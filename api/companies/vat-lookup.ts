@@ -22,6 +22,7 @@ const vatLookupParamSchema = z.object({
 
 type VatLookupContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext, string, { in: { param: z.input<typeof vatLookupParamSchema>, query: z.input<typeof vatLookupQuerySchema> }, out: { param: z.infer<typeof vatLookupParamSchema>, query: z.infer<typeof vatLookupQuerySchema> } }>;
 
+// IMPORTANT: Even though this endpoint is a hidden route, it is also used by some internal integrations, so make sure to keep it backwards compatible.
 const _vatLookup = server.get(
     "/:teamId/vat-lookup",
     requireIntegrationSupportedTeamAccess(),
