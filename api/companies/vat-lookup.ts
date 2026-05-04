@@ -1,4 +1,4 @@
-import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { getEnterpriseData } from "@peppol/data/cbe-public-search/client";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -7,6 +7,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { cleanEnterpriseNumber } from "@peppol/utils/util";
+import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -23,7 +24,7 @@ type VatLookupContext = Context<AuthenticatedUserContext & AuthenticatedTeamCont
 
 const _vatLookup = server.get(
     "/:teamId/vat-lookup",
-    requireTeamAccess(),
+    requireIntegrationSupportedTeamAccess(),
     describeRoute({ hide: true }),
     zodValidator("param", vatLookupParamSchema),
     zodValidator("query", vatLookupQuerySchema),
