@@ -9,6 +9,7 @@ import { getActiveSubscription } from "@peppol/data/subscriptions";
 import { isPlayground } from "@peppol/data/teams";
 import { canUseIntegrations } from "@peppol/utils/plan-validation";
 import { IntegrationFailureNotification } from "@peppol/emails/integration-failure-notification";
+import { log } from "@recommand/lib/logger";
 
 function flattenFieldsToObject(fields: IntegrationConfigurationField[]): Record<string, unknown> {
     return fields.reduce((acc, field) => {
@@ -92,7 +93,7 @@ export async function postToIntegration({
             teamId: integration.teamId,
         }
     });
-    console.log("Posting to integration", integration.manifest.url, event, JSON.stringify({...JSON.parse(body), jwt: "...", auth: {...integration.configuration.auth, token: "..."}}, null, 2));
+    log(["Posting to integration", integration.manifest.url, event, JSON.stringify({...JSON.parse(body), jwt: "...", auth: {...integration.configuration.auth, token: "..."}}, null, 2)], "info");
 
     const response = await fetch(createCleanUrl([integration.manifest.url, event]), {
         method: 'POST',
@@ -103,9 +104,9 @@ export async function postToIntegration({
     });
 
     const responseBody = await response.text();
-    console.log("Response body from integration", responseBody);
+    log(["Response body from integration", responseBody], "info");
     const json = JSON.parse(responseBody);
-    console.log("Response from integration", integration.manifest.url, event, JSON.stringify(json, null, 2));
+    log(["Response from integration", integration.manifest.url, event, JSON.stringify(json, null, 2)], "info");
 
     // Ensure the version is 1.0.0
     if (json.version !== "1.0.0") {
@@ -134,7 +135,7 @@ export async function postToIntegration({
         //     await sendFailureEmailToTeam({ integration, event, failedTasks });
         // }
         
-        console.error("Error response from integration", integration.manifest.url, event, JSON.stringify(json, null, 2));
+        log(["Error response from integration", integration.manifest.url, event, JSON.stringify(json, null, 2)], "error");
         throw new UserFacingError(message);
     }
 
