@@ -244,35 +244,46 @@ export async function submitIdentityForm(
     throw new UserFacingError("This verification has already been submitted.");
   }
 
+  let effectiveFirstName = firstName;
+  let effectiveLastName = lastName;
+
   if (company.country === "BE") {
     if (!company.enterpriseNumber) {
       throw new UserFacingError("Company does not have an enterprise number. Please complete the company details first.");
     }
     const lookupNumber = company.country === "BE" && company.enterpriseNumber.toUpperCase().startsWith("BE") ? company.enterpriseNumber.slice(2) : company.enterpriseNumber;
     const enterpriseData = await getEnterpriseData(lookupNumber, company.country);
-    const isRepresentative = enterpriseData.representatives.some(
-      (rep) =>
-        rep.firstName && rep.lastName &&
-        namesMatch(rep.firstName, firstName) &&
-        namesMatch(rep.lastName, lastName)
+    const validRepresentatives = enterpriseData.representatives.filter(
+      (rep): rep is typeof rep & { firstName: string; lastName: string } => Boolean(rep.firstName && rep.lastName)
     );
-    if (!isRepresentative) {
-      throw new UserFacingError(
-        "The provided name does not match any representative of this company in the CBE registry. Please contact support@recommand.eu to proceed with the verification."
+
+    if (validRepresentatives.length === 0) {
+      effectiveFirstName = "UNKNOWN";
+      effectiveLastName = "UNKNOWN";
+    } else {
+      const isRepresentative = validRepresentatives.some(
+        (rep) =>
+          namesMatch(rep.firstName, firstName) &&
+          namesMatch(rep.lastName, lastName)
       );
+      if (!isRepresentative) {
+        throw new UserFacingError(
+          "The provided name does not match any representative of this company in the CBE registry. Please contact support@recommand.eu to proceed with the verification."
+        );
+      }
     }
   }
 
   const verificationUrl = await createIdVerificationUrl(companyVerificationLogId, company, {
-    firstName,
-    lastName,
+    firstName: effectiveFirstName,
+    lastName: effectiveLastName,
   });
 
   await db
     .update(companyVerificationLog)
     .set({
-      firstName,
-      lastName,
+      firstName: effectiveFirstName,
+      lastName: effectiveLastName,
       status: "idVerificationRequested",
     })
     .where(eq(companyVerificationLog.id, companyVerificationLogId))

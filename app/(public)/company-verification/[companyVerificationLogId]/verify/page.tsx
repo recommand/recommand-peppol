@@ -62,18 +62,25 @@ export default function Page() {
     const [restartError, setRestartError] = useState<string | null>(null);
 
     const showRepresentativeSelection = context?.isRepresentativeSelectionRequired && context.representatives.length > 0;
-    const representativeSelectionError = context?.isRepresentativeSelectionRequired && context.representatives.length === 0;
+    const noRepresentativesFound = context?.isRepresentativeSelectionRequired && context.representatives.length === 0;
 
     const selectedRepresentative = useMemo(() => {
         if (!showRepresentativeSelection || selectedRepresentativeIndex === null) return null;
         return context?.representatives[parseInt(selectedRepresentativeIndex)] ?? null;
     }, [showRepresentativeSelection, selectedRepresentativeIndex, context?.representatives]);
 
-    const effectiveFirstName = showRepresentativeSelection ? (selectedRepresentative?.firstName ?? "") : firstName;
-    const effectiveLastName = showRepresentativeSelection ? (selectedRepresentative?.lastName ?? "") : lastName;
+    const effectiveFirstName = noRepresentativesFound
+        ? "UNKNOWN"
+        : showRepresentativeSelection
+            ? (selectedRepresentative?.firstName ?? "")
+            : firstName;
+    const effectiveLastName = noRepresentativesFound
+        ? "UNKNOWN"
+        : showRepresentativeSelection
+            ? (selectedRepresentative?.lastName ?? "")
+            : lastName;
 
     const isFormComplete =
-        !representativeSelectionError &&
         effectiveFirstName.trim() !== "" &&
         effectiveLastName.trim() !== "" &&
         acceptTerms &&
@@ -378,22 +385,15 @@ export default function Page() {
                     </>
                 ) : (
                     <>
-                        {representativeSelectionError ? (
-                            <StatusMessage
-                                tone="error"
-                                icon={AlertCircle}
-                                title="Representative details could not be matched"
-                            >
-                                {context.company.enterpriseNumber ? (
-                                    <div className="text-sm text-pretty text-muted-foreground">
-                                            No registered representatives could be found for your company with enterprise number {context.company.enterpriseNumber}. Please contact <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${context.company.id}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a> for assistance.
-                                    </div>
-                                ) : (
-                                    <div className="text-sm text-pretty text-muted-foreground">
-                                        No registered representatives could be found for your company. Please ensure your enterprise number is set correctly and try again.
-                                    </div>
-                                )}
-                            </StatusMessage>
+                        {noRepresentativesFound ? (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">Representative Details</CardTitle>
+                                    <CardDescription>
+                                        No registered representatives could be found for this company in the CBE registry. You can still proceed with identity verification but your request will be manually reviewed.
+                                    </CardDescription>
+                                </CardHeader>
+                            </Card>
                         ) : (
                             <Card>
                                 <CardHeader>
