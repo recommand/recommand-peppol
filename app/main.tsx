@@ -80,7 +80,7 @@ export default function Main({ children }: { children: React.ReactNode }) {
 
     registerMenuItem({
       id: "user.api.webhooks",
-      title: "Webhooks",
+      title: "Webhooks and rules",
       icon: Webhook,
       href: "/webhooks",
     });

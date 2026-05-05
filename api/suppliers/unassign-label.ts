@@ -6,7 +6,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@peppol/utils/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierIdParamSchema } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";

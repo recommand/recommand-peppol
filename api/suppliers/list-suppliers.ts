@@ -11,7 +11,7 @@ import {
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
-} from "@peppol/utils/api-docs";
+} from "@core/lib/api-docs";
 import { supplierResponse } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 

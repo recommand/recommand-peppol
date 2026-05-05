@@ -20,7 +20,7 @@ import {
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
-} from "@peppol/utils/api-docs";
+} from "@core/lib/api-docs";
 import { addMonths, formatISO } from "date-fns";
 import {
   sendCreditNoteSchema,
@@ -47,6 +47,7 @@ import {
 import { selfBillingCreditNoteToUBL } from "@peppol/utils/parsing/self-billing-creditnote/to-xml";
 import { sendOutgoingDocumentNotifications } from "@peppol/data/send-document-notifications";
 import { z } from "zod";
+import { publishEvent } from "@core/data/rules/events";
 import type {
   AuthenticatedUserContext,
   AuthenticatedTeamContext,
@@ -785,8 +786,25 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           as4Response?.receivedPeppolSignalMessage ?? null,
         envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
       })
-      .returning({ id: transmittedDocuments.id })
-      .then((rows) => rows[0]);
+    .returning({ id: transmittedDocuments.id })
+    .then((rows) => rows[0]);
+
+    await publishEvent("peppol.document.sent.v1", {
+      teamId: c.var.team.id,
+      aggregateType: "peppol.document",
+      aggregateId: transmittedDocument.id,
+      idempotencyKey: `peppol.document.sent:${transmittedDocument.id}`,
+      payload: {
+        companyId: company.id,
+        docType: type,
+        senderId: senderAddress,
+        receiverId: recipientAddress,
+        peppolMessageId: as4Response?.peppolMessageId ?? null,
+        peppolConversationId: as4Response?.peppolConversationId ?? null,
+        envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
+        countryC1,
+      },
+    });
 
     // Create a new transferEvent for billing
     if (!isPlayground) {

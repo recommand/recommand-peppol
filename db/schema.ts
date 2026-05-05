@@ -1,4 +1,4 @@
-import type { BillingConfig } from "data/plans";
+import type { BillingConfig } from "../data/plans";
 import { teams } from "@core/db/schema";
 import {
   timestamp,

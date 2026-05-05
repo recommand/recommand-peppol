@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponse } from "@peppol/utils/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 
 const server = new Server();

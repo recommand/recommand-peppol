@@ -1,7 +1,6 @@
 import { db } from "@recommand/db";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
 import { getCompanyByPeppolId } from "@peppol/data/companies";
-import { callWebhooks } from "@peppol/data/webhooks";
 import { UserFacingError } from "@peppol/utils/util";
 import { parseDocument } from "@peppol/utils/parsing/parse-document";
 import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "./phoss-smp/service-metadata";
@@ -15,6 +14,7 @@ import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import { getTransmittedDocumentSearchFields } from "@peppol/utils/transmitted-document-search";
 import { ulid } from "ulid";
+import { publishEvent } from "@core/data/rules/events";
 
 export async function receiveDocument(options: {
   senderId: string;
@@ -106,11 +106,21 @@ export async function receiveDocument(options: {
     .returning({ id: transmittedDocuments.id })
     .then((rows) => rows[0]);
 
-  // Call the webhooks
-  await callWebhooks(company.teamId, company.id, "document.received", {
-    documentId: transmittedDocument.id,
+  await publishEvent("peppol.document.received.v1", {
     teamId: company.teamId,
-    companyId: company.id,
+    aggregateType: "peppol.document",
+    aggregateId: transmittedDocument.id,
+    idempotencyKey: `peppol.document.received:${transmittedDocument.id}`,
+    payload: {
+      companyId: company.id,
+      docType: type,
+      senderId,
+      receiverId,
+      peppolMessageId: options.as4MessageId ?? null,
+      peppolConversationId: options.as4ConversationId ?? null,
+      envelopeId: options.sbdhInstanceIdentifier ?? null,
+      countryC1: options.countryC1,
+    },
   });
 
   // Create a new transferEvent for billing

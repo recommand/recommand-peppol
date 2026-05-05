@@ -4,7 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@peppol/utils/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyDocumentTypeResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";

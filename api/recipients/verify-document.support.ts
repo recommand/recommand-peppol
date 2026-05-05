@@ -7,7 +7,7 @@ import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@c
 import { describeRoute } from "hono-openapi";
 import {
     describeSuccessResponseWithZod,
-} from "@peppol/utils/api-docs";
+} from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { verifyDocumentSupport } from "@peppol/data/recipient";
 import { getTeamExtension } from "@peppol/data/teams";

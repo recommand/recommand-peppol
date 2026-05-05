@@ -2,8 +2,8 @@ import { transmittedDocumentLabels, transmittedDocuments, labels } from "@peppol
 import { db } from "@recommand/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { UserFacingError } from "@peppol/utils/util";
-import { callWebhooks } from "@peppol/data/webhooks";
 import { getLabelsForSuppliers } from "./suppliers";
+import { publishEvent } from "@core/data/rules/events";
 
 export async function assignLabelToDocument(
   teamId: string,
@@ -11,7 +11,13 @@ export async function assignLabelToDocument(
   labelId: string
 ): Promise<void> {
   const document = await db
-    .select({ id: transmittedDocuments.id, companyId: transmittedDocuments.companyId })
+    .select({
+      id: transmittedDocuments.id,
+      companyId: transmittedDocuments.companyId,
+      type: transmittedDocuments.type,
+      senderId: transmittedDocuments.senderId,
+      receiverId: transmittedDocuments.receiverId,
+    })
     .from(transmittedDocuments)
     .where(and(eq(transmittedDocuments.id, documentId), eq(transmittedDocuments.teamId, teamId)))
     .then((rows) => rows[0]);
@@ -21,7 +27,7 @@ export async function assignLabelToDocument(
   }
 
   const label = await db
-    .select({ id: labels.id })
+    .select({ id: labels.id, externalId: labels.externalId })
     .from(labels)
     .where(and(eq(labels.id, labelId), eq(labels.teamId, teamId)))
     .then((rows) => rows[0]);
@@ -50,11 +56,19 @@ export async function assignLabelToDocument(
     labelId: labelId,
   });
 
-  await callWebhooks(teamId, document.companyId, "document.label.assigned", {
-    documentId,
+  await publishEvent("peppol.document.label.assigned.v1", {
     teamId,
-    companyId: document.companyId,
-    labelId,
+    aggregateType: "peppol.document",
+    aggregateId: documentId,
+    idempotencyKey: `peppol.document.label.assigned:${documentId}:${labelId}`,
+    payload: {
+      companyId: document.companyId,
+      labelId,
+      labelExternalId: label.externalId ?? null,
+      docType: document.type,
+      senderId: document.senderId,
+      receiverId: document.receiverId ?? null,
+    },
   });
 }
 
@@ -70,7 +84,13 @@ export async function assignLabelToDocuments(
   }
 
   const teamDocuments = await db
-    .select({ id: transmittedDocuments.id, companyId: transmittedDocuments.companyId })
+    .select({
+      id: transmittedDocuments.id,
+      companyId: transmittedDocuments.companyId,
+      type: transmittedDocuments.type,
+      senderId: transmittedDocuments.senderId,
+      receiverId: transmittedDocuments.receiverId,
+    })
     .from(transmittedDocuments)
     .where(and(eq(transmittedDocuments.teamId, teamId), inArray(transmittedDocuments.id, uniqueDocumentIds)));
 
@@ -79,7 +99,7 @@ export async function assignLabelToDocuments(
   }
 
   const label = await db
-    .select({ id: labels.id })
+    .select({ id: labels.id, externalId: labels.externalId })
     .from(labels)
     .where(and(eq(labels.id, labelId), eq(labels.teamId, teamId)))
     .then((rows) => rows[0]);
@@ -117,11 +137,19 @@ export async function assignLabelToDocuments(
 
   await Promise.all(
     documentsToAssign.map((document) =>
-      callWebhooks(teamId, document.companyId, "document.label.assigned", {
-        documentId: document.id,
+      publishEvent("peppol.document.label.assigned.v1", {
         teamId,
-        companyId: document.companyId,
-        labelId,
+        aggregateType: "peppol.document",
+        aggregateId: document.id,
+        idempotencyKey: `peppol.document.label.assigned:${document.id}:${labelId}`,
+        payload: {
+          companyId: document.companyId,
+          labelId,
+          labelExternalId: label.externalId ?? null,
+          docType: document.type,
+          senderId: document.senderId,
+          receiverId: document.receiverId ?? null,
+        },
       })
     )
   );
@@ -133,7 +161,13 @@ export async function unassignLabelFromDocument(
   labelId: string
 ): Promise<void> {
   const document = await db
-    .select({ id: transmittedDocuments.id, companyId: transmittedDocuments.companyId })
+    .select({
+      id: transmittedDocuments.id,
+      companyId: transmittedDocuments.companyId,
+      type: transmittedDocuments.type,
+      senderId: transmittedDocuments.senderId,
+      receiverId: transmittedDocuments.receiverId,
+    })
     .from(transmittedDocuments)
     .where(and(eq(transmittedDocuments.id, documentId), eq(transmittedDocuments.teamId, teamId)))
     .then((rows) => rows[0]);
@@ -143,7 +177,7 @@ export async function unassignLabelFromDocument(
   }
 
   const label = await db
-    .select({ id: labels.id })
+    .select({ id: labels.id, externalId: labels.externalId })
     .from(labels)
     .where(and(eq(labels.id, labelId), eq(labels.teamId, teamId)))
     .then((rows) => rows[0]);
@@ -161,11 +195,19 @@ export async function unassignLabelFromDocument(
       )
     );
 
-  await callWebhooks(teamId, document.companyId, "document.label.unassigned", {
-    documentId,
+  await publishEvent("peppol.document.label.unassigned.v1", {
     teamId,
-    companyId: document.companyId,
-    labelId,
+    aggregateType: "peppol.document",
+    aggregateId: documentId,
+    idempotencyKey: `peppol.document.label.unassigned:${documentId}:${labelId}`,
+    payload: {
+      companyId: document.companyId,
+      labelId,
+      labelExternalId: label.externalId ?? null,
+      docType: document.type,
+      senderId: document.senderId,
+      receiverId: document.receiverId ?? null,
+    },
   });
 }
 

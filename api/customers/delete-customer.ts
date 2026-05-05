@@ -12,7 +12,7 @@ import { describeRoute } from "hono-openapi";
 import {
   describeErrorResponse,
   describeSuccessResponse,
-} from "@peppol/utils/api-docs";
+} from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { customerIdParamSchema } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";

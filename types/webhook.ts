@@ -4,7 +4,7 @@ export type Webhook = {
   companyId: string | null;
   url: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt: string | null;
 };
 
 export type WebhookFormData = {

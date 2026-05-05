@@ -28,6 +28,7 @@ import { initializeIntegrationCronJobs } from "./data/integrations/cron";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
+import { registerPeppolEventTypes } from "./lib/event-types";
 
 export let logger: Logger;
 
@@ -37,6 +38,7 @@ export async function init(app: RecommandApp, server: Server) {
   logger = new Logger(app);
   logger.info("Initializing peppol app");
 
+  registerPeppolEventTypes();
   addBackendEventListener(CORE_BACKEND_EVENTS.TEAM_CREATED, onTeamCreated);
 
   initializeIntegrationCronJobs(logger);

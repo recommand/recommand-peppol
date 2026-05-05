@@ -14,7 +14,7 @@ import {
 } from "@peppol/data/transmitted-documents";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { renderDocumentHtml, renderDocumentPdf } from "@peppol/utils/document-renderer";
-import { describeErrorResponse } from "@peppol/utils/api-docs";
+import { describeErrorResponse } from "@core/lib/api-docs";
 
 const server = new Server();
 

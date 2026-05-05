@@ -12,7 +12,7 @@ import { getCustomers } from "@peppol/data/customers";
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
-} from "@peppol/utils/api-docs";
+} from "@core/lib/api-docs";
 import { customerResponse } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 

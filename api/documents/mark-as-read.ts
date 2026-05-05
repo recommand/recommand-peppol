@@ -11,7 +11,7 @@ import {
 import {
     describeErrorResponse,
     describeSuccessResponse,
-} from "@peppol/utils/api-docs";
+} from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 
 const server = new Server();

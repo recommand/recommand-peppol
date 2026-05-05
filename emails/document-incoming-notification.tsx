@@ -1,13 +1,24 @@
 import { Text } from "@react-email/components";
-import { EmailLayout, EmailHeading, InfoSection } from "@core/emails/components/shared";
+import {
+  Button,
+  EmailLayout,
+  EmailHeading,
+  InfoSection,
+  Section,
+} from "@core/emails/components/shared";
 
-interface DocumentIncomingNotificationProps {
+export interface DocumentIncomingNotificationProps {
   companyName: string;
   senderName: string;
   documentType: string;
   documentNumber?: string;
   amount?: string;
   currency?: string;
+  documentUrl?: string;
+  event?: {
+    aggregateId: string;
+    payload?: unknown;
+  };
 }
 
 export const DocumentIncomingNotification = ({
@@ -17,6 +28,7 @@ export const DocumentIncomingNotification = ({
   documentNumber,
   amount,
   currency,
+  documentUrl,
 }: DocumentIncomingNotificationProps) => (
   <EmailLayout
     preview={`New ${documentType.toLowerCase()} received from ${senderName}`}
@@ -45,8 +57,28 @@ export const DocumentIncomingNotification = ({
       The document and any attachments are included with this email. Please
       review and take any necessary action.
     </Text>
+    {documentUrl ? (
+      <Section className="my-6 text-center">
+        <Button href={documentUrl}>Open document</Button>
+      </Section>
+    ) : null}
   </EmailLayout>
 );
+
+export const subject = (props: DocumentIncomingNotificationProps) => {
+  if (props.documentNumber) {
+    return `New ${props.documentType} received: ${props.documentNumber}`;
+  }
+
+  const eventPayload =
+    props.event?.payload && typeof props.event.payload === "object"
+      ? (props.event.payload as { docType?: string })
+      : undefined;
+  const eventDocumentType =
+    eventPayload?.docType ?? props.documentType ?? "document";
+  const aggregateId = props.event?.aggregateId;
+  return `New ${eventDocumentType} received${aggregateId ? `: ${aggregateId}` : ""}`;
+};
 
 DocumentIncomingNotification.PreviewProps = {
   companyName: "Acme Corporation",
@@ -55,6 +87,7 @@ DocumentIncomingNotification.PreviewProps = {
   documentNumber: "INV-2024-001",
   amount: "1,250.00",
   currency: "EUR",
+  documentUrl: "https://app.recommand.eu/transmitted-documents/doc_123",
 } as DocumentIncomingNotificationProps;
 
 export default DocumentIncomingNotification;

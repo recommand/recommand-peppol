@@ -8,7 +8,7 @@ import { describeRoute } from "hono-openapi";
 import {
     describeErrorResponse,
     describeSuccessResponseWithZod,
-} from "@peppol/utils/api-docs";
+} from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { searchPeppolDirectory } from "@peppol/data/peppol-directory";
 import { getTeamExtension } from "@peppol/data/teams";

@@ -1,7 +1,7 @@
 import { Server } from "@recommand/lib/api";
 import "zod-openapi/extend";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse } from "@peppol/utils/api-docs";
+import { describeErrorResponse } from "@core/lib/api-docs";
 
 const server = new Server();
 

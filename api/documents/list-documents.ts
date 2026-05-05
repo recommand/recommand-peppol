@@ -11,7 +11,7 @@ import {
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
-} from "@peppol/utils/api-docs";
+} from "@core/lib/api-docs";
 import { supportedDocumentTypeEnum } from "@peppol/db/schema";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";

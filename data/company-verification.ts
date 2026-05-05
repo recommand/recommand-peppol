@@ -7,7 +7,7 @@ import { getCompany, verifyCompany, type Company } from "./companies";
 import { getTeamExtension } from "./teams";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./phoss-smp";
-import { sendCompanyVerificationWebhook } from "./company-verification-webhooks";
+import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
 export type CompanyVerificationStatus = CompanyVerificationLog["status"];
@@ -142,7 +142,8 @@ export async function finalizeCompanyVerification({
         verificationProofReference,
         errorMessage,
       });
-      await sendCompanyVerificationWebhook({
+      await publishCompanyVerificationEvent({
+        verificationEventId: companyVerificationLogId,
         teamId: company.teamId,
         companyId: company.id,
         status: "error",
@@ -164,7 +165,8 @@ export async function finalizeCompanyVerification({
         verificationProofReference,
         errorMessage,
       });
-      await sendCompanyVerificationWebhook({
+      await publishCompanyVerificationEvent({
+        verificationEventId: companyVerificationLogId,
         teamId: company.teamId,
         companyId: company.id,
         status: "error",
@@ -193,7 +195,8 @@ export async function finalizeCompanyVerification({
     throw error;
   }
 
-  await sendCompanyVerificationWebhook({
+  await publishCompanyVerificationEvent({
+    verificationEventId: companyVerificationLogId,
     teamId: company.teamId,
     companyId: company.id,
     status,
