@@ -74,18 +74,13 @@ export function registerPeppolEventTypes() {
 
   registerEventType({
     type: "peppol.document.received.v1",
-    sourcePackage: "peppol",
     aggregateType: "peppol.document",
     payload: documentReceivedPayloadSchema,
     conditionFields: [
-      { path: "payload.companyId", label: "Company ID", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
+      { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
       { path: "payload.docType", label: "Document type", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...receivedDocumentTypes] },
-      { path: "payload.senderId", label: "Sender ID", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
-      { path: "payload.receiverId", label: "Receiver ID", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
-      { path: "payload.peppolMessageId", label: "Peppol message ID", valueType: "string", operators: ["eq", "neq", "exists"] },
-      { path: "payload.peppolConversationId", label: "Peppol conversation ID", valueType: "string", operators: ["eq", "neq", "exists"] },
-      { path: "payload.envelopeId", label: "Envelope ID", valueType: "string", operators: ["eq", "neq", "exists"] },
-      { path: "payload.countryC1", label: "Country C1", valueType: "string", operators: ["eq", "neq", "in"] },
+      { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+      { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
     ],
     webhook: {
       eventType: "document.received",
@@ -111,18 +106,13 @@ export function registerPeppolEventTypes() {
 
   registerEventType({
     type: "peppol.document.sent.v1",
-    sourcePackage: "peppol",
     aggregateType: "peppol.document",
     payload: documentSentPayloadSchema,
     conditionFields: [
-      { path: "payload.companyId", label: "Company ID", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
+      { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
       { path: "payload.docType", label: "Document type", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...receivedDocumentTypes] },
-      { path: "payload.senderId", label: "Sender ID", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
-      { path: "payload.receiverId", label: "Receiver ID", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
-      { path: "payload.peppolMessageId", label: "Peppol message ID", valueType: "string", operators: ["eq", "neq", "exists"] },
-      { path: "payload.peppolConversationId", label: "Peppol conversation ID", valueType: "string", operators: ["eq", "neq", "exists"] },
-      { path: "payload.envelopeId", label: "Envelope ID", valueType: "string", operators: ["eq", "neq", "exists"] },
-      { path: "payload.countryC1", label: "Country C1", valueType: "string", operators: ["eq", "neq", "in"] },
+      { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+      { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
     ],
     webhook: {
       eventType: "document.sent",
@@ -148,7 +138,6 @@ export function registerPeppolEventTypes() {
 
   registerEventType({
     type: "peppol.document.label.assigned.v1",
-    sourcePackage: "peppol",
     aggregateType: "peppol.document",
     payload: documentLabelPayloadSchema,
     conditionFields: [
@@ -186,16 +175,15 @@ export function registerPeppolEventTypes() {
 
   registerEventType({
     type: "peppol.document.label.unassigned.v1",
-    sourcePackage: "peppol",
     aggregateType: "peppol.document",
     payload: documentLabelPayloadSchema,
     conditionFields: [
-      { path: "payload.companyId", label: "Company ID", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
-      { path: "payload.labelId", label: "Label ID", valueType: "string", operators: ["eq", "neq", "in"], picker: "label" },
+      { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
+      { path: "payload.labelId", label: "Label", valueType: "string", operators: ["eq", "neq", "in"], picker: "label" },
       { path: "payload.labelExternalId", label: "Label external ID", valueType: "string", operators: ["eq", "neq", "in"] },
       { path: "payload.docType", label: "Document type", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...receivedDocumentTypes] },
-      { path: "payload.senderId", label: "Sender ID", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
-      { path: "payload.receiverId", label: "Receiver ID", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+      { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+      { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
     ],
     webhook: {
       eventType: "document.label.unassigned",
@@ -224,11 +212,10 @@ export function registerPeppolEventTypes() {
 
   registerEventType({
     type: "peppol.company.verification.v1",
-    sourcePackage: "peppol",
     aggregateType: "peppol.company",
     payload: companyVerificationPayloadSchema,
     conditionFields: [
-      { path: "payload.companyId", label: "Company ID", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
+      { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
       { path: "payload.status", label: "Verification status", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: ["verified", "rejected", "error"] },
       { path: "payload.errorMessage", label: "Error message", valueType: "string", operators: ["eq", "neq", "exists"] },
     ],
