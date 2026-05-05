@@ -43,7 +43,7 @@ export default function DocumentLabelUnassignedNotification(props: Props) {
     <EmailLayout preview={`${labelName} was removed from ${documentType.toLowerCase()} ${documentReference}`}>
       <EmailHeading>Label removed from document</EmailHeading>
       <Text className="mb-4">
-        A rule removed the label <strong>{labelName}</strong> from a{" "}
+        The label <strong>{labelName}</strong> was removed from a{" "}
         {documentType.toLowerCase()} for <strong>{companyName}</strong>.
       </Text>
       <InfoSection>

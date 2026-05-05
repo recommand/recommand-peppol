@@ -45,7 +45,7 @@ export default function DocumentLabelAssignedNotification(props: Props) {
     <EmailLayout preview={`${labelName} was assigned to ${documentType.toLowerCase()} ${documentReference}`}>
       <EmailHeading>Label assigned to document</EmailHeading>
       <Text className="mb-4">
-        A rule assigned the label <strong>{labelName}</strong> to a{" "}
+        The label <strong>{labelName}</strong> was assigned to a{" "}
         {documentType.toLowerCase()} for <strong>{companyName}</strong>.
       </Text>
       <InfoSection>
