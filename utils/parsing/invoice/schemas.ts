@@ -437,7 +437,11 @@ export const attachmentSchema = z
       description:
         "MIME type of the document (e.g. application/pdf, text/csv, image/png)",
     }),
-    filename: z.string().openapi({ example: "contract.pdf" }),
+    filename: z.string().openapi({
+      example: "contract.pdf",
+      description:
+        "Filename for an embedded attachment. This is included in the Peppol XML only when `embeddedDocument` is provided. For URL-only attachments, the document contains an external reference and the filename is not embedded.",
+    }),
     description: z.string().nullish().openapi({ example: "Signed contract" }),
     embeddedDocument: z
       .string()
