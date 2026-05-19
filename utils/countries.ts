@@ -158,6 +158,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "SE",
         name: "Sweden",
         flag: "🇸🇪",
+        defaultEnterpriseNumberScheme: "0007",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
