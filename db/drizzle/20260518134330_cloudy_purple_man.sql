@@ -1,0 +1,1 @@
+ALTER TABLE "peppol_team_extensions" ADD COLUMN "company_verification_extension_until" timestamp with time zone;

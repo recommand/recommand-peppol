@@ -526,6 +526,7 @@ export const teamExtensions = pgTable("peppol_team_extensions", {
   isPlayground: boolean("is_playground").notNull().default(false),
   useTestNetwork: boolean("use_test_network").notNull().default(false),
   verificationRequirements: verificationRequirementsEnum("verification_requirements").notNull().default("lax"),
+  companyVerificationExtensionUntil: timestamp("company_verification_extension_until", { withTimezone: true }),
   supportEmailAddress: text("support_email_address"),
 });
 
