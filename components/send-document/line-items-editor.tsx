@@ -169,6 +169,7 @@ export function LineItemsEditor({
                       <SelectItem value="KGM">Kilogram</SelectItem>
                       <SelectItem value="MTR">Meter</SelectItem>
                       <SelectItem value="LTR">Liter</SelectItem>
+                      <SelectItem value="MWH">Megawatt hour (MWh)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
