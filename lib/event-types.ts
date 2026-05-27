@@ -32,7 +32,7 @@ const documentSentPayloadSchema = z.object({
   companyId: z.string(),
   docType: z.enum(receivedDocumentTypes),
   senderId: z.string(),
-  receiverId: z.string(),
+  receiverId: z.string().nullable(),
   peppolMessageId: z.string().nullable().optional(),
   peppolConversationId: z.string().nullable().optional(),
   envelopeId: z.string().nullable().optional(),
