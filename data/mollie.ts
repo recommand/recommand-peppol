@@ -214,13 +214,15 @@ export async function processPayment(paymentId: string) {
 
   const billingEventId = (payment.metadata as any).billingEventId;
 
-  const [{ billingProfileId, invoiceReference, totalAmountIncl, billingDate, teamId }] = await db
+  const [{ billingProfileId, invoiceReference, totalAmountIncl, billingDate, teamId, paymentStatus, amountDue: currentAmountDue }] = await db
     .select({
       billingProfileId: subscriptionBillingEvents.billingProfileId,
       invoiceReference: subscriptionBillingEvents.invoiceReference,
       totalAmountIncl: subscriptionBillingEvents.totalAmountIncl,
       billingDate: subscriptionBillingEvents.billingDate,
       teamId: subscriptionBillingEvents.teamId,
+      paymentStatus: subscriptionBillingEvents.paymentStatus,
+      amountDue: subscriptionBillingEvents.amountDue,
     })
     .from(subscriptionBillingEvents)
     .where(eq(subscriptionBillingEvents.id, billingEventId))
@@ -276,6 +278,10 @@ export async function processPayment(paymentId: string) {
         ));
     });
   } else {
+    if (paymentStatus === "paid" || new Decimal(currentAmountDue).lte(0)) {
+      console.log(`Ignoring ${payment.status} webhook for settled billing event ${billingEventId}`);
+      return;
+    }
 
     const { graceStartedAt, companyName, billingEmail } = await db
       .select({

@@ -1,7 +1,7 @@
 import {
   billingProfiles,
-  subscriptionBillingEvents,
   paymentFailureReminders,
+  subscriptionBillingEvents,
 } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { and, eq, gte, inArray, gt } from "drizzle-orm";
@@ -18,8 +18,12 @@ export type PaymentRetryResult = {
   errorMessage?: string;
 };
 
-export async function retryFailedPayments(teamIds?: string[], dryRun: boolean = false): Promise<PaymentRetryResult[]> {
+export async function retryFailedPayments(
+  teamIds?: string[],
+  dryRun: boolean = false
+): Promise<PaymentRetryResult[]> {
   const results: PaymentRetryResult[] = [];
+  const sevenDaysAgo = subDays(new Date(), 7);
 
   const failedPayments = await db
     .select({
@@ -39,7 +43,18 @@ export async function retryFailedPayments(teamIds?: string[], dryRun: boolean = 
 
   for (const { billingEvent, billingProfile } of failedPayments) {
     try {
-      const sevenDaysAgo = subDays(new Date(), 7);
+      if (billingEvent.createdAt >= sevenDaysAgo) {
+        results.push({
+          status: "skipped",
+          billingEventId: billingEvent.id,
+          invoiceReference: billingEvent.invoiceReference,
+          teamId: billingEvent.teamId,
+          companyName: billingProfile.companyName,
+          amountDue: billingEvent.amountDue,
+          errorMessage: "Skipped: original payment attempt was within the last 7 days",
+        });
+        continue;
+      }
 
       const recentReminder = await db
         .select()
@@ -96,6 +111,10 @@ export async function retryFailedPayments(teamIds?: string[], dryRun: boolean = 
           billingEmail: billingProfile.billingEmail,
           invoiceReference: billingEvent.invoiceReference,
           billingDate: billingEvent.billingDate,
+        });
+        await db.insert(paymentFailureReminders).values({
+          billingEventId: billingEvent.id,
+          emailAddresses: [],
         });
         results.push({
           status: "success",
