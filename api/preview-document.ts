@@ -25,11 +25,6 @@ import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-r
 import type { TransmittedDocument } from "@peppol/data/transmitted-documents";
 import { renderDocumentHtml } from "@peppol/utils/document-renderer";
 import { ulid } from "ulid";
-import { invoiceToUBL } from "@peppol/utils/parsing/invoice/to-xml";
-import { creditNoteToUBL } from "@peppol/utils/parsing/creditnote/to-xml";
-import { selfBillingInvoiceToUBL } from "@peppol/utils/parsing/self-billing-invoice/to-xml";
-import { selfBillingCreditNoteToUBL } from "@peppol/utils/parsing/self-billing-creditnote/to-xml";
-import { messageLevelResponseToXML } from "@peppol/utils/parsing/message-level-response/to-xml";
 import { parseDocument } from "@peppol/utils/parsing/parse-document";
 import {
   CREDIT_NOTE_DOCUMENT_TYPE_INFO,
@@ -37,9 +32,10 @@ import {
   MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
   SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
   SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO,
+  type SupportedDocumentType,
 } from "@peppol/utils/document-types";
 import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
-import type { SupportedDocumentType } from "@peppol/utils/document-types";
+import { resolveDocumentXmlHandler } from "@peppol/utils/parsing/document-handlers";
 
 const server = new Server();
 
@@ -124,14 +120,19 @@ async function _previewDocumentImplementation(c: PreviewDocumentContext) {
         });
       }
 
-      const xml = invoiceToUBL({
-        invoice,
+      const docTypeId = input.doctypeId ?? INVOICE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(docTypeId, "invoice");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      const xml = xmlHandler.handler.toXml({
+        document: invoice,
         senderAddress,
         recipientAddress,
         isDocumentValidationEnforced: true,
       });
       const parsed = parseDocument(
-        INVOICE_DOCUMENT_TYPE_INFO.docTypeId,
+        docTypeId,
         xml,
         company,
         senderAddress
@@ -166,14 +167,19 @@ async function _previewDocumentImplementation(c: PreviewDocumentContext) {
         creditNote.issueDate = formatISO(now, { representation: "date" });
       }
 
-      const xml = creditNoteToUBL({
-        creditNote,
+      const docTypeId = input.doctypeId ?? CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(docTypeId, "creditNote");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      const xml = xmlHandler.handler.toXml({
+        document: creditNote,
         senderAddress,
         recipientAddress,
         isDocumentValidationEnforced: true,
       });
       const parsed = parseDocument(
-        CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId,
+        docTypeId,
         xml,
         company,
         senderAddress
@@ -214,14 +220,19 @@ async function _previewDocumentImplementation(c: PreviewDocumentContext) {
         });
       }
 
-      const xml = selfBillingInvoiceToUBL({
-        selfBillingInvoice: invoice,
+      const docTypeId = input.doctypeId ?? SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(docTypeId, "selfBillingInvoice");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      const xml = xmlHandler.handler.toXml({
+        document: invoice,
         senderAddress,
         recipientAddress,
         isDocumentValidationEnforced: true,
       });
       const parsed = parseDocument(
-        SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO.docTypeId,
+        docTypeId,
         xml,
         company,
         senderAddress
@@ -257,14 +268,19 @@ async function _previewDocumentImplementation(c: PreviewDocumentContext) {
         creditNote.issueDate = formatISO(now, { representation: "date" });
       }
 
-      const xml = selfBillingCreditNoteToUBL({
-        selfBillingCreditNote: creditNote,
+      const docTypeId = input.doctypeId ?? SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(docTypeId, "selfBillingCreditNote");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      const xml = xmlHandler.handler.toXml({
+        document: creditNote,
         senderAddress,
         recipientAddress,
         isDocumentValidationEnforced: true,
       });
       const parsed = parseDocument(
-        SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId,
+        docTypeId,
         xml,
         company,
         senderAddress
@@ -292,13 +308,19 @@ async function _previewDocumentImplementation(c: PreviewDocumentContext) {
         });
       }
 
-      const xml = messageLevelResponseToXML({
-        messageLevelResponse,
+      const docTypeId = input.doctypeId ?? MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(docTypeId, "messageLevelResponse");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      const xml = xmlHandler.handler.toXml({
+        document: messageLevelResponse,
         senderAddress,
         recipientAddress,
+        isDocumentValidationEnforced: true,
       });
       const parsed = parseDocument(
-        MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO.docTypeId,
+        docTypeId,
         xml,
         company,
         senderAddress

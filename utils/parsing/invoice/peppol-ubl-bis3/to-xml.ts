@@ -1,12 +1,7 @@
 import { XMLBuilder } from "fast-xml-parser";
-import type { Invoice } from "./schemas";
-import {
-  calculateLineAmount,
-  calculateTotals,
-  calculateVat,
-  extractTotals,
-} from "./calculations";
-import { parsePeppolAddress } from "../peppol-address";
+import type { Invoice } from "../schemas";
+import { calculateDocumentTotals } from "../calculations";
+import { parsePeppolAddress } from "../../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import { INVOICE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 
@@ -37,14 +32,10 @@ export function invoiceToUBL({
 }
 
 export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, isDocumentValidationEnforced }: { invoice: Invoice, supplierAddress: string, customerAddress: string, isDocumentValidationEnforced: boolean }) {
-  const totals = calculateTotals(invoice);
-  const vat = (invoice.vat && "subtotals" in invoice.vat && "totalVatAmount" in invoice.vat) ? invoice.vat : calculateVat({ document: invoice, isDocumentValidationEnforced });
-  const lines = invoice.lines.map((line) => ({
-    ...line,
-    netAmount: line.netAmount || calculateLineAmount(line),
-  }));
-
-  const extractedTotals = extractTotals(totals);
+  const { vat, lines, extractedTotals } = calculateDocumentTotals({
+    document: invoice,
+    isDocumentValidationEnforced,
+  });
 
   const supplier = parsePeppolAddress(supplierAddress);
   const customer = parsePeppolAddress(customerAddress);

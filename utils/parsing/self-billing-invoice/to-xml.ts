@@ -1,5 +1,5 @@
 import { SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
-import { prebuildInvoiceUBL } from "../invoice/to-xml";
+import { prebuildInvoiceUBL } from "../invoice/peppol-ubl-bis3/to-xml";
 import type { SelfBillingInvoice } from "./schemas";
 import { XMLBuilder } from "fast-xml-parser";
 

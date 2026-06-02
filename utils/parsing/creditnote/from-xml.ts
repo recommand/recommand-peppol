@@ -69,7 +69,10 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     country: getTextContent(sellerParty.PostalAddress?.Country?.IdentificationCode),
     vatNumber: sellerParty.PartyTaxScheme?.CompanyID ? getTextContent(sellerParty.PartyTaxScheme?.CompanyID) : null,
     enterpriseNumberScheme: getNullableTextContent(sellerParty.PartyLegalEntity?.CompanyID?.["@_schemeID"]),
-    enterpriseNumber: getNullableTextContent(sellerParty.PartyLegalEntity?.CompanyID?.["#text"]),
+    enterpriseNumber: getNullableTextContent(
+      sellerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
+        sellerParty.PartyLegalEntity?.CompanyID
+    ),
     email: getNullableTextContent(sellerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(sellerParty.Contact?.Telephone),
   };
@@ -89,7 +92,10 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     country: getTextContent(buyerParty.PostalAddress?.Country?.IdentificationCode),
     vatNumber: buyerParty.PartyTaxScheme?.CompanyID ? getTextContent(buyerParty.PartyTaxScheme?.CompanyID) : null,
     enterpriseNumberScheme: getNullableTextContent(buyerParty.PartyLegalEntity?.CompanyID?.["@_schemeID"]),
-    enterpriseNumber: getNullableTextContent(buyerParty.PartyLegalEntity?.CompanyID?.["#text"]),
+    enterpriseNumber: getNullableTextContent(
+      buyerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
+        buyerParty.PartyLegalEntity?.CompanyID
+    ),
     email: getNullableTextContent(buyerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(buyerParty.Contact?.Telephone),
   };

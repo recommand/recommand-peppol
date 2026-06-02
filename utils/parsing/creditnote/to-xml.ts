@@ -1,11 +1,6 @@
 import { XMLBuilder } from "fast-xml-parser";
 import type { CreditNote } from "./schemas";
-import {
-  calculateLineAmount,
-  calculateTotals,
-  calculateVat,
-  extractTotals,
-} from "../invoice/calculations";
+import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import { CREDIT_NOTE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
@@ -38,14 +33,10 @@ export function creditNoteToUBL(
 }
 
 export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddress, isDocumentValidationEnforced}: {creditNote: CreditNote, supplierAddress: string, customerAddress: string, isDocumentValidationEnforced: boolean}) {
-  const totals = calculateTotals(creditNote);
-  const vat = (creditNote.vat && "subtotals" in creditNote.vat && "totalVatAmount" in creditNote.vat) ? creditNote.vat : calculateVat({document: creditNote, isDocumentValidationEnforced});
-  const lines = creditNote.lines.map((line) => ({
-    ...line,
-    netAmount: line.netAmount || calculateLineAmount(line),
-  }));
-
-  const extractedTotals = extractTotals(totals);
+  const { vat, lines, extractedTotals } = calculateDocumentTotals({
+    document: creditNote,
+    isDocumentValidationEnforced,
+  });
 
   const supplier = parsePeppolAddress(supplierAddress);
   const buyer = parsePeppolAddress(customerAddress);

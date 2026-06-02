@@ -2,7 +2,6 @@ import { Server, type Context } from "@recommand/lib/api";
 import { describeRoute } from "hono-openapi";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
-import { invoiceToUBL } from "@peppol/utils/parsing/invoice/to-xml";
 import { sendDocumentSchema, DocumentType } from "utils/parsing/send-document";
 import {
   sendInvoiceSchema,
@@ -26,7 +25,6 @@ import {
   sendCreditNoteSchema,
   type CreditNote,
 } from "@peppol/utils/parsing/creditnote/schemas";
-import { creditNoteToUBL } from "@peppol/utils/parsing/creditnote/to-xml";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { simulateSendAs4 } from "@peppol/data/playground/simulate-ap";
 import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
@@ -39,12 +37,10 @@ import {
   sendSelfBillingInvoiceSchema,
   type SelfBillingInvoice,
 } from "@peppol/utils/parsing/self-billing-invoice/schemas";
-import { selfBillingInvoiceToUBL } from "@peppol/utils/parsing/self-billing-invoice/to-xml";
 import {
   sendSelfBillingCreditNoteSchema,
   type SelfBillingCreditNote,
 } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
-import { selfBillingCreditNoteToUBL } from "@peppol/utils/parsing/self-billing-creditnote/to-xml";
 import { sendOutgoingDocumentNotifications } from "@peppol/data/send-document-notifications";
 import { z } from "zod";
 import { publishEvent } from "@core/data/rules/events";
@@ -68,13 +64,16 @@ import {
   messageLevelResponseSchema,
   type MessageLevelResponse,
 } from "@peppol/utils/parsing/message-level-response/schemas";
-import { messageLevelResponseToXML } from "@peppol/utils/parsing/message-level-response/to-xml";
 import { ulid } from "ulid";
 import { generateAndAttachPdf } from "@peppol/utils/pdf-attachment-helper";
 import {
   type ParsedDocument as FilenameParsedDocument,
 } from "@peppol/utils/document-filename";
 import { getTransmittedDocumentSearchFields } from "@peppol/utils/transmitted-document-search";
+import {
+  getDocumentXmlHandlerByDocTypeId,
+  resolveDocumentXmlHandler,
+} from "@peppol/utils/parsing/document-handlers";
 
 const server = new Server();
 
@@ -173,7 +172,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
     let type: SupportedDocumentType = "unknown";
     let probableType: SupportedDocumentType = "unknown";
     let parsedDocument: FilenameParsedDocument | null = null;
-    let doctypeId: string = INVOICE_DOCUMENT_TYPE_INFO.docTypeId;
+    let doctypeId: string = "";
 
     // Get senderId, countryC1 from company
     const company = c.var.company;
@@ -224,29 +223,34 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           representation: "date",
         });
       }
-      let ublInvoice = invoiceToUBL({
-        invoice,
+      doctypeId = input.doctypeId ?? INVOICE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "invoice");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      let invoiceXml = xmlHandler.handler.toXml({
+        document: invoice,
         senderAddress,
         recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
         isDocumentValidationEnforced: true,
       });
-      let parsed = parseDocument(doctypeId, ublInvoice, company, senderAddress);
+      let parsed = parseDocument(doctypeId, invoiceXml, company, senderAddress);
 
       if (input.pdfGeneration?.enabled) {
         const parsedForPdf = (parsed.parsedDocument as Invoice) ?? invoice;
         invoice.attachments = await generateAndAttachPdf(transmittedDocumentId, "invoice", parsedForPdf, invoice.attachments, customPdfFilename);
 
-        ublInvoice = invoiceToUBL({
-          invoice,
+        invoiceXml = xmlHandler.handler.toXml({
+          document: invoice,
           senderAddress,
           recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
           isDocumentValidationEnforced: true,
         });
-        parsed = parseDocument(doctypeId, ublInvoice, company, senderAddress);
+        parsed = parseDocument(doctypeId, invoiceXml, company, senderAddress);
       }
 
       if (!isRecipientNull) {
-        xmlDocument = ublInvoice;
+        xmlDocument = invoiceXml;
       }
       type = "invoice";
 
@@ -289,16 +293,20 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           representation: "date",
         });
       }
-      doctypeId = CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId;
-      let ublCreditNote = creditNoteToUBL({
-        creditNote,
+      doctypeId = input.doctypeId ?? CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "creditNote");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      let creditNoteXml = xmlHandler.handler.toXml({
+        document: creditNote,
         senderAddress,
         recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
         isDocumentValidationEnforced: true,
       });
       let parsed = parseDocument(
         doctypeId,
-        ublCreditNote,
+        creditNoteXml,
         company,
         senderAddress
       );
@@ -308,22 +316,22 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           (parsed.parsedDocument as CreditNote) ?? creditNote;
         creditNote.attachments = await generateAndAttachPdf(transmittedDocumentId, "creditNote", parsedForPdf, creditNote.attachments, customPdfFilename);
 
-        ublCreditNote = creditNoteToUBL({
-          creditNote,
+        creditNoteXml = xmlHandler.handler.toXml({
+          document: creditNote,
           senderAddress,
           recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
           isDocumentValidationEnforced: true,
         });
         parsed = parseDocument(
           doctypeId,
-          ublCreditNote,
+          creditNoteXml,
           company,
           senderAddress
         );
       }
 
       if (!isRecipientNull) {
-        xmlDocument = ublCreditNote;
+        xmlDocument = creditNoteXml;
       }
       type = "creditNote";
 
@@ -369,31 +377,35 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           representation: "date",
         });
       }
-      doctypeId = SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO.docTypeId;
-      let ublInvoice = selfBillingInvoiceToUBL({
-        selfBillingInvoice: invoice,
+      doctypeId = input.doctypeId ?? SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "selfBillingInvoice");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      let invoiceXml = xmlHandler.handler.toXml({
+        document: invoice,
         senderAddress,
         recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
         isDocumentValidationEnforced: true,
       });
-      let parsed = parseDocument(doctypeId, ublInvoice, company, senderAddress);
+      let parsed = parseDocument(doctypeId, invoiceXml, company, senderAddress);
 
       if (input.pdfGeneration?.enabled) {
         const parsedForPdf =
           (parsed.parsedDocument as SelfBillingInvoice) ?? invoice;
         invoice.attachments = await generateAndAttachPdf(transmittedDocumentId, "selfBillingInvoice", parsedForPdf, invoice.attachments, customPdfFilename);
 
-        ublInvoice = selfBillingInvoiceToUBL({
-          selfBillingInvoice: invoice,
+        invoiceXml = xmlHandler.handler.toXml({
+          document: invoice,
           senderAddress,
           recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
           isDocumentValidationEnforced: true,
         });
-        parsed = parseDocument(doctypeId, ublInvoice, company, senderAddress);
+        parsed = parseDocument(doctypeId, invoiceXml, company, senderAddress);
       }
 
       if (!isRecipientNull) {
-        xmlDocument = ublInvoice;
+        xmlDocument = invoiceXml;
       }
       type = "selfBillingInvoice";
 
@@ -438,16 +450,20 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           representation: "date",
         });
       }
-      doctypeId = SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId;
-      let ublSelfBillingCreditNote = selfBillingCreditNoteToUBL({
-        selfBillingCreditNote,
+      doctypeId = input.doctypeId ?? SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "selfBillingCreditNote");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      let selfBillingCreditNoteXml = xmlHandler.handler.toXml({
+        document: selfBillingCreditNote,
         senderAddress,
         recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
         isDocumentValidationEnforced: true,
       });
       let parsed = parseDocument(
         doctypeId,
-        ublSelfBillingCreditNote,
+        selfBillingCreditNoteXml,
         company,
         senderAddress
       );
@@ -458,22 +474,22 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           selfBillingCreditNote;
         selfBillingCreditNote.attachments = await generateAndAttachPdf(transmittedDocumentId, "selfBillingCreditNote", parsedForPdf, selfBillingCreditNote.attachments, customPdfFilename);
 
-        ublSelfBillingCreditNote = selfBillingCreditNoteToUBL({
-          selfBillingCreditNote,
+        selfBillingCreditNoteXml = xmlHandler.handler.toXml({
+          document: selfBillingCreditNote,
           senderAddress,
           recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
           isDocumentValidationEnforced: true,
         });
         parsed = parseDocument(
           doctypeId,
-          ublSelfBillingCreditNote,
+          selfBillingCreditNoteXml,
           company,
           senderAddress
         );
       }
 
       if (!isRecipientNull) {
-        xmlDocument = ublSelfBillingCreditNote;
+        xmlDocument = selfBillingCreditNoteXml;
       }
       type = "selfBillingCreditNote";
 
@@ -515,13 +531,18 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         );
       }
 
-      xmlDocument = messageLevelResponseToXML({
-        messageLevelResponse,
+      doctypeId = input.doctypeId ?? MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "messageLevelResponse");
+      if (!xmlHandler.ok) {
+        return c.json(actionFailure(xmlHandler.message), 400);
+      }
+      xmlDocument = xmlHandler.handler.toXml({
+        document: messageLevelResponse,
         senderAddress,
         recipientAddress: recipientAddress!,
+        isDocumentValidationEnforced: true,
       });
       type = "messageLevelResponse";
-      doctypeId = MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO.docTypeId;
 
       const parsed = parseDocument(
         doctypeId,
@@ -599,7 +620,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         return c.json(
           actionFailure({
             root: [
-              "Document validation failed. Please ensure your document complies with EN16931 and PEPPOL BIS 3.0 requirements.",
+              "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
             ],
             ...errors,
           }),
@@ -622,7 +643,9 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         if (type === "unknown" && probableType !== "unknown") {
           typeToInspect = probableType;
         }
-        processId = getDocumentTypeInfo(typeToInspect).processId;
+        processId =
+          getDocumentXmlHandlerByDocTypeId(doctypeId)?.processId ??
+          getDocumentTypeInfo(typeToInspect).processId;
       } catch (error) {
         console.error("Failed to get process id:", error);
         sendSystemAlert(

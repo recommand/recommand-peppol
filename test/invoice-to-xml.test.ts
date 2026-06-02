@@ -1,11 +1,18 @@
 import { describe, it, expect } from "bun:test";
-import { invoiceToUBL } from "../utils/parsing/invoice/to-xml";
+import { invoiceToUBL } from "../utils/parsing/invoice/peppol-ubl-bis3/to-xml";
+import { invoiceToCII } from "../utils/parsing/invoice/cii-d22b/to-xml";
 import type { Invoice } from "../utils/parsing/invoice/schemas";
-import { parseInvoiceFromXML } from "@peppol/utils/parsing/invoice/from-xml";
+import { parseInvoiceFromXML } from "@peppol/utils/parsing/invoice/peppol-ubl-bis3/from-xml";
+import { parseInvoiceFromCII } from "@peppol/utils/parsing/invoice/cii-d22b/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
+import Decimal from "decimal.js";
 
-async function checkInvoiceXML(xml: string, invoice: Invoice, testName: string = "invoice") {
+function expectDecimalEqual(actual: string | null | undefined, expected: string) {
+  expect(new Decimal(actual ?? "0").equals(expected)).toBe(true);
+}
+
+function checkUBLInvoiceXML(xml: string, invoice: Invoice) {
   expect(xml).toBeDefined();
   expect(typeof xml).toBe("string");
   expect(xml.length).toBeGreaterThan(0);
@@ -25,12 +32,76 @@ async function checkInvoiceXML(xml: string, invoice: Invoice, testName: string =
   }
   expect(xml).toContain(String(invoice.seller.name));
   expect(xml).toContain(String(invoice.buyer.name));
+}
 
-  await validateXml(xml, testName);
+function checkCIIInvoiceXML(xml: string, invoice: Invoice) {
+  expect(xml).toBeDefined();
+  expect(typeof xml).toBe("string");
+  expect(xml.length).toBeGreaterThan(0);
+
+  expect(xml).toContain("<CrossIndustryInvoice");
+  expect(xml).toContain(
+    'xmlns="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"'
+  );
+
+  expect(xml).toContain(String(invoice.invoiceNumber));
+  expect(xml).toContain(String(invoice.issueDate).replaceAll("-", ""));
+
+  if (invoice.dueDate) {
+    expect(xml).toContain(String(invoice.dueDate).replaceAll("-", ""));
+  }
+
+  if (invoice.currency) {
+    expect(xml).toContain(String(invoice.currency));
+  }
+  expect(xml).toContain(String(invoice.seller.name));
+  expect(xml).toContain(String(invoice.buyer.name));
+}
+
+async function checkInvoiceXML({
+  invoice,
+  senderAddress,
+  recipientAddress,
+  testName = "invoice",
+  isDocumentValidationEnforced = false,
+}: {
+  invoice: Invoice;
+  senderAddress: string;
+  recipientAddress: string;
+  testName?: string;
+  isDocumentValidationEnforced?: boolean;
+}) {
+  const ublXml = invoiceToUBL({
+    invoice,
+    senderAddress,
+    recipientAddress,
+    isDocumentValidationEnforced,
+  });
+  const ciiXml = invoiceToCII({
+    invoice,
+    senderAddress,
+    recipientAddress,
+    isDocumentValidationEnforced,
+  });
+
+  checkUBLInvoiceXML(ublXml, invoice);
+  checkCIIInvoiceXML(ciiXml, invoice);
+
+  await Promise.all([
+    validateXml(ublXml, `${testName} UBL`),
+    validateXml(ciiXml, `${testName} CII D22B`),
+  ]);
+
+  const parsedUbl = parseInvoiceFromXML(ublXml);
+  const parsedCii = parseInvoiceFromCII(ciiXml);
+
+  expect(parsedCii).toEqual(parsedUbl);
+
+  return { ublXml, ciiXml, parsedInvoice: parsedUbl };
 }
 
 
-describe("invoiceToUBL", () => {
+describe("invoice XML generation", () => {
   it("should convert Factuur 25607246 invoice to XML", async () => {
     const invoice: Invoice = {
       invoiceNumber: "1234",
@@ -121,11 +192,12 @@ describe("invoiceToUBL", () => {
     const senderAddress = "0208:0428643097";
     const recipientAddress = "0208:0598726857";
 
-    const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-
-    await checkInvoiceXML(xml, invoice, "Factuur 25607246 invoice");
-
-    const parsed = parseInvoiceFromXML(xml);
+    const { parsedInvoice: parsed } = await checkInvoiceXML({
+      invoice,
+      senderAddress,
+      recipientAddress,
+      testName: "Factuur 25607246 invoice",
+    });
 
     expect(parsed.invoiceNumber).toBe(invoice.invoiceNumber);
     expect(parsed.issueDate).toBe(invoice.issueDate);
@@ -173,6 +245,178 @@ describe("invoiceToUBL", () => {
       ...overrides,
     };
   }
+
+  describe("complex invoice payload", () => {
+    it("should round-trip a complex invoice with references, delivery, negative line and item metadata", async () => {
+      const invoice = createBaseInvoice({
+        invoiceNumber: "INV-TEST-001",
+        buyerReference: "PO123",
+        purchaseOrderReference: "PO1234",
+        salesOrderReference: "SO1234",
+        currency: "CAD",
+        issueDate: "2025-06-30",
+        dueDate: "2025-07-30",
+        buyer: {
+          vatNumber: "BE0771287976",
+          enterpriseNumber: "1234",
+          name: "Kobe Indemans",
+          street: "Nieuwdorp 5",
+          street2: "",
+          city: "Peer",
+          postalZone: "3990",
+          country: "BE",
+          email: "kobe@example.com",
+          phone: "0123456",
+        },
+        despatchReference: "DE-123",
+        delivery: {
+          date: "2025-10-21",
+          locationIdentifier: {
+            scheme: "0208",
+            identifier: "0659689080",
+          },
+          location: {
+            street: "straat 1",
+            city: "Peer",
+            postalZone: "3990",
+            country: "BE",
+          },
+          recipientName: "Company Ltd.",
+        },
+        paymentMeans: [
+          {
+            name: "Belfius",
+            paymentMethod: "other",
+            reference: "INV-TEST-001",
+            iban: "BE92731060018723",
+            financialInstitutionBranch: "KREDBEB",
+          },
+        ],
+        paymentTerms: {
+          note: "Net 30",
+        },
+        lines: [
+          {
+            id: "a1",
+            name: "Test",
+            description: "Test",
+            buyersId: "BID-001",
+            sellersId: "CS-001",
+            standardId: {
+              scheme: "0160",
+              identifier: "10986700",
+            },
+            originCountry: "BE",
+            quantity: "-1.00",
+            unitCode: "HUR",
+            netPriceAmount: "1.00",
+            netAmount: "-1.00",
+            vat: {
+              category: "S",
+              percentage: "21.00",
+            },
+            orderLineReference: "ORDER_LINE_REF_01",
+            documentReference: "ORIGINAL-INVOICE-01",
+            commodityClassifications: [
+              {
+                scheme: "SN",
+                schemeVersion: "1",
+                value: "123456",
+              },
+              {
+                scheme: "SN",
+                value: "1234567",
+              },
+            ],
+            additionalItemProperties: [
+              {
+                name: "Color",
+                value: "Green",
+              },
+              {
+                name: "Size",
+                value: "XL",
+              },
+            ],
+          },
+          {
+            name: "Test",
+            note: "Here's your discount!",
+            description: "Test",
+            buyersId: "BID-001",
+            sellersId: "CS-001",
+            standardId: {
+              scheme: "0160",
+              identifier: "10986700",
+            },
+            originCountry: "BE",
+            quantity: "20.00",
+            unitCode: "HUR",
+            netPriceAmount: "1.00",
+            netAmount: "22.00",
+            vat: {
+              category: "S",
+              percentage: "21.00",
+            },
+            discounts: [
+              {
+                amount: "1.00",
+                reasonCode: "95",
+              },
+            ],
+            surcharges: [
+              {
+                amount: "3.00",
+                reason: "TEST",
+              },
+            ],
+          },
+          {
+            name: "Test",
+            quantity: "1.00",
+            unitCode: "C62",
+            netPriceAmount: "0.00",
+            netAmount: "0.00",
+            vat: {
+              category: "E",
+              percentage: "0.00",
+            },
+          },
+        ],
+        vat: {
+          exemptionReason: "Test",
+        } as any,
+      });
+
+      const senderAddress = "0208:0428643097";
+      const recipientAddress = "0208:0598726857";
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "complex invoice payload",
+      });
+
+      expect(parsed.invoiceNumber).toBe("INV-TEST-001");
+      expect(parsed.currency).toBe("CAD");
+      expect(parsed.buyer.name).toBe("Kobe Indemans");
+      expect(parsed.purchaseOrderReference).toBe("PO1234");
+      expect(parsed.salesOrderReference).toBe("SO1234");
+      expect(parsed.despatchReference).toBe("DE-123");
+      expect(parsed.delivery?.recipientName).toBe("Company Ltd.");
+      expect(parsed.paymentMeans?.[0].paymentMethod).toBe("other");
+      expect(parsed.lines.length).toBe(3);
+      expectDecimalEqual(parsed.lines[0].quantity, "-1.00");
+      expectDecimalEqual(parsed.lines[0].netAmount, "-1.00");
+      expect(parsed.lines[0].commodityClassifications?.length).toBe(2);
+      expect(parsed.lines[0].additionalItemProperties?.length).toBe(2);
+      expect(parsed.lines[1].note).toBe("Here's your discount!");
+      expect(parsed.lines[1].discounts?.[0].reasonCode).toBe("95");
+      expect(parsed.lines[1].surcharges?.[0].reason).toBe("TEST");
+      expect(parsed.lines[2].vat.category).toBe("E");
+      expect(parsed.vat?.subtotals.some((subtotal) => subtotal.exemptionReason === "Test")).toBe(true);
+    });
+  });
 
 
   describe("line-level discounts and surcharges", () => {
@@ -224,11 +468,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await checkInvoiceXML(xml, invoice, "line-level discounts and surcharges");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "line-level discounts and surcharges",
+      });
 
       expect(parsed.lines.length).toBe(2);
 
@@ -291,11 +536,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "line totals preservation");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "line totals preservation",
+      });
 
       expect(parsed.lines[0].netAmount).toBe("190.00");
       expect(parseFloat(parsed.lines[0].quantity)).toBe(2.5);
@@ -353,11 +599,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "global discounts and surcharges");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "global discounts and surcharges",
+      });
 
       expect(parsed.discounts?.length).toBe(2);
       expect(parsed.discounts?.[0].amount).toBe("10.00");
@@ -451,11 +698,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "combined line-level and global discounts/surcharges");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "combined line-level and global discounts/surcharges",
+      });
 
       expect(parsed.lines.length).toBe(2);
 
@@ -540,11 +788,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "document totals preservation with line and global discounts/surcharges");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "document totals preservation with line and global discounts/surcharges",
+      });
 
       expect(parsed.totals).toBeDefined();
       expect(parsed.totals?.linesAmount).toBeDefined();
@@ -612,11 +861,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "totals with different VAT rates on discounts and surcharges");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "totals with different VAT rates on discounts and surcharges",
+      });
 
       expect(parsed.totals?.discountAmount).toBeDefined();
       expect(parsed.totals?.surchargeAmount).toBeDefined();
@@ -675,11 +925,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "rounding scenarios with discounts and surcharges");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "rounding scenarios with discounts and surcharges",
+      });
 
       expect(parsed.lines[0].discounts?.length).toBe(2);
       expect(parsed.lines[0].quantity).toBe("1.333");
@@ -723,11 +974,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "invoice with only line discounts");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "invoice with only line discounts",
+      });
 
       expect(parsed.lines[0].discounts?.length).toBe(1);
       expect(parsed.lines[0].discounts?.[0].amount).toBe("10.00");
@@ -761,11 +1013,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "invoice with only line surcharges");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "invoice with only line surcharges",
+      });
 
       expect(parsed.lines[0].surcharges?.length).toBe(1);
       expect(parsed.lines[0].surcharges?.[0].amount).toBe("5.00");
@@ -816,11 +1069,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "invoice with reasonCode only");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "invoice with reasonCode only",
+      });
 
       expect(parsed.lines[0].discounts?.[0].reasonCode).toBe("95");
       expect(parsed.lines[0].surcharges?.[0].reasonCode).toBe("FC");
@@ -928,25 +1182,21 @@ describe("invoiceToUBL", () => {
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
 
-      const xml1 = invoiceToUBL({
+      const { parsedInvoice: parsed1 } = await checkInvoiceXML({
         invoice: invoiceWithPrecalculatedVat,
         senderAddress,
         recipientAddress,
+        testName: "invoice with precalculated VAT",
         isDocumentValidationEnforced: true,
       });
 
-      const xml2 = invoiceToUBL({
+      const { parsedInvoice: parsed2 } = await checkInvoiceXML({
         invoice: invoiceWithSimplifiedVat,
         senderAddress,
         recipientAddress,
+        testName: "invoice with simplified VAT",
         isDocumentValidationEnforced: true,
       });
-
-      await validateXml(xml1, "invoice with precalculated VAT");
-      await validateXml(xml2, "invoice with simplified VAT");
-
-      const parsed1 = parseInvoiceFromXML(xml1);
-      const parsed2 = parseInvoiceFromXML(xml2);
 
       expect(parsed1.totals?.taxExclusiveAmount).toBe("850.00");
       expect(parsed1.totals?.taxExclusiveAmount).toBe(parsed2.totals?.taxExclusiveAmount);
@@ -1065,11 +1315,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "VAT totals with multiple rates including exempt category");
-      
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "VAT totals with multiple rates including exempt category",
+      });
 
       expect(parsed.vat).toBeDefined();
       expect(parsed.vat?.totalVatAmount).toBe("505.68");
@@ -1122,9 +1373,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "address mapping");
+      const { ublXml: xml, parsedInvoice } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "address mapping",
+      });
       
       const parser = new XMLParser({
         ignoreAttributes: false,
@@ -1140,7 +1394,6 @@ describe("invoiceToUBL", () => {
       expect(`${supplierEndpointId["@_schemeID"]}:${supplierEndpointId["#text"]}`).toBe(senderAddress);
       expect(`${customerEndpointId["@_schemeID"]}:${customerEndpointId["#text"]}`).toBe(recipientAddress);
 
-      const parsedInvoice = parseInvoiceFromXML(xml);
       expect(parsedInvoice.seller.name).toBe(invoice.seller.name);
       expect(parsedInvoice.buyer.name).toBe(invoice.buyer.name);
 
@@ -1191,9 +1444,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "enterprise number");
+      const { ublXml: xml, parsedInvoice } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "enterprise number",
+      });
       
       expect(xml).toContain('<cbc:CompanyID>1234567894</cbc:CompanyID>');
       expect(xml).toContain('<cbc:CompanyID>9876543210</cbc:CompanyID>');
@@ -1212,7 +1468,6 @@ describe("invoiceToUBL", () => {
       expect(supplierEnterpriseNumber).toBe("1234567894");
       expect(customerEnterpriseNumber).toBe("9876543210");
 
-      const parsedInvoice = parseInvoiceFromXML(xml);
       expect(parsedInvoice.seller.name).toBe(invoice.seller.name);
       expect(parsedInvoice.buyer.name).toBe(invoice.buyer.name);
 
@@ -1261,9 +1516,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "missing enterprise number");
+      const { ublXml: xml } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "missing enterprise number",
+      });
       
       await sendDocumentViaAPI(invoice, "invoice", recipientAddress);
     });
@@ -1327,15 +1585,17 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false});
-      
-      await validateXml(xml, "VAT category O with exemption reason");
+      const { ublXml: xml, parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "VAT category O with exemption reason",
+      });
       
       expect(xml).toContain('cbc:ID>O</cbc:ID>');
       expect(xml).toContain("Not subject to VAT according to local legislation");
       expect(xml).toContain('<cbc:CompanyID>1234567894</cbc:CompanyID>');
 
-      const parsed = parseInvoiceFromXML(xml);
       expect(parsed.lines[0].vat.category).toBe("O");
       expect(parsed.lines[0].vat.percentage).toBe("0.00");
       expect(parsed.vat?.subtotals.length).toBe(1);
@@ -1418,12 +1678,16 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({ invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
+      await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "VAT category O document-level allowance BR-O-06",
+      });
 
       // BR-O-06: allowance with category O must not have a Percent element
       // BR-O-07: charge with category O must not have a Percent element
       // We can verify by ensuring validation passes (both rules are fatal)
-      await validateXml(xml, "VAT category O document-level allowance BR-O-06");
     });
   });
 
@@ -1450,12 +1714,15 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({ invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
+      const { ublXml: xml, parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "baseQuantity greater than 1",
+      });
 
       expect(xml).toContain("BaseQuantity");
       expect(xml).toContain("51.98");
-
-      const parsed = parseInvoiceFromXML(xml);
 
       expect(parsed.lines[0].netPriceAmount).toBe("51.98");
       expect(parsed.lines[0].baseQuantity).toBe("10");
@@ -1483,11 +1750,14 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({ invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
+      const { ublXml: xml, parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "baseQuantity equal to 1",
+      });
 
       expect(xml).not.toContain("BaseQuantity");
-
-      const parsed = parseInvoiceFromXML(xml);
 
       expect(parsed.lines[0].netPriceAmount).toBe("10");
       expect(parsed.lines[0].baseQuantity).toBe("1");
@@ -1529,11 +1799,12 @@ describe("invoiceToUBL", () => {
 
       const senderAddress = "0208:0428643097";
       const recipientAddress = "0208:0598726857";
-      const xml = invoiceToUBL({ invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-      await validateXml(xml, "baseQuantity round-trip");
-
-      const parsed = parseInvoiceFromXML(xml);
+      const { parsedInvoice: parsed } = await checkInvoiceXML({
+        invoice,
+        senderAddress,
+        recipientAddress,
+        testName: "baseQuantity round-trip",
+      });
 
       expect(parsed.lines[0].netPriceAmount).toBe("73.47");
       expect(parsed.lines[0].baseQuantity).toBe("10");
@@ -1548,4 +1819,3 @@ describe("invoiceToUBL", () => {
     });
   });
 });
-

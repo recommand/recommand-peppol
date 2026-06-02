@@ -105,7 +105,7 @@ export const sendDocumentSchema = z.object({
   ]),
   doctypeId: z.string().optional().openapi({
     description:
-      'The document type identifier. Not required, only used when documentType is "xml". For supported document types, the doctypeId can be detected automatically from your XML document, if that\'s not the case you can provide it manually.',
+      "The document type identifier. For JSON documents this defaults to the standard Peppol BIS 3 UBL document type for the selected documentType. For raw XML documents it can be detected automatically where supported.",
     example:
       "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
   }),

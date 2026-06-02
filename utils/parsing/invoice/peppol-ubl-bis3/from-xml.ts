@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
-import { invoiceSchema, type Invoice } from "./schemas";
-import { getTextContent, getNumberContent, getPercentage, getNullableTextContent, getNullableNumberContent } from "../xml-helpers";
-import type { SelfBillingInvoice } from "../self-billing-invoice/schemas";
+import { invoiceSchema, type Invoice } from "../schemas";
+import { getTextContent, getNumberContent, getPercentage, getNullableTextContent, getNullableNumberContent } from "../../xml-helpers";
+import type { SelfBillingInvoice } from "../../self-billing-invoice/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 
 const parser = new XMLParser({
@@ -65,7 +65,10 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     country: getTextContent(sellerParty.PostalAddress?.Country?.IdentificationCode),
     vatNumber: sellerParty.PartyTaxScheme?.CompanyID ? getTextContent(sellerParty.PartyTaxScheme?.CompanyID) : null,
     enterpriseNumberScheme: getNullableTextContent(sellerParty.PartyLegalEntity?.CompanyID?.["@_schemeID"]),
-    enterpriseNumber: getNullableTextContent(sellerParty.PartyLegalEntity?.CompanyID?.["#text"]),
+    enterpriseNumber: getNullableTextContent(
+      sellerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
+        sellerParty.PartyLegalEntity?.CompanyID
+    ),
     email: getNullableTextContent(sellerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(sellerParty.Contact?.Telephone),
   };
@@ -85,7 +88,10 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     country: getTextContent(buyerParty.PostalAddress?.Country?.IdentificationCode),
     vatNumber: buyerParty.PartyTaxScheme?.CompanyID ? getTextContent(buyerParty.PartyTaxScheme?.CompanyID) : null,
     enterpriseNumberScheme: getNullableTextContent(buyerParty.PartyLegalEntity?.CompanyID?.["@_schemeID"]),
-    enterpriseNumber: getNullableTextContent(buyerParty.PartyLegalEntity?.CompanyID?.["#text"]),
+    enterpriseNumber: getNullableTextContent(
+      buyerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
+        buyerParty.PartyLegalEntity?.CompanyID
+    ),
     email: getNullableTextContent(buyerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(buyerParty.Contact?.Telephone),
   };

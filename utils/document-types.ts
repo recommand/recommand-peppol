@@ -70,6 +70,13 @@ export const MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     processId: "urn:fdc:peppol.eu:poacc:bis:mlr:3"
 };
 
+export const CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "invoice",
+    title: "France CII Invoice CIUS",
+    docTypeId: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::D22B",
+    processId: "urn:peppol:france:billing:regulated"
+};
+
 export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     INVOICE_DOCUMENT_TYPE_INFO,
     CREDIT_NOTE_DOCUMENT_TYPE_INFO,
@@ -79,6 +86,7 @@ export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
     INVOICE_RESPONSE_DOCUMENT_TYPE_INFO,
     MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
 ];
 
 export const BILLING_DOCUMENT_TYPE_INFO: DocumentTypeInfo[] = [

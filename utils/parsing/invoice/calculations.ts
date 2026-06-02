@@ -204,6 +204,29 @@ export function calculateVat({document, isDocumentValidationEnforced}: {document
   return { totalVatAmount, subtotals };
 } 
 
+// Calculates the totals at every level of a document: the net amount per line,
+// the VAT subtotals/total, and the extracted document-level monetary totals.
+export function calculateDocumentTotals({
+  document,
+  isDocumentValidationEnforced,
+}: {
+  document: Invoice | CreditNote;
+  isDocumentValidationEnforced: boolean;
+}) {
+  const totals = calculateTotals(document);
+  const vat =
+    document.vat && "subtotals" in document.vat && "totalVatAmount" in document.vat
+      ? document.vat
+      : calculateVat({ document, isDocumentValidationEnforced });
+  const lines = document.lines.map((line) => ({
+    ...line,
+    netAmount: line.netAmount || calculateLineAmount(line),
+  }));
+  const extractedTotals = extractTotals(totals);
+
+  return { vat, lines, extractedTotals };
+}
+
 export function isTaxExemptionReasonRequired(category: VatCategory): boolean {
   // AE: VAT reverse charge
   // E: Exempt from VAT
