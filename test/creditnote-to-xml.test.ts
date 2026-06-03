@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
-import { creditNoteToUBL } from "../utils/parsing/creditnote/to-xml";
+import { creditNoteToUBL } from "../utils/parsing/creditnote/peppol-ubl-bis3/to-xml";
 import type { CreditNote } from "../utils/parsing/creditnote/schemas";
-import { parseCreditNoteFromXML } from "@peppol/utils/parsing/creditnote/from-xml";
+import { parseCreditNoteFromXML } from "@peppol/utils/parsing/creditnote/peppol-ubl-bis3/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
 

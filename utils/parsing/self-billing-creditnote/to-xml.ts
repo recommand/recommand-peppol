@@ -1,5 +1,5 @@
 import { SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
-import { prebuildCreditNoteUBL } from "../creditnote/to-xml";
+import { prebuildCreditNoteUBL } from "../creditnote/peppol-ubl-bis3/to-xml";
 import type { SelfBillingCreditNote } from "./schemas";
 import { XMLBuilder } from "fast-xml-parser";
 

@@ -1,7 +1,7 @@
 import { invoiceToUBL } from "./invoice/peppol-ubl-bis3/to-xml";
 import { parseInvoiceFromXML } from "./invoice/peppol-ubl-bis3/from-xml";
-import { creditNoteToUBL } from "./creditnote/to-xml";
-import { parseCreditNoteFromXML } from "./creditnote/from-xml";
+import { creditNoteToUBL } from "./creditnote/peppol-ubl-bis3/to-xml";
+import { parseCreditNoteFromXML } from "./creditnote/peppol-ubl-bis3/from-xml";
 import { selfBillingInvoiceToUBL } from "./self-billing-invoice/to-xml";
 import { parseSelfBillingInvoiceFromXML } from "./self-billing-invoice/from-xml";
 import { selfBillingCreditNoteToUBL } from "./self-billing-creditnote/to-xml";

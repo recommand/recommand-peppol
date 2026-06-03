@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
-import { creditNoteSchema, type CreditNote } from "./schemas";
-import { getTextContent, getNumberContent, getPercentage, getNullableTextContent, getNullableNumberContent } from "../xml-helpers";
-import type { SelfBillingCreditNote } from "../self-billing-creditnote/schemas";
+import { creditNoteSchema, type CreditNote } from "../schemas";
+import { getTextContent, getNumberContent, getPercentage, getNullableTextContent, getNullableNumberContent } from "../../xml-helpers";
+import type { SelfBillingCreditNote } from "../../self-billing-creditnote/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 
 const parser = new XMLParser({

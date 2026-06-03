@@ -1,7 +1,7 @@
 import { XMLBuilder } from "fast-xml-parser";
-import type { CreditNote } from "./schemas";
-import { calculateDocumentTotals } from "../invoice/calculations";
-import { parsePeppolAddress } from "../peppol-address";
+import type { CreditNote } from "../schemas";
+import { calculateDocumentTotals } from "../../invoice/calculations";
+import { parsePeppolAddress } from "../../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import { CREDIT_NOTE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 
