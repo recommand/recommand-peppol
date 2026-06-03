@@ -283,12 +283,6 @@ function lineItem(document: BillingDocument, item: BillingDocument["lines"][numb
           "ram:LineID": item.orderLineReference,
         },
       }),
-      ...(item.documentReference && {
-        "ram:AdditionalReferencedDocument": {
-          "ram:IssuerAssignedID": item.documentReference,
-          "ram:TypeCode": "130",
-        },
-      }),
       "ram:NetPriceProductTradePrice": {
         "ram:ChargeAmount": amount(item.netPriceAmount, document.currency),
         ...(item.baseQuantity && item.baseQuantity !== "1" && {
@@ -330,6 +324,12 @@ function lineItem(document: BillingDocument, item: BillingDocument["lines"][numb
       "ram:SpecifiedTradeSettlementLineMonetarySummation": {
         "ram:LineTotalAmount": amount(item.netAmount, document.currency),
       },
+      ...(item.documentReference && {
+        "ram:AdditionalReferencedDocument": {
+          "ram:IssuerAssignedID": item.documentReference,
+          "ram:TypeCode": "130",
+        },
+      }),
     },
   };
 }

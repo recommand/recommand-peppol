@@ -220,7 +220,9 @@ export function parseBillingDocumentFromCII(xml: string) {
       const lineSettlement = line.SpecifiedLineTradeSettlement;
       const lineCharges = lineSettlement?.SpecifiedTradeAllowanceCharge || [];
       const lineTax = first(lineSettlement?.ApplicableTradeTax);
-      const lineReference = first(lineAgreement?.AdditionalReferencedDocument);
+      const lineReference =
+        first(lineSettlement?.AdditionalReferencedDocument) ??
+        first(lineAgreement?.AdditionalReferencedDocument);
 
       return {
         id: getTextContent(line.AssociatedDocumentLineDocument?.LineID),
