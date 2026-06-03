@@ -1,8 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { z } from "zod";
-import { DOCUMENT_XML_HANDLERS } from "../utils/parsing/document-handlers";
+import {
+  DOCUMENT_XML_HANDLERS,
+  type DocumentXmlHandler,
+} from "../utils/parsing/document-handlers";
 import type { SupportedDocumentType } from "../utils/document-types";
 import type { ParsedDocument } from "../utils/document-filename";
+import { FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO } from "../utils/document-types";
+import { resolveOutgoingDocumentXmlHandler } from "../utils/outgoing-document-payload";
 import { creditNoteSchema, type CreditNote } from "../utils/parsing/creditnote/schemas";
 import { invoiceSchema, type Invoice } from "../utils/parsing/invoice/schemas";
 import {
@@ -144,13 +149,36 @@ function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
   return schema.parse(normalizeBillingDocument(generated as BillingDocument)) as ParsedDocument;
 }
 
+function handlersForType(type: SchemaDocumentType): DocumentXmlHandler[] {
+  const handlers = DOCUMENT_XML_HANDLERS.filter((handler) => handler.type === type);
+  if (type !== "invoice") {
+    return handlers;
+  }
+
+  const facturXResolution = resolveOutgoingDocumentXmlHandler(
+    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    "invoice"
+  );
+  if (!facturXResolution.ok) {
+    throw new Error(facturXResolution.message);
+  }
+
+  return [
+    ...handlers,
+    {
+      ...facturXResolution.resolution.handler,
+      title: "France Factur-X CII Invoice",
+    },
+  ];
+}
+
 // Types that must round-trip through both their UBL and CII (D22B) handlers.
 const minimumHandlerCount: Partial<Record<SchemaDocumentType, number>> = {
-  invoice: 2,
+  invoice: 3,
   creditNote: 2,
 };
 
-function roundTripHandler(handler: (typeof DOCUMENT_XML_HANDLERS)[number], document: ParsedDocument) {
+function roundTripHandler(handler: DocumentXmlHandler, document: ParsedDocument) {
   const parsed = handler.fromXml(
     handler.toXml({
       document,
@@ -173,7 +201,7 @@ function roundTripHandler(handler: (typeof DOCUMENT_XML_HANDLERS)[number], docum
 
 describe("document XML handlers schema-driven round-trip", () => {
   for (const type of Object.keys(schemasByType) as SchemaDocumentType[]) {
-    const handlers = DOCUMENT_XML_HANDLERS.filter((handler) => handler.type === type);
+    const handlers = handlersForType(type);
 
     describe(type, () => {
       it(`registers at least ${minimumHandlerCount[type] ?? 1} handler(s)`, () => {

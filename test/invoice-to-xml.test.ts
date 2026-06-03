@@ -7,6 +7,8 @@ import { parseInvoiceFromCII } from "@peppol/utils/parsing/invoice/cii-d22b/from
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
 import Decimal from "decimal.js";
+import { FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
+import { resolveOutgoingDocumentXmlHandler } from "@peppol/utils/outgoing-document-payload";
 
 function expectDecimalEqual(actual: string | null | undefined, expected: string) {
   expect(new Decimal(actual ?? "0").equals(expected)).toBe(true);
@@ -83,21 +85,39 @@ async function checkInvoiceXML({
     recipientAddress,
     isDocumentValidationEnforced,
   });
+  const facturXResolution = resolveOutgoingDocumentXmlHandler(
+    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    "invoice"
+  );
+  if (!facturXResolution.ok) {
+    throw new Error(facturXResolution.message);
+  }
+  const facturXXml = facturXResolution.resolution.handler.toXml({
+    document: invoice,
+    senderAddress,
+    recipientAddress,
+    isDocumentValidationEnforced,
+  });
 
   checkUBLInvoiceXML(ublXml, invoice);
   checkCIIInvoiceXML(ciiXml, invoice);
+  checkCIIInvoiceXML(facturXXml, invoice);
+  expect(facturXXml).toContain("<ram:ID>urn:cen.eu:en16931:2017</ram:ID>");
 
   await Promise.all([
     validateXml(ublXml, `${testName} UBL`),
     validateXml(ciiXml, `${testName} CII D22B`),
+    validateXml(facturXXml, `${testName} Factur-X CII D22B`),
   ]);
 
   const parsedUbl = parseInvoiceFromXML(ublXml);
   const parsedCii = parseInvoiceFromCII(ciiXml);
+  const parsedFacturX = parseInvoiceFromCII(facturXXml);
 
   expect(parsedCii).toEqual(parsedUbl);
+  expect(parsedFacturX).toEqual(parsedUbl);
 
-  return { ublXml, ciiXml, parsedInvoice: parsedUbl };
+  return { ublXml, ciiXml, facturXXml, parsedInvoice: parsedUbl };
 }
 
 
