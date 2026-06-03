@@ -6,7 +6,10 @@ import {
 } from "../utils/parsing/document-handlers";
 import type { SupportedDocumentType } from "../utils/document-types";
 import type { ParsedDocument } from "../utils/document-filename";
-import { FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO } from "../utils/document-types";
+import {
+  FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+  FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+} from "../utils/document-types";
 import { resolveOutgoingDocumentXmlHandler } from "../utils/outgoing-document-payload";
 import { creditNoteSchema, type CreditNote } from "../utils/parsing/creditnote/schemas";
 import { invoiceSchema, type Invoice } from "../utils/parsing/invoice/schemas";
@@ -151,13 +154,17 @@ function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
 
 function handlersForType(type: SchemaDocumentType): DocumentXmlHandler[] {
   const handlers = DOCUMENT_XML_HANDLERS.filter((handler) => handler.type === type);
-  if (type !== "invoice") {
+  if (type !== "invoice" && type !== "creditNote") {
     return handlers;
   }
 
+  const facturXDocTypeId =
+    type === "invoice"
+      ? FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId
+      : FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId;
   const facturXResolution = resolveOutgoingDocumentXmlHandler(
-    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-    "invoice"
+    facturXDocTypeId,
+    type
   );
   if (!facturXResolution.ok) {
     throw new Error(facturXResolution.message);
@@ -167,7 +174,10 @@ function handlersForType(type: SchemaDocumentType): DocumentXmlHandler[] {
     ...handlers,
     {
       ...facturXResolution.resolution.handler,
-      title: "France Factur-X CII Invoice",
+      title:
+        type === "invoice"
+          ? "France Factur-X CII Invoice"
+          : "France Factur-X CII Credit Note",
     },
   ];
 }
@@ -175,7 +185,7 @@ function handlersForType(type: SchemaDocumentType): DocumentXmlHandler[] {
 // Types that must round-trip through both their UBL and CII (D22B) handlers.
 const minimumHandlerCount: Partial<Record<SchemaDocumentType, number>> = {
   invoice: 3,
-  creditNote: 2,
+  creditNote: 3,
 };
 
 function roundTripHandler(handler: DocumentXmlHandler, document: ParsedDocument) {

@@ -33,9 +33,14 @@ export async function generateFacturXDocument(options: {
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to generate Factur-X document.`
-    );
+    let errorText = "";
+    try{
+      const errorJson = await response.json();
+      errorText = errorJson.error;
+    } catch (error) {
+      errorText = await response.text();
+    }
+    throw new Error(`Failed to generate Factur-X document. ${errorText}`);
   }
 
   return Buffer.from(await response.arrayBuffer());

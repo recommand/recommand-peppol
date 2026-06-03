@@ -79,9 +79,16 @@ export const CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
 
 export const FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
-    title: "France Factur-X",
+    title: "France Factur-X Invoice",
     docTypeId: "urn:peppol:doctype:pdf+xml##urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:Factur-X:1.0::D22B",
     processId: "urn:peppol:france:billing:regulated"
+};
+
+export const FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "creditNote",
+    title: "France Factur-X Credit Note",
+    docTypeId: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    processId: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId
 };
 
 export const CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
@@ -103,6 +110,7 @@ export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
     FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
 ];
 
 export const BILLING_DOCUMENT_TYPE_INFO: DocumentTypeInfo[] = [
@@ -113,6 +121,7 @@ export const BILLING_DOCUMENT_TYPE_INFO: DocumentTypeInfo[] = [
     CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
     FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
 ];
 
 export function getDocumentTypeInfo(type: string): DocumentTypeInfo {

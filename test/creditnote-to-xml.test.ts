@@ -6,6 +6,8 @@ import { parseCreditNoteFromXML } from "@peppol/utils/parsing/creditnote/peppol-
 import { parseCreditNoteFromCII } from "@peppol/utils/parsing/creditnote/cii-d22b/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
+import { FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
+import { resolveOutgoingDocumentXmlHandler } from "@peppol/utils/outgoing-document-payload";
 
 function checkUBLCreditNoteXML(xml: string, creditNote: CreditNote) {
     expect(xml).toBeDefined();
@@ -70,21 +72,39 @@ async function checkCreditNoteXML({
         recipientAddress,
         isDocumentValidationEnforced,
     });
+    const facturXResolution = resolveOutgoingDocumentXmlHandler(
+        FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+        "creditNote"
+    );
+    if (!facturXResolution.ok) {
+        throw new Error(facturXResolution.message);
+    }
+    const facturXXml = facturXResolution.resolution.handler.toXml({
+        document: creditNote,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+    });
 
     checkUBLCreditNoteXML(ublXml, creditNote);
     checkCIICreditNoteXML(ciiXml, creditNote);
+    checkCIICreditNoteXML(facturXXml, creditNote);
+    expect(facturXXml).toContain("<ram:ID>urn:cen.eu:en16931:2017</ram:ID>");
 
     await Promise.all([
         validateXml(ublXml, `${testName} UBL`),
         validateXml(ciiXml, `${testName} CII D22B`),
+        validateXml(facturXXml, `${testName} Factur-X CII D22B`),
     ]);
 
     const parsedUbl = parseCreditNoteFromXML(ublXml);
     const parsedCii = parseCreditNoteFromCII(ciiXml);
+    const parsedFacturX = parseCreditNoteFromCII(facturXXml);
 
     expect(parsedCii).toEqual(parsedUbl);
+    expect(parsedFacturX).toEqual(parsedUbl);
 
-    return { ublXml, ciiXml, parsedCreditNote: parsedUbl };
+    return { ublXml, ciiXml, facturXXml, parsedCreditNote: parsedUbl };
 }
 
 describe("creditNoteToUBL", () => {

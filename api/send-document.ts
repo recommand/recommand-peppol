@@ -238,7 +238,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       if (!xmlResolution.ok) {
         return c.json(actionFailure(xmlResolution.message), 400);
       }
-      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId);
+      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId, "invoice");
       const xmlHandler = xmlResolution.resolution.handler;
       let invoiceXml = xmlHandler.toXml({
         document: invoice,
@@ -324,7 +324,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       if (!xmlResolution.ok) {
         return c.json(actionFailure(xmlResolution.message), 400);
       }
-      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId);
+      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId, "creditNote");
       const xmlHandler = xmlResolution.resolution.handler;
       let creditNoteXml = xmlHandler.toXml({
         document: creditNote,
@@ -411,7 +411,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       if (!xmlResolution.ok) {
         return c.json(actionFailure(xmlResolution.message), 400);
       }
-      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId);
+      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId, "selfBillingInvoice");
       const xmlHandler = xmlResolution.resolution.handler;
       let invoiceXml = xmlHandler.toXml({
         document: invoice,
@@ -497,7 +497,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       if (!xmlResolution.ok) {
         return c.json(actionFailure(xmlResolution.message), 400);
       }
-      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId);
+      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId, "selfBillingCreditNote");
       const xmlHandler = xmlResolution.resolution.handler;
       let selfBillingCreditNoteXml = xmlHandler.toXml({
         document: selfBillingCreditNote,
@@ -687,6 +687,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           docTypeId: doctypeId,
           xmlDocument: generatedXmlDocument,
           parsedDocument,
+          type,
         });
         outgoingDocumentBody = outgoingPayload.body;
         outgoingDocumentContentType = outgoingPayload.contentType;

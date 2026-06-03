@@ -7,11 +7,13 @@ export function creditNoteToCII({
   senderAddress,
   recipientAddress,
   isDocumentValidationEnforced,
+  guidelineId,
 }: {
   creditNote: CreditNote;
   senderAddress: string;
   recipientAddress: string;
   isDocumentValidationEnforced: boolean;
+  guidelineId?: string;
 }): string {
   return billingDocumentToCII({
     document: creditNote,
@@ -22,5 +24,6 @@ export function creditNoteToCII({
     customerAddress: recipientAddress,
     isDocumentValidationEnforced,
     invoiceReferences: creditNote.invoiceReferences,
+    guidelineId,
   });
 }
