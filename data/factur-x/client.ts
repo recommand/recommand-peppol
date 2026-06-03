@@ -27,7 +27,7 @@ export async function generateFacturXDocument(options: {
     })
   );
 
-  const response = await fetch("http://localhost:5000/generate_facturx", {
+  const response = await fetch("https://facturx.recommand.dev/generate_facturx", {
     method: "POST",
     body: formData,
   });
