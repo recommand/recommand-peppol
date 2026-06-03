@@ -14,6 +14,30 @@ function expectDecimalEqual(actual: string | null | undefined, expected: string)
   expect(new Decimal(actual ?? "0").equals(expected)).toBe(true);
 }
 
+function withDefaultCiiDelivery<T extends { buyer: Invoice["buyer"]; delivery?: Invoice["delivery"] }>(
+  document: T
+): T {
+  if (document.delivery) {
+    return document;
+  }
+
+  return {
+    ...document,
+    delivery: {
+      date: null,
+      locationIdentifier: undefined,
+      location: {
+        street: document.buyer.street,
+        street2: document.buyer.street2 || null,
+        city: document.buyer.city,
+        postalZone: document.buyer.postalZone,
+        country: document.buyer.country,
+      },
+      recipientName: document.buyer.name,
+    },
+  };
+}
+
 function checkUBLInvoiceXML(xml: string, invoice: Invoice) {
   expect(xml).toBeDefined();
   expect(typeof xml).toBe("string");
@@ -113,9 +137,10 @@ async function checkInvoiceXML({
   const parsedUbl = parseInvoiceFromXML(ublXml);
   const parsedCii = parseInvoiceFromCII(ciiXml);
   const parsedFacturX = parseInvoiceFromCII(facturXXml);
+  const expectedCii = withDefaultCiiDelivery(parsedUbl);
 
-  expect(parsedCii).toEqual(parsedUbl);
-  expect(parsedFacturX).toEqual(parsedUbl);
+  expect(parsedCii).toEqual(expectedCii);
+  expect(parsedFacturX).toEqual(expectedCii);
 
   return { ublXml, ciiXml, facturXXml, parsedInvoice: parsedUbl };
 }

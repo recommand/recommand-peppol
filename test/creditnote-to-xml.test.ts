@@ -9,6 +9,30 @@ import { XMLParser } from "fast-xml-parser";
 import { FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 import { resolveOutgoingDocumentXmlHandler } from "@peppol/utils/outgoing-document-payload";
 
+function withDefaultCiiDelivery<T extends { buyer: CreditNote["buyer"]; delivery?: CreditNote["delivery"] }>(
+    document: T
+): T {
+    if (document.delivery) {
+        return document;
+    }
+
+    return {
+        ...document,
+        delivery: {
+            date: null,
+            locationIdentifier: undefined,
+            location: {
+                street: document.buyer.street,
+                street2: document.buyer.street2 || null,
+                city: document.buyer.city,
+                postalZone: document.buyer.postalZone,
+                country: document.buyer.country,
+            },
+            recipientName: document.buyer.name,
+        },
+    };
+}
+
 function checkUBLCreditNoteXML(xml: string, creditNote: CreditNote) {
     expect(xml).toBeDefined();
     expect(typeof xml).toBe("string");
@@ -100,9 +124,10 @@ async function checkCreditNoteXML({
     const parsedUbl = parseCreditNoteFromXML(ublXml);
     const parsedCii = parseCreditNoteFromCII(ciiXml);
     const parsedFacturX = parseCreditNoteFromCII(facturXXml);
+    const expectedCii = withDefaultCiiDelivery(parsedUbl);
 
-    expect(parsedCii).toEqual(parsedUbl);
-    expect(parsedFacturX).toEqual(parsedUbl);
+    expect(parsedCii).toEqual(expectedCii);
+    expect(parsedFacturX).toEqual(expectedCii);
 
     return { ublXml, ciiXml, facturXXml, parsedCreditNote: parsedUbl };
 }
