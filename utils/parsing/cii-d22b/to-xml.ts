@@ -159,6 +159,13 @@ function deliveryTradeParty(document: BillingDocument): XmlNode | undefined {
   };
 }
 
+function fallbackDeliveryTradeParty(party: Party): XmlNode {
+  return {
+    "ram:Name": party.name,
+    "ram:PostalTradeAddress": tradeAddress(party),
+  };
+}
+
 function tradeTax({
   category,
   percentage,
@@ -361,7 +368,8 @@ export function billingDocumentToCII({
     document,
     isDocumentValidationEnforced,
   });
-  const shipToTradeParty = deliveryTradeParty(document);
+  const shipToTradeParty =
+    deliveryTradeParty(document) ?? fallbackDeliveryTradeParty(document.buyer);
   const paymentReferences =
     document.paymentMeans
       ?.map((payment) => payment.reference)
