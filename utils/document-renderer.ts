@@ -363,12 +363,19 @@ function buildMessageLevelResponseTemplateData(
 async function callTailwindPdfGenerator(
   templateHtml: string,
   data: BillingTemplateData | MessageLevelResponseTemplateData,
-  options: { preview: boolean },
+  options: { preview: boolean; pdfa?: boolean },
 ): Promise<string | Buffer> {
   const body = JSON.stringify({ html: templateHtml, data });
-
-  const url = options.preview
-    ? `${RECOMMAND_RENDER_ENDPOINT}/?preview=true`
+  const searchParams = new URLSearchParams();
+  if (options.preview) {
+    searchParams.set("preview", "true");
+  }
+  if (options.pdfa) {
+    searchParams.set("pdfa", "true");
+  }
+  const query = searchParams.toString();
+  const url = query
+    ? `${RECOMMAND_RENDER_ENDPOINT}/?${query}`
     : RECOMMAND_RENDER_ENDPOINT;
 
   const response = await fetch(url, {
@@ -418,6 +425,7 @@ export async function renderDocumentHtml(
 
 export async function renderDocumentPdf(
   document: PublicTransmittedDocument,
+  options: { pdfa?: boolean } = {},
 ): Promise<Buffer> {
   if (document.type === "unknown") {
     throw new Error("Unknown document type");
@@ -427,7 +435,7 @@ export async function renderDocumentPdf(
     const pdf = await callTailwindPdfGenerator(
       MESSAGE_LEVEL_RESPONSE_TEMPLATE,
       data,
-      { preview: false },
+      { preview: false, pdfa: options.pdfa },
     );
     return pdf as Buffer;
   }
@@ -436,8 +444,7 @@ export async function renderDocumentPdf(
   const pdf = await callTailwindPdfGenerator(
     BILLING_DOCUMENT_TEMPLATE,
     data,
-    { preview: false },
+    { preview: false, pdfa: options.pdfa },
   );
   return pdf as Buffer;
 }
-

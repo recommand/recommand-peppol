@@ -132,7 +132,10 @@ export function parseBillingDocumentFromCII(xml: string) {
   const headerAllowanceCharges = settlement.SpecifiedTradeAllowanceCharge || [];
   const tradeTaxes = settlement.ApplicableTradeTax || [];
   const headerReferences = agreement.AdditionalReferencedDocument || [];
+  const paymentReferences = settlement.PaymentReference || [];
   const shipToTradeParty = delivery?.ShipToTradeParty;
+  const deliveryLocationIdentifier =
+    shipToTradeParty?.GlobalID ?? shipToTradeParty?.ID;
   const deliveryDate = nullableDate(
     delivery?.ActualDeliverySupplyChainEvent?.OccurrenceDateTime
   );
@@ -171,13 +174,14 @@ export function parseBillingDocumentFromCII(xml: string) {
     delivery: shipToTradeParty || deliveryDate
       ? {
           date: deliveryDate,
-          locationIdentifier: shipToTradeParty?.ID
+          locationIdentifier: deliveryLocationIdentifier
             ? {
                 scheme: getTextContent(
-                  shipToTradeParty.ID?.["@_schemeID"]
+                  deliveryLocationIdentifier?.["@_schemeID"]
                 ),
                 identifier: getTextContent(
-                  shipToTradeParty.ID?.["#text"] ?? shipToTradeParty.ID
+                  deliveryLocationIdentifier?.["#text"] ??
+                    deliveryLocationIdentifier
                 ),
               }
             : undefined,
@@ -196,9 +200,9 @@ export function parseBillingDocumentFromCII(xml: string) {
         }
       : undefined,
     paymentMeans: (settlement.SpecifiedTradeSettlementPaymentMeans || []).map(
-      (payment: any) => ({
+      (payment: any, index: number) => ({
         paymentMethod: getPaymentKeyByCode(getTextContent(payment.TypeCode)),
-        reference: getTextContent(payment.ID),
+        reference: getTextContent(paymentReferences[index]),
         iban: getTextContent(payment.PayeePartyCreditorFinancialAccount?.IBANID),
         name: getNullableTextContent(
           payment.PayeePartyCreditorFinancialAccount?.AccountName

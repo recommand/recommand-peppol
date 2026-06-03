@@ -73,6 +73,11 @@ import { getTransmittedDocumentSearchFields } from "@peppol/utils/transmitted-do
 import {
   resolveDocumentXmlHandler,
 } from "@peppol/utils/parsing/document-handlers";
+import {
+  prepareOutgoingDocumentPayload,
+  requiresPdfAForGeneratedPdf,
+  resolveOutgoingDocumentXmlHandler,
+} from "@peppol/utils/outgoing-document-payload";
 
 const server = new Server();
 
@@ -167,11 +172,14 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       );
     }
 
-    let xmlDocument: string | null = null;
+    let generatedXmlDocument: string | null = null;
     let type: SupportedDocumentType = "unknown";
     let probableType: SupportedDocumentType = "unknown";
     let parsedDocument: FilenameParsedDocument | null = null;
     let doctypeId: string = "";
+    let outgoingDocumentBody: BodyInit | null = null;
+    let outgoingDocumentContentType = "application/xml";
+    let outgoingDocumentProcessId: string | null = null;
 
     // Get senderId, countryC1 from company
     const company = c.var.company;
@@ -223,34 +231,50 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         });
       }
       doctypeId = input.doctypeId ?? INVOICE_DOCUMENT_TYPE_INFO.docTypeId;
-      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "invoice");
-      if (!xmlHandler.ok) {
-        return c.json(actionFailure(xmlHandler.message), 400);
+      const xmlResolution = resolveOutgoingDocumentXmlHandler(
+        doctypeId,
+        "invoice"
+      );
+      if (!xmlResolution.ok) {
+        return c.json(actionFailure(xmlResolution.message), 400);
       }
-      let invoiceXml = xmlHandler.handler.toXml({
+      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId);
+      const xmlHandler = xmlResolution.resolution.handler;
+      let invoiceXml = xmlHandler.toXml({
         document: invoice,
         senderAddress,
         recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
         isDocumentValidationEnforced: true,
       });
-      let parsed = parseDocument(doctypeId, invoiceXml, company, senderAddress);
+      let parsed = parseDocument(
+        xmlResolution.resolution.parseDocTypeId,
+        invoiceXml,
+        company,
+        senderAddress
+      );
 
       if (input.pdfGeneration?.enabled) {
         const parsedForPdf = (parsed.parsedDocument as Invoice) ?? invoice;
-        invoice.attachments = await generateAndAttachPdf(transmittedDocumentId, "invoice", parsedForPdf, invoice.attachments, customPdfFilename);
+        invoice.attachments = await generateAndAttachPdf(transmittedDocumentId, "invoice", parsedForPdf, invoice.attachments, {
+          customPdfFilename,
+          pdfa: shouldGeneratePdfA,
+        });
 
-        invoiceXml = xmlHandler.handler.toXml({
+        invoiceXml = xmlHandler.toXml({
           document: invoice,
           senderAddress,
           recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
           isDocumentValidationEnforced: true,
         });
-        parsed = parseDocument(doctypeId, invoiceXml, company, senderAddress);
+        parsed = parseDocument(
+          xmlResolution.resolution.parseDocTypeId,
+          invoiceXml,
+          company,
+          senderAddress
+        );
       }
 
-      if (!isRecipientNull) {
-        xmlDocument = invoiceXml;
-      }
+      generatedXmlDocument = invoiceXml;
       type = "invoice";
 
       if (parsed.parsedDocument) {
@@ -293,18 +317,23 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         });
       }
       doctypeId = input.doctypeId ?? CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId;
-      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "creditNote");
-      if (!xmlHandler.ok) {
-        return c.json(actionFailure(xmlHandler.message), 400);
+      const xmlResolution = resolveOutgoingDocumentXmlHandler(
+        doctypeId,
+        "creditNote"
+      );
+      if (!xmlResolution.ok) {
+        return c.json(actionFailure(xmlResolution.message), 400);
       }
-      let creditNoteXml = xmlHandler.handler.toXml({
+      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId);
+      const xmlHandler = xmlResolution.resolution.handler;
+      let creditNoteXml = xmlHandler.toXml({
         document: creditNote,
         senderAddress,
         recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
         isDocumentValidationEnforced: true,
       });
       let parsed = parseDocument(
-        doctypeId,
+        xmlResolution.resolution.parseDocTypeId,
         creditNoteXml,
         company,
         senderAddress
@@ -313,25 +342,26 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       if (input.pdfGeneration?.enabled) {
         const parsedForPdf =
           (parsed.parsedDocument as CreditNote) ?? creditNote;
-        creditNote.attachments = await generateAndAttachPdf(transmittedDocumentId, "creditNote", parsedForPdf, creditNote.attachments, customPdfFilename);
+        creditNote.attachments = await generateAndAttachPdf(transmittedDocumentId, "creditNote", parsedForPdf, creditNote.attachments, {
+          customPdfFilename,
+          pdfa: shouldGeneratePdfA,
+        });
 
-        creditNoteXml = xmlHandler.handler.toXml({
+        creditNoteXml = xmlHandler.toXml({
           document: creditNote,
           senderAddress,
           recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
           isDocumentValidationEnforced: true,
         });
         parsed = parseDocument(
-          doctypeId,
+          xmlResolution.resolution.parseDocTypeId,
           creditNoteXml,
           company,
           senderAddress
         );
       }
 
-      if (!isRecipientNull) {
-        xmlDocument = creditNoteXml;
-      }
+      generatedXmlDocument = creditNoteXml;
       type = "creditNote";
 
       if (parsed.parsedDocument) {
@@ -377,35 +407,48 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         });
       }
       doctypeId = input.doctypeId ?? SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO.docTypeId;
-      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "selfBillingInvoice");
-      if (!xmlHandler.ok) {
-        return c.json(actionFailure(xmlHandler.message), 400);
+      const xmlResolution = resolveOutgoingDocumentXmlHandler(doctypeId, "selfBillingInvoice");
+      if (!xmlResolution.ok) {
+        return c.json(actionFailure(xmlResolution.message), 400);
       }
-      let invoiceXml = xmlHandler.handler.toXml({
+      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId);
+      const xmlHandler = xmlResolution.resolution.handler;
+      let invoiceXml = xmlHandler.toXml({
         document: invoice,
         senderAddress,
         recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
         isDocumentValidationEnforced: true,
       });
-      let parsed = parseDocument(doctypeId, invoiceXml, company, senderAddress);
+      let parsed = parseDocument(
+        xmlResolution.resolution.parseDocTypeId,
+        invoiceXml,
+        company,
+        senderAddress
+      );
 
       if (input.pdfGeneration?.enabled) {
         const parsedForPdf =
           (parsed.parsedDocument as SelfBillingInvoice) ?? invoice;
-        invoice.attachments = await generateAndAttachPdf(transmittedDocumentId, "selfBillingInvoice", parsedForPdf, invoice.attachments, customPdfFilename);
+        invoice.attachments = await generateAndAttachPdf(transmittedDocumentId, "selfBillingInvoice", parsedForPdf, invoice.attachments, {
+          customPdfFilename,
+          pdfa: shouldGeneratePdfA,
+        });
 
-        invoiceXml = xmlHandler.handler.toXml({
+        invoiceXml = xmlHandler.toXml({
           document: invoice,
           senderAddress,
           recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
           isDocumentValidationEnforced: true,
         });
-        parsed = parseDocument(doctypeId, invoiceXml, company, senderAddress);
+        parsed = parseDocument(
+          xmlResolution.resolution.parseDocTypeId,
+          invoiceXml,
+          company,
+          senderAddress
+        );
       }
 
-      if (!isRecipientNull) {
-        xmlDocument = invoiceXml;
-      }
+      generatedXmlDocument = invoiceXml;
       type = "selfBillingInvoice";
 
       if (parsed.parsedDocument) {
@@ -450,18 +493,20 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         });
       }
       doctypeId = input.doctypeId ?? SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId;
-      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "selfBillingCreditNote");
-      if (!xmlHandler.ok) {
-        return c.json(actionFailure(xmlHandler.message), 400);
+      const xmlResolution = resolveOutgoingDocumentXmlHandler(doctypeId, "selfBillingCreditNote");
+      if (!xmlResolution.ok) {
+        return c.json(actionFailure(xmlResolution.message), 400);
       }
-      let selfBillingCreditNoteXml = xmlHandler.handler.toXml({
+      const shouldGeneratePdfA = requiresPdfAForGeneratedPdf(doctypeId);
+      const xmlHandler = xmlResolution.resolution.handler;
+      let selfBillingCreditNoteXml = xmlHandler.toXml({
         document: selfBillingCreditNote,
         senderAddress,
         recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
         isDocumentValidationEnforced: true,
       });
       let parsed = parseDocument(
-        doctypeId,
+        xmlResolution.resolution.parseDocTypeId,
         selfBillingCreditNoteXml,
         company,
         senderAddress
@@ -471,25 +516,26 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         const parsedForPdf =
           (parsed.parsedDocument as SelfBillingCreditNote) ??
           selfBillingCreditNote;
-        selfBillingCreditNote.attachments = await generateAndAttachPdf(transmittedDocumentId, "selfBillingCreditNote", parsedForPdf, selfBillingCreditNote.attachments, customPdfFilename);
+        selfBillingCreditNote.attachments = await generateAndAttachPdf(transmittedDocumentId, "selfBillingCreditNote", parsedForPdf, selfBillingCreditNote.attachments, {
+          customPdfFilename,
+          pdfa: shouldGeneratePdfA,
+        });
 
-        selfBillingCreditNoteXml = xmlHandler.handler.toXml({
+        selfBillingCreditNoteXml = xmlHandler.toXml({
           document: selfBillingCreditNote,
           senderAddress,
           recipientAddress: recipientAddress ?? RECIPIENT_NULL_FALLBACK_ADDRESS,
           isDocumentValidationEnforced: true,
         });
         parsed = parseDocument(
-          doctypeId,
+          xmlResolution.resolution.parseDocTypeId,
           selfBillingCreditNoteXml,
           company,
           senderAddress
         );
       }
 
-      if (!isRecipientNull) {
-        xmlDocument = selfBillingCreditNoteXml;
-      }
+      generatedXmlDocument = selfBillingCreditNoteXml;
       type = "selfBillingCreditNote";
 
       if (parsed.parsedDocument) {
@@ -531,11 +577,12 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       }
 
       doctypeId = input.doctypeId ?? MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO.docTypeId;
-      const xmlHandler = resolveDocumentXmlHandler(doctypeId, "messageLevelResponse");
-      if (!xmlHandler.ok) {
-        return c.json(actionFailure(xmlHandler.message), 400);
+      const xmlResolution = resolveOutgoingDocumentXmlHandler(doctypeId, "messageLevelResponse");
+      if (!xmlResolution.ok) {
+        return c.json(actionFailure(xmlResolution.message), 400);
       }
-      xmlDocument = xmlHandler.handler.toXml({
+      const xmlHandler = xmlResolution.resolution.handler;
+      generatedXmlDocument = xmlHandler.toXml({
         document: messageLevelResponse,
         senderAddress,
         recipientAddress: recipientAddress!,
@@ -544,8 +591,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       type = "messageLevelResponse";
 
       const parsed = parseDocument(
-        doctypeId,
-        xmlDocument,
+        xmlResolution.resolution.parseDocTypeId,
+        generatedXmlDocument,
         company,
         senderAddress
       );
@@ -565,11 +612,11 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           400
         );
       }
-      xmlDocument = document as string;
+      generatedXmlDocument = document as string;
       if (input.doctypeId) {
         doctypeId = input.doctypeId;
       } else {
-        doctypeId = detectDoctypeId(xmlDocument) || "";
+        doctypeId = detectDoctypeId(generatedXmlDocument) || "";
         if (!doctypeId) {
           return c.json(
             actionFailure(
@@ -582,7 +629,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
 
       const parsed = parseDocument(
         doctypeId,
-        xmlDocument,
+        generatedXmlDocument,
         company,
         senderAddress
       );
@@ -593,6 +640,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
     } else {
       return c.json(actionFailure("Invalid document type provided."), 400);
     }
+
+    const xmlDocument = isRecipientNull ? null : generatedXmlDocument;
 
     let validation: ValidationResponse | undefined;
 
@@ -628,6 +677,32 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       }
     }
 
+    if (
+      generatedXmlDocument &&
+      parsedDocument &&
+      input.documentType !== DocumentType.XML
+    ) {
+      try {
+        const outgoingPayload = await prepareOutgoingDocumentPayload({
+          docTypeId: doctypeId,
+          xmlDocument: generatedXmlDocument,
+          parsedDocument,
+        });
+        outgoingDocumentBody = outgoingPayload.body;
+        outgoingDocumentContentType = outgoingPayload.contentType;
+        outgoingDocumentProcessId = outgoingPayload.processId ?? null;
+      } catch (error) {
+        return c.json(
+          actionFailure(
+            error instanceof Error
+              ? error.message
+              : "Failed to prepare document for sending."
+          ),
+          400
+        );
+      }
+    }
+
     let sentPeppol = false;
     let sentEmailRecipients: string[] = [];
     let additionalPeppolFailureContext = "";
@@ -642,11 +717,14 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         if (type === "unknown" && probableType !== "unknown") {
           typeToInspect = probableType;
         }
-        const resolvedHandler = resolveDocumentXmlHandler(doctypeId, typeToInspect);
-        processId =
-          resolvedHandler.ok
+        if (outgoingDocumentProcessId) {
+          processId = outgoingDocumentProcessId;
+        } else {
+          const resolvedHandler = resolveDocumentXmlHandler(doctypeId, typeToInspect);
+          processId = resolvedHandler.ok
             ? resolvedHandler.handler.processId
             : getDocumentTypeInfo(typeToInspect).processId;
+        }
       } catch (error) {
         console.error("Failed to get process id:", error);
         sendSystemAlert(
@@ -665,6 +743,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
 
     let as4Response: SendAs4Response | null = null;
     if (!isRecipientNull) {
+      const documentBody = outgoingDocumentBody ?? xmlDocument!;
       if (isPlayground && !useTestNetwork) {
         try {
           await simulateSendAs4({
@@ -673,7 +752,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
             docTypeId: doctypeId,
             processId,
             countryC1: countryC1,
-            body: xmlDocument!,
+            body: xmlDocument!, // TODO: support factur-x documents
             playgroundTeamId: c.var.team.id, // Must be the same as the sender team: we don't support cross-team sending
           });
           sentPeppol = true;
@@ -701,7 +780,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           docTypeId: doctypeId,
           processId,
           countryC1: countryC1,
-          body: xmlDocument!,
+          body: documentBody,
+          contentType: outgoingDocumentContentType,
           useTestNetwork,
         });
         if (!as4Response.ok) {
@@ -739,7 +819,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
             to: recipient,
             subject: input.email.subject,
             htmlBody: input.email.htmlBody,
-            xmlDocument: xmlDocument,
+            xmlDocument,
             type,
             parsedDocument: parsedDocument,
             isPlayground,
@@ -862,7 +942,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         companyName: company.name,
         type,
         parsedDocument,
-        xmlDocument: xmlDocument,
+        xmlDocument,
         isPlayground,
       });
     } catch (error) {

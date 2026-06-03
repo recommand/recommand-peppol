@@ -7,11 +7,13 @@ export function invoiceToCII({
   senderAddress,
   recipientAddress,
   isDocumentValidationEnforced,
+  guidelineId,
 }: {
   invoice: Invoice;
   senderAddress: string;
   recipientAddress: string;
   isDocumentValidationEnforced: boolean;
+  guidelineId?: string;
 }): string {
   return billingDocumentToCII({
     document: invoice,
@@ -22,5 +24,6 @@ export function invoiceToCII({
     customerAddress: recipientAddress,
     isDocumentValidationEnforced,
     dueDate: invoice.dueDate,
+    guidelineId,
   });
 }

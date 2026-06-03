@@ -7,15 +7,20 @@ import {
 import type { SupportedDocumentType } from "@peppol/utils/document-types";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
 
+type GenerateAndAttachPdfOptions = {
+  customPdfFilename?: string;
+  pdfa?: boolean;
+};
+
 export async function generateAndAttachPdf(
   documentId: string,
   documentType: SupportedDocumentType,
   document: any,
   attachments: Attachment[] | null | undefined,
-  customPdfFilename?: string
+  options: GenerateAndAttachPdfOptions = {}
 ): Promise<Attachment[]> {
-  const pdfFilename = customPdfFilename
-    ? ensureFileExtension(customPdfFilename, "pdf")
+  const pdfFilename = options.customPdfFilename
+    ? ensureFileExtension(options.customPdfFilename, "pdf")
     : ensureFileExtension(
         getDocumentFilename(documentType, document as ParsedDocument | null),
         "pdf"
@@ -25,7 +30,7 @@ export async function generateAndAttachPdf(
     id: documentId,
     type: documentType,
     parsed: document,
-  } as any);
+  } as any, { pdfa: options.pdfa });
 
   const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
   const existingAttachments = Array.isArray(attachments)
@@ -46,4 +51,20 @@ export async function generateAndAttachPdf(
   });
 
   return nextAttachments;
+}
+
+export function findFirstEmbeddedPdfAttachment(
+  attachments: Attachment[] | null | undefined
+): Attachment | null {
+  if (!Array.isArray(attachments)) {
+    return null;
+  }
+  return (
+    attachments.find(
+      (attachment) =>
+        attachment.embeddedDocument &&
+        (attachment.mimeCode === "application/pdf" ||
+          attachment.filename.toLowerCase().endsWith(".pdf"))
+    ) ?? null
+  );
 }

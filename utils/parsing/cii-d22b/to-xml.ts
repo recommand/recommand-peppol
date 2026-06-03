@@ -119,9 +119,6 @@ function tradeParty(party: Party, peppolAddress: string): XmlNode {
         "ram:ID": id(party.vatNumber, "VA"),
       },
     }),
-    "ram:EndPointURIUniversalCommunication": {
-      "ram:URIID": id(parsedAddress.identifier, parsedAddress.schemeId),
-    },
   };
 }
 
@@ -132,10 +129,14 @@ function deliveryTradeParty(document: BillingDocument): XmlNode | undefined {
 
   return {
     ...(document.delivery?.locationIdentifier && {
-      "ram:ID": id(
-        document.delivery.locationIdentifier.identifier,
-        document.delivery.locationIdentifier.scheme
-      ),
+      ...(document.delivery.locationIdentifier.scheme
+        ? {
+            "ram:GlobalID": id(
+              document.delivery.locationIdentifier.identifier,
+              document.delivery.locationIdentifier.scheme
+            ),
+          }
+        : { "ram:ID": document.delivery.locationIdentifier.identifier }),
     }),
     ...(document.delivery?.recipientName && { "ram:Name": document.delivery.recipientName }),
     ...(document.delivery?.location && {
@@ -343,6 +344,7 @@ export function billingDocumentToCII({
   isDocumentValidationEnforced,
   dueDate,
   invoiceReferences,
+  guidelineId = customizationId(documentTypeInfo),
 }: {
   document: BillingDocument;
   documentTypeInfo: DocumentTypeInfo;
@@ -353,6 +355,7 @@ export function billingDocumentToCII({
   isDocumentValidationEnforced: boolean;
   dueDate?: string | null;
   invoiceReferences?: { id: string; issueDate?: string | null }[];
+  guidelineId?: string;
 }): string {
   const { vat, lines, extractedTotals } = calculateDocumentTotals({
     document,
@@ -376,7 +379,7 @@ export function billingDocumentToCII({
           "ram:ID": documentTypeInfo.processId,
         },
         "ram:GuidelineSpecifiedDocumentContextParameter": {
-          "ram:ID": customizationId(documentTypeInfo),
+          "ram:ID": guidelineId,
         },
       },
       ExchangedDocument: {
@@ -439,7 +442,6 @@ export function billingDocumentToCII({
             "ram:SpecifiedTradeSettlementPaymentMeans": document.paymentMeans.map((payment) => ({
               "ram:TypeCode": getPaymentCodeByKey(payment.paymentMethod),
               ...(payment.name && { "ram:Information": payment.name }),
-              ...(payment.reference && { "ram:ID": payment.reference }),
               "ram:PayeePartyCreditorFinancialAccount": {
                 "ram:IBANID": payment.iban,
                 ...(payment.name && { "ram:AccountName": payment.name }),

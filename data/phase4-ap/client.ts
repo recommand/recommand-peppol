@@ -28,7 +28,8 @@ export async function sendAs4(options: {
   docTypeId: string;
   processId: string;
   countryC1: string;
-  body: string; // XML string
+  body: BodyInit;
+  contentType?: string;
   useTestNetwork: boolean,
 }): Promise<SendAs4Response> {
   const { senderId, receiverId, docTypeId, processId, countryC1, body } = options;
@@ -44,7 +45,7 @@ export async function sendAs4(options: {
     const result = await fetchPhase4Ap(`/sendas4/${encodedSenderId}/${encodedReceiverId}/${encodedDocTypeId}/${encodedProcessId}/${encodedCountryC1}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/xml',
+        'Content-Type': options.contentType ?? 'application/xml',
       },
       body,
       useTestNetwork: options.useTestNetwork,
