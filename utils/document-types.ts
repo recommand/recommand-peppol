@@ -77,6 +77,13 @@ export const CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     processId: "urn:peppol:france:billing:regulated"
 };
 
+export const CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "creditNote",
+    title: "France CII Credit Note CIUS",
+    docTypeId: CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    processId: CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId
+};
+
 export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     INVOICE_DOCUMENT_TYPE_INFO,
     CREDIT_NOTE_DOCUMENT_TYPE_INFO,
@@ -87,6 +94,7 @@ export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     INVOICE_RESPONSE_DOCUMENT_TYPE_INFO,
     MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
     CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
 ];
 
 export const BILLING_DOCUMENT_TYPE_INFO: DocumentTypeInfo[] = [
@@ -94,6 +102,8 @@ export const BILLING_DOCUMENT_TYPE_INFO: DocumentTypeInfo[] = [
     CREDIT_NOTE_DOCUMENT_TYPE_INFO,
     SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO,
     SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
 ];
 
 export function getDocumentTypeInfo(type: string): DocumentTypeInfo {

@@ -10,7 +10,10 @@ import { messageLevelResponseToXML } from "./message-level-response/to-xml";
 import { parseMessageLevelResponseFromXML } from "./message-level-response/from-xml";
 import { invoiceToCII } from "./invoice/cii-d22b/to-xml";
 import { parseInvoiceFromCII } from "./invoice/cii-d22b/from-xml";
+import { creditNoteToCII } from "./creditnote/cii-d22b/to-xml";
+import { parseCreditNoteFromCII } from "./creditnote/cii-d22b/from-xml";
 import {
+  CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
   CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
   CREDIT_NOTE_DOCUMENT_TYPE_INFO,
   INVOICE_DOCUMENT_TYPE_INFO,
@@ -131,27 +134,41 @@ export const DOCUMENT_XML_HANDLERS: DocumentXmlHandler[] = [
       }),
     fromXml: (xml) => parseInvoiceFromCII(xml),
   },
+  {
+    ...CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    type: "creditNote",
+    matchesDocTypeId: (docTypeId) => docTypeId === CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
+      creditNoteToCII({
+        creditNote: document as CreditNote,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+      }),
+    fromXml: (xml) => parseCreditNoteFromCII(xml),
+  },
 ];
 
-export function getDocumentXmlHandlerByDocTypeId(docTypeId: string): DocumentXmlHandler | undefined {
-  return DOCUMENT_XML_HANDLERS.find((handler) => handler.matchesDocTypeId(docTypeId));
+export function getDocumentXmlHandlersByDocTypeId(docTypeId: string): DocumentXmlHandler[] {
+  return DOCUMENT_XML_HANDLERS.filter((handler) => handler.matchesDocTypeId(docTypeId));
 }
 
 export function resolveDocumentXmlHandler(
   docTypeId: string,
   expectedType: SupportedDocumentType
 ): { ok: true; handler: DocumentXmlHandler } | { ok: false; message: string } {
-  const handler = getDocumentXmlHandlerByDocTypeId(docTypeId);
+  const handlers = getDocumentXmlHandlersByDocTypeId(docTypeId);
+  const handler = handlers.find((candidate) => candidate.type === expectedType);
   if (!handler) {
+    if (handlers.length > 0) {
+      return {
+        ok: false,
+        message: `Document type identifier '${docTypeId}' does not match documentType '${expectedType}'.`,
+      };
+    }
     return {
       ok: false,
       message: `Document type identifier '${docTypeId}' is not supported for JSON document conversion.`,
-    };
-  }
-  if (handler.type !== expectedType) {
-    return {
-      ok: false,
-      message: `Document type identifier '${docTypeId}' does not match documentType '${expectedType}'.`,
     };
   }
   return { ok: true, handler };

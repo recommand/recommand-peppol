@@ -71,7 +71,6 @@ import {
 } from "@peppol/utils/document-filename";
 import { getTransmittedDocumentSearchFields } from "@peppol/utils/transmitted-document-search";
 import {
-  getDocumentXmlHandlerByDocTypeId,
   resolveDocumentXmlHandler,
 } from "@peppol/utils/parsing/document-handlers";
 
@@ -643,9 +642,11 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         if (type === "unknown" && probableType !== "unknown") {
           typeToInspect = probableType;
         }
+        const resolvedHandler = resolveDocumentXmlHandler(doctypeId, typeToInspect);
         processId =
-          getDocumentXmlHandlerByDocTypeId(doctypeId)?.processId ??
-          getDocumentTypeInfo(typeToInspect).processId;
+          resolvedHandler.ok
+            ? resolvedHandler.handler.processId
+            : getDocumentTypeInfo(typeToInspect).processId;
       } catch (error) {
         console.error("Failed to get process id:", error);
         sendSystemAlert(

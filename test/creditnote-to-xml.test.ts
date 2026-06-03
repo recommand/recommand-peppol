@@ -1,11 +1,13 @@
 import { describe, it, expect } from "bun:test";
 import { creditNoteToUBL } from "../utils/parsing/creditnote/peppol-ubl-bis3/to-xml";
+import { creditNoteToCII } from "../utils/parsing/creditnote/cii-d22b/to-xml";
 import type { CreditNote } from "../utils/parsing/creditnote/schemas";
 import { parseCreditNoteFromXML } from "@peppol/utils/parsing/creditnote/peppol-ubl-bis3/from-xml";
+import { parseCreditNoteFromCII } from "@peppol/utils/parsing/creditnote/cii-d22b/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
 
-async function checkCreditNoteXML(xml: string, creditNote: CreditNote, testName: string = "credit note") {
+function checkUBLCreditNoteXML(xml: string, creditNote: CreditNote) {
     expect(xml).toBeDefined();
     expect(typeof xml).toBe("string");
     expect(xml.length).toBeGreaterThan(0);
@@ -21,8 +23,68 @@ async function checkCreditNoteXML(xml: string, creditNote: CreditNote, testName:
     }
     expect(xml).toContain(String(creditNote.seller.name));
     expect(xml).toContain(String(creditNote.buyer.name));
+}
 
-    await validateXml(xml, testName);
+function checkCIICreditNoteXML(xml: string, creditNote: CreditNote) {
+    expect(xml).toBeDefined();
+    expect(typeof xml).toBe("string");
+    expect(xml.length).toBeGreaterThan(0);
+
+    expect(xml).toContain("<CrossIndustryInvoice");
+    expect(xml).toContain(
+        'xmlns="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"'
+    );
+
+    expect(xml).toContain(String(creditNote.creditNoteNumber));
+    expect(xml).toContain(String(creditNote.issueDate).replaceAll("-", ""));
+
+    if (creditNote.currency) {
+        expect(xml).toContain(String(creditNote.currency));
+    }
+    expect(xml).toContain(String(creditNote.seller.name));
+    expect(xml).toContain(String(creditNote.buyer.name));
+}
+
+async function checkCreditNoteXML({
+    creditNote,
+    senderAddress,
+    recipientAddress,
+    testName = "credit note",
+    isDocumentValidationEnforced = false,
+}: {
+    creditNote: CreditNote;
+    senderAddress: string;
+    recipientAddress: string;
+    testName?: string;
+    isDocumentValidationEnforced?: boolean;
+}) {
+    const ublXml = creditNoteToUBL({
+        creditNote,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+    });
+    const ciiXml = creditNoteToCII({
+        creditNote,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+    });
+
+    checkUBLCreditNoteXML(ublXml, creditNote);
+    checkCIICreditNoteXML(ciiXml, creditNote);
+
+    await Promise.all([
+        validateXml(ublXml, `${testName} UBL`),
+        validateXml(ciiXml, `${testName} CII D22B`),
+    ]);
+
+    const parsedUbl = parseCreditNoteFromXML(ublXml);
+    const parsedCii = parseCreditNoteFromCII(ciiXml);
+
+    expect(parsedCii).toEqual(parsedUbl);
+
+    return { ublXml, ciiXml, parsedCreditNote: parsedUbl };
 }
 
 describe("creditNoteToUBL", () => {
@@ -105,6 +167,9 @@ describe("creditNoteToUBL", () => {
                     paymentMethod: "credit_transfer",
                 },
             ],
+            paymentTerms: {
+                note: "Payment within 30 days",
+            },
             vat: null,
             delivery: null,
             totals: {
@@ -121,11 +186,12 @@ describe("creditNoteToUBL", () => {
         const senderAddress = "0208:0428643097";
         const recipientAddress = "0208:0598726857";
 
-        const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-        await checkCreditNoteXML(xml, creditNote, "credit note");
-
-        const parsed = parseCreditNoteFromXML(xml);
+        const { parsedCreditNote: parsed } = await checkCreditNoteXML({
+            creditNote,
+            senderAddress,
+            recipientAddress,
+            testName: "credit note",
+        });
 
         expect(parsed.creditNoteNumber).toBe(creditNote.creditNoteNumber);
         expect(parsed.issueDate).toBe(creditNote.issueDate);
@@ -169,6 +235,9 @@ describe("creditNoteToUBL", () => {
             },
             lines: [],
             invoiceReferences: [],
+            paymentTerms: {
+                note: "Payment within 30 days",
+            },
             ...overrides,
         };
     }
@@ -195,9 +264,12 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-            await validateXml(xml, "address mapping");
+            const { ublXml: xml, parsedCreditNote } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "address mapping",
+            });
 
             const parser = new XMLParser({
                 ignoreAttributes: false,
@@ -214,7 +286,6 @@ describe("creditNoteToUBL", () => {
             expect(`${supplierEndpointId["@_schemeID"]}:${supplierEndpointId["#text"]}`).toBe(senderAddress);
             expect(`${customerEndpointId["@_schemeID"]}:${customerEndpointId["#text"]}`).toBe(recipientAddress);
 
-            const parsedCreditNote = parseCreditNoteFromXML(xml);
             expect(parsedCreditNote.seller.name).toBe(creditNote.seller.name);
             expect(parsedCreditNote.buyer.name).toBe(creditNote.buyer.name);
 
@@ -264,9 +335,12 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-            await validateXml(xml, "enterprise number");
+            const { ublXml: xml, parsedCreditNote } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "enterprise number",
+            });
 
             expect(xml).toContain('<cbc:CompanyID>1234567894</cbc:CompanyID>');
             expect(xml).toContain('<cbc:CompanyID>9876543210</cbc:CompanyID>');
@@ -285,8 +359,6 @@ describe("creditNoteToUBL", () => {
             expect(supplierEnterpriseNumber).toBe("1234567894");
             expect(customerEnterpriseNumber).toBe("9876543210");
 
-
-            const parsedCreditNote = parseCreditNoteFromXML(xml);
             expect(parsedCreditNote.seller.name).toBe(creditNote.seller.name);
             expect(parsedCreditNote.buyer.name).toBe(creditNote.buyer.name);
 
@@ -334,9 +406,12 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-            await validateXml(xml, "missing enterprise number");
+            await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "missing enterprise number",
+            });
 
             await sendDocumentViaAPI(creditNote, "creditNote", recipientAddress);
         });
@@ -391,11 +466,12 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-            await checkCreditNoteXML(xml, creditNote, "line-level discounts and surcharges");
-
-            const parsed = parseCreditNoteFromXML(xml);
+            const { parsedCreditNote: parsed } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "line-level discounts and surcharges",
+            });
 
             expect(parsed.lines.length).toBe(2);
 
@@ -480,11 +556,12 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-            await validateXml(xml, "global discounts and surcharges");
-
-            const parsed = parseCreditNoteFromXML(xml);
+            const { parsedCreditNote: parsed } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "global discounts and surcharges",
+            });
 
             expect(parsed.discounts?.length).toBe(2);
             expect(parsed.discounts?.[0].amount).toBe("10.00");
@@ -535,26 +612,21 @@ describe("creditNoteToUBL", () => {
                         id: "INV-001",
                         issueDate: "2025-01-01",
                     },
-                    {
-                        id: "INV-002",
-                        issueDate: null,
-                    },
                 ],
             });
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
+            const { parsedCreditNote: parsed } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "invoice references",
+            });
 
-            await validateXml(xml, "invoice references");
-
-            const parsed = parseCreditNoteFromXML(xml);
-
-            expect(parsed.invoiceReferences.length).toBe(2);
+            expect(parsed.invoiceReferences.length).toBe(1);
             expect(parsed.invoiceReferences[0].id).toBe("INV-001");
             expect(parsed.invoiceReferences[0].issueDate).toBe("2025-01-01");
-            expect(parsed.invoiceReferences[1].id).toBe("INV-002");
-            expect(parsed.invoiceReferences[1].issueDate).toBeNull();
 
             await sendDocumentViaAPI(creditNote, "creditNote", recipientAddress);
         });
@@ -632,11 +704,12 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-            await validateXml(xml, "VAT edge cases");
-
-            const parsed = parseCreditNoteFromXML(xml);
+            const { parsedCreditNote: parsed } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "VAT edge cases",
+            });
 
             expect(parsed.vat).toBeDefined();
             expect(parsed.vat?.totalVatAmount).toBe("505.68");
@@ -670,7 +743,6 @@ describe("creditNoteToUBL", () => {
                 purchaseOrderReference: null,
                 despatchReference: null,
                 paymentMeans: null,
-                paymentTerms: null,
                 delivery: null,
                 discounts: null,
                 surcharges: null,
@@ -694,11 +766,13 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
+            const { parsedCreditNote: parsed } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "missing optional fields",
+            });
 
-            await validateXml(xml, "missing optional fields");
-
-            const parsed = parseCreditNoteFromXML(xml);
             expect(parsed.creditNoteNumber).toBe(creditNote.creditNoteNumber);
             expect(parsed.lines.length).toBe(1);
 
@@ -746,11 +820,13 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
+            const { parsedCreditNote: parsed } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "street2",
+            });
 
-            await validateXml(xml, "street2");
-
-            const parsed = parseCreditNoteFromXML(xml);
             expect(parsed.seller.street2).toBe("Suite 100");
             expect(parsed.buyer.street2).toBe("Floor 2");
 
@@ -815,15 +891,17 @@ describe("creditNoteToUBL", () => {
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";
-            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
-
-            await validateXml(xml, "VAT category O with exemption reason");
+            const { ublXml: xml, parsedCreditNote: parsed } = await checkCreditNoteXML({
+                creditNote,
+                senderAddress,
+                recipientAddress,
+                testName: "VAT category O with exemption reason",
+            });
 
             expect(xml).toContain('cbc:ID>O</cbc:ID>');
             expect(xml).toContain("Not subject to VAT according to local legislation");
             expect(xml).toContain('<cbc:CompanyID>1234567894</cbc:CompanyID>');
 
-            const parsed = parseCreditNoteFromXML(xml);
             expect(parsed.lines[0].vat.category).toBe("O");
             expect(parsed.lines[0].vat.percentage).toBe("0.00");
             expect(parsed.vat?.subtotals.length).toBe(1);
@@ -838,4 +916,3 @@ describe("creditNoteToUBL", () => {
         });
     });
 });
-

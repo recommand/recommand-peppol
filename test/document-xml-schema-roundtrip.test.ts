@@ -144,42 +144,66 @@ function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
   return schema.parse(normalizeBillingDocument(generated as BillingDocument)) as ParsedDocument;
 }
 
+// Types that must round-trip through both their UBL and CII (D22B) handlers.
+const minimumHandlerCount: Partial<Record<SchemaDocumentType, number>> = {
+  invoice: 2,
+  creditNote: 2,
+};
+
+function roundTripHandler(handler: (typeof DOCUMENT_XML_HANDLERS)[number], document: ParsedDocument) {
+  const parsed = handler.fromXml(
+    handler.toXml({
+      document,
+      senderAddress,
+      recipientAddress,
+      isDocumentValidationEnforced: false,
+    })
+  );
+  const reparsed = handler.fromXml(
+    handler.toXml({
+      document: parsed,
+      senderAddress,
+      recipientAddress,
+      isDocumentValidationEnforced: false,
+    })
+  );
+
+  return { parsed, reparsed };
+}
+
 describe("document XML handlers schema-driven round-trip", () => {
   for (const type of Object.keys(schemasByType) as SchemaDocumentType[]) {
-    it(`round-trips a schema-generated ${type}`, () => {
-      const parsedDocuments: ParsedDocument[] = [];
-      const handlers = DOCUMENT_XML_HANDLERS.filter((handler) => handler.type === type);
+    const handlers = DOCUMENT_XML_HANDLERS.filter((handler) => handler.type === type);
 
-      expect(handlers.length, `${type} handlers`).toBeGreaterThan(0);
+    describe(type, () => {
+      it(`registers at least ${minimumHandlerCount[type] ?? 1} handler(s)`, () => {
+        expect(handlers.length, `${type} handlers`).toBeGreaterThanOrEqual(
+          minimumHandlerCount[type] ?? 1
+        );
+      });
 
       for (const handler of handlers) {
-        const document = generatedDocumentFor(type);
-        const parsed = handler.fromXml(
-          handler.toXml({
-            document,
-            senderAddress,
-            recipientAddress,
-            isDocumentValidationEnforced: false,
-          })
-        );
-        const reparsed = handler.fromXml(
-          handler.toXml({
-            document: parsed,
-            senderAddress,
-            recipientAddress,
-            isDocumentValidationEnforced: false,
-          })
-        );
+        it(`round-trips via ${handler.title}`, () => {
+          const document = generatedDocumentFor(type);
+          const { parsed, reparsed } = roundTripHandler(handler, document);
 
-        expect(parsed, handler.title).toEqual(document);
-        expect(reparsed, handler.title).toEqual(parsed);
-
-        parsedDocuments.push(parsed);
+          expect(parsed, handler.title).toEqual(document);
+          expect(reparsed, handler.title).toEqual(parsed);
+        });
       }
 
-      const [firstDocument, ...otherDocuments] = parsedDocuments;
-      for (const parsedDocument of otherDocuments) {
-        expect(parsedDocument, `${type} handlers`).toEqual(firstDocument);
+      if (handlers.length > 1) {
+        it("handlers produce equivalent parsed documents", () => {
+          const document = generatedDocumentFor(type);
+          const parsedDocuments = handlers.map(
+            (handler) => roundTripHandler(handler, document).parsed
+          );
+
+          const [firstDocument, ...otherDocuments] = parsedDocuments;
+          for (const parsedDocument of otherDocuments) {
+            expect(parsedDocument, `${type} handlers`).toEqual(firstDocument);
+          }
+        });
       }
     });
   }

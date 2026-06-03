@@ -2,7 +2,7 @@ import type { Company } from "@peppol/data/companies";
 import { sendSystemAlert } from "../system-notifications/telegram";
 import { XMLParser } from "fast-xml-parser";
 import { MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO, type SupportedDocumentType } from "../document-types";
-import { getDocumentXmlHandlerByDocTypeId } from "./document-handlers";
+import { getDocumentXmlHandlersByDocTypeId } from "./document-handlers";
 import { getTextContent } from "./xml-helpers";
 
 function getCiiStandardVersion(parsedCii: any): string {
@@ -28,14 +28,35 @@ function getCiiSyntaxVersion(guidelineId: string): string {
 }
 
 function getSupportedDocTypeId(candidate: string): string | null {
-    return getDocumentXmlHandlerByDocTypeId(candidate) ? candidate : null;
+    return getDocumentXmlHandlersByDocTypeId(candidate).length > 0 ? candidate : null;
+}
+
+function getCiiDocumentType(xml: string): SupportedDocumentType {
+    const parser = new XMLParser({
+        ignoreAttributes: false,
+        attributeNamePrefix: "@_",
+        removeNSPrefix: true,
+    });
+    const parsed = parser.parse(xml);
+    const typeCode = getTextContent(parsed.CrossIndustryInvoice?.ExchangedDocument?.TypeCode);
+    if (typeCode === "381") {
+        return "creditNote";
+    }
+    if (typeCode === "380") {
+        return "invoice";
+    }
+    return "unknown";
 }
 
 export function parseDocument(docTypeId: string, xml: string, company: Company, senderId: string) {
     let parsedDocument = null;
     let type: SupportedDocumentType = "unknown";
     let probableType: SupportedDocumentType = "unknown";
-    const handler = getDocumentXmlHandlerByDocTypeId(docTypeId);
+    const handlers = getDocumentXmlHandlersByDocTypeId(docTypeId);
+    const ciiType = docTypeId.includes("CrossIndustryInvoice") ? getCiiDocumentType(xml) : "unknown";
+    const handler =
+        handlers.find((candidate) => ciiType !== "unknown" && candidate.type === ciiType) ??
+        handlers[0];
 
     if (handler) {
         probableType = handler.type;
