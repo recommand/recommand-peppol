@@ -6,7 +6,7 @@ import { getMinimalTeamMembers } from "@core/data/team-members";
 import { sendEmail } from "@core/lib/email";
 import { getCompany } from "@peppol/data/companies";
 import { getActiveSubscription } from "@peppol/data/subscriptions";
-import { isPlayground } from "@peppol/data/teams";
+import { getTeamExtension, isPlayground } from "@peppol/data/teams";
 import { canUseIntegrations } from "@peppol/utils/plan-validation";
 import { IntegrationFailureNotification } from "@peppol/emails/integration-failure-notification";
 import { log } from "@recommand/lib/logger";
@@ -16,6 +16,12 @@ function flattenFieldsToObject(fields: IntegrationConfigurationField[]): Record<
         acc[field.id] = field.value;
         return acc;
     }, {} as Record<string, unknown>);
+}
+
+const FAILURE_EMAIL_EXCLUDED_TASKS = new Set(["HARVEST_API_ERROR"]);
+
+function getFailureEmailTasks(failedTasks: Array<{ task: string; message: string; context?: string }>) {
+    return failedTasks.filter((failedTask) => !FAILURE_EMAIL_EXCLUDED_TASKS.has(failedTask.task));
 }
 
 async function sendFailureEmailToTeam({
@@ -28,11 +34,21 @@ async function sendFailureEmailToTeam({
     failedTasks: Array<{ task: string; message: string; context?: string }>;
 }) {
     try {
-        const teamMembers = await getMinimalTeamMembers(integration.teamId);
-        const verifiedTeamMembers = teamMembers.filter(member => member.user.emailVerified);
-        
-        if (verifiedTeamMembers.length === 0) {
-            console.log("No verified team members to send integration failure email to");
+        const teamExtension = await getTeamExtension(integration.teamId);
+        const supportEmailAddress = teamExtension?.supportEmailAddress?.trim();
+
+        let recipientEmails: string[];
+        if (supportEmailAddress) {
+            recipientEmails = [supportEmailAddress];
+        } else {
+            const teamMembers = await getMinimalTeamMembers(integration.teamId);
+            recipientEmails = teamMembers
+                .filter((member) => member.user.emailVerified)
+                .map((member) => member.user.email);
+        }
+
+        if (recipientEmails.length === 0) {
+            console.log("No recipients to send integration failure email to");
             return;
         }
 
@@ -40,21 +56,23 @@ async function sendFailureEmailToTeam({
         const companyName = company?.name || "Unknown Company";
 
         const integrationName = integration.manifest.name;
+        const subject = `Integration Failure: ${integrationName} for ${companyName}`;
+        const email = IntegrationFailureNotification({
+            integrationName,
+            companyName,
+            event,
+            failedTasks,
+        });
 
-        for (const member of verifiedTeamMembers) {
+        for (const recipientEmail of recipientEmails) {
             try {
                 await sendEmail({
-                    to: member.user.email,
-                    subject: `Integration Failure: ${integrationName} for ${companyName}`,
-                    email: IntegrationFailureNotification({
-                        integrationName,
-                        companyName,
-                        event,
-                        failedTasks,
-                    }),
+                    to: recipientEmail,
+                    subject,
+                    email,
                 });
             } catch (error) {
-                console.error(`Failed to send integration failure email to ${member.user.email}:`, error);
+                console.error(`Failed to send integration failure email to ${recipientEmail}:`, error);
             }
         }
     } catch (error) {
@@ -130,10 +148,10 @@ export async function postToIntegration({
             await createIntegrationTaskLog(integration.id, event, parsedResponse.error.task, false, message, parsedResponse.error.context ?? "");
         }
         
-        // Temporarily disabled failure email notifications until we have a better approach to handling errors.
-        // if (failedTasks.length > 0) {
-        //     await sendFailureEmailToTeam({ integration, event, failedTasks });
-        // }
+        const emailTasks = getFailureEmailTasks(failedTasks);
+        if (emailTasks.length > 0) {
+            await sendFailureEmailToTeam({ integration, event, failedTasks: emailTasks });
+        }
         
         log(["Error response from integration", integration.manifest.url, event, JSON.stringify(json, null, 2)], "error");
         throw new UserFacingError(message);
@@ -166,10 +184,10 @@ export async function postToIntegration({
             }
         }
         
-        // Temporarily disabled failure email notifications until we have a better approach to handling errors.
-        // if (failedTasks.length > 0) {
-        //     await sendFailureEmailToTeam({ integration, event, failedTasks });
-        // }
+        const emailTasks = getFailureEmailTasks(failedTasks);
+        if (emailTasks.length > 0) {
+            await sendFailureEmailToTeam({ integration, event, failedTasks: emailTasks });
+        }
     }
 
 
