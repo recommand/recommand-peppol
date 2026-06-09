@@ -1,10 +1,11 @@
-import { XMLParser, XMLBuilder } from "fast-xml-parser";
-import { createHash, randomBytes, randomUUID } from "crypto";
+import { XMLParser } from "fast-xml-parser";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { enterpriseDataCache } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { and, desc, eq } from "drizzle-orm";
 import type { Representative, EnterpriseData, CompanyAddress, CompanyType } from "./types";
+import { hasCompleteCbeAddress, parseCbeAddress, pickFirstEstablishmentAddress } from "./parse-address";
+import { callKboSoap, getKboCredentials } from "./soap";
 
 export type { Representative };
 
@@ -13,103 +14,96 @@ const parser = new XMLParser({
   attributeNamePrefix: "@_",
   textNodeName: "#text",
   removeNSPrefix: true,
-  isArray: (name, jpath) => {
-    return name === "Function";
+  isArray: (name) => {
+    return name === "Function" || name === "Establishment";
   },
 });
 
-const builder = new XMLBuilder({
-  ignoreAttributes: false,
-  format: false,
-});
+async function fetchEstablishmentAddressFallback(
+  enterpriseNumber: string,
+  credentials: { username: string; password: string },
+): Promise<CompanyAddress | null> {
+  const xml = await callKboSoap({
+    credentials,
+    soapAction: "http://fgov.economie.be/kbopub/ReadEstablishmentByEnterpriseNumber",
+    requestBody: {
+      "mes:ReadEstablishmentByEnterpriseNumberRequest": {
+        "dat:EnterpriseNumber": enterpriseNumber,
+        "mes:TypeOfResult": "long",
+      },
+    },
+  });
+
+  const parsed = parser.parse(xml);
+  const establishments = parsed.Envelope?.Body?.ReadEstablishmentByEnterpriseNumberReply?.Establishment;
+
+  return pickFirstEstablishmentAddress(establishments);
+}
+
+async function resolveEnterpriseAddress({
+  enterpriseNumber,
+  rootAddress,
+  credentials,
+}: {
+  enterpriseNumber: string;
+  rootAddress: CompanyAddress | null;
+  credentials: { username: string; password: string };
+}): Promise<CompanyAddress | null> {
+  if (hasCompleteCbeAddress(rootAddress)) {
+    console.log("Using cached address for enterprise", enterpriseNumber, JSON.stringify(rootAddress, null, 2));
+    return rootAddress;
+  }
+
+  try {
+    console.log("Fetching establishment address fallback for enterprise", enterpriseNumber);
+    return await fetchEstablishmentAddressFallback(enterpriseNumber, credentials);
+  } catch (error) {
+    console.error(error);
+    return rootAddress;
+  }
+}
 
 export async function getEnterpriseData(enterpriseNumber: string, country: string): Promise<EnterpriseData> {
 
   try {
     const cache = await getEnterpriseDataFromCache(enterpriseNumber, country);
-    // Chache is not older than 1 month
     if (cache && new Date(cache.updatedAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000) {
+      if (hasCompleteCbeAddress(cache.enterpriseData.address)) {
+        return cache.enterpriseData;
+      }
+
+      const address = await resolveEnterpriseAddress({
+        enterpriseNumber,
+        rootAddress: cache.enterpriseData.address,
+        credentials: getKboCredentials(),
+      });
+
+      if (hasCompleteCbeAddress(address) && !hasCompleteCbeAddress(cache.enterpriseData.address)) {
+        const enterpriseData = { ...cache.enterpriseData, address };
+        try {
+          await upsertEnterpriseDataInCache(enterpriseData);
+        } catch (error) {
+          console.error(error);
+        }
+        return enterpriseData;
+      }
+
       return cache.enterpriseData;
     }
   } catch (error) { }
 
-  const username = process.env.CBE_USERNAME;
-  const password = process.env.CBE_PASSWORD;
-  const endpoint = "https://kbopub.economie.fgov.be/kbopubws180000/services/wsKBOPub";
+  const credentials = getKboCredentials();
 
-  if (!username || !password) {
-    throw new Error("CBE_USERNAME and CBE_PASSWORD environment variables must be set");
-  }
-
-  const nonce = randomBytes(16);
-  const nonceBase64 = nonce.toString("base64");
-  const created = new Date().toISOString();
-  const expires = new Date(Date.now() + 300 * 1000).toISOString();
-
-  const passwordDigest = createHash("sha1")
-    .update(nonce)
-    .update(created)
-    .update(password)
-    .digest("base64");
-
-  const requestId = randomUUID();
-  const language = "nl";
-
-  const soapEnvelope = {
-    "soapenv:Envelope": {
-      "@_xmlns:soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
-      "@_xmlns:mes": "http://economie.fgov.be/kbopub/webservices/v1/messages",
-      "@_xmlns:dat": "http://economie.fgov.be/kbopub/webservices/v1/datamodel",
-      "@_xmlns:wsse": "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd",
-      "@_xmlns:wsu": "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd",
-      "soapenv:Header": {
-        "wsse:Security": {
-          "wsu:Timestamp": {
-            "wsu:Created": created,
-            "wsu:Expires": expires,
-          },
-          "wsse:UsernameToken": {
-            "wsse:Username": username,
-            "wsse:Password": {
-              "@_Type": "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest",
-              "#text": passwordDigest,
-            },
-            "wsse:Nonce": {
-              "@_EncodingType": "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary",
-              "#text": nonceBase64,
-            },
-            "wsu:Created": created,
-          },
-        },
-        "mes:RequestContext": {
-          "mes:Id": requestId,
-          "mes:Language": language,
-        },
-      },
-      "soapenv:Body": {
-        "mes:ReadEnterpriseRequest": {
-          "dat:EnterpriseNumber": enterpriseNumber,
-        },
+  const xml = await callKboSoap({
+    credentials,
+    soapAction: "http://fgov.economie.be/kbopub/ReadEnterprise",
+    requestBody: {
+      "mes:ReadEnterpriseRequest": {
+        "dat:EnterpriseNumber": enterpriseNumber,
       },
     },
-  };
-
-  const soapBody = builder.build(soapEnvelope);
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "text/xml;charset=UTF-8",
-      "SOAPAction": '"http://fgov.economie.be/kbopub/ReadEnterprise"',
-    },
-    body: soapBody,
   });
 
-  if (!response.ok) {
-    throw new Error(`CBE API error: ${response.status} ${response.statusText}: ${await response.text()}`);
-  }
-
-  const xml = await response.text();
   const parsed = parser.parse(xml);
 
   const envelope = parsed.Envelope;
@@ -174,19 +168,12 @@ export async function getEnterpriseData(enterpriseNumber: string, country: strin
     });
   }
 
-  const addr = enterprise.Address;
-  console.log("addr", addr);
-  if (addr) {
-    const streetDesc = addr.Street?.Description;
-    const municipalityDesc = addr.Municipality?.Description;
-    address = {
-      street: streetDesc?.Value || null,
-      number: addr.HouseNumber != null ? String(addr.HouseNumber) : null,
-      postalCode: addr.Zipcode != null ? String(addr.Zipcode) : null,
-      city: municipalityDesc?.Value || null,
-      country: "BE",
-    };
-  }
+  address = parseCbeAddress(enterprise.Address);
+  address = await resolveEnterpriseAddress({
+    enterpriseNumber,
+    rootAddress: address,
+    credentials,
+  });
 
   if (enterprise.JuridicalForm || enterprise.Denomination) {
     const juridicalFormDesc = enterprise.JuridicalForm?.Description;
