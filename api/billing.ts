@@ -5,7 +5,7 @@ import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { endBillingCycle } from "@peppol/data/billing/billing";
 import { retryFailedPayments } from "@peppol/data/billing/payment-retry";
 import { endOfMonth, format, subMonths } from "date-fns";
-import { requireAdmin } from "@core/lib/auth-middleware";
+import { requireGlobalPermission } from "@core/lib/permissions/permission-middleware";
 import { describeRoute } from "hono-openapi";
 import ExcelJS from "exceljs";
 import { TZDate } from "@date-fns/tz";
@@ -14,7 +14,7 @@ const server = new Server();
 
 const _endBillingCycle = server.post(
   "/billing/end-billing-cycle",
-  requireAdmin(),
+  requireGlobalPermission("peppol.billing"),
   describeRoute({ hide: true }),
   zodValidator("query", z.object({ dryRun: z.string().optional().default("false"), teamId: z.union([z.string(), z.array(z.string())]).optional(), billingDate: z.string().optional() })),
   async (c) => {
@@ -105,7 +105,7 @@ const _endBillingCycle = server.post(
 
 const _retryFailedPayments = server.post(
   "/billing/retry-failed-payments",
-  requireAdmin(),
+  requireGlobalPermission("peppol.billing"),
   describeRoute({ hide: true }),
   zodValidator("query", z.object({ dryRun: z.string().optional().default("false"), teamId: z.union([z.string(), z.array(z.string())]).optional() })),
   async (c) => {
