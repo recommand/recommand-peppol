@@ -11,6 +11,7 @@ import {
 import { sendAs4, type SendAs4Response } from "@peppol/data/phase4-ap/client";
 import { db } from "@recommand/db";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
+import { parsedHasAttachments } from "@peppol/data/offload/storage";
 import {
   requireIntegrationSupportedCompanyAccess,
   requireValidSubscription,
@@ -770,6 +771,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         processId,
         countryC1: countryC1,
         xml: xmlDocument,
+        xmlLocation: xmlDocument != null ? "db" : "none",
+        attachmentsLocation: parsedHasAttachments(parsedDocument) ? "db" : "none",
 
         sentOverPeppol: sentPeppol,
         sentOverEmail: sentEmailRecipients.length > 0,

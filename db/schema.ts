@@ -97,6 +97,14 @@ export const validationResultEnum = pgEnum(
   validationResult.options
 );
 
+// Where a document payload (xml / parsed attachments) currently lives.
+// "none" = the payload was never kept, "db" = stored in this row, "s3" = offloaded to S3.
+export const payloadLocationEnum = pgEnum("peppol_payload_location", [
+  "none",
+  "db",
+  "s3",
+]);
+
 export function lower(email: AnyPgColumn): SQL {
   return sql`lower(${email})`;
 }
@@ -463,7 +471,23 @@ export const transmittedDocuments = pgTable(
     docTypeId: text("doc_type_id").notNull(), // e.g. urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1
     processId: text("process_id").notNull(), // e.g. urn:fdc:peppol.eu:2017:poacc:billing:01:1.0
     countryC1: text("country_c1").notNull(), // e.g. BE
-    xml: text("xml"), // XML body of the document, can be null if the body was not kept
+    xml: text("xml"), // XML body of the document. Null when xmlLocation is "none" (not kept) or "s3" (offloaded).
+    // Single source of truth for where the xml body lives. See data/offload.
+    xmlLocation: payloadLocationEnum("xml_location").notNull().default("db"),
+    // Single source of truth for where the parsed attachments live. When "s3" the
+    // attachments are stored as JSON next to the xml; when "none" there are none.
+    attachmentsLocation: payloadLocationEnum("attachments_location")
+      .notNull()
+      .default("db"),
+    // The exact S3 key prefix used when this document's payloads were offloaded,
+    // without a suffix. Resolve a payload by appending ".xml" or
+    // ".attachments.json". Null until the document is offloaded. Stored (rather
+    // than re-derived) so reads/deletes are immune to changes in the key scheme.
+    s3KeyPrefix: text("s3_key_prefix"),
+    // Set when an offload worker claims this row, so other workers/instances
+    // skip it while it is being uploaded. A stale claim (older than the worker's
+    // threshold) is treated as abandoned and the row becomes eligible again.
+    offloadClaimedAt: timestamp("offload_claimed_at", { withTimezone: true }),
 
     sentOverPeppol: boolean("sent_over_peppol").notNull().default(true),
     sentOverEmail: boolean("sent_over_email").notNull().default(false),

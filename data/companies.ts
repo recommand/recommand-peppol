@@ -15,6 +15,10 @@ import { COUNTRIES } from "@peppol/utils/countries";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { createVerificationSession, type VerificationExpectedDetails } from "./didit/client";
 import { getCompanyVerificationLog } from "./company-verification";
+import {
+  deleteOffloadedDocumentObjects,
+  getOffloadedDocumentS3KeysForCompany,
+} from "./offload/storage";
 import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 
@@ -379,9 +383,19 @@ export async function deleteCompany({
   if (shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements: teamExtension?.verificationRequirements ?? undefined })) {
     await unregisterCompanyRegistrations({ companyId, useTestNetwork });
   }
+
+  // Collect offloaded document S3 keys before the company (and its documents,
+  // via cascade) are deleted, then remove the objects best-effort afterwards.
+  const offloadedKeys = await getOffloadedDocumentS3KeysForCompany(
+    teamId,
+    companyId
+  );
+
   await db
     .delete(companies)
     .where(and(eq(companies.teamId, teamId), eq(companies.id, companyId)));
+
+  await deleteOffloadedDocumentObjects(offloadedKeys);
 }
 
 export async function verifyCompany({

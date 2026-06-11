@@ -1,5 +1,6 @@
 import { db } from "@recommand/db";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
+import { parsedHasAttachments } from "@peppol/data/offload/storage";
 import { getCompanyByPeppolId } from "@peppol/data/companies";
 import { UserFacingError } from "@peppol/utils/util";
 import { parseDocument } from "@peppol/utils/parsing/parse-document";
@@ -95,6 +96,8 @@ export async function receiveDocument(options: {
       processId: cleanProcessId,
       countryC1: options.countryC1,
       xml: options.body,
+      xmlLocation: options.body != null ? "db" : "none",
+      attachmentsLocation: parsedHasAttachments(parsedDocument) ? "db" : "none",
       peppolMessageId: options.as4MessageId ?? null,
       peppolConversationId: options.as4ConversationId ?? null,
       envelopeId: options.sbdhInstanceIdentifier ?? null,

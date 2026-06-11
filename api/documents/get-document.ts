@@ -7,7 +7,9 @@ import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@c
 import { describeRoute } from "hono-openapi";
 import {
     getTransmittedDocument,
+    toApiTransmittedDocument,
 } from "@peppol/data/transmitted-documents";
+import { resolveDocumentXml } from "@peppol/data/offload/storage";
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
@@ -67,12 +69,15 @@ async function _getTransmittedDocumentImplementation(c: GetTransmittedDocumentCo
         }
 
         // Currently not mentioned in the API docs yet, so we can still roll this back if needed
-        if (c.req.header("accept")?.toLowerCase().startsWith("application/xml") && document.xml) {
-          c.header("Content-Type", "application/xml; charset=utf-8");
-          return c.body(document.xml);
+        if (c.req.header("accept")?.toLowerCase().startsWith("application/xml")) {
+          const xml = await resolveDocumentXml(document);
+          if (xml) {
+            c.header("Content-Type", "application/xml; charset=utf-8");
+            return c.body(xml);
+          }
         }
-  
-        return c.json(actionSuccess({ document }));
+
+        return c.json(actionSuccess({ document: await toApiTransmittedDocument(document) }));
       } catch (error) {
         return c.json(actionFailure("Failed to fetch document"), 500);
       }
