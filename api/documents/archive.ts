@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import { renderDocumentPdf } from "@peppol/utils/document-renderer";
 import type { PublicTransmittedDocumentWithLabels } from "@peppol/data/transmitted-documents";
 import {
+  hydrateDocumentParsedAttachments,
   resolveDocumentXml,
   resolveDocumentXmlAndAttachments,
 } from "@peppol/data/offload/storage";
@@ -37,10 +38,12 @@ export async function buildDocumentsArchive(
       return;
     }
 
-    const { xml: _xml, ...documentMetadata } = document;
+    const { xml, attachments } = await resolveDocumentXmlAndAttachments(document);
+
+    const parsed = hydrateDocumentParsedAttachments(document.parsed, attachments);
+    const { xml: _xml, ...documentMetadata } = { ...document, parsed };
     folder.file("document.json", JSON.stringify(documentMetadata, null, 2));
 
-    const { xml, attachments } = await resolveDocumentXmlAndAttachments(document);
     if (xml) {
       folder.file("document.xml", xml);
     }
