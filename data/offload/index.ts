@@ -30,6 +30,10 @@ const CLAIM_STALE_MS = 15 * 60 * 1000;
 // below) — but a single process only needs one loop.
 let isRunning = false;
 
+export function isDocumentOffloadEnabled(): boolean {
+  return process.env.PEPPOL_DOCUMENT_OFFLOAD_ENABLED === "true";
+}
+
 /**
  * Offload the raw xml (and parsed.attachments) of documents older than the
  * retention window to S3, gradually slimming down the database. Documents are
@@ -38,7 +42,7 @@ let isRunning = false;
  * be retried (the S3 keys are deterministic, making re-upload idempotent).
  */
 export async function offloadOldDocuments(logger: Logger): Promise<void> {
-  if (!isS3Enabled()) {
+  if (!isDocumentOffloadEnabled() || !isS3Enabled()) {
     return;
   }
   // A previous run may still be draining the backlog (which can take longer than

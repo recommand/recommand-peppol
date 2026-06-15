@@ -1,10 +1,14 @@
 import { Cron } from "croner";
 import { Logger } from "@recommand/lib/logger";
 import { isS3Enabled } from "@core/lib/s3";
-import { offloadOldDocuments } from "./index";
+import { isDocumentOffloadEnabled, offloadOldDocuments } from "./index";
 
 export async function initializeOffloadCronJobs(logger: Logger): Promise<void> {
-  if (process.env.RUN_CRON !== "true" || !isS3Enabled()) {
+  if (
+    process.env.RUN_CRON !== "true" ||
+    !isDocumentOffloadEnabled() ||
+    !isS3Enabled()
+  ) {
     return;
   }
 
