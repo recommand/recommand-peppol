@@ -15,10 +15,8 @@ import { COUNTRIES } from "@peppol/utils/countries";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { createVerificationSession, type VerificationExpectedDetails } from "./didit/client";
 import { getCompanyVerificationLog } from "./company-verification";
-import {
-  deleteOffloadedDocumentObjects,
-  getOffloadedDocumentS3KeysForCompany,
-} from "./offload/storage";
+import { companyDocumentsS3Prefix } from "./offload/storage";
+import { enqueueS3PrefixDeletions } from "./s3-deletion";
 import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 
@@ -384,18 +382,18 @@ export async function deleteCompany({
     await unregisterCompanyRegistrations({ companyId, useTestNetwork });
   }
 
-  // Collect offloaded document S3 keys before the company (and its documents,
-  // via cascade) are deleted, then remove the objects best-effort afterwards.
-  const offloadedKeys = await getOffloadedDocumentS3KeysForCompany(
-    teamId,
-    companyId
-  );
-
-  await db
-    .delete(companies)
-    .where(and(eq(companies.teamId, teamId), eq(companies.id, companyId)));
-
-  await deleteOffloadedDocumentObjects(offloadedKeys);
+  // The company's documents are deleted by the FK cascade; their S3 objects
+  // all live under the company's prefix and are removed by the background
+  // deletion worker. Enqueueing in the same transaction as the delete means
+  // the objects can never be orphaned, and the request doesn't wait on S3.
+  await db.transaction(async (tx) => {
+    await enqueueS3PrefixDeletions(tx, [
+      companyDocumentsS3Prefix(teamId, companyId),
+    ]);
+    await tx
+      .delete(companies)
+      .where(and(eq(companies.teamId, teamId), eq(companies.id, companyId)));
+  });
 }
 
 export async function verifyCompany({

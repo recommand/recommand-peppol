@@ -1,9 +1,6 @@
 import { transmittedDocuments } from "@peppol/db/schema";
-import { db } from "@recommand/db";
-import { and, eq, or } from "drizzle-orm";
-import { deleteFile, downloadFile } from "@core/lib/s3";
+import { downloadFile } from "@core/lib/s3";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
-import { S3_REQUEST_CONCURRENCY, mapWithConcurrency } from "@peppol/utils/concurrency";
 import { withTimeout } from "@peppol/utils/timeout";
 
 // Upper bound on any single S3 request before we give up on it, protecting
@@ -28,14 +25,34 @@ type DocumentS3Locator = {
   createdAt: Date;
 };
 
+// Root of all offloaded document objects. Every document object lives under
+// the prefix of its team and company, which lets the deletion worker remove
+// all of a company's (or team's) objects by prefix without enumerating keys
+// from the database. The deletion queue relies on this layout staying stable.
+export const PEPPOL_DOCUMENTS_S3_ROOT = "peppol-documents";
+
+export function teamDocumentsS3Prefix(teamId: string): string {
+  return `${PEPPOL_DOCUMENTS_S3_ROOT}/${teamId}/`;
+}
+
+export function companyDocumentsS3Prefix(
+  teamId: string,
+  companyId: string
+): string {
+  return `${teamDocumentsS3Prefix(teamId)}${companyId}/`;
+}
+
 // Derive the canonical S3 key prefix for a document. Called once, at offload
 // time; the result is persisted to s3KeyPrefix and used for all later reads.
+// Document ids are fixed-length ULIDs, so one document's prefix can never be
+// a prefix of another's; prefix-deleting it removes exactly this document's
+// objects.
 export function documentS3KeyPrefix(doc: DocumentS3Locator): string {
   const d = doc.createdAt;
   const yyyy = d.getUTCFullYear();
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(d.getUTCDate()).padStart(2, "0");
-  return `peppol-documents/${doc.teamId}/${doc.companyId}/${yyyy}/${mm}/${dd}/${doc.id}`;
+  return `${companyDocumentsS3Prefix(doc.teamId, doc.companyId)}${yyyy}/${mm}/${dd}/${doc.id}`;
 }
 
 export function documentXmlKey(s3KeyPrefix: string): string {
@@ -163,60 +180,18 @@ export const offloadedDocumentSelect = {
   s3KeyPrefix: transmittedDocuments.s3KeyPrefix,
 };
 
-// The S3 object keys for the payloads of these documents that live in S3.
-export function offloadedDocumentS3Keys(
+// The s3KeyPrefix of each document that has at least one payload in S3. These
+// are the prefixes to enqueue for background deletion when the documents are
+// deleted; documents that were never offloaded have nothing in S3.
+export function offloadedDocumentS3Prefixes(
   docs: OffloadedDocumentLocator[]
 ): string[] {
-  const keys: string[] = [];
+  const prefixes: string[] = [];
   for (const doc of docs) {
     if (!doc.s3KeyPrefix) continue;
-    if (doc.xmlLocation === "s3") keys.push(documentXmlKey(doc.s3KeyPrefix));
-    if (doc.attachmentsLocation === "s3")
-      keys.push(documentAttachmentsKey(doc.s3KeyPrefix));
+    if (doc.xmlLocation === "s3" || doc.attachmentsLocation === "s3") {
+      prefixes.push(doc.s3KeyPrefix);
+    }
   }
-  return keys;
-}
-
-// Best-effort deletion of offloaded S3 objects. Never throws: an orphaned object
-// is a minor storage cost, not a correctness problem, and must not block the
-// (already committed or about-to-happen) deletion of the database rows.
-// Concurrency is bounded so deleting a company (or a large batch) with many
-// thousands of offloaded documents does not fire all the requests at once.
-export async function deleteOffloadedDocumentObjects(
-  keys: string[]
-): Promise<void> {
-  await mapWithConcurrency(keys, S3_REQUEST_CONCURRENCY, (key) =>
-    withTimeout(
-      deleteFile(key),
-      S3_OPERATION_TIMEOUT_MS,
-      `Delete offloaded document object ${key}`
-    ).catch((error) => {
-      console.error(
-        `Failed to delete offloaded document object ${key}:`,
-        error
-      );
-    })
-  );
-}
-
-// Collect the offloaded S3 keys for all documents belonging to a company. Used
-// before a company (and its documents, via cascade) is deleted.
-export async function getOffloadedDocumentS3KeysForCompany(
-  teamId: string,
-  companyId: string
-): Promise<string[]> {
-  const docs = await db
-    .select(offloadedDocumentSelect)
-    .from(transmittedDocuments)
-    .where(
-      and(
-        eq(transmittedDocuments.teamId, teamId),
-        eq(transmittedDocuments.companyId, companyId),
-        or(
-          eq(transmittedDocuments.xmlLocation, "s3"),
-          eq(transmittedDocuments.attachmentsLocation, "s3")
-        )
-      )
-    );
-  return offloadedDocumentS3Keys(docs);
+  return prefixes;
 }

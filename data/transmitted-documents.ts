@@ -4,12 +4,13 @@ import { eq, and, or, sql, desc, isNull, isNotNull, inArray, ilike, gte, lt } fr
 import type { Label } from "./labels";
 import { removeAttachmentsFromParsedDocument } from "@peppol/utils/parsing/remove-attachments";
 import {
-  deleteOffloadedDocumentObjects,
-  offloadedDocumentS3Keys,
+  offloadedDocumentS3Prefixes,
   offloadedDocumentSelect,
   resolveDocumentParsedWithAttachments,
   resolveDocumentXml,
+  teamDocumentsS3Prefix,
 } from "./offload/storage";
+import { enqueueS3PrefixDeletions } from "./s3-deletion";
 
 export type TransmittedDocument = typeof transmittedDocuments.$inferSelect;
 export type InsertTransmittedDocument = typeof transmittedDocuments.$inferInsert;
@@ -300,11 +301,15 @@ export async function deleteTransmittedDocument(
     .from(transmittedDocuments)
     .where(and(eq(transmittedDocuments.id, documentId), eq(transmittedDocuments.teamId, teamId)));
 
-  await db
-    .delete(transmittedDocuments)
-    .where(and(eq(transmittedDocuments.id, documentId), eq(transmittedDocuments.teamId, teamId)));
-
-  await deleteOffloadedDocumentObjects(offloadedDocumentS3Keys(docs));
+  // Offloaded S3 objects are removed by the background deletion worker;
+  // enqueueing in the same transaction as the delete means they can never be
+  // orphaned, and the request doesn't wait on S3.
+  await db.transaction(async (tx) => {
+    await enqueueS3PrefixDeletions(tx, offloadedDocumentS3Prefixes(docs));
+    await tx
+      .delete(transmittedDocuments)
+      .where(and(eq(transmittedDocuments.id, documentId), eq(transmittedDocuments.teamId, teamId)));
+  });
 }
 
 export async function deleteTransmittedDocuments(
@@ -331,39 +336,33 @@ export async function deleteTransmittedDocuments(
     throw new Error("Document not found");
   }
 
-  await db
-    .delete(transmittedDocuments)
-    .where(
-      and(
-        eq(transmittedDocuments.teamId, teamId),
-        inArray(transmittedDocuments.id, uniqueDocumentIds)
-      )
+  await db.transaction(async (tx) => {
+    await enqueueS3PrefixDeletions(
+      tx,
+      offloadedDocumentS3Prefixes(existingDocuments)
     );
-
-  await deleteOffloadedDocumentObjects(offloadedDocumentS3Keys(existingDocuments));
+    await tx
+      .delete(transmittedDocuments)
+      .where(
+        and(
+          eq(transmittedDocuments.teamId, teamId),
+          inArray(transmittedDocuments.id, uniqueDocumentIds)
+        )
+      );
+  });
 }
 
 export async function deleteAllTransmittedDocuments(
   teamId: string
 ): Promise<void> {
-  const offloadedDocs = await db
-    .select(offloadedDocumentSelect)
-    .from(transmittedDocuments)
-    .where(
-      and(
-        eq(transmittedDocuments.teamId, teamId),
-        or(
-          eq(transmittedDocuments.xmlLocation, "s3"),
-          eq(transmittedDocuments.attachmentsLocation, "s3")
-        )
-      )
-    );
-
-  await db
-    .delete(transmittedDocuments)
-    .where(eq(transmittedDocuments.teamId, teamId));
-
-  await deleteOffloadedDocumentObjects(offloadedDocumentS3Keys(offloadedDocs));
+  // All of the team's document objects live under the team's prefix, so one
+  // queue row covers them all — no need to enumerate offloaded documents.
+  await db.transaction(async (tx) => {
+    await enqueueS3PrefixDeletions(tx, [teamDocumentsS3Prefix(teamId)]);
+    await tx
+      .delete(transmittedDocuments)
+      .where(eq(transmittedDocuments.teamId, teamId));
+  });
 }
 
 export async function getInbox(

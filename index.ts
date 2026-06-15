@@ -26,6 +26,7 @@ import teamsServer from "./api/teams/get-team-extension";
 import customersServer from "./api/customers";
 import { initializeIntegrationCronJobs } from "./data/integrations/cron";
 import { initializeOffloadCronJobs } from "./data/offload/cron";
+import { initializeS3DeletionCronJobs } from "./data/s3-deletion/cron";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
@@ -46,6 +47,7 @@ export async function init(app: RecommandApp, server: Server) {
 
   initializeIntegrationCronJobs(logger);
   initializeOffloadCronJobs(logger);
+  initializeS3DeletionCronJobs(logger);
 
   const exclude: RegExp[] = [
     /^\/api\/core(?!\/auth\/verify).*$/, // Exclude all core API endpoints except the auth/verify endpoint

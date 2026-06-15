@@ -525,6 +525,26 @@ export const transmittedDocuments = pgTable(
   }
 );
 
+// Queue of S3 key prefixes whose objects must be deleted. Rows are enqueued in
+// the same transaction that deletes documents (or a whole company), so the
+// HTTP request returns as soon as the database rows are gone and a background
+// worker removes the S3 objects afterwards (see data/s3-deletion). One row
+// covers everything under its prefix, so deleting a company with 100k
+// offloaded documents enqueues a single row.
+export const pendingS3Deletions = pgTable("pending_s3_deletions", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => "psd_" + ulid()),
+  prefix: text("prefix").notNull(),
+  // Set when a worker claims this row, so other workers/instances skip it
+  // while its prefix is being drained. A stale claim (older than the worker's
+  // threshold) is treated as abandoned and the row becomes eligible again.
+  claimedAt: timestamp("claimed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const transmittedDocumentLabels = pgTable(
   "peppol_transmitted_document_labels",
   {
