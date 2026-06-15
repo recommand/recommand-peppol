@@ -17,6 +17,7 @@ import { db } from "@recommand/db";
 import { and, eq } from "drizzle-orm";
 import JSZip from "jszip";
 import { renderDocumentPdf } from "@peppol/utils/document-renderer";
+import { resolveDocumentXmlAndAttachments } from "@peppol/data/offload/storage";
 
 const server = new Server();
 
@@ -141,24 +142,22 @@ const _downloadBillingInvoice = server.get(
 
       const zip = new JSZip();
 
-      if (document[0].xml) {
-        zip.file("document.xml", document[0].xml);
+      const { xml, attachments } = await resolveDocumentXmlAndAttachments(document[0]);
+      if (xml) {
+        zip.file("document.xml", xml);
       }
 
       let hasPdfAttachment = false;
-      if (document[0].parsed && typeof document[0].parsed === "object" && "attachments" in document[0].parsed) {
-        const attachments = (document[0].parsed as any).attachments;
-        if (Array.isArray(attachments)) {
-          for (const attachment of attachments) {
-            const base64 = attachment.embeddedDocument;
-            const mimeCode = attachment.mimeCode;
-            const filename = attachment.filename;
+      if (Array.isArray(attachments)) {
+        for (const attachment of attachments) {
+          const base64 = attachment.embeddedDocument;
+          const mimeCode = attachment.mimeCode;
+          const filename = attachment.filename;
 
-            if (base64 && mimeCode && filename) {
-              zip.file(filename, Buffer.from(base64, 'base64'));
-              if (mimeCode === "application/pdf") {
-                hasPdfAttachment = true;
-              }
+          if (base64 && mimeCode && filename) {
+            zip.file(filename, Buffer.from(base64, 'base64'));
+            if (mimeCode === "application/pdf") {
+              hasPdfAttachment = true;
             }
           }
         }

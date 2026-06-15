@@ -1,0 +1,2 @@
+CREATE INDEX "pending_s3_deletions_claim_idx" ON "pending_s3_deletions" USING btree ("claimed_at","created_at");--> statement-breakpoint
+CREATE INDEX "peppol_transmitted_documents_offload_idx" ON "peppol_transmitted_documents" USING btree ("xml_location","created_at","offload_claimed_at");
