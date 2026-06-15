@@ -522,7 +522,14 @@ export const transmittedDocuments = pgTable(
       .defaultNow()
       .notNull(),
     updatedAt: autoUpdateTimestamp(),
-  }
+  },
+  (table) => [
+    index("peppol_transmitted_documents_offload_idx").on(
+      table.xmlLocation,
+      table.createdAt,
+      table.offloadClaimedAt
+    ),
+  ]
 );
 
 // Queue of S3 key prefixes whose objects must be deleted. Rows are enqueued in
@@ -531,19 +538,28 @@ export const transmittedDocuments = pgTable(
 // worker removes the S3 objects afterwards (see data/s3-deletion). One row
 // covers everything under its prefix, so deleting a company with 100k
 // offloaded documents enqueues a single row.
-export const pendingS3Deletions = pgTable("pending_s3_deletions", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => "psd_" + ulid()),
-  prefix: text("prefix").notNull(),
-  // Set when a worker claims this row, so other workers/instances skip it
-  // while its prefix is being drained. A stale claim (older than the worker's
-  // threshold) is treated as abandoned and the row becomes eligible again.
-  claimedAt: timestamp("claimed_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const pendingS3Deletions = pgTable(
+  "pending_s3_deletions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "psd_" + ulid()),
+    prefix: text("prefix").notNull(),
+    // Set when a worker claims this row, so other workers/instances skip it
+    // while its prefix is being drained. A stale claim (older than the worker's
+    // threshold) is treated as abandoned and the row becomes eligible again.
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("pending_s3_deletions_claim_idx").on(
+      table.claimedAt,
+      table.createdAt
+    ),
+  ]
+);
 
 export const transmittedDocumentLabels = pgTable(
   "peppol_transmitted_document_labels",

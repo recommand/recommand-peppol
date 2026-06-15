@@ -14,23 +14,23 @@ export async function initializeOffloadCronJobs(logger: Logger): Promise<void> {
   logger.info("Initializing document offload cron job");
 
   // Daily at 01:00
-  new Cron("0 1 * * *", { name: "peppol.offload-xml" }, async () => {
-    logger.info("Executing peppol.offload-xml");
+  new Cron("0 1 * * *", { name: "peppol.offload" }, async () => {
+    logger.info("Executing peppol.offload");
     try {
       await offloadOldDocuments(logger);
     } catch (error) {
       logger.error(
-        `Failed to run peppol.offload-xml: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to run peppol.offload: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   });
 
   logger.info("Document offload cron job initialized");
 
-  logger.info("Running peppol.offload-xml immediately");
+  logger.info("Running peppol.offload immediately");
   offloadOldDocuments(logger).catch((error) => {
     logger.error(
-      `Failed to run peppol.offload-xml immediately: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to run peppol.offload immediately: ${error instanceof Error ? error.message : String(error)}`
     );
   });
 }

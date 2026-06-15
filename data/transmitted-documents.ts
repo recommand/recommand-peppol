@@ -233,6 +233,8 @@ export async function getTransmittedDocuments(
       sentOverEmail: transmittedDocuments.sentOverEmail,
       emailRecipients: transmittedDocuments.emailRecipients,
       parsed: transmittedDocuments.parsed,
+      attachmentsLocation: transmittedDocuments.attachmentsLocation,
+      s3KeyPrefix: transmittedDocuments.s3KeyPrefix,
       validation: transmittedDocuments.validation,
       peppolMessageId: transmittedDocuments.peppolMessageId,
       peppolConversationId: transmittedDocuments.peppolConversationId,
@@ -248,13 +250,22 @@ export async function getTransmittedDocuments(
   const documentIds = documents.map((doc) => doc.id);
   const documentLabelsMap = await getLabelsForDocuments(documentIds);
 
-  const documentsWithLabels = documents.map((doc) => ({
-    ...doc,
-    labels: documentLabelsMap.get(doc.id) || [],
-    parsed: excludeAttachments
-      ? (removeAttachmentsFromParsedDocument(doc.parsed) as typeof doc.parsed)
-      : doc.parsed,
-  }));
+  const documentsWithLabels = await Promise.all(
+    documents.map(async (doc) => {
+      const { attachmentsLocation, s3KeyPrefix, ...publicDoc } = doc;
+      return {
+        ...publicDoc,
+        labels: documentLabelsMap.get(doc.id) || [],
+        parsed: excludeAttachments
+          ? (removeAttachmentsFromParsedDocument(doc.parsed) as typeof doc.parsed)
+          : await resolveDocumentParsedWithAttachments({
+              parsed: doc.parsed,
+              attachmentsLocation,
+              s3KeyPrefix,
+            }),
+      };
+    })
+  );
 
   return { documents: documentsWithLabels, total };
 }
