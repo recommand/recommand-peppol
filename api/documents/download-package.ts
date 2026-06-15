@@ -6,7 +6,10 @@ import { actionFailure } from "@recommand/lib/utils";
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { describeRoute } from "hono-openapi";
 import { getTransmittedDocument } from "@peppol/data/transmitted-documents";
-import { resolveDocumentXmlAndAttachments } from "@peppol/data/offload/storage";
+import {
+    hydrateDocumentParsedAttachments,
+    resolveDocumentXmlAndAttachments,
+} from "@peppol/data/offload/storage";
 import {
     describeErrorResponse,
 } from "@core/lib/api-docs";
@@ -88,12 +91,14 @@ async function _downloadPackageImplementation(c: DownloadPackageContext) {
         // Create a new zip file
         const zip = new JSZip();
 
-        // Add document metadata as JSON
-        const { xml: _xml, ...documentMetadata } = document;
-        zip.file("document.json", JSON.stringify(documentMetadata, null, 2));
-
         // Fetch the xml and attachments concurrently (both may live in S3).
         const { xml, attachments } = await resolveDocumentXmlAndAttachments(document);
+
+        const parsed = hydrateDocumentParsedAttachments(document.parsed, attachments);
+
+        // Add document metadata as JSON
+        const { xml: _xml, ...documentMetadata } = { ...document, parsed };
+        zip.file("document.json", JSON.stringify(documentMetadata, null, 2));
 
         // Add XML if available
         if (xml) {

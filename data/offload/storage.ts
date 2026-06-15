@@ -144,6 +144,20 @@ export async function resolveDocumentXmlAndAttachments(
   return { xml, attachments };
 }
 
+export function hydrateDocumentParsedAttachments<T>(
+  parsed: T,
+  attachments: Attachment[]
+): T {
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !("attachments" in parsed)
+  ) {
+    return parsed;
+  }
+  return { ...parsed, attachments };
+}
+
 // Return a copy of the parsed document with its attachments resolved from
 // wherever they live, normalised so the API shape matches a never-offloaded
 // document. Offloading strips an empty attachments list to null in the database;
@@ -164,7 +178,7 @@ export async function resolveDocumentParsedWithAttachments<T>(
     doc.attachmentsLocation === "s3"
       ? await resolveDocumentAttachments(doc)
       : (doc.parsed as { attachments?: Attachment[] | null }).attachments ?? [];
-  return { ...doc.parsed, attachments };
+  return hydrateDocumentParsedAttachments(doc.parsed, attachments);
 }
 
 type OffloadedDocumentLocator = {
