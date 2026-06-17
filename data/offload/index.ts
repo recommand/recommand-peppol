@@ -13,7 +13,7 @@ import {
 import { withTimeout } from "@peppol/utils/timeout";
 import type { Logger } from "@recommand/lib/logger";
 
-const RETENTION_DAYS = 3 * 30; // TODO: Decrease to 7 days later on
+const RETENTION_DAYS = 30; // TODO: Decrease to 7 days later on
 // Abort a run after this many consecutive failures (e.g. S3 unavailable) so we
 // don't churn through the whole table during an outage; the next run retries.
 const MAX_CONSECUTIVE_FAILURES = 25;
