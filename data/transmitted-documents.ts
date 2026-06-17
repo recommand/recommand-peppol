@@ -11,6 +11,10 @@ import {
   teamDocumentsS3Prefix,
 } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
+import {
+  mapWithConcurrency,
+  S3_REQUEST_CONCURRENCY,
+} from "@peppol/utils/concurrency";
 
 export type TransmittedDocument = typeof transmittedDocuments.$inferSelect;
 export type InsertTransmittedDocument = typeof transmittedDocuments.$inferInsert;
@@ -250,8 +254,10 @@ export async function getTransmittedDocuments(
   const documentIds = documents.map((doc) => doc.id);
   const documentLabelsMap = await getLabelsForDocuments(documentIds);
 
-  const documentsWithLabels = await Promise.all(
-    documents.map(async (doc) => {
+  const documentsWithLabels = await mapWithConcurrency(
+    documents,
+    S3_REQUEST_CONCURRENCY,
+    async (doc) => {
       const { attachmentsLocation, s3KeyPrefix, ...publicDoc } = doc;
       return {
         ...publicDoc,
@@ -264,7 +270,7 @@ export async function getTransmittedDocuments(
               s3KeyPrefix,
             }),
       };
-    })
+    }
   );
 
   return { documents: documentsWithLabels, total };

@@ -1,7 +1,6 @@
 import { transmittedDocuments } from "@peppol/db/schema";
-import { downloadFile } from "@core/lib/s3";
+import { downloadTextFile } from "@core/lib/s3";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
-import { withTimeout } from "@peppol/utils/timeout";
 
 // Upper bound on any single S3 request before we give up on it, protecting
 // against a request that hangs indefinitely (a stalled connection never
@@ -89,12 +88,9 @@ export async function resolveDocumentXml(
     case "db":
       return doc.xml;
     case "s3": {
-      const file = await downloadFile(documentXmlKey(requireS3KeyPrefix(doc)));
-      return await withTimeout(
-        file.text(),
-        S3_OPERATION_TIMEOUT_MS,
-        "Read offloaded document xml from S3"
-      );
+      return await downloadTextFile(documentXmlKey(requireS3KeyPrefix(doc)), {
+        timeoutMs: S3_OPERATION_TIMEOUT_MS,
+      });
     }
     case "none":
       return null;
@@ -112,11 +108,11 @@ export async function resolveDocumentAttachments(
       return (doc.parsed as { attachments?: Attachment[] | null } | null)
         ?.attachments ?? [];
     case "s3": {
-      const file = await downloadFile(documentAttachmentsKey(requireS3KeyPrefix(doc)));
-      const json = await withTimeout(
-        file.text(),
-        S3_OPERATION_TIMEOUT_MS,
-        "Read offloaded document attachments from S3"
+      const json = await downloadTextFile(
+        documentAttachmentsKey(requireS3KeyPrefix(doc)),
+        {
+          timeoutMs: S3_OPERATION_TIMEOUT_MS,
+        }
       );
       return JSON.parse(json) as Attachment[];
     }
