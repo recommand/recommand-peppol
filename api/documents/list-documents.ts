@@ -87,14 +87,18 @@ const getTransmittedDocumentsQuerySchema = z.object({
   }),
   excludeAttachments: z
     .preprocess(
-      (value) =>
-        value === "true" ? true : value === "false" ? false : value,
+      (value) => {
+        if (value === undefined) return undefined;
+        if (value === "true" || value === "") return true;
+        if (value === "false") return false;
+        return value;
+      },
       z.boolean()
     )
     .optional()
     .default(false)
     .openapi({
-    description: "When true, excludes attachments from the parsed object to reduce payload size",
+    description: "When true, excludes attachments from the parsed object to reduce payload size. Can be passed as a flag without a value (e.g. ?excludeAttachments).",
     example: false,
   }),
 });
