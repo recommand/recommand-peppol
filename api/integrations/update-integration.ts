@@ -9,7 +9,6 @@ import { integrationResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { updateIntegration } from "@peppol/data/integrations";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
-import { manifestSchema } from "@peppol/types/integration/manifest";
 import { configurationSchema } from "@peppol/types/integration/configuration";
 import { UserFacingError } from "@peppol/utils/util";
 import { audit } from "@core/lib/audit";

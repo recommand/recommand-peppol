@@ -96,7 +96,7 @@ async function _getTransmittedDocumentImplementation(c: GetTransmittedDocumentCo
       } catch (error) {
         return c.json(actionFailure("Failed to fetch document"), 500);
       }
-};
+}
 
 export type GetTransmittedDocument = typeof _getTransmittedDocument | typeof _getTransmittedDocumentMinimal;
 
