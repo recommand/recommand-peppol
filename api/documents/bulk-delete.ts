@@ -1,4 +1,5 @@
 import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import { audit } from "@core/lib/audit";
 import { deleteTransmittedDocuments } from "@peppol/data/transmitted-documents";
 import { Server, type Context } from "@recommand/lib/api";
 import { zodValidator } from "@recommand/lib/zod-validator";
@@ -41,6 +42,15 @@ const _bulkDelete = server.delete(
     try {
       const { documentIds } = c.req.valid("json");
       await deleteTransmittedDocuments(c.var.team.id, documentIds);
+      await audit(c, {
+        action: "delete",
+        subsystem: "peppol.documents",
+        objectType: "peppol.document_batch",
+        metadata: {
+          documentIds,
+          documentCount: documentIds.length,
+        },
+      });
       return c.json(actionSuccess());
     } catch (error) {
       if (error instanceof Error && error.message === "Document not found") {

@@ -9,6 +9,7 @@ import { webhookResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { updateWebhook } from "@peppol/data/webhooks";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -70,6 +71,16 @@ async function _updateWebhookImplementation(c: UpdateWebhookContext) {
         if (!webhook) {
             return c.json(actionFailure("Webhook not found"), 404);
         }
+        await audit(c, {
+            action: "update",
+            subsystem: "peppol.webhooks",
+            objectType: "peppol.webhook",
+            objectId: webhook.id,
+            after: {
+                url: webhook.url,
+                companyId: webhook.companyId,
+            },
+        });
         return c.json(actionSuccess({ webhook }));
     } catch (error) {
         return c.json(actionFailure("Could not update webhook"), 500);

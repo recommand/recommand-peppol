@@ -12,6 +12,7 @@ import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { manifestSchema } from "@peppol/types/integration/manifest";
 import { configurationSchema } from "@peppol/types/integration/configuration";
 import { UserFacingError } from "@peppol/utils/util";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -75,6 +76,17 @@ async function _updateIntegrationImplementation(c: UpdateIntegrationContext) {
         if (!integration) {
             return c.json(actionFailure("Integration not found"), 404);
         }
+        await audit(c, {
+            action: "update",
+            subsystem: "peppol.integrations",
+            objectType: "peppol.integration",
+            objectId: integration.id,
+            after: {
+                companyId: integration.companyId,
+                configuration: "set",
+            },
+            metadata: { changedFields: ["companyId", "configuration"] },
+        });
         return c.json(actionSuccess({ integration }));
     } catch (error) {
         if (error instanceof UserFacingError) {
@@ -87,4 +99,3 @@ async function _updateIntegrationImplementation(c: UpdateIntegrationContext) {
 export type UpdateIntegration = typeof _updateIntegration | typeof _updateIntegrationMinimal;
 
 export default server;
-
