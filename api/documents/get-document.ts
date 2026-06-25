@@ -16,7 +16,6 @@ import {
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
-import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -73,25 +72,11 @@ async function _getTransmittedDocumentImplementation(c: GetTransmittedDocumentCo
         if (c.req.header("accept")?.toLowerCase().startsWith("application/xml")) {
           const xml = await resolveDocumentXml(document);
           if (xml) {
-            await audit(c, {
-              action: "read",
-              subsystem: "peppol.documents",
-              objectType: "peppol.document",
-              objectId: document.id,
-              metadata: { format: "xml" },
-            });
             c.header("Content-Type", "application/xml; charset=utf-8");
             return c.body(xml);
           }
         }
 
-        await audit(c, {
-          action: "read",
-          subsystem: "peppol.documents",
-          objectType: "peppol.document",
-          objectId: document.id,
-          metadata: { format: "json" },
-        });
         return c.json(actionSuccess({ document: await toApiTransmittedDocument(document) }));
       } catch (error) {
         return c.json(actionFailure("Failed to fetch document"), 500);
