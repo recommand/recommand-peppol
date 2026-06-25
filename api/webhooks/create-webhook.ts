@@ -9,6 +9,7 @@ import { webhookResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { createWebhook } from "@peppol/data/webhooks";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -57,6 +58,16 @@ async function _createWebhookImplementation(c: CreateWebhookContext) {
         const webhook = await createWebhook({
             ...c.req.valid("json"),
             teamId: c.var.team.id,
+        });
+        await audit(c, {
+            action: "create",
+            subsystem: "peppol.webhooks",
+            objectType: "peppol.webhook",
+            objectId: webhook.id,
+            after: {
+                url: webhook.url,
+                companyId: webhook.companyId,
+            },
         });
         return c.json(actionSuccess({ webhook }));
     } catch (error) {

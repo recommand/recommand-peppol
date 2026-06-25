@@ -16,6 +16,7 @@ import {
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import JSZip from "jszip";
 import { renderDocumentPdf } from "@peppol/utils/document-renderer";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -141,6 +142,17 @@ async function _downloadPackageImplementation(c: DownloadPackageContext) {
         // Set headers for file download
         c.header("Content-Type", "application/zip");
         c.header("Content-Disposition", `attachment; filename="${documentId}.zip"`);
+
+        await audit(c, {
+            action: "download",
+            subsystem: "peppol.documents",
+            objectType: "peppol.document",
+            objectId: document.id,
+            metadata: {
+                format: "zip",
+                generatePdf,
+            },
+        });
 
         return c.body(zipBuffer);
     } catch (error) {

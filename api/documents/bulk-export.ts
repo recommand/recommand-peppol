@@ -1,4 +1,5 @@
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import { audit } from "@core/lib/audit";
 import { getTransmittedDocumentsByIds } from "@peppol/data/transmitted-documents";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { Server, type Context } from "@recommand/lib/api";
@@ -57,6 +58,19 @@ const _bulkExport = server.post(
 
       c.header("Content-Type", "application/zip");
       c.header("Content-Disposition", `attachment; filename="documents-selection.zip"`);
+
+      await audit(c, {
+        action: "download",
+        subsystem: "peppol.documents",
+        objectType: "peppol.document_batch",
+        metadata: {
+          documentIds,
+          documentCount: documents.length,
+          format: "zip",
+          outputType,
+          generatePdf,
+        },
+      });
 
       return c.body(zipBuffer);
     } catch (error) {

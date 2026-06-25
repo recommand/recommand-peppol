@@ -13,6 +13,7 @@ import {
     describeSuccessResponse,
 } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -60,6 +61,12 @@ async function _deleteTransmittedDocumentImplementation(c: DeleteTransmittedDocu
     try {
         const { documentId } = c.req.valid("param");
         await deleteTransmittedDocument(c.var.team.id, documentId);
+        await audit(c, {
+            action: "delete",
+            subsystem: "peppol.documents",
+            objectType: "peppol.document",
+            objectId: documentId,
+        });
         return c.json(actionSuccess());
     } catch (error) {
         if (error instanceof Error && error.message === "Document not found") {

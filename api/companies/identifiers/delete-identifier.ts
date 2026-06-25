@@ -12,6 +12,7 @@ import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/a
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -59,11 +60,19 @@ const _deleteIdentifier = server.delete(
 async function _deleteIdentifierImplementation(c: DeleteIdentifierContext) {
     try {
         const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground: c.var.team.isPlayground, useTestNetwork: c.var.team.useTestNetwork, isSmpRecipient: c.var.company.isSmpRecipient, isVerified: c.var.company.isVerified, verificationRequirements: c.var.team.verificationRequirements ?? undefined });
+        const { companyId, identifierId } = c.req.valid("param");
         await deleteCompanyIdentifier({
-            companyId: c.req.valid("param").companyId,
-            identifierId: c.req.valid("param").identifierId,
+            companyId,
+            identifierId,
             skipSmpRegistration,
             useTestNetwork: c.var.team.useTestNetwork ?? false,
+        });
+        await audit(c, {
+            action: "delete",
+            subsystem: "peppol.identifiers",
+            objectType: "peppol.identifier",
+            objectId: identifierId,
+            metadata: { companyId, skipSmpRegistration },
         });
 
         return c.json(actionSuccess());

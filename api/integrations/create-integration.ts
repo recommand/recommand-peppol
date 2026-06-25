@@ -12,6 +12,7 @@ import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { manifestSchema } from "@peppol/types/integration/manifest";
 import { configurationSchema } from "@peppol/types/integration/configuration";
 import { UserFacingError } from "@peppol/utils/util";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -71,6 +72,18 @@ async function _createIntegrationImplementation(c: CreateIntegrationContext) {
             ...c.req.valid("json"),
             teamId: c.var.team.id,
         });
+        await audit(c, {
+            action: "create",
+            subsystem: "peppol.integrations",
+            objectType: "peppol.integration",
+            objectId: integration.id,
+            after: {
+                companyId: integration.companyId,
+                manifestName: integration.manifest.name,
+                manifestVersion: integration.manifest.version,
+                configuration: "set",
+            },
+        });
         return c.json(actionSuccess({ integration }));
     } catch (error) {
         console.error(error);
@@ -84,4 +97,3 @@ async function _createIntegrationImplementation(c: CreateIntegrationContext) {
 export type CreateIntegration = typeof _createIntegration | typeof _createIntegrationMinimal;
 
 export default server;
-
