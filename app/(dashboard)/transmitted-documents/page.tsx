@@ -31,6 +31,7 @@ import { PartyInfoTooltip } from "@peppol/components/party-info-tooltip";
 import { TransmissionStatusIcons } from "@peppol/components/transmission-status-icons";
 import { DocumentTypeCell } from "@peppol/components/document-type-cell";
 import { LabelBadge } from "@peppol/components/label-badge";
+import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
 import {
   Popover,
   PopoverContent,
@@ -991,42 +992,17 @@ export default function Page() {
                 onRemove={() => handleUnassignLabel(documentId, label.id)}
               />
             ))}
-            <Popover>
-              <PopoverTrigger asChild>
+            <DocumentLabelPicker
+              labels={labels}
+              assignedLabels={documentLabels}
+              onAssign={(label) => handleAssignLabel(documentId, label.id)}
+              title="Assign Labels"
+              trigger={
                 <Button variant="ghost" size="icon" title="Add label">
                   <Tag className="h-4 w-4" />
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-0" align="start">
-                <div className="p-2">
-                  <div className="text-sm font-medium mb-2">Assign Labels</div>
-                  <div className="space-y-1 max-h-64 overflow-y-auto">
-                    {labels
-                      .filter((label) => !documentLabels.some((l) => l.id === label.id))
-                      .map((label) => (
-                        <button
-                          key={label.id}
-                          onClick={() => {
-                            handleAssignLabel(documentId, label.id);
-                          }}
-                          className="w-full flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent rounded-md text-left"
-                        >
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: label.colorHex }}
-                          />
-                          <span className="flex-1">{label.name}</span>
-                        </button>
-                      ))}
-                    {labels.filter((label) => !documentLabels.some((l) => l.id === label.id)).length === 0 && (
-                      <div className="text-sm text-muted-foreground px-2 py-1.5">
-                        No available labels
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+              }
+            />
           </div>
         );
       },
