@@ -8,6 +8,7 @@ import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { deleteWebhook } from "@peppol/data/webhooks";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -52,7 +53,14 @@ const _deleteWebhook = server.delete(
 
 async function _deleteWebhookImplementation(c: DeleteWebhookContext) {
     try {
-        await deleteWebhook(c.var.team.id, c.req.valid("param").webhookId);
+        const webhookId = c.req.valid("param").webhookId;
+        await deleteWebhook(c.var.team.id, webhookId);
+        await audit(c, {
+            action: "delete",
+            subsystem: "peppol.webhooks",
+            objectType: "peppol.webhook",
+            objectId: webhookId,
+        });
         return c.json(actionSuccess());
     } catch (error) {
         return c.json(actionFailure("Could not delete webhook"), 500);

@@ -8,6 +8,7 @@ import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/uti
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { deleteIntegration } from "@peppol/data/integrations";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -54,7 +55,14 @@ const _deleteIntegration = server.delete(
 
 async function _deleteIntegrationImplementation(c: DeleteIntegrationContext) {
     try {
-        await deleteIntegration(c.var.team.id, c.req.valid("param").integrationId);
+        const integrationId = c.req.valid("param").integrationId;
+        await deleteIntegration(c.var.team.id, integrationId);
+        await audit(c, {
+            action: "delete",
+            subsystem: "peppol.integrations",
+            objectType: "peppol.integration",
+            objectId: integrationId,
+        });
         return c.json(actionSuccess());
     } catch (error) {
         return c.json(actionFailure("Could not delete integration"), 500);
@@ -64,4 +72,3 @@ async function _deleteIntegrationImplementation(c: DeleteIntegrationContext) {
 export type DeleteIntegration = typeof _deleteIntegration | typeof _deleteIntegrationMinimal;
 
 export default server;
-

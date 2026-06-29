@@ -1,6 +1,7 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
 import type { TransmittedDocuments } from "@peppol/api/documents";
+import type { Labels } from "@peppol/api/labels";
 import { useActiveTeam } from "@core/hooks/user";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -15,6 +16,8 @@ import {
   Copy,
   ChevronDown,
   ExternalLink,
+  Tag,
+  CheckCheck,
 } from "lucide-react";
 import {
   Card,
@@ -51,8 +54,10 @@ import { ValidationDetails } from "@peppol/components/validation-details";
 import type { ValidationResponse } from "@peppol/types/validation";
 import { CsvAttachmentTable } from "@peppol/components/csv-attachment-table";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
+import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
 
 const client = rc<TransmittedDocuments>("peppol");
+const labelsClient = rc<Labels>("v1");
 
 type TransmittedDocumentWithLabels = TransmittedDocument & {
   labels?: Label[];
@@ -71,6 +76,7 @@ export default function TransmittedDocumentDetailPage() {
     TransmittedDocumentWithoutBody[]
   >([]);
   const [isLoadingRelated, setIsLoadingRelated] = useState(false);
+  const [labels, setLabels] = useState<Label[]>([]);
 
   useEffect(() => {
     const fetchDocument = async () => {
@@ -118,6 +124,34 @@ export default function TransmittedDocumentDetailPage() {
 
     fetchDocument();
   }, [id, activeTeam?.id, navigate]);
+
+  useEffect(() => {
+    const fetchLabels = async () => {
+      if (!activeTeam?.id) {
+        setLabels([]);
+        return;
+      }
+
+      try {
+        const response = await labelsClient[":teamId"]["labels"].$get({
+          param: { teamId: activeTeam.id },
+        });
+        const json = await response.json();
+
+        if (!json.success || !Array.isArray(json.labels)) {
+          throw new Error("Failed to load labels");
+        }
+
+        setLabels(json.labels);
+      } catch (error) {
+        console.error("Failed to load labels:", error);
+        toast.error("Failed to load labels");
+        setLabels([]);
+      }
+    };
+
+    fetchLabels();
+  }, [activeTeam?.id]);
 
   useEffect(() => {
     if (!activeTeam?.id || !doc) {
@@ -215,6 +249,88 @@ export default function TransmittedDocumentDetailPage() {
     } catch (error) {
       console.error("Failed to delete document:", error);
       toast.error("Failed to delete document");
+    }
+  };
+
+  const handleUpdateLabel = async (label: Label, isAssigned: boolean) => {
+    if (!activeTeam?.id || !doc) return;
+
+    const previousLabels = doc.labels || [];
+
+    setDoc({
+      ...doc,
+      labels: isAssigned
+        ? previousLabels.filter(
+            (assignedLabel) => assignedLabel.id !== label.id
+          )
+        : [...previousLabels, label],
+    });
+
+    try {
+      const labelRoute =
+        client[":teamId"]["documents"][":documentId"]["labels"][":labelId"];
+      const params = {
+        param: {
+          teamId: activeTeam.id,
+          documentId: doc.id,
+          labelId: label.id,
+        },
+      };
+      const response = isAssigned
+        ? await labelRoute.$delete(params)
+        : await labelRoute.$post(params);
+      const json = await response.json();
+
+      if (!json.success) {
+        throw new Error(stringifyActionFailure(json.errors));
+      }
+    } catch (error) {
+      console.error("Failed to update document label:", error);
+      setDoc((currentDoc) =>
+        currentDoc ? { ...currentDoc, labels: previousLabels } : currentDoc
+      );
+      toast.error(
+        isAssigned ? "Failed to remove label" : "Failed to assign label"
+      );
+    }
+  };
+
+  const handleToggleMarkAsRead = async () => {
+    if (!activeTeam?.id || !doc) return;
+
+    const previousReadAt = doc.readAt;
+    const read = previousReadAt === null;
+
+    setDoc({
+      ...doc,
+      readAt: read ? new Date() : null,
+    });
+
+    try {
+      const response = await client[":teamId"]["documents"][":documentId"][
+        "markAsRead"
+      ].$post({
+        param: {
+          teamId: activeTeam.id,
+          documentId: doc.id,
+        },
+        json: { read },
+      });
+      const json = await response.json();
+
+      if (!json.success) {
+        throw new Error(stringifyActionFailure(json.errors));
+      }
+
+      toast.success(
+        read ? "Document marked as read" : "Document marked as unread"
+      );
+    } catch (error) {
+      console.error("Failed to update document read status:", error);
+      setDoc((currentDoc) =>
+        currentDoc ? { ...currentDoc, readAt: previousReadAt } : currentDoc
+      );
+      toast.error("Failed to update document read status");
     }
   };
 
@@ -339,6 +455,33 @@ export default function TransmittedDocumentDetailPage() {
       title={pageTitle}
       description="Preview and metadata for this transmitted Peppol document."
       buttons={[
+        <DocumentLabelPicker
+          key="labels"
+          labels={labels}
+          assignedLabels={doc.labels || []}
+          onAssign={(label) => handleUpdateLabel(label, false)}
+          onUnassign={(label) => handleUpdateLabel(label, true)}
+          showAssignedLabels
+          title="Document labels"
+          emptyText="No labels available"
+          align="end"
+          trigger={
+            <Button variant="outline">
+              <Tag className="h-4 w-4" />
+            </Button>
+          }
+        />,
+        <AsyncButton
+          key="read-status"
+          variant="outline"
+          size="icon"
+          onClick={handleToggleMarkAsRead}
+          title={doc.readAt ? "Mark as unread" : "Mark as read"}
+        >
+          <CheckCheck
+            className={doc.readAt ? "h-4 w-4 opacity-30" : "h-4 w-4"}
+          />
+        </AsyncButton>,
         <AsyncButton key="download" variant="outline" onClick={handleDownload}>
           <FolderArchive className="h-4 w-4 mr-2" />
           Download package

@@ -13,6 +13,7 @@ import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -79,6 +80,18 @@ async function _updateIdentifierImplementation(c: UpdateIdentifierContext) {
             },
             skipSmpRegistration,
             useTestNetwork: c.var.team.useTestNetwork ?? false,
+        });
+        await audit(c, {
+            action: "update",
+            subsystem: "peppol.identifiers",
+            objectType: "peppol.identifier",
+            objectId: identifier.id,
+            after: {
+                companyId: identifier.companyId,
+                scheme: identifier.scheme,
+                identifier: identifier.identifier,
+            },
+            metadata: { changedFields: ["scheme", "identifier"], skipSmpRegistration },
         });
 
         return c.json(actionSuccess({ identifier }));

@@ -1,23 +1,38 @@
 import { supportedDocumentTypeEnum, transmittedDocuments, transmittedDocumentLabels, labels } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { eq, and, sql, desc, isNull, isNotNull, inArray, ilike, gte, lt } from "drizzle-orm";
+import { eq, and, or, sql, desc, isNull, isNotNull, inArray, ilike, gte, lt } from "drizzle-orm";
 import type { Label } from "./labels";
 import { removeAttachmentsFromParsedDocument } from "@peppol/utils/parsing/remove-attachments";
+import {
+  offloadedDocumentS3Prefixes,
+  offloadedDocumentSelect,
+  resolveDocumentParsedWithAttachments,
+  resolveDocumentXml,
+  teamDocumentsS3Prefix,
+} from "./offload/storage";
+import { enqueueS3PrefixDeletions } from "./s3-deletion";
+import {
+  mapWithConcurrency,
+  S3_REQUEST_CONCURRENCY,
+} from "@peppol/utils/concurrency";
 
 export type TransmittedDocument = typeof transmittedDocuments.$inferSelect;
 export type InsertTransmittedDocument = typeof transmittedDocuments.$inferInsert;
 type TransmittedDocumentSearchField = "senderName" | "receiverName" | "documentNumber" | "searchText";
 type TransmittedDocumentLabel = Omit<Label, "teamId" | "createdAt" | "updatedAt">;
-export type PublicTransmittedDocument = Omit<TransmittedDocument, TransmittedDocumentSearchField>;
+export type PublicTransmittedDocument = Omit<TransmittedDocument, TransmittedDocumentSearchField | "offloadClaimedAt">;
 export type PublicTransmittedDocumentWithLabels = PublicTransmittedDocument & {
   labels?: TransmittedDocumentLabel[];
 };
 
+// Internal storage-location fields that must never be exposed to API consumers.
+type InternalStorageField = "xmlLocation" | "attachmentsLocation" | "s3KeyPrefix";
+
 // Create a type that excludes the body field but includes parsed data
-export type TransmittedDocumentWithoutBody = Omit<PublicTransmittedDocument, "xml"> & {
+export type TransmittedDocumentWithoutBody = Omit<PublicTransmittedDocument, "xml" | InternalStorageField> & {
   labels?: TransmittedDocumentLabel[];
 };
-type InboxTransmittedDocument = Omit<PublicTransmittedDocument, "xml" | "parsed"> & {
+type InboxTransmittedDocument = Omit<PublicTransmittedDocument, "xml" | InternalStorageField | "parsed"> & {
   labels?: TransmittedDocumentLabel[];
 };
 
@@ -32,6 +47,9 @@ const publicTransmittedDocumentSelect = {
   processId: transmittedDocuments.processId,
   countryC1: transmittedDocuments.countryC1,
   xml: transmittedDocuments.xml,
+  xmlLocation: transmittedDocuments.xmlLocation,
+  attachmentsLocation: transmittedDocuments.attachmentsLocation,
+  s3KeyPrefix: transmittedDocuments.s3KeyPrefix,
   sentOverPeppol: transmittedDocuments.sentOverPeppol,
   sentOverEmail: transmittedDocuments.sentOverEmail,
   emailRecipients: transmittedDocuments.emailRecipients,
@@ -46,6 +64,25 @@ const publicTransmittedDocumentSelect = {
   createdAt: transmittedDocuments.createdAt,
   updatedAt: transmittedDocuments.updatedAt,
 };
+
+// API-facing shape of a document: xml and parsed payloads resolved from wherever
+// they live (so offloaded documents are indistinguishable from in-database ones),
+// and the internal storage-location fields removed so they are never exposed.
+export type ApiTransmittedDocument = Omit<
+  PublicTransmittedDocumentWithLabels,
+  InternalStorageField
+>;
+
+export async function toApiTransmittedDocument(
+  doc: PublicTransmittedDocumentWithLabels
+): Promise<ApiTransmittedDocument> {
+  const [xml, parsed] = await Promise.all([
+    resolveDocumentXml(doc),
+    resolveDocumentParsedWithAttachments(doc),
+  ]);
+  const { xmlLocation, attachmentsLocation, s3KeyPrefix, ...rest } = doc;
+  return { ...rest, xml, parsed };
+}
 
 async function getLabelsForDocuments(documentIds: string[]): Promise<Map<string, TransmittedDocumentLabel[]>> {
   const documentLabelsMap = new Map<string, TransmittedDocumentLabel[]>();
@@ -200,6 +237,8 @@ export async function getTransmittedDocuments(
       sentOverEmail: transmittedDocuments.sentOverEmail,
       emailRecipients: transmittedDocuments.emailRecipients,
       parsed: transmittedDocuments.parsed,
+      attachmentsLocation: transmittedDocuments.attachmentsLocation,
+      s3KeyPrefix: transmittedDocuments.s3KeyPrefix,
       validation: transmittedDocuments.validation,
       peppolMessageId: transmittedDocuments.peppolMessageId,
       peppolConversationId: transmittedDocuments.peppolConversationId,
@@ -215,13 +254,24 @@ export async function getTransmittedDocuments(
   const documentIds = documents.map((doc) => doc.id);
   const documentLabelsMap = await getLabelsForDocuments(documentIds);
 
-  const documentsWithLabels = documents.map((doc) => ({
-    ...doc,
-    labels: documentLabelsMap.get(doc.id) || [],
-    parsed: excludeAttachments
-      ? (removeAttachmentsFromParsedDocument(doc.parsed) as typeof doc.parsed)
-      : doc.parsed,
-  }));
+  const documentsWithLabels = await mapWithConcurrency(
+    documents,
+    S3_REQUEST_CONCURRENCY,
+    async (doc) => {
+      const { attachmentsLocation, s3KeyPrefix, ...publicDoc } = doc;
+      return {
+        ...publicDoc,
+        labels: documentLabelsMap.get(doc.id) || [],
+        parsed: excludeAttachments
+          ? (removeAttachmentsFromParsedDocument(doc.parsed) as typeof doc.parsed)
+          : await resolveDocumentParsedWithAttachments({
+              parsed: doc.parsed,
+              attachmentsLocation,
+              s3KeyPrefix,
+            }),
+      };
+    }
+  );
 
   return { documents: documentsWithLabels, total };
 }
@@ -263,9 +313,20 @@ export async function deleteTransmittedDocument(
   teamId: string,
   documentId: string
 ): Promise<void> {
-  await db
-    .delete(transmittedDocuments)
+  const docs = await db
+    .select(offloadedDocumentSelect)
+    .from(transmittedDocuments)
     .where(and(eq(transmittedDocuments.id, documentId), eq(transmittedDocuments.teamId, teamId)));
+
+  // Offloaded S3 objects are removed by the background deletion worker;
+  // enqueueing in the same transaction as the delete means they can never be
+  // orphaned, and the request doesn't wait on S3.
+  await db.transaction(async (tx) => {
+    await enqueueS3PrefixDeletions(tx, offloadedDocumentS3Prefixes(docs));
+    await tx
+      .delete(transmittedDocuments)
+      .where(and(eq(transmittedDocuments.id, documentId), eq(transmittedDocuments.teamId, teamId)));
+  });
 }
 
 export async function deleteTransmittedDocuments(
@@ -279,7 +340,7 @@ export async function deleteTransmittedDocuments(
   }
 
   const existingDocuments = await db
-    .select({ id: transmittedDocuments.id })
+    .select(offloadedDocumentSelect)
     .from(transmittedDocuments)
     .where(
       and(
@@ -292,22 +353,33 @@ export async function deleteTransmittedDocuments(
     throw new Error("Document not found");
   }
 
-  await db
-    .delete(transmittedDocuments)
-    .where(
-      and(
-        eq(transmittedDocuments.teamId, teamId),
-        inArray(transmittedDocuments.id, uniqueDocumentIds)
-      )
+  await db.transaction(async (tx) => {
+    await enqueueS3PrefixDeletions(
+      tx,
+      offloadedDocumentS3Prefixes(existingDocuments)
     );
+    await tx
+      .delete(transmittedDocuments)
+      .where(
+        and(
+          eq(transmittedDocuments.teamId, teamId),
+          inArray(transmittedDocuments.id, uniqueDocumentIds)
+        )
+      );
+  });
 }
 
 export async function deleteAllTransmittedDocuments(
   teamId: string
 ): Promise<void> {
-  await db
-    .delete(transmittedDocuments)
-    .where(eq(transmittedDocuments.teamId, teamId));
+  // All of the team's document objects live under the team's prefix, so one
+  // queue row covers them all — no need to enumerate offloaded documents.
+  await db.transaction(async (tx) => {
+    await enqueueS3PrefixDeletions(tx, [teamDocumentsS3Prefix(teamId)]);
+    await tx
+      .delete(transmittedDocuments)
+      .where(eq(transmittedDocuments.teamId, teamId));
+  });
 }
 
 export async function getInbox(

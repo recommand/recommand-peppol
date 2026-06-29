@@ -85,8 +85,20 @@ const getTransmittedDocumentsQuerySchema = z.object({
   envelopeId: z.string().optional().openapi({
     description: "Filter documents by envelope ID (Standard Business Document Header Instance Identifier)",
   }),
-  excludeAttachments: z.coerce.boolean().optional().default(false).openapi({
-    description: "When true, excludes attachments from the parsed object to reduce payload size",
+  excludeAttachments: z
+    .preprocess(
+      (value) => {
+        if (value === undefined) return undefined;
+        if (value === "true" || value === "") return true;
+        if (value === "false") return false;
+        return value;
+      },
+      z.boolean()
+    )
+    .optional()
+    .default(false)
+    .openapi({
+    description: "When true, excludes attachments from the parsed object to reduce payload size. Can be passed as a flag without a value (e.g. ?excludeAttachments).",
     example: false,
   }),
 });

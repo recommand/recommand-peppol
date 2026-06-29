@@ -10,6 +10,7 @@ import {
 import { sendAs4, type SendAs4Response } from "@peppol/data/phase4-ap/client";
 import { db } from "@recommand/db";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
+import { parsedHasAttachments } from "@peppol/data/offload/storage";
 import {
   requireIntegrationSupportedCompanyAccess,
   requireValidSubscription,
@@ -78,6 +79,7 @@ import {
   requiresPdfAForGeneratedPdf,
   resolveOutgoingDocumentXmlHandler,
 } from "@peppol/utils/outgoing-document-payload";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -142,8 +144,11 @@ const _sendDocumentMinimal = server.post(
 const RECIPIENT_NULL_FALLBACK_ADDRESS = "0000:0000"; // Used for null recipient to be able to generate a PDF
 
 async function _sendDocumentImplementation(c: SendDocumentContext) {
+  let inputFormat = "unknown";
+
   try {
     const input = c.req.valid("json");
+    inputFormat = input.documentType === DocumentType.XML ? "xml" : "json_api";
     const document = input.document;
     const isPlayground = c.get("team").isPlayground;
     const useTestNetwork = c.get("team").useTestNetwork ?? false;
@@ -875,6 +880,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         processId,
         countryC1: countryC1,
         xml: xmlDocument,
+        xmlLocation: xmlDocument != null ? "db" : "none",
+        attachmentsLocation: parsedHasAttachments(parsedDocument) ? "db" : "none",
 
         sentOverPeppol: sentPeppol,
         sentOverEmail: sentEmailRecipients.length > 0,
@@ -955,6 +962,30 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       );
     }
 
+    await audit(c, {
+      action: "create",
+      subsystem: "peppol.documents",
+      objectType: "peppol.document",
+      objectId: transmittedDocument.id,
+      teamId: c.var.team.id,
+      after: {
+        companyId: company.id,
+        direction: "outgoing",
+        type,
+        sentOverPeppol: sentPeppol,
+        sentOverEmail: sentEmailRecipients.length > 0,
+      },
+      metadata: {
+        inputFormat,
+        senderId: senderAddress,
+        receiverId: recipientAddress,
+        docTypeId: doctypeId,
+        processId,
+        peppolMessageId: as4Response?.peppolMessageId ?? null,
+        envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
+      },
+    });
+
     return c.json(
       actionSuccess({
         teamId: c.var.team.id,
@@ -975,6 +1006,18 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
     );
   } catch (error) {
     console.error(error);
+
+    await audit(c, {
+      action: "create",
+      subsystem: "peppol.documents",
+      outcome: "failed",
+      objectType: "peppol.document",
+      reasonCode: "send_document_failed",
+      metadata: {
+        inputFormat,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
 
     sendSystemAlert(
       "Document Sending Failed",

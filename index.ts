@@ -25,10 +25,13 @@ import suppliersServer from "./api/suppliers";
 import teamsServer from "./api/teams/get-team-extension";
 import customersServer from "./api/customers";
 import { initializeIntegrationCronJobs } from "./data/integrations/cron";
+import { initializeOffloadCronJobs } from "./data/offload/cron";
+import { initializeS3DeletionCronJobs } from "./data/s3-deletion/cron";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
-import { onTeamCreated } from "./lib/backend-events";
+import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
 import { registerPeppolEventTypes } from "./lib/event-types";
+import "./lib/permissions";
 
 export let logger: Logger;
 
@@ -40,8 +43,11 @@ export async function init(app: RecommandApp, server: Server) {
 
   registerPeppolEventTypes();
   addBackendEventListener(CORE_BACKEND_EVENTS.TEAM_CREATED, onTeamCreated);
+  addBackendEventListener(CORE_BACKEND_EVENTS.TEAM_BEFORE_DELETE, onTeamBeforeDelete);
 
   initializeIntegrationCronJobs(logger);
+  initializeOffloadCronJobs(logger);
+  initializeS3DeletionCronJobs(logger);
 
   const exclude: RegExp[] = [
     /^\/api\/core(?!\/auth\/verify).*$/, // Exclude all core API endpoints except the auth/verify endpoint

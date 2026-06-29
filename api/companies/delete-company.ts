@@ -10,6 +10,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -54,7 +55,14 @@ const _deleteCompany = server.delete(
 
 async function _deleteCompanyImplementation(c: DeleteCompanyContext) {
     try {
-        await deleteCompany({teamId: c.var.team.id, companyId: c.req.valid("param").companyId});
+        const companyId = c.req.valid("param").companyId;
+        await deleteCompany({teamId: c.var.team.id, companyId});
+        await audit(c, {
+            action: "delete",
+            subsystem: "peppol.companies",
+            objectType: "peppol.company",
+            objectId: companyId,
+        });
         return c.json(actionSuccess());
       } catch (error) {
         console.error(error);

@@ -14,6 +14,7 @@ import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { zodValidCountryCodes } from "@peppol/db/schema";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -86,6 +87,26 @@ async function _updateCompanyImplementation(c: UpdateCompanyContext) {
         if (!company) {
             return c.json(actionFailure("Company not found"), 404);
         }
+        await audit(c, {
+            action: "update",
+            subsystem: "peppol.companies",
+            objectType: "peppol.company",
+            objectId: company.id,
+            after: {
+                name: company.name,
+                address: company.address,
+                postalCode: company.postalCode,
+                city: company.city,
+                country: company.country,
+                enterpriseNumberScheme: company.enterpriseNumberScheme,
+                enterpriseNumber: company.enterpriseNumber,
+                vatNumber: company.vatNumber,
+                email: company.email,
+                phone: company.phone,
+                isSmpRecipient: company.isSmpRecipient,
+            },
+            metadata: { changedFields: Object.keys(updateData) },
+        });
         return c.json(actionSuccess({ company }));
     } catch (error) {
         if (error instanceof UserFacingError) {

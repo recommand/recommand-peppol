@@ -16,6 +16,7 @@ import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { zodValidCountryCodes } from "@peppol/db/schema";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
+import { audit } from "@core/lib/audit";
 
 const server = new Server();
 
@@ -97,6 +98,21 @@ async function _createCompanyImplementation(c: CreateCompanyContext) {
             const { log, verificationUrl } = await createCompanyVerificationLog({
                 teamId: c.var.team.id,
                 companyId: company.id,
+            });
+            await audit(c, {
+                action: "create",
+                subsystem: "peppol.companies",
+                objectType: "peppol.company",
+                objectId: company.id,
+                after: {
+                    name: company.name,
+                    country: company.country,
+                    enterpriseNumberScheme: company.enterpriseNumberScheme,
+                    enterpriseNumber: company.enterpriseNumber,
+                    vatNumber: company.vatNumber,
+                    isSmpRecipient: company.isSmpRecipient,
+                },
+                metadata: { verificationLogId: log.id },
             });
 
             return c.json(actionSuccess({ company, verificationUrl, verificationLogId: log.id }));

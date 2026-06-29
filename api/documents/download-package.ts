@@ -5,9 +5,11 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionFailure } from "@recommand/lib/utils";
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { describeRoute } from "hono-openapi";
+import { getTransmittedDocument } from "@peppol/data/transmitted-documents";
 import {
-    getTransmittedDocument,
-} from "@peppol/data/transmitted-documents";
+    hydrateDocumentParsedAttachments,
+    resolveDocumentXmlAndAttachments,
+} from "@peppol/data/offload/storage";
 import {
     describeErrorResponse,
 } from "@core/lib/api-docs";
@@ -89,8 +91,13 @@ async function _downloadPackageImplementation(c: DownloadPackageContext) {
         // Create a new zip file
         const zip = new JSZip();
 
+        // Fetch the xml and attachments concurrently (both may live in S3).
+        const { xml, attachments } = await resolveDocumentXmlAndAttachments(document);
+
+        const parsed = hydrateDocumentParsedAttachments(document.parsed, attachments);
+
         // Add document metadata as JSON
-        const { xml, ...documentMetadata } = document;
+        const { xml: _xml, ...documentMetadata } = { ...document, parsed };
         zip.file("document.json", JSON.stringify(documentMetadata, null, 2));
 
         // Add XML if available
@@ -100,8 +107,8 @@ async function _downloadPackageImplementation(c: DownloadPackageContext) {
 
         // If there are attachments, add them to the zip
         let hasPdfAttachment = false;
-        if (document.parsed && "attachments" in document.parsed && document.parsed.attachments) {
-            for (const attachment of document.parsed.attachments) {
+        if (attachments) {
+            for (const attachment of attachments) {
                 const base64 = attachment.embeddedDocument;
                 const mimeCode = attachment.mimeCode;
                 const filename = attachment.filename;
