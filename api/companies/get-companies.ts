@@ -9,7 +9,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
-import { companyResponse } from "./shared";
+import { companyResponse, toCompanyResponse } from "./shared";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
@@ -66,7 +66,7 @@ async function _getCompaniesImplementation(c: GetCompaniesContext) {
             enterpriseNumber,
             vatNumber,
         });
-        return c.json(actionSuccess({ companies: allCompanies }));
+        return c.json(actionSuccess({ companies: allCompanies.map(toCompanyResponse) }));
     } catch (error) {
         return c.json(actionFailure("Could not fetch companies"), 500);
     }

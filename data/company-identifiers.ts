@@ -3,7 +3,7 @@ import { validateIdentifier } from "@peppol/utils/identifier-validation";
 import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
-import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./phoss-smp";
+import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";
 import { getTeamExtensionAndCompanyByCompanyId } from "./teams";
 
 export type CompanyIdentifier = typeof companyIdentifiers.$inferSelect;

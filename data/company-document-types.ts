@@ -2,7 +2,7 @@ import { companyDocumentTypes } from "@peppol/db/schema";
 import { UserFacingError } from "@peppol/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc } from "drizzle-orm";
-import { unregisterCompanyDocumentType, upsertCompanyRegistrations } from "./phoss-smp";
+import { unregisterCompanyDocumentType, upsertCompanyRegistrations } from "./smp-providers";
 
 export type CompanyDocumentType = typeof companyDocumentTypes.$inferSelect;
 export type InsertCompanyDocumentType = typeof companyDocumentTypes.$inferInsert;

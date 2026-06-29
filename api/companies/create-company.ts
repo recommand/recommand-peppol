@@ -11,7 +11,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
-import { companyResponse } from "./shared";
+import { companyResponse, toCompanyResponse } from "./shared";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { zodValidCountryCodes } from "@peppol/db/schema";
@@ -115,7 +115,7 @@ async function _createCompanyImplementation(c: CreateCompanyContext) {
                 metadata: { verificationLogId: log.id },
             });
 
-            return c.json(actionSuccess({ company, verificationUrl, verificationLogId: log.id }));
+            return c.json(actionSuccess({ company: toCompanyResponse(company), verificationUrl, verificationLogId: log.id }));
         } catch (error) {
             try {
                 await deleteCompany({

@@ -6,7 +6,7 @@ import { UserFacingError } from "@peppol/utils/util";
 import { getCompany, verifyCompany, type Company } from "./companies";
 import { getTeamExtension } from "./teams";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
-import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./phoss-smp";
+import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;

@@ -97,6 +97,17 @@ export const validationResultEnum = pgEnum(
   validationResult.options
 );
 
+export const accessPointProviderIds = ["recommand-ap1"] as const;
+export const zodAccessPointProviderIds = z.enum(accessPointProviderIds);
+export const accessPointProviderEnum = pgEnum(
+  "peppol_access_point_provider",
+  accessPointProviderIds
+);
+
+export const smpProviderIds = ["recommand-smp1"] as const;
+export const zodSmpProviderIds = z.enum(smpProviderIds);
+export const smpProviderEnum = pgEnum("peppol_smp_provider", smpProviderIds);
+
 // Where a document payload (xml / parsed attachments) currently lives.
 // "none" = the payload was never kept, "db" = stored in this row, "s3" = offloaded to S3.
 export const payloadLocationEnum = pgEnum("peppol_payload_location", [
@@ -266,6 +277,12 @@ export const companies = pgTable("peppol_companies", {
   email: text("email"),
   phone: text("phone"),
   isSmpRecipient: boolean("is_smp_recipient").notNull().default(true),
+  accessPointProvider: accessPointProviderEnum("access_point_provider")
+    .notNull()
+    .default("recommand-ap1"),
+  smpProvider: smpProviderEnum("smp_provider")
+    .notNull()
+    .default("recommand-smp1"),
   isVerified: boolean("is_verified").notNull().default(false),
   verificationProofReference: text("verification_proof_reference"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -471,6 +488,12 @@ export const transmittedDocuments = pgTable(
     docTypeId: text("doc_type_id").notNull(), // e.g. urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1
     processId: text("process_id").notNull(), // e.g. urn:fdc:peppol.eu:2017:poacc:billing:01:1.0
     countryC1: text("country_c1").notNull(), // e.g. BE
+    accessPointProvider: accessPointProviderEnum("access_point_provider")
+      .notNull()
+      .default("recommand-ap1"),
+    smpProvider: smpProviderEnum("smp_provider")
+      .notNull()
+      .default("recommand-smp1"),
     xml: text("xml"), // XML body of the document. Null when xmlLocation is "none" (not kept) or "s3" (offloaded).
     // Single source of truth for where the xml body lives. See data/offload.
     xmlLocation: payloadLocationEnum("xml_location").notNull().default("db"),

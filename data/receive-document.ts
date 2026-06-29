@@ -95,6 +95,8 @@ export async function receiveDocument(options: {
       docTypeId: cleanDocTypeId,
       processId: cleanProcessId,
       countryC1: options.countryC1,
+      accessPointProvider: company.accessPointProvider,
+      smpProvider: company.smpProvider,
       xml: options.body,
       xmlLocation: options.body != null ? "db" : "none",
       attachmentsLocation: parsedHasAttachments(parsedDocument) ? "db" : "none",

@@ -7,7 +7,10 @@ import {
   sendInvoiceSchema,
   type Invoice,
 } from "@peppol/utils/parsing/invoice/schemas";
-import { sendAs4, type SendAs4Response } from "@peppol/data/phase4-ap/client";
+import {
+  getAccessPointProvider,
+  type SendAs4Response,
+} from "@peppol/data/access-point-providers";
 import { db } from "@recommand/db";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
 import { parsedHasAttachments } from "@peppol/data/offload/storage";
@@ -780,7 +783,9 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           }
         }
       } else {
-        as4Response = await sendAs4({
+        as4Response = await getAccessPointProvider(
+          company.accessPointProvider
+        ).sendAs4({
           senderId: senderAddress,
           receiverId: recipientAddress!,
           docTypeId: doctypeId,
@@ -879,6 +884,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         docTypeId: doctypeId,
         processId,
         countryC1: countryC1,
+        accessPointProvider: company.accessPointProvider,
+        smpProvider: company.smpProvider,
         xml: xmlDocument,
         xmlLocation: xmlDocument != null ? "db" : "none",
         attachmentsLocation: parsedHasAttachments(parsedDocument) ? "db" : "none",
