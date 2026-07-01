@@ -76,8 +76,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "FR",
         name: "France",
         flag: "🇫🇷",
-        defaultVatScheme: "9957",
-        defaultEnterpriseNumberScheme: "0002",
+        defaultEnterpriseNumberScheme: "0225",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {

@@ -8,6 +8,13 @@ import {
   upsertCompanyRegistration as upsertRecommandP1CompanyRegistration,
   upsertCompanyRegistrations as upsertRecommandP1CompanyRegistrations,
 } from "@peppol/data/phoss-smp";
+import {
+  unregisterCompanyDocumentType as unregisterArratechCompanyDocumentType,
+  unregisterCompanyIdentifier as unregisterArratechCompanyIdentifier,
+  unregisterCompanyRegistrations as unregisterArratechCompanyRegistrations,
+  upsertCompanyRegistration as upsertArratechCompanyRegistration,
+  upsertCompanyRegistrations as upsertArratechCompanyRegistrations,
+} from "@peppol/data/at/smp";
 import type { SmpProviderId } from "@peppol/data/peppol-providers";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
@@ -49,6 +56,13 @@ const smpProviders = {
     upsertCompanyRegistration: upsertRecommandP1CompanyRegistration,
     unregisterCompanyDocumentType: unregisterRecommandP1CompanyDocumentType,
     unregisterCompanyIdentifier: unregisterRecommandP1CompanyIdentifier,
+  },
+  "at-shared-smp": {
+    upsertCompanyRegistrations: upsertArratechCompanyRegistrations,
+    unregisterCompanyRegistrations: unregisterArratechCompanyRegistrations,
+    upsertCompanyRegistration: upsertArratechCompanyRegistration,
+    unregisterCompanyDocumentType: unregisterArratechCompanyDocumentType,
+    unregisterCompanyIdentifier: unregisterArratechCompanyIdentifier,
   },
 } satisfies Record<SmpProviderId, SmpProvider>;
 

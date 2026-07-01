@@ -104,7 +104,7 @@ export const accessPointProviderEnum = pgEnum(
   accessPointProviderIds
 );
 
-export const smpProviderIds = ["recommand-smp1"] as const;
+export const smpProviderIds = ["recommand-smp1", "at-shared-smp"] as const;
 export const zodSmpProviderIds = z.enum(smpProviderIds);
 export const smpProviderEnum = pgEnum("peppol_smp_provider", smpProviderIds);
 
