@@ -8,9 +8,9 @@ export async function simulateSendAs4(options: {
   docTypeId: string;
   processId: string;
   countryC1: string;
-  body: string; // XML string
+  body: BodyInit;
+  contentType?: string;
 
-  // Playground specific options
   playgroundTeamId: string;
 }) {
 
@@ -34,7 +34,6 @@ export async function simulateSendAs4(options: {
     return
   }
 
-  // The company is registered, so we can receive the document
   await receiveDocument({
     senderId: options.senderId,
     receiverId: options.receiverId,
@@ -42,6 +41,7 @@ export async function simulateSendAs4(options: {
     processId: options.processId,
     countryC1: options.countryC1,
     body: options.body,
+    contentType: options.contentType,
     skipBilling: true,
     playgroundTeamId: options.playgroundTeamId,
   });

@@ -14,12 +14,21 @@ export const receiveDocumentSchema = z.object({
   processId: z.string(),
   countryC1: z.string(),
   body: z.string(),
+  contentType: z.string().optional(),
   as4MessageId: z.string().nullish(),
   as4ConversationId: z.string().nullish(),
   sbdhInstanceIdentifier: z.string().nullish(),
 });
 
 const server = new Server();
+
+function isXmlContentType(contentType: string | undefined): boolean {
+  if (!contentType) {
+    return true;
+  }
+  const mimeType = contentType.toLowerCase().split(";")[0].trim();
+  return mimeType === "application/xml";
+}
 
 server.post(
   "/receiveDocument",
@@ -31,7 +40,12 @@ server.post(
 
     try {
       const useTestNetwork = c.get("token") !== process.env.INTERNAL_TOKEN;
-      await receiveDocument({...jsonBody, useTestNetwork});
+      const body = isXmlContentType(jsonBody.contentType)
+        ? jsonBody.body
+        : new Blob([Buffer.from(jsonBody.body, "base64")], {
+          type: jsonBody.contentType,
+        });
+      await receiveDocument({...jsonBody, body, useTestNetwork});
     } catch (error) {
       console.error("Error receiving document:", error);
       if (error instanceof UserFacingError) {

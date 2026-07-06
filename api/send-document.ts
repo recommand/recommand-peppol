@@ -770,7 +770,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
             docTypeId: doctypeId,
             processId,
             countryC1: countryC1,
-            body: xmlDocument!, // TODO: support factur-x documents
+            body: documentBody,
+            contentType: outgoingDocumentContentType,
             playgroundTeamId: c.var.team.id, // Must be the same as the sender team: we don't support cross-team sending
           });
           sentPeppol = true;
