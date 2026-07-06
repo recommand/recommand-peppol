@@ -160,7 +160,7 @@ async function resolveArratechDocumentTypes(
   );
 
   if (resolvedDocumentTypes.length > 20) {
-    throw new UserFacingError("Arratech SMP supports at most 20 document types per participant update");
+    throw new UserFacingError("AT SMP supports at most 20 document types per participant update");
   }
 
   return resolvedDocumentTypes;

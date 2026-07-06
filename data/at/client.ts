@@ -89,7 +89,7 @@ export async function fetchArratechJson<T>(
 
   if (!response.ok) {
     const message = await getErrorMessage(response);
-    throw new UserFacingError(`Arratech request failed: ${message}`);
+    throw new UserFacingError(`AT request failed: ${message}`);
   }
 
   return await response.json();
