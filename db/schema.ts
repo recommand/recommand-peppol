@@ -116,6 +116,12 @@ export const payloadLocationEnum = pgEnum("peppol_payload_location", [
   "s3",
 ]);
 
+export const originalPayloadContainerFormats = ["none", "pdf"] as const;
+export const originalPayloadContainerFormatEnum = pgEnum(
+  "peppol_original_payload_container_format",
+  originalPayloadContainerFormats
+);
+
 export function lower(email: AnyPgColumn): SQL {
   return sql`lower(${email})`;
 }
@@ -502,9 +508,18 @@ export const transmittedDocuments = pgTable(
     attachmentsLocation: payloadLocationEnum("attachments_location")
       .notNull()
       .default("db"),
+    originalPayloadLocation: payloadLocationEnum("original_payload_location")
+      .notNull()
+      .default("none"),
+    originalPayloadContainerFormat: originalPayloadContainerFormatEnum(
+      "original_payload_container_format"
+    )
+      .notNull()
+      .default("none"),
     // The exact S3 key prefix used when this document's payloads were offloaded,
     // without a suffix. Resolve a payload by appending ".xml" or
-    // ".attachments.json". Null until the document is offloaded. Stored (rather
+    // ".attachments.json". Original binary payloads use ".original". Null until
+    // a document payload is stored in S3. Stored (rather
     // than re-derived) so reads/deletes are immune to changes in the key scheme.
     s3KeyPrefix: text("s3_key_prefix"),
     // Set when an offload worker claims this row, so other workers/instances

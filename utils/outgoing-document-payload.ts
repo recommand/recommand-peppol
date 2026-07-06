@@ -26,6 +26,10 @@ type OutgoingDocumentPayload = {
   body: string | Blob;
   contentType: string;
   processId?: string;
+  originalPayload?: {
+    content: Buffer;
+    containerFormat: "pdf";
+  };
 };
 
 type BinaryDocumentFormat = {
@@ -92,6 +96,10 @@ async function resolveFacturXPayload({
     body: bufferToBlob(facturXDocument, "application/pdf"),
     contentType: "application/pdf",
     processId,
+    originalPayload: {
+      content: facturXDocument,
+      containerFormat: "pdf",
+    },
   };
 }
 

@@ -8,6 +8,8 @@ import { describeRoute } from "hono-openapi";
 import { getTransmittedDocument } from "@peppol/data/transmitted-documents";
 import {
     hydrateDocumentParsedAttachments,
+    originalPayloadFilename,
+    resolveDocumentOriginalPayload,
     resolveDocumentXmlAndAttachments,
 } from "@peppol/data/offload/storage";
 import {
@@ -91,18 +93,32 @@ async function _downloadPackageImplementation(c: DownloadPackageContext) {
         // Create a new zip file
         const zip = new JSZip();
 
-        // Fetch the xml and attachments concurrently (both may live in S3).
-        const { xml, attachments } = await resolveDocumentXmlAndAttachments(document);
+        const [{ xml, attachments }, originalPayload] = await Promise.all([
+            resolveDocumentXmlAndAttachments(document),
+            resolveDocumentOriginalPayload(document),
+        ]);
 
         const parsed = hydrateDocumentParsedAttachments(document.parsed, attachments);
 
         // Add document metadata as JSON
-        const { xml: _xml, ...documentMetadata } = { ...document, parsed };
+        const {
+            xml: _xml,
+            xmlLocation,
+            attachmentsLocation,
+            originalPayloadLocation,
+            originalPayloadContainerFormat,
+            s3KeyPrefix,
+            ...documentMetadata
+        } = { ...document, parsed };
         zip.file("document.json", JSON.stringify(documentMetadata, null, 2));
 
         // Add XML if available
         if (xml) {
             zip.file("document.xml", xml);
+        }
+
+        if (originalPayload) {
+            zip.file(originalPayloadFilename(document.originalPayloadContainerFormat), originalPayload);
         }
 
         // If there are attachments, add them to the zip

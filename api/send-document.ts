@@ -13,7 +13,11 @@ import {
 } from "@peppol/data/access-point-providers";
 import { db } from "@recommand/db";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
-import { parsedHasAttachments } from "@peppol/data/offload/storage";
+import {
+  parsedHasAttachments,
+  uploadDocumentOriginalPayload,
+  type OriginalPayloadContainerFormat,
+} from "@peppol/data/offload/storage";
 import {
   requireIntegrationSupportedCompanyAccess,
   requireValidSubscription,
@@ -188,6 +192,10 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
     let outgoingDocumentBody: BodyInit | null = null;
     let outgoingDocumentContentType = "application/xml";
     let outgoingDocumentProcessId: string | null = null;
+    let originalOutgoingPayload: {
+      content: Buffer;
+      containerFormat: Exclude<OriginalPayloadContainerFormat, "none">;
+    } | null = null;
 
     // Get senderId, countryC1 from company
     const company = c.var.company;
@@ -700,6 +708,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         outgoingDocumentBody = outgoingPayload.body;
         outgoingDocumentContentType = outgoingPayload.contentType;
         outgoingDocumentProcessId = outgoingPayload.processId ?? null;
+        originalOutgoingPayload = outgoingPayload.originalPayload ?? null;
       } catch (error) {
         return c.json(
           actionFailure(
@@ -871,6 +880,34 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       type,
       parsedDocument,
     });
+    const transmittedDocumentCreatedAt = new Date();
+    let s3KeyPrefix: string | null = null;
+    let originalPayloadLocation: "none" | "s3" = "none";
+    let originalPayloadContainerFormat: OriginalPayloadContainerFormat = "none";
+
+    if (originalOutgoingPayload) {
+      try {
+        s3KeyPrefix = await uploadDocumentOriginalPayload(
+          {
+            id: transmittedDocumentId,
+            teamId: c.var.team.id,
+            companyId: company.id,
+            createdAt: transmittedDocumentCreatedAt,
+          },
+          originalOutgoingPayload.content,
+          originalOutgoingPayload.containerFormat
+        );
+        originalPayloadLocation = "s3";
+        originalPayloadContainerFormat = originalOutgoingPayload.containerFormat;
+      } catch (error) {
+        console.error("Failed to upload original payload:", error);
+        sendSystemAlert(
+          "Original Payload Upload Failed",
+          `Failed to upload original payload. Error: \`\`\`\n${error}\n\`\`\``,
+          "error"
+        );
+      }
+    }
 
     const transmittedDocument = await db
       .insert(transmittedDocuments)
@@ -878,6 +915,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         id: transmittedDocumentId,
         teamId: c.var.team.id,
         companyId: company.id,
+        createdAt: transmittedDocumentCreatedAt,
         direction: "outgoing",
         senderId: senderAddress,
         receiverId: recipientAddress,
@@ -889,6 +927,9 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         xml: xmlDocument,
         xmlLocation: xmlDocument != null ? "db" : "none",
         attachmentsLocation: parsedHasAttachments(parsedDocument) ? "db" : "none",
+        originalPayloadLocation,
+        originalPayloadContainerFormat,
+        s3KeyPrefix,
 
         sentOverPeppol: sentPeppol,
         sentOverEmail: sentEmailRecipients.length > 0,

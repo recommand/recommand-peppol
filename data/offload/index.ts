@@ -87,6 +87,7 @@ async function drainOldDocuments(logger: Logger): Promise<void> {
         createdAt: transmittedDocuments.createdAt,
         xml: transmittedDocuments.xml,
         parsed: transmittedDocuments.parsed,
+        s3KeyPrefix: transmittedDocuments.s3KeyPrefix,
       })
       .from(transmittedDocuments)
       .where(

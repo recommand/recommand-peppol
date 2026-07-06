@@ -135,7 +135,6 @@ async function resolveArratechDocumentType(
   const docTypeId = documentTypeIdentifier(documentType.docTypeId);
   const processId = processIdentifier(documentType.processId);
   const documentTypes = await getArratechDocumentTypes(useTestNetwork);
-  console.log("Arratech supported document types", documentTypes);
   const matchingDocumentType = documentTypes.find((arratechDocumentType) => {
     return getDocumentTypeValue(arratechDocumentType) === docTypeId
       && supportsProcess(arratechDocumentType, processId);
