@@ -7,7 +7,6 @@ import {
   extractTotals,
 } from "./calculations";
 import { parsePeppolAddress } from "../peppol-address";
-import { trimsToDefined } from "../xml-helpers";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import { INVOICE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 
@@ -66,14 +65,14 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
       "cbc:IssueDate": invoice.issueDate,
       "cbc:DueDate": invoice.dueDate,
       "cbc:InvoiceTypeCode": "380",
-      ...(trimsToDefined(invoice.note) && { "cbc:Note": invoice.note }),
+      ...(invoice.note && { "cbc:Note": invoice.note }),
       "cbc:DocumentCurrencyCode": invoice.currency,
       ...(invoice.buyerReference && {
         "cbc:BuyerReference": invoice.buyerReference,
       }),
       ...((invoice.purchaseOrderReference || invoice.salesOrderReference) && {
         "cac:OrderReference": {
-          "cbc:ID": invoice.purchaseOrderReference || "NA",
+          "cbc:ID": invoice.purchaseOrderReference ? invoice.purchaseOrderReference : "NA",
           ...(invoice.salesOrderReference && { "cbc:SalesOrderID": invoice.salesOrderReference }),
         },
       }),
@@ -252,7 +251,7 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
           },
         })),
       }),
-      ...(trimsToDefined(invoice.paymentTerms?.note) && {
+      ...(invoice.paymentTerms?.note && {
         "cac:PaymentTerms": {
           "cbc:Note": invoice.paymentTerms!.note,
         },
@@ -364,7 +363,7 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
       },
       "cac:InvoiceLine": lines.map((item, index) => ({
         "cbc:ID": item.id === undefined || item.id === null ? (index + 1).toString() : item.id,
-        ...(trimsToDefined(item.note) && { "cbc:Note": item.note }),
+        ...(item.note && { "cbc:Note": item.note }),
         "cbc:InvoicedQuantity": {
           "@_unitCode": item.unitCode,
           "#text": item.quantity,

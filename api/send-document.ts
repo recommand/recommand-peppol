@@ -194,10 +194,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
     }
 
     if (input.documentType === DocumentType.INVOICE) {
-      const invoice = document as Invoice;
-
       // Check the invoice corresponds to the required zod schema
-      const parsedInvoice = sendInvoiceSchema.safeParse(invoice);
+      const parsedInvoice = sendInvoiceSchema.safeParse(document);
       if (!parsedInvoice.success) {
         return c.json(
           actionFailure(
@@ -206,6 +204,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           400
         );
       }
+      const invoice = parsedInvoice.data as Invoice;
 
       if (!invoice.seller) {
         invoice.seller = {
@@ -262,10 +261,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         parsedDocument = invoice;
       }
     } else if (input.documentType === DocumentType.CREDIT_NOTE) {
-      const creditNote = document as CreditNote;
-
       // Check the credit note corresponds to the required zod schema
-      const parsedCreditNote = sendCreditNoteSchema.safeParse(creditNote);
+      const parsedCreditNote = sendCreditNoteSchema.safeParse(document);
       if (!parsedCreditNote.success) {
         return c.json(
           actionFailure(
@@ -274,6 +271,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           400
         );
       }
+      const creditNote = parsedCreditNote.data as CreditNote;
 
       if (!creditNote.seller) {
         creditNote.seller = {
@@ -339,10 +337,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         parsedDocument = creditNote;
       }
     } else if (input.documentType === DocumentType.SELF_BILLING_INVOICE) {
-      const invoice = document as SelfBillingInvoice;
-
       // Check the invoice corresponds to the required zod schema
-      const parsedInvoice = sendSelfBillingInvoiceSchema.safeParse(invoice);
+      const parsedInvoice = sendSelfBillingInvoiceSchema.safeParse(document);
       if (!parsedInvoice.success) {
         return c.json(
           actionFailure(
@@ -351,6 +347,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           400
         );
       }
+      const invoice = parsedInvoice.data as SelfBillingInvoice;
 
       if (!invoice.buyer) {
         invoice.buyer = {
@@ -409,11 +406,9 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         parsedDocument = invoice;
       }
     } else if (input.documentType === DocumentType.SELF_BILLING_CREDIT_NOTE) {
-      const selfBillingCreditNote = document as SelfBillingCreditNote;
-
       // Check the credit note corresponds to the required zod schema
       const parsedCreditNote = sendSelfBillingCreditNoteSchema.safeParse(
-        selfBillingCreditNote
+        document
       );
       if (!parsedCreditNote.success) {
         return c.json(
@@ -423,6 +418,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           400
         );
       }
+      const selfBillingCreditNote = parsedCreditNote.data as SelfBillingCreditNote;
 
       if (!selfBillingCreditNote.buyer) {
         selfBillingCreditNote.buyer = {

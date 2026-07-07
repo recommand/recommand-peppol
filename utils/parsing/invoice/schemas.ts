@@ -66,26 +66,35 @@ export const unlimitedDecimalSchema = z
     description: "Decimal number as a string with flexible precision",
   });
 
+export function normalizeWhitespaceOnlyText(value: string): string {
+  return value.trim() === "" ? "" : value;
+}
+
+export const optionalNullishTextSchema = z
+  .string()
+  .nullish()
+  .transform((value) => (value == null ? value : normalizeWhitespaceOnlyText(value)));
+
 export const partySchema = z
   .object({
-    vatNumber: z.string().nullish().openapi({ example: "BE1234567894" }),
+    vatNumber: optionalNullishTextSchema.openapi({ example: "BE1234567894" }),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish().openapi({ example: "0208", description: "The scheme that corresponds to the enterprise number. Can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/)." }),
-    enterpriseNumber: z.string().nullish().openapi({ example: "1234567894" }),
+    enterpriseNumber: optionalNullishTextSchema.openapi({ example: "1234567894" }),
     name: z.string().openapi({ example: "Example Company" }),
     street: z.string().openapi({ example: "Example Street 1" }),
-    street2: z.string().nullish().openapi({ example: "Suite 100" }),
+    street2: optionalNullishTextSchema.openapi({ example: "Suite 100" }),
     city: z.string().openapi({ example: "Brussels" }),
     postalZone: z.string().openapi({ example: "1000" }),
     country: z
       .string()
       .length(2, "Country code must be in ISO 3166-1:Alpha2 format")
       .openapi({ example: "BE" }),
-    email: z.string().nullish().openapi({
+    email: optionalNullishTextSchema.openapi({
       example: "email@example.com",
       description:
         "The email address of the party. If not provided, the email address will not be included in the document.",
     }),
-    phone: z.string().nullish().openapi({
+    phone: optionalNullishTextSchema.openapi({
       example: "887 654 321",
       description:
         "The phone number of the party. Must contain at least 3 digits. If not provided, the phone number will not be included in the document.",
@@ -111,10 +120,10 @@ export const deliverySchema = z
           "The identifier of the delivery location. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
       }),
     location: z.object({
-      street: z.string().nullish().openapi({ example: "Example Street 1" }),
-      street2: z.string().nullish().openapi({ example: "Suite 100" }),
-      city: z.string().nullish().openapi({ example: "Brussels" }),
-      postalZone: z.string().nullish().openapi({ example: "1000" }),
+      street: optionalNullishTextSchema.openapi({ example: "Example Street 1" }),
+      street2: optionalNullishTextSchema.openapi({ example: "Suite 100" }),
+      city: optionalNullishTextSchema.openapi({ example: "Brussels" }),
+      postalZone: optionalNullishTextSchema.openapi({ example: "1000" }),
       country: z
         .string()
         .length(2, "Country code must be in ISO 3166-1:Alpha2 format")
@@ -131,7 +140,7 @@ export const deliverySchema = z
 
 export const paymentMeansSchema = z
   .object({
-    name: z.string().nullish().openapi({
+    name: optionalNullishTextSchema.openapi({
       example: "Credit Transfer",
       description: "The name of the payment means.",
     }),
@@ -145,9 +154,9 @@ export const paymentMeansSchema = z
       ])
       .default("credit_transfer")
       .openapi({ example: "credit_transfer" }),
-    reference: z.string().default("").openapi({ example: "INV-2026-001" }),
+    reference: optionalNullishTextSchema.default("").openapi({ example: "INV-2026-001" }),
     iban: z.string().openapi({ example: "BE1234567890" }),
-    financialInstitutionBranch: z.string().nullish().openapi({
+    financialInstitutionBranch: optionalNullishTextSchema.openapi({
       description:
         "An identifier for the payment service provider where a payment account is located. Such as a BIC or a national clearing code where required.",
     }),
@@ -176,11 +185,11 @@ export const vatSubtotalSchema = z
     vatAmount: decimalSchema,
     category: vatCategoryEnum,
     percentage: decimalSchema,
-    exemptionReasonCode: z.string().nullish().openapi({
+    exemptionReasonCode: optionalNullishTextSchema.openapi({
       description:
         "If the invoice is exempt from VAT, this (or exemptionReason) is required. The exemption reason code identifier must belong to the CEF VATEX code list	found [here](https://docs.peppol.eu/poacc/billing/3.0/2024-Q4/codelist/vatex/).",
     }),
-    exemptionReason: z.string().nullish().openapi({
+    exemptionReason: optionalNullishTextSchema.openapi({
       description:
         "If the invoice is exempt from VAT, this (or exemptionReasonCode) is required. The exemption reason must be a textual statement of the reason why the amount is exempt from VAT or why no VAT is charged.",
     }),
@@ -226,12 +235,12 @@ export const totalsSchema = z
 
 export const lineDiscountSchema = z
   .object({
-    reasonCode: z.string().nullish().openapi({
+    reasonCode: optionalNullishTextSchema.openapi({
       example: "95",
       description:
         "The reason code for the discount. This must be one of the codes in the [UNCL5189 subset](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5189/) code list. For example, `95` for regular discounts. Either reason or reasonCode must be provided.",
     }),
-    reason: z.string().nullish().openapi({
+    reason: optionalNullishTextSchema.openapi({
       example: "Discount",
       description:
         "The reason for the discount. This is a free text field. Either reason or reasonCode must be provided.",
@@ -245,12 +254,12 @@ export const lineDiscountSchema = z
 
 export const lineSurchargeSchema = z
   .object({
-    reasonCode: z.string().nullish().openapi({
+    reasonCode: optionalNullishTextSchema.openapi({
       example: "FC",
       description:
         "The reason code for the surcharge. This must be one of the codes in the [UNCL7161 subset](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7161/) code list. For example, `FC` for freight services. Either reason or reasonCode must be provided.",
     }),
-    reason: z.string().nullish().openapi({
+    reason: optionalNullishTextSchema.openapi({
       example: "Freight services",
       description:
         "The reason for the surcharge. This is a free text field. Either reason or reasonCode must be provided.",
@@ -272,32 +281,29 @@ export const additionalItemPropertySchema = z
 export const itemClassificationCodeSchema = z
   .object({
     scheme: z.enum(ITEM_TYPE_IDENTIFICATION_CODES.map((code) => code.key) as [string, ...string[]]).openapi({ example: "SN", description: "The scheme of the item classification code. Can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7143/)." }),
-    schemeVersion: z.string().nullish(),
+    schemeVersion: optionalNullishTextSchema,
     value: z.string().min(1).openapi({ example: "123456", description: "The value of the item classification code." }),
   })
   .openapi({ ref: "ItemClassificationCode" });
 
 export const lineSchema = z
   .object({
-    id: z.string().nullish().openapi({
+    id: optionalNullishTextSchema.openapi({
       example: "1",
       description:
         "A line number. If not provided, it will be calculated automatically.",
     }),
     name: z.string().default("").openapi({ example: "Consulting Services" }),
-    description: z
-      .string()
-      .nullish()
-      .openapi({ example: "Professional consulting services" }),
-    note: z.string().nullish().openapi({
+    description: optionalNullishTextSchema.openapi({ example: "Professional consulting services" }),
+    note: optionalNullishTextSchema.openapi({
       description:
         "A textual note that gives unstructured information that is relevant to this line.",
     }),
-    buyersId: z.string().nullish().openapi({
+    buyersId: optionalNullishTextSchema.openapi({
       example: "CS-001",
       description: "The item identifier of the item as defined by the buyer.",
     }),
-    sellersId: z.string().nullish().openapi({
+    sellersId: optionalNullishTextSchema.openapi({
       example: "CS-001",
       description:
         "The item identifier of the item as defined by the seller. This is typically a product code or SKU.",
@@ -312,12 +318,12 @@ export const lineSchema = z
         description:
           "The standard identifier of the item based on a registered scheme. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
       }),
-    documentReference: z.string().nullish().openapi({
+    documentReference: optionalNullishTextSchema.openapi({
       example: "INV-2024-001",
       description:
         "A reference to a related document, mostly used to refer to a related invoice.",
     }),
-    orderLineReference: z.string().nullish().openapi({
+    orderLineReference: optionalNullishTextSchema.openapi({
       description: "A reference to a related order line.",
     }),
     commodityClassifications: z.array(itemClassificationCodeSchema).nullish().openapi({ description: "Optional commodity classifications" }),
@@ -363,12 +369,12 @@ export const lineSchema = z
 
 export const discountSchema = z
   .object({
-    reasonCode: z.string().nullish().openapi({
+    reasonCode: optionalNullishTextSchema.openapi({
       example: "95",
       description:
         "The reason code for the discount. This must be one of the codes in the [UNCL5189 subset](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5189/) code list. For example, `95` for regular discounts. Either reason or reasonCode must be provided.",
     }),
-    reason: z.string().nullish().openapi({
+    reason: optionalNullishTextSchema.openapi({
       example: "Discount",
       description:
         "The reason for the discount. This is a free text field. Either reason or reasonCode must be provided.",
@@ -383,12 +389,12 @@ export const discountSchema = z
 
 export const surchargeSchema = z
   .object({
-    reasonCode: z.string().nullish().openapi({
+    reasonCode: optionalNullishTextSchema.openapi({
       example: "FC",
       description:
         "The reason code for the surcharge. This must be one of the codes in the [UNCL7161 subset](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7161/) code list. For example, `FC` for freight services. Either reason or reasonCode must be provided.",
     }),
-    reason: z.string().nullish().openapi({
+    reason: optionalNullishTextSchema.openapi({
       example: "Freight services",
       description:
         "The reason for the surcharge. This is a free text field. Either reason or reasonCode must be provided.",
@@ -412,11 +418,11 @@ export const sendVatTotalsSchema = z.union([
   vatTotalsSchema,
   z
     .object({
-      exemptionReasonCode: z.string().nullish().openapi({
+      exemptionReasonCode: optionalNullishTextSchema.openapi({
         description:
           "If the invoice is exempt from VAT, this (or exemptionReason) is required. The exemption reason code identifier must belong to the CEF VATEX code list	found [here](https://docs.peppol.eu/poacc/billing/3.0/2024-Q4/codelist/vatex/).",
       }),
-      exemptionReason: z.string().nullish().openapi({
+      exemptionReason: optionalNullishTextSchema.openapi({
         description:
           "If the invoice is exempt from VAT, this (or exemptionReasonCode) is required. The exemption reason must be a textual statement of the reason why the amount is exempt from VAT or why no VAT is charged.",
       }),
@@ -442,15 +448,9 @@ export const attachmentSchema = z
       description:
         "Filename for an embedded attachment. This is included in the Peppol XML only when `embeddedDocument` is provided. For URL-only attachments, the document contains an external reference and the filename is not embedded.",
     }),
-    description: z.string().nullish().openapi({ example: "Signed contract" }),
-    embeddedDocument: z
-      .string()
-      .nullish()
-      .openapi({ description: "base64 encoded document" }),
-    url: z
-      .string()
-      .nullish()
-      .openapi({ example: "https://example.com/contract.pdf" }),
+    description: optionalNullishTextSchema.openapi({ example: "Signed contract" }),
+    embeddedDocument: optionalNullishTextSchema.openapi({ description: "base64 encoded document" }),
+    url: optionalNullishTextSchema.openapi({ example: "https://example.com/contract.pdf" }),
   })
   .openapi({ ref: "Attachment" });
 
@@ -458,17 +458,14 @@ export const _invoiceSchema = z.object({
   invoiceNumber: z.string().openapi({ example: "INV-2024-001" }),
   issueDate: z.string().date().openapi({ example: "2024-03-20" }),
   dueDate: z.string().date().nullish().openapi({ example: "2024-04-20" }),
-  note: z
-    .string()
-    .nullish()
-    .openapi({ example: "Thank you for your business" }),
-  buyerReference: z.string().nullish().openapi({ example: "PO-2024-001" }),
-  purchaseOrderReference: z.string().nullish().openapi({
+  note: optionalNullishTextSchema.openapi({ example: "Thank you for your business" }),
+  buyerReference: optionalNullishTextSchema.openapi({ example: "PO-2024-001" }),
+  purchaseOrderReference: optionalNullishTextSchema.openapi({
     example: "PO-2024-001",
     description: "A reference to a related purchase order",
   }),
-  salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
-  despatchReference: z.string().nullish().openapi({
+  salesOrderReference: optionalNullishTextSchema.openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
+  despatchReference: optionalNullishTextSchema.openapi({
     example: "DE-2024-001",
     description:
       "A reference to a related despatch advice document (e.g. packing slip)",

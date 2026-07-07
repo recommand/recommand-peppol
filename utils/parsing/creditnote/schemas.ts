@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import "zod-openapi/extend";
-import { attachmentSchema, deliverySchema, discountSchema, lineSchema, partySchema, paymentMeansSchema, sendVatTotalsSchema, surchargeSchema, totalsSchema, vatTotalsSchema } from '../invoice/schemas';
+import { attachmentSchema, deliverySchema, discountSchema, lineSchema, optionalNullishTextSchema, partySchema, paymentMeansSchema, sendVatTotalsSchema, surchargeSchema, totalsSchema, vatTotalsSchema } from '../invoice/schemas';
 import { CURRENCIES, zCurrencies } from '@peppol/utils/currencies';
 
 const creditNoteInvoiceReferenceSchema = z.object({
@@ -11,12 +11,12 @@ const creditNoteInvoiceReferenceSchema = z.object({
 export const _creditNoteSchema = z.object({
   creditNoteNumber: z.string().openapi({ example: "CN-2024-001" }),
   issueDate: z.string().date().openapi({ example: "2024-03-20" }),
-  note: z.string().nullish().openapi({ example: "Thank you for your business" }),
-  buyerReference: z.string().nullish().openapi({ example: "PO-2024-001" }),
+  note: optionalNullishTextSchema.openapi({ example: "Thank you for your business" }),
+  buyerReference: optionalNullishTextSchema.openapi({ example: "PO-2024-001" }),
   invoiceReferences: z.array(creditNoteInvoiceReferenceSchema).default([]).openapi({ description: "References to one or more invoices that are being credited" }),
-  purchaseOrderReference: z.string().nullish().openapi({ example: "PO-2024-001", description: "A reference to a related purchase order" }),
-  salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
-  despatchReference: z.string().nullish().openapi({ example: "DE-2024-001", description: "A reference to a related despatch advice document (e.g. packing slip)" }),
+  purchaseOrderReference: optionalNullishTextSchema.openapi({ example: "PO-2024-001", description: "A reference to a related purchase order" }),
+  salesOrderReference: optionalNullishTextSchema.openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
+  despatchReference: optionalNullishTextSchema.openapi({ example: "DE-2024-001", description: "A reference to a related despatch advice document (e.g. packing slip)" }),
   seller: partySchema,
   buyer: partySchema,
   delivery: deliverySchema.nullish().openapi({ description: "Optional delivery information." }),

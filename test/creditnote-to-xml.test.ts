@@ -1,6 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { creditNoteToUBL } from "../utils/parsing/creditnote/to-xml";
 import type { CreditNote } from "../utils/parsing/creditnote/schemas";
+import { creditNoteSchema } from "../utils/parsing/creditnote/schemas";
 import { parseCreditNoteFromXML } from "@peppol/utils/parsing/creditnote/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
@@ -706,7 +707,7 @@ describe("creditNoteToUBL", () => {
         });
 
         it("should omit whitespace-only document note from XML", async () => {
-            const creditNote = createBaseCreditNote({
+            const creditNote = creditNoteSchema.parse(createBaseCreditNote({
                 note: " ",
                 lines: [
                     {
@@ -723,7 +724,9 @@ describe("creditNoteToUBL", () => {
                         originCountry: null,
                     },
                 ],
-            });
+            }));
+
+            expect(creditNote.note).toBe("");
 
             const senderAddress = "0208:0428643097";
             const recipientAddress = "0208:0598726857";

@@ -1,7 +1,3 @@
-export function trimsToDefined(value: string | null | undefined): value is string {
-  return !!value?.trim();
-}
-
 export function getTextContent(value: any): string {
   if (!value) return "";
   if (typeof value === "string") return value;
