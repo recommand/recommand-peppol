@@ -7,6 +7,7 @@ import {
   extractTotals,
 } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
+import { trimsToDefined } from "../xml-helpers";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import { CREDIT_NOTE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 
@@ -65,7 +66,7 @@ export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddr
       "cbc:ID": creditNote.creditNoteNumber,
       "cbc:IssueDate": creditNote.issueDate,
       "cbc:CreditNoteTypeCode": "381",
-      ...(creditNote.note && { "cbc:Note": creditNote.note }),
+      ...(trimsToDefined(creditNote.note) && { "cbc:Note": creditNote.note }),
       "cbc:DocumentCurrencyCode": creditNote.currency,
       ...(creditNote.buyerReference && {
         "cbc:BuyerReference": creditNote.buyerReference,
@@ -255,9 +256,9 @@ export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddr
           },
         })),
       }),
-      ...(creditNote.paymentTerms && {
+      ...(trimsToDefined(creditNote.paymentTerms?.note) && {
         "cac:PaymentTerms": {
-          "cbc:Note": creditNote.paymentTerms.note,
+          "cbc:Note": creditNote.paymentTerms!.note,
         },
       }),
       ...((creditNote.discounts || creditNote.surcharges) && {
@@ -367,7 +368,7 @@ export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddr
       },
       "cac:CreditNoteLine": lines.map((item, index) => ({
         "cbc:ID": item.id === undefined || item.id === null ? (index + 1).toString() : item.id,
-        ...(item.note && { "cbc:Note": item.note }),
+        ...(trimsToDefined(item.note) && { "cbc:Note": item.note }),
         "cbc:CreditedQuantity": {
           "@_unitCode": item.unitCode,
           "#text": item.quantity,

@@ -7,6 +7,7 @@ import {
   extractTotals,
 } from "./calculations";
 import { parsePeppolAddress } from "../peppol-address";
+import { trimsToDefined } from "../xml-helpers";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import { INVOICE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 
@@ -65,7 +66,7 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
       "cbc:IssueDate": invoice.issueDate,
       "cbc:DueDate": invoice.dueDate,
       "cbc:InvoiceTypeCode": "380",
-      ...(invoice.note && { "cbc:Note": invoice.note }),
+      ...(trimsToDefined(invoice.note) && { "cbc:Note": invoice.note }),
       "cbc:DocumentCurrencyCode": invoice.currency,
       ...(invoice.buyerReference && {
         "cbc:BuyerReference": invoice.buyerReference,
@@ -251,9 +252,9 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
           },
         })),
       }),
-      ...(invoice.paymentTerms && {
+      ...(trimsToDefined(invoice.paymentTerms?.note) && {
         "cac:PaymentTerms": {
-          "cbc:Note": invoice.paymentTerms.note,
+          "cbc:Note": invoice.paymentTerms!.note,
         },
       }),
       ...((invoice.discounts || invoice.surcharges) && {
@@ -363,7 +364,7 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
       },
       "cac:InvoiceLine": lines.map((item, index) => ({
         "cbc:ID": item.id === undefined || item.id === null ? (index + 1).toString() : item.id,
-        ...(item.note && { "cbc:Note": item.note }),
+        ...(trimsToDefined(item.note) && { "cbc:Note": item.note }),
         "cbc:InvoicedQuantity": {
           "@_unitCode": item.unitCode,
           "#text": item.quantity,

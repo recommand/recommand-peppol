@@ -705,6 +705,33 @@ describe("creditNoteToUBL", () => {
             await sendDocumentViaAPI(creditNote, "creditNote", recipientAddress);
         });
 
+        it("should omit whitespace-only document note from XML", async () => {
+            const creditNote = createBaseCreditNote({
+                note: " ",
+                lines: [
+                    {
+                        name: "Item 1",
+                        quantity: "1",
+                        unitCode: "C62",
+                        netPriceAmount: "100.00",
+                        netAmount: null,
+                        vat: { category: "S", percentage: "21.00" },
+                        buyersId: null,
+                        sellersId: null,
+                        standardId: null,
+                        description: null,
+                        originCountry: null,
+                    },
+                ],
+            });
+
+            const senderAddress = "0208:0428643097";
+            const recipientAddress = "0208:0598726857";
+            const xml = creditNoteToUBL({ creditNote, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
+
+            expect(xml).not.toContain("<cbc:Note");
+        });
+
         it("should handle credit note with street2", async () => {
             const creditNote = createBaseCreditNote({
                 seller: {
