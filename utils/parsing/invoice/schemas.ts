@@ -24,6 +24,12 @@ export type VatCategory = keyof typeof VAT_CATEGORIES;
 const toDecimalString = (val: number | string) => new Decimal(val).toFixed(2);
 const toUnlimitedDecimalString = (val: number | string) =>
   new Decimal(val).toString();
+// Prices keep unlimited precision but always show at least 2 decimal places,
+// so a value like "12.40" is preserved instead of being normalized to "12.4".
+const toPriceDecimalString = (val: number | string) => {
+  const decimal = new Decimal(val);
+  return decimal.toFixed(Math.max(2, decimal.decimalPlaces()));
+};
 
 // Create a reusable decimal transform schema
 export const decimalSchema = z
@@ -64,6 +70,27 @@ export const unlimitedDecimalSchema = z
     type: "string",
     example: "21.00",
     description: "Decimal number as a string with flexible precision",
+  });
+
+export const priceDecimalSchema = z
+  .union([z.number(), z.string()])
+  .refine(
+    (val) => {
+      try {
+        const decimal = new Decimal(val);
+        return decimal.isNaN() === false && decimal.isFinite() === true;
+      } catch (error) {
+        return false;
+      }
+    },
+    { message: "Invalid decimal" }
+  )
+  .transform(toPriceDecimalString)
+  .openapi({
+    type: "string",
+    example: "12.40",
+    description:
+      "Decimal number as a string with flexible precision",
   });
 
 export const partySchema = z
@@ -339,7 +366,7 @@ export const lineSchema = z
       description:
         "Recommended unit codes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNECERec20/).",
     }),
-    netPriceAmount: unlimitedDecimalSchema,
+    netPriceAmount: priceDecimalSchema,
     baseQuantity: unlimitedDecimalSchema.nullish().openapi({
       example: "1",
       description:

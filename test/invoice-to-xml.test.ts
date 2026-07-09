@@ -1489,7 +1489,7 @@ describe("invoiceToUBL", () => {
 
       const parsed = parseInvoiceFromXML(xml);
 
-      expect(parsed.lines[0].netPriceAmount).toBe("10");
+      expect(parsed.lines[0].netPriceAmount).toBe("10.00");
       expect(parsed.lines[0].baseQuantity).toBe("1");
     });
 
@@ -1540,9 +1540,61 @@ describe("invoiceToUBL", () => {
       // PEPPOL-EN16931-R120: LineExtensionAmount = quantity * (netPriceAmount / baseQuantity)
       expect(parsed.lines[0].netAmount).toBe("14.69"); // 2 * (73.47 / 10) = 14.694 → 14.69
 
-      expect(parsed.lines[1].netPriceAmount).toBe("25");
+      expect(parsed.lines[1].netPriceAmount).toBe("25.00");
       expect(parsed.lines[1].baseQuantity).toBe("1");
       expect(parsed.lines[1].netAmount).toBe("75.00"); // 3 * (25 / 1) = 75.00
+
+      await sendDocumentViaAPI(invoice, "invoice", recipientAddress);
+    });
+  });
+
+  describe("netPriceAmount precision", () => {
+    it("should preserve trailing zeros and higher precision through round-trip conversion", async () => {
+      const invoice = createBaseInvoice({
+        lines: [
+          {
+            name: "Trailing zero price",
+            quantity: "1.00",
+            unitCode: "C62",
+            netPriceAmount: "12.40",
+            baseQuantity: "1",
+            netAmount: null,
+            vat: { category: "S", percentage: "21.00" },
+            buyersId: null,
+            sellersId: null,
+            standardId: null,
+            description: null,
+            originCountry: null,
+          },
+          {
+            name: "High precision price",
+            quantity: "1",
+            unitCode: "C62",
+            netPriceAmount: "12.4567",
+            baseQuantity: "1",
+            netAmount: null,
+            vat: { category: "S", percentage: "21.00" },
+            buyersId: null,
+            sellersId: null,
+            standardId: null,
+            description: null,
+            originCountry: null,
+          },
+        ],
+      });
+
+      const senderAddress = "0208:0428643097";
+      const recipientAddress = "0208:0598726857";
+      const xml = invoiceToUBL({ invoice, senderAddress, recipientAddress, isDocumentValidationEnforced: false });
+
+      await validateXml(xml, "netPriceAmount precision round-trip");
+
+      const parsed = parseInvoiceFromXML(xml);
+
+      // Trailing zero is preserved instead of being normalized to "12.4"
+      expect(parsed.lines[0].netPriceAmount).toBe("12.40");
+      // Higher precision is kept as-is
+      expect(parsed.lines[1].netPriceAmount).toBe("12.4567");
 
       await sendDocumentViaAPI(invoice, "invoice", recipientAddress);
     });
