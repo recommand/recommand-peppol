@@ -48,7 +48,7 @@ export const COUNTRIES: CountryInfo[] = ([
         code: "CA",
         name: "Canada",
         flag: "🇨🇦",
-        supportLevel: "unsupported",
+        supportLevel: "supported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
@@ -248,7 +248,7 @@ export const COUNTRIES: CountryInfo[] = ([
         code: "AU",
         name: "Australia",
         flag: "🇦🇺",
-        supportLevel: "unsupported",
+        supportLevel: "supported",
         defaultEnterpriseNumberScheme: "0151",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -284,7 +284,7 @@ export const COUNTRIES: CountryInfo[] = ([
         code: "US",
         name: "United States",
         flag: "🇺🇸",
-        supportLevel: "unsupported",
+        supportLevel: "supported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
