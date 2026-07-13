@@ -68,6 +68,8 @@ export function CompanyIdentityFields({
     const vatNumber = value.vatNumber ?? "";
     const enterpriseNumber = value.enterpriseNumber ?? "";
     const enterpriseNumberScheme = value.enterpriseNumberScheme ?? "";
+    const countryInfo = COUNTRIES.find((entry) => entry.code === country);
+    const countryOptions = COUNTRIES.filter((entry) => entry.supportLevel !== "unsupported" || entry.code === country);
 
     return (
         <>
@@ -81,13 +83,29 @@ export function CompanyIdentityFields({
                         <SelectValue placeholder="Select a country" />
                     </SelectTrigger>
                     <SelectContent>
-                        {COUNTRIES.map((countryOption) => (
+                        {countryOptions.map((countryOption) => (
                             <SelectItem key={countryOption.code} value={countryOption.code}>
                                 {countryOption.flag} {countryOption.name}
                             </SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
+                {countryInfo?.supportLevel === "partial" && (
+                    <StatusMessage
+                        tone="warning"
+                        icon={AlertTriangle}
+                        title={`${countryInfo.name} is partially supported`}
+                        description={`Companies in ${countryInfo.name} are functional, but some country-specific features or requirements may not be covered yet.`}
+                    />
+                )}
+                {countryInfo?.supportLevel === "unsupported" && (
+                    <StatusMessage
+                        tone="warning"
+                        icon={AlertTriangle}
+                        title={`${countryInfo.name} is currently not supported`}
+                        description={`New companies cannot be created in ${countryInfo.name}, and existing companies cannot switch to it. We are working on supporting more countries in the future. Would you like to see support for ${countryInfo.name}? Let us know via support@recommand.eu.`}
+                    />
+                )}
             </div>
             <div className="space-y-2">
                 <Label htmlFor="vatNumber">{vatNumberLabel}</Label>
