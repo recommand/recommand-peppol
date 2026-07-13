@@ -8,10 +8,10 @@ import {
   UserFacingError,
 } from "@peppol/utils/util";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
-import { getTeamExtension, type TeamExtension } from "./teams";
+import { getTeamExtension } from "./teams";
 import { createCompanyDocumentType } from "./company-document-types";
 import { canUpsertCompanyIdentifier, createCompanyIdentifier, getCompanyIdentifiers } from "./company-identifiers";
-import { COUNTRIES } from "@peppol/utils/countries";
+import { COUNTRIES, getCountrySupportLevel } from "@peppol/utils/countries";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { createVerificationSession, type VerificationExpectedDetails } from "./didit/client";
 import { getCompanyVerificationLog } from "./company-verification";
@@ -152,6 +152,10 @@ export async function createCompany(company: InsertCompany & { skipDefaultCompan
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
   const defaultPeppolProviders = resolveDefaultPeppolProviders(company.country);
 
+  if (getCountrySupportLevel(company.country) === "unsupported") {
+    throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be created in this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`);
+  }
+
   validateCompanyCountryIdentifiers({
     country: company.country,
     vatNumber: cleanedVat,
@@ -252,6 +256,11 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   const oldCompany = await getCompany(company.teamId, company.id);
   if (!oldCompany) {
     throw new UserFacingError("Company not found");
+  }
+
+  // Existing companies in an unsupported country keep working; only switching to one is blocked
+  if (company.country && company.country !== oldCompany.country && getCountrySupportLevel(company.country) === "unsupported") {
+    throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be switched to this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`);
   }
 
   const effectiveCountry = company.country ?? oldCompany.country;

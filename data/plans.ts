@@ -37,10 +37,26 @@ export const allPlans: Plan[] = [
   {
     id: "professional",
     isAvailable: true,
-    name: "Professional",
+    name: "Professional 1000",
     basePrice: 99,
     includedMonthlyDocuments: 1000,
     documentOveragePrice: 0.1,
+  },
+  {
+    id: "professional-2500",
+    isAvailable: true,
+    name: "Professional 2500",
+    basePrice: 199,
+    includedMonthlyDocuments: 2500,
+    documentOveragePrice: 0.08,
+  },
+  {
+    id: "professional-5000",
+    isAvailable: true,
+    name: "Professional 5000",
+    basePrice: 349,
+    includedMonthlyDocuments: 5000,
+    documentOveragePrice: 0.07,
   },
   {
     id: "enterprise",

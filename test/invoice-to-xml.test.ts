@@ -1804,6 +1804,8 @@ describe("invoice XML generation", () => {
 
       expect(xml).not.toContain("BaseQuantity");
 
+      const parsed = parseInvoiceFromXML(xml);
+
       expect(parsed.lines[0].netPriceAmount).toBe("10");
       expect(parsed.lines[0].baseQuantity).toBe("1");
     });
@@ -1856,7 +1858,7 @@ describe("invoice XML generation", () => {
       // PEPPOL-EN16931-R120: LineExtensionAmount = quantity * (netPriceAmount / baseQuantity)
       expect(parsed.lines[0].netAmount).toBe("14.69"); // 2 * (73.47 / 10) = 14.694 → 14.69
 
-      expect(parsed.lines[1].netPriceAmount).toBe("25");
+      expect(parsed.lines[1].netPriceAmount).toBe("25.00");
       expect(parsed.lines[1].baseQuantity).toBe("1");
       expect(parsed.lines[1].netAmount).toBe("75.00"); // 3 * (25 / 1) = 75.00
 

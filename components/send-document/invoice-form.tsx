@@ -114,6 +114,8 @@ export function InvoiceForm({
           const company = json.company;
           const companyInfo = {
             vatNumber: company.vatNumber || "",
+            enterpriseNumber: company.enterpriseNumber || null,
+            enterpriseNumberScheme: company.enterpriseNumberScheme || null,
             name: company.name,
             street: company.address,
             city: company.city,
