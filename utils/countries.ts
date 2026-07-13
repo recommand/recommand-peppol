@@ -1,9 +1,12 @@
 import { INVOICE_DOCUMENT_TYPE_INFO, CREDIT_NOTE_DOCUMENT_TYPE_INFO, SI_UBL_INVOICE_DOCUMENT_TYPE_INFO, SI_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO, type DocumentTypeInfo } from "./document-types";
 
+export type CountrySupportLevel = "supported" | "partial" | "unsupported";
+
 export type CountryInfo = {
     code: string;
     name: string;
     flag: string;
+    supportLevel: CountrySupportLevel;
     defaultVatScheme?: string | null;
     defaultEnterpriseNumberScheme?: string | null;
     defaultDocumentTypes: DocumentTypeInfo[];
@@ -14,11 +17,12 @@ const DEFAULT_DOCUMENT_TYPES: DocumentTypeInfo[] = [
     CREDIT_NOTE_DOCUMENT_TYPE_INFO,
 ];
 
-export const COUNTRIES: CountryInfo[] = [
+export const COUNTRIES: CountryInfo[] = ([
     {
         code: "AT",
         name: "Austria",
         flag: "🇦🇹",
+        supportLevel: "supported",
         defaultVatScheme: "9914",
         defaultEnterpriseNumberScheme: "9919",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
@@ -27,6 +31,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "BE",
         name: "Belgium",
         flag: "🇧🇪",
+        supportLevel: "supported",
         defaultVatScheme: "9925",
         defaultEnterpriseNumberScheme: "0208",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
@@ -35,6 +40,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "BG",
         name: "Bulgaria",
         flag: "🇧🇬",
+        supportLevel: "unsupported",
         defaultVatScheme: "9926",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -42,12 +48,14 @@ export const COUNTRIES: CountryInfo[] = [
         code: "CA",
         name: "Canada",
         flag: "🇨🇦",
+        supportLevel: "supported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "HR",
         name: "Croatia",
         flag: "🇭🇷",
+        supportLevel: "partial",
         defaultVatScheme: "9934",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -55,6 +63,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "DK",
         name: "Denmark",
         flag: "🇩🇰",
+        supportLevel: "supported",
         defaultEnterpriseNumberScheme: "0184",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -62,6 +71,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "EE",
         name: "Estonia",
         flag: "🇪🇪",
+        supportLevel: "supported",
         defaultEnterpriseNumberScheme: "0191",
         defaultVatScheme: "9931",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
@@ -70,12 +80,14 @@ export const COUNTRIES: CountryInfo[] = [
         code: "FI",
         name: "Finland",
         flag: "🇫🇮",
+        supportLevel: "supported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "FR",
         name: "France",
         flag: "🇫🇷",
+        supportLevel: "supported",
         defaultVatScheme: "9957",
         defaultEnterpriseNumberScheme: "0002",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
@@ -84,6 +96,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "DE",
         name: "Germany",
         flag: "🇩🇪",
+        supportLevel: "supported",
         defaultVatScheme: "9930",
         defaultEnterpriseNumberScheme: "0204",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
@@ -92,12 +105,14 @@ export const COUNTRIES: CountryInfo[] = [
         code: "GR",
         name: "Greece",
         flag: "🇬🇷",
+        supportLevel: "partial",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "HU",
         name: "Hungary",
         flag: "🇭🇺",
+        supportLevel: "partial",
         defaultVatScheme: "9910",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -105,6 +120,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "IS",
         name: "Iceland",
         flag: "🇮🇸",
+        supportLevel: "supported",
         defaultEnterpriseNumberScheme: "0196",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -112,6 +128,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "IE",
         name: "Ireland",
         flag: "🇮🇪",
+        supportLevel: "supported",
         defaultVatScheme: "9935",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -119,12 +136,25 @@ export const COUNTRIES: CountryInfo[] = [
         code: "IT",
         name: "Italy",
         flag: "🇮🇹",
+        supportLevel: "partial",
+        defaultVatScheme: "0211",
+        defaultEnterpriseNumberScheme: "0210",
+        defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
+    },
+    {
+        code: "LV",
+        name: "Latvia",
+        flag: "🇱🇻",
+        supportLevel: "partial",
+        defaultVatScheme: "9939",
+        defaultEnterpriseNumberScheme: "0218",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "LU",
         name: "Luxembourg",
         flag: "🇱🇺",
+        supportLevel: "supported",
         defaultVatScheme: "9938",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -132,6 +162,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "NL",
         name: "Netherlands",
         flag: "🇳🇱",
+        supportLevel: "supported",
         defaultVatScheme: "9944",
         defaultEnterpriseNumberScheme: "0106",
         defaultDocumentTypes: [
@@ -144,6 +175,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "NO",
         name: "Norway",
         flag: "🇳🇴",
+        supportLevel: "supported",
         defaultEnterpriseNumberScheme: "0192",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -151,13 +183,47 @@ export const COUNTRIES: CountryInfo[] = [
         code: "PL",
         name: "Poland",
         flag: "🇵🇱",
+        supportLevel: "partial",
         defaultVatScheme: "9945",
+        defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
+    },
+    {
+        code: "PT",
+        name: "Portugal",
+        flag: "🇵🇹",
+        supportLevel: "supported",
+        defaultVatScheme: "9946",
+        defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
+    },
+    {
+        code: "RO",
+        name: "Romania",
+        flag: "🇷🇴",
+        supportLevel: "partial",
+        defaultVatScheme: "9947",
+        defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
+    },
+    {
+        code: "SI",
+        name: "Slovenia",
+        flag: "🇸🇮",
+        supportLevel: "supported",
+        defaultVatScheme: "9949",
+        defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
+    },
+    {
+        code: "ES",
+        name: "Spain",
+        flag: "🇪🇸",
+        supportLevel: "partial",
+        defaultVatScheme: "9920",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "SE",
         name: "Sweden",
         flag: "🇸🇪",
+        supportLevel: "supported",
         defaultEnterpriseNumberScheme: "0007",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -165,13 +231,16 @@ export const COUNTRIES: CountryInfo[] = [
         code: "SK",
         name: "Slovakia",
         flag: "🇸🇰",
-        defaultEnterpriseNumberScheme: "0158",
+        supportLevel: "partial",
+        defaultEnterpriseNumberScheme: "0245",
+        defaultVatScheme: "9950",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "GB",
         name: "United Kingdom",
         flag: "🇬🇧",
+        supportLevel: "supported",
         defaultVatScheme: "9932",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -179,6 +248,7 @@ export const COUNTRIES: CountryInfo[] = [
         code: "AU",
         name: "Australia",
         flag: "🇦🇺",
+        supportLevel: "supported",
         defaultEnterpriseNumberScheme: "0151",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
@@ -186,36 +256,46 @@ export const COUNTRIES: CountryInfo[] = [
         code: "JP",
         name: "Japan",
         flag: "🇯🇵",
+        supportLevel: "unsupported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "MY",
         name: "Malaysia",
         flag: "🇲🇾",
+        supportLevel: "unsupported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "NZ",
         name: "New Zealand",
         flag: "🇳🇿",
+        supportLevel: "unsupported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "SG",
         name: "Singapore",
         flag: "🇸🇬",
+        supportLevel: "unsupported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "US",
         name: "United States",
         flag: "🇺🇸",
+        supportLevel: "supported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "AE",
         name: "United Arab Emirates",
         flag: "🇦🇪",
+        supportLevel: "unsupported",
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
-].sort((a, b) => a.name.localeCompare(b.name));
+] satisfies CountryInfo[]).sort((a, b) => a.name.localeCompare(b.name));
+
+export function getCountrySupportLevel(countryCode: string | null | undefined): CountrySupportLevel | undefined {
+    return COUNTRIES.find((country) => country.code === countryCode)?.supportLevel;
+}
