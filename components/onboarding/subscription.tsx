@@ -13,13 +13,14 @@ export default function SubscriptionOnboarding({ onComplete }: { onComplete: () 
     </div>;
   }
 
-  return <div>
+  return <div className="w-[min(56rem,calc(100vw-2rem))]">
     <PlansGrid
       currentSubscription={null}
       teamId={team.id}
       onSubscriptionUpdate={onComplete}
+      showHeader={false}
     />
-    <PlaygroundOption 
+    <PlaygroundOption
       buttonText="Skip Subscription - Create Playground" 
       description="Skip subscription setup by creating a playground to test your Peppol API integrations without billing requirements, or switch to another team."
     />
