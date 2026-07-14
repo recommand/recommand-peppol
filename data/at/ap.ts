@@ -1,13 +1,42 @@
 import type { SendAs4Response } from "@peppol/data/phase4-ap/client";
 import {
   DOCUMENT_SCHEME,
+  PARTICIPANT_SCHEME,
   PROCESS_SCHEME,
 } from "@peppol/data/phoss-smp/service-metadata";
+import { verifyDocumentSupport } from "@peppol/data/recipient";
 import {
   buildStandardBusinessDocument,
   type SbdhPayload,
 } from "@peppol/utils/sbdh";
+import { UserFacingError } from "@peppol/utils/util";
 import { fetchArratechJson, getArratechConfig } from "./client";
+
+// Arratech does not synchronously check receiver support before accepting a transaction, so
+// we perform the SMP-level document type check ourselves.
+async function checkReceiverSupportsDocumentType(options: {
+  receiverId: string;
+  docTypeId: string;
+  processId: string;
+  useTestNetwork: boolean;
+}): Promise<void> {
+  const { receiverId, docTypeId, processId, useTestNetwork } = options;
+
+  try {
+    await verifyDocumentSupport({
+      recipientAddress: receiverId,
+      documentType: docTypeId,
+      useTestNetwork,
+    });
+  } catch {
+    const encodedProcessId = processId.includes("::")
+      ? processId
+      : `${PROCESS_SCHEME}::${processId}`;
+    throw new UserFacingError(
+      `Failed to resolve SMP endpoint (${PARTICIPANT_SCHEME}::${receiverId}, ${DOCUMENT_SCHEME}::${docTypeId}, ${encodedProcessId})`
+    );
+  }
+}
 
 async function toSbdhPayload(
   body: BodyInit,
@@ -39,6 +68,13 @@ export async function sendAs4(options: {
   const config = getArratechConfig(options.useTestNetwork);
 
   try {
+    await checkReceiverSupportsDocumentType({
+      receiverId: options.receiverId,
+      docTypeId: options.docTypeId,
+      processId: options.processId,
+      useTestNetwork: options.useTestNetwork,
+    });
+
     // Arratech expects a full Standard Business Document (SBDH envelope +
     // payload), not the bare business document.
     const standardBusinessDocument = buildStandardBusinessDocument({
