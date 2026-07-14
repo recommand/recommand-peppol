@@ -7,8 +7,8 @@ import { getDocumentTypeInfo } from "@peppol/utils/document-types";
 import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
 import { parseCertificateExpiry } from "@peppol/utils/certificate";
 
-const SML_ZONE = "edelivery.tech.ec.europa.eu";
-const SML_TEST_ZONE = "acc.edelivery.tech.ec.europa.eu";
+const SML_ZONE = "participant.sml.prod.tech.peppol.org";
+const SML_TEST_ZONE = "participant.sml.test.tech.peppol.org";
 
 function stripTrailingEquals(str: string): string {
   return str.replace(/=+$/, "");
