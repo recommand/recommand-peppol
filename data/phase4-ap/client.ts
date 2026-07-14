@@ -43,8 +43,11 @@ export async function sendAs4(options: {
     const encodedDocTypeId = encodeURIComponent(docTypeId);
     const encodedProcessId = encodeURIComponent(processId);
     const encodedCountryC1 = encodeURIComponent(countryC1);
+    const endpoint = options.contentType === "application/pdf"
+      ? `/sendas4-facturx/${encodedSenderId}/${encodedReceiverId}/${encodedCountryC1}`
+      : `/sendas4/${encodedSenderId}/${encodedReceiverId}/${encodedDocTypeId}/${encodedProcessId}/${encodedCountryC1}`;
 
-    const result = await fetchPhase4Ap(`/sendas4/${encodedSenderId}/${encodedReceiverId}/${encodedDocTypeId}/${encodedProcessId}/${encodedCountryC1}`, {
+    const result = await fetchPhase4Ap(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': options.contentType ?? 'application/xml',
