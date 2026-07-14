@@ -11,6 +11,7 @@ import documentDefaultsServer from "./api/document-defaults";
 import previewDocumentServer from "./api/preview-document";
 import receiveDocumentServer from "./api/internal/receive-document";
 import diditWebhookServer from "./api/internal/didit-webhook";
+import arratechWebhookServer from "./api/internal/arratech-webhook";
 import transmittedDocumentsServer from "./api/documents";
 import {
   generateSpecs,
@@ -191,6 +192,7 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, recipientServer);
   server.route(prefix + "internal/", receiveDocumentServer);
   server.route(prefix + "internal/", diditWebhookServer);
+  server.route(prefix + "internal/", arratechWebhookServer);
 
   server.route(prefix, webhooksServer);
   server.route(prefix, integrationsServer);

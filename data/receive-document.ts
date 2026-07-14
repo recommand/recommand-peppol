@@ -109,6 +109,7 @@ export async function receiveDocument(options: {
   as4MessageId?: string | null;
   as4ConversationId?: string | null;
   sbdhInstanceIdentifier?: string | null;
+  apTransactionId?: string | null;
 }) {
   // The sender and receiver id might start with iso6523-actorid-upis::
   const senderId = options.senderId.startsWith("iso6523-actorid-upis::")
@@ -217,6 +218,7 @@ export async function receiveDocument(options: {
       peppolMessageId: options.as4MessageId ?? null,
       peppolConversationId: options.as4ConversationId ?? null,
       envelopeId: options.sbdhInstanceIdentifier ?? null,
+      apTransactionId: options.apTransactionId ?? null,
       type,
       parsed: parsedDocument,
       validation,

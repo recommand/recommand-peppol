@@ -56,7 +56,7 @@ async function getErrorMessage(response: Response): Promise<string> {
   }
 }
 
-async function fetchArratech(
+export async function fetchArratech(
   path: string,
   options: { useTestNetwork: boolean } & RequestInit
 ): Promise<Response> {

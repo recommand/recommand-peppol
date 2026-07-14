@@ -52,6 +52,42 @@ export function parseSbdhDocumentIdentification(
   };
 }
 
+// Extracts the business document from a Standard Business Document, returning
+// the payload XML as-is (no re-serialization) or the decoded content of a
+// Peppol BinaryContent element. Input that is not an SBD is returned unchanged.
+export function extractStandardBusinessDocumentPayload(
+  xml: string
+):
+  | { kind: "xml"; xml: string }
+  | { kind: "binary"; content: Buffer; mimeType: string } {
+  const headerClose = xml.match(
+    /<\/(?:[\w.-]+:)?StandardBusinessDocumentHeader\s*>/
+  );
+  if (!headerClose || headerClose.index === undefined) {
+    return { kind: "xml", xml };
+  }
+
+  const payloadStart = headerClose.index + headerClose[0].length;
+  const documentClose = xml.match(/<\/(?:[\w.-]+:)?StandardBusinessDocument\s*>\s*$/);
+  const payload = xml.slice(payloadStart, documentClose?.index ?? xml.length).trim();
+
+  const binaryContent = payload.match(
+    /^<(?:[\w.-]+:)?BinaryContent\b([^>]*)>([\s\S]*)<\/(?:[\w.-]+:)?BinaryContent\s*>$/
+  );
+  if (binaryContent) {
+    const mimeType =
+      binaryContent[1].match(/mimeType\s*=\s*"([^"]*)"/)?.[1] ??
+      "application/octet-stream";
+    return {
+      kind: "binary",
+      content: Buffer.from(binaryContent[2].replace(/\s/g, ""), "base64"),
+      mimeType,
+    };
+  }
+
+  return { kind: "xml", xml: payload };
+}
+
 function escapeXml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

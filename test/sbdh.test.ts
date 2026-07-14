@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildStandardBusinessDocument,
+  extractStandardBusinessDocumentPayload,
   parseSbdhDocumentIdentification,
 } from "@peppol/utils/sbdh";
 
@@ -121,5 +122,60 @@ describe("buildStandardBusinessDocument", () => {
         payload: { kind: "xml", xml: "<Invoice/>" },
       })
     ).toThrow();
+  });
+
+  test("extract round-trips an XML payload", () => {
+    const invoice =
+      '<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"><cbc:ID>1</cbc:ID></Invoice>';
+    const { xml } = buildStandardBusinessDocument({
+      ...baseOptions,
+      payload: { kind: "xml", xml: invoice },
+    });
+
+    expect(extractStandardBusinessDocumentPayload(xml)).toEqual({
+      kind: "xml",
+      xml: invoice,
+    });
+  });
+
+  test("extract round-trips a binary payload", () => {
+    const { xml } = buildStandardBusinessDocument({
+      ...baseOptions,
+      docTypeId: FACTURX_DOC_TYPE_ID,
+      payload: {
+        kind: "binary",
+        base64Content: Buffer.from("%PDF-fake").toString("base64"),
+        mimeType: "application/pdf",
+      },
+    });
+
+    const extracted = extractStandardBusinessDocumentPayload(xml);
+    expect(extracted.kind).toBe("binary");
+    if (extracted.kind === "binary") {
+      expect(extracted.mimeType).toBe("application/pdf");
+      expect(extracted.content.toString()).toBe("%PDF-fake");
+    }
+  });
+
+  test("extract handles namespace-prefixed SBD elements", () => {
+    const xml = [
+      '<sh:StandardBusinessDocument xmlns:sh="http://www.unece.org/cefact/namespaces/StandardBusinessDocumentHeader">',
+      "<sh:StandardBusinessDocumentHeader><sh:HeaderVersion>1.0</sh:HeaderVersion></sh:StandardBusinessDocumentHeader>",
+      '<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"/>',
+      "</sh:StandardBusinessDocument>",
+    ].join("\n");
+
+    expect(extractStandardBusinessDocumentPayload(xml)).toEqual({
+      kind: "xml",
+      xml: '<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"/>',
+    });
+  });
+
+  test("extract returns non-SBD input unchanged", () => {
+    const invoice = "<Invoice><cbc:ID>1</cbc:ID></Invoice>";
+    expect(extractStandardBusinessDocumentPayload(invoice)).toEqual({
+      kind: "xml",
+      xml: invoice,
+    });
   });
 });
