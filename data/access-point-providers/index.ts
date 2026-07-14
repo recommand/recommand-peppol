@@ -2,6 +2,7 @@ import {
   sendAs4 as sendRecommandP1As4,
   type SendAs4Response,
 } from "@peppol/data/phase4-ap/client";
+import { sendAs4 as sendArratechAs4 } from "@peppol/data/at/ap";
 import type { AccessPointProviderId } from "@peppol/data/peppol-providers";
 
 export type SendAs4Options = Parameters<typeof sendRecommandP1As4>[0];
@@ -13,6 +14,9 @@ type AccessPointProvider = {
 const accessPointProviders = {
   "recommand-ap1": {
     sendAs4: sendRecommandP1As4,
+  },
+  "at-shared-ap": {
+    sendAs4: sendArratechAs4,
   },
 } satisfies Record<AccessPointProviderId, AccessPointProvider>;
 

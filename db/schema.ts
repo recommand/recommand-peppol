@@ -97,7 +97,7 @@ export const validationResultEnum = pgEnum(
   validationResult.options
 );
 
-export const accessPointProviderIds = ["recommand-ap1"] as const;
+export const accessPointProviderIds = ["recommand-ap1", "at-shared-ap"] as const;
 export const zodAccessPointProviderIds = z.enum(accessPointProviderIds);
 export const accessPointProviderEnum = pgEnum(
   "peppol_access_point_provider",
@@ -554,6 +554,10 @@ export const transmittedDocuments = pgTable(
     peppolConversationId: text("peppol_conversation_id"),
     receivedPeppolSignalMessage: text("received_peppol_signal_message"),
     envelopeId: text("envelope_id"),
+    // The sending access point provider's own transaction reference (e.g. the
+    // Arratech transaction id), used to correlate provider callbacks/webhooks
+    // with this document. Null for providers that don't expose one.
+    apTransactionId: text("ap_transaction_id"),
 
     readAt: timestamp("read_at"), // defaults to null, set when the document is read
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -567,6 +571,9 @@ export const transmittedDocuments = pgTable(
       table.createdAt,
       table.offloadClaimedAt
     ),
+    index("peppol_transmitted_documents_ap_transaction_id_idx")
+      .on(table.apTransactionId)
+      .where(isNotNull(table.apTransactionId)),
   ]
 );
 

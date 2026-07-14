@@ -1,0 +1,2 @@
+ALTER TABLE "peppol_transmitted_documents" ADD COLUMN "ap_transaction_id" text;--> statement-breakpoint
+CREATE INDEX "peppol_transmitted_documents_ap_transaction_id_idx" ON "peppol_transmitted_documents" USING btree ("ap_transaction_id") WHERE "peppol_transmitted_documents"."ap_transaction_id" is not null;

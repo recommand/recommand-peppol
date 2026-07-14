@@ -17,6 +17,8 @@ export type SendAs4Response = {
   peppolConversationId: string | null;
   receivedPeppolSignalMessage: string | null;
   sbdhInstanceIdentifier: string | null;
+  // The access point provider's own transaction reference, when it exposes one.
+  apTransactionId?: string | null;
   sendingException?: {
     message: string;
   };

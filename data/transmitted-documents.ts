@@ -20,7 +20,7 @@ export type TransmittedDocument = typeof transmittedDocuments.$inferSelect;
 export type InsertTransmittedDocument = typeof transmittedDocuments.$inferInsert;
 type TransmittedDocumentSearchField = "senderName" | "receiverName" | "documentNumber" | "searchText";
 type TransmittedDocumentLabel = Omit<Label, "teamId" | "createdAt" | "updatedAt">;
-type InternalProviderField = "accessPointProvider" | "smpProvider";
+type InternalProviderField = "accessPointProvider" | "smpProvider" | "apTransactionId";
 export type PublicTransmittedDocument = Omit<
   TransmittedDocument,
   TransmittedDocumentSearchField | InternalProviderField | "offloadClaimedAt"

@@ -946,6 +946,7 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         receivedPeppolSignalMessage:
           as4Response?.receivedPeppolSignalMessage ?? null,
         envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
+        apTransactionId: as4Response?.apTransactionId ?? null,
       })
     .returning({ id: transmittedDocuments.id })
     .then((rows) => rows[0]);

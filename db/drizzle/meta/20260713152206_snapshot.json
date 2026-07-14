@@ -1,6 +1,6 @@
 {
-  "id": "7d786c61-f2b7-4ed7-aeb3-de421c2407bd",
-  "prevId": "ec2e9c3a-5d21-42c5-9d45-1b0da7c7be92",
+  "id": "8fe414a0-1d45-4a3d-acac-f5e2f1e02d97",
+  "prevId": "7d786c61-f2b7-4ed7-aeb3-de421c2407bd",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -350,6 +350,22 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "access_point_provider": {
+          "name": "access_point_provider",
+          "type": "peppol_access_point_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-ap1'"
+        },
+        "smp_provider": {
+          "name": "smp_provider",
+          "type": "peppol_smp_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-smp1'"
         },
         "is_verified": {
           "name": "is_verified",
@@ -2240,6 +2256,22 @@
           "primaryKey": false,
           "notNull": true
         },
+        "access_point_provider": {
+          "name": "access_point_provider",
+          "type": "peppol_access_point_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-ap1'"
+        },
+        "smp_provider": {
+          "name": "smp_provider",
+          "type": "peppol_smp_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-smp1'"
+        },
         "xml": {
           "name": "xml",
           "type": "text",
@@ -2261,6 +2293,22 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'db'"
+        },
+        "original_payload_location": {
+          "name": "original_payload_location",
+          "type": "peppol_payload_location",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "original_payload_container_format": {
+          "name": "original_payload_container_format",
+          "type": "peppol_original_payload_container_format",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
         },
         "s3_key_prefix": {
           "name": "s3_key_prefix",
@@ -2527,6 +2575,22 @@
     }
   },
   "enums": {
+    "public.peppol_access_point_provider": {
+      "name": "peppol_access_point_provider",
+      "schema": "public",
+      "values": [
+        "recommand-ap1",
+        "at-shared-ap"
+      ]
+    },
+    "public.peppol_original_payload_container_format": {
+      "name": "peppol_original_payload_container_format",
+      "schema": "public",
+      "values": [
+        "none",
+        "pdf"
+      ]
+    },
     "public.peppol_payload_location": {
       "name": "peppol_payload_location",
       "schema": "public",
@@ -2558,6 +2622,14 @@
         "active",
         "grace",
         "suspended"
+      ]
+    },
+    "public.peppol_smp_provider": {
+      "name": "peppol_smp_provider",
+      "schema": "public",
+      "values": [
+        "recommand-smp1",
+        "at-shared-smp"
       ]
     },
     "public.peppol_supported_document_type": {

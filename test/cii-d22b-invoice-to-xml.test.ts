@@ -49,8 +49,6 @@ describe("invoiceToCII", () => {
     });
 
     expect(xml).toContain("CrossIndustryInvoice");
-    // Save xml to file
-    Bun.write("cii-d22b-invoice-to-xml.xml", xml);
     await validateXml(xml, "CII D22B invoice");
   });
 });

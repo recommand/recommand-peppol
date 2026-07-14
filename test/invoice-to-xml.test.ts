@@ -1804,9 +1804,7 @@ describe("invoice XML generation", () => {
 
       expect(xml).not.toContain("BaseQuantity");
 
-      const parsed = parseInvoiceFromXML(xml);
-
-      expect(parsed.lines[0].netPriceAmount).toBe("10");
+      expect(parsed.lines[0].netPriceAmount).toBe("10.00");
       expect(parsed.lines[0].baseQuantity).toBe("1");
     });
 

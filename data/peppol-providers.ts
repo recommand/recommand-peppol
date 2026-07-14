@@ -12,7 +12,7 @@ export function resolveDefaultPeppolProviders(country: string): {
 } {
   if (country.toUpperCase() === "FR") {
     return {
-      accessPointProvider: "recommand-ap1",
+      accessPointProvider: "at-shared-ap",
       smpProvider: "at-shared-smp",
     };
   }
