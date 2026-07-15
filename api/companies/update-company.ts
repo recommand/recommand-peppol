@@ -20,7 +20,7 @@ const server = new Server();
 
 const updateCompanyRouteDescription = describeRoute({
     operationId: "updateCompany",
-    description: "Update an existing company",
+    description: "Update an existing company. Changing the VAT number or enterprise number of a verified company revokes its current verification status and requires the company to be verified again.",
     summary: "Update Company",
     tags: ["Companies"],
     responses: {
@@ -48,8 +48,12 @@ const updateCompanyJsonBodySchema = z.object({
     city: z.string().optional(),
     country: zodValidCountryCodes.optional(),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish(),
-    enterpriseNumber: z.string().nullish().transform(cleanEnterpriseNumber),
-    vatNumber: z.string().nullish().transform(cleanVatNumber),
+    enterpriseNumber: z.string().nullish().transform(cleanEnterpriseNumber).openapi({
+        description: "The enterprise number of the company. Changing its value on a verified company revokes the current verification status.",
+    }),
+    vatNumber: z.string().nullish().transform(cleanVatNumber).openapi({
+        description: "The VAT number of the company. Changing its value on a verified company revokes the current verification status.",
+    }),
     email: z.string().email().or(z.literal("")).nullish().transform((val) => val?.trim() === "" ? null : val),
     phone: z.string().nullish().transform((val) => val?.trim() === "" ? null : val),
     isSmpRecipient: z.boolean().optional(),
