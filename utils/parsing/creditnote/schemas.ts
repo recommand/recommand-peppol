@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import "zod-openapi/extend";
 import { attachmentSchema, deliverySchema, discountSchema, lineSchema, partySchema, paymentMeansSchema, sendVatTotalsSchema, surchargeSchema, totalsSchema, vatTotalsSchema } from '../invoice/schemas';
+import { countrySpecificSchema } from '../country-specific/schemas';
 import { CURRENCIES, zCurrencies } from '@peppol/utils/currencies';
 
 const creditNoteInvoiceReferenceSchema = z.object({
@@ -12,6 +13,7 @@ export const _creditNoteSchema = z.object({
   creditNoteNumber: z.string().openapi({ example: "CN-2024-001" }),
   issueDate: z.string().date().openapi({ example: "2024-03-20" }),
   note: z.string().nullish().openapi({ example: "Thank you for your business" }),
+  countrySpecific: countrySpecificSchema.nullish().openapi({ description: "Structured country-specific requirements. The FR variant is required for French regulated UBL, CII, and Factur-X document types." }),
   buyerReference: z.string().nullish().openapi({ example: "PO-2024-001" }),
   invoiceReferences: z.array(creditNoteInvoiceReferenceSchema).default([]).openapi({ description: "References to one or more invoices that are being credited" }),
   purchaseOrderReference: z.string().nullish().openapi({ example: "PO-2024-001", description: "A reference to a related purchase order" }),

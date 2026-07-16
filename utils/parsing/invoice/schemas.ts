@@ -5,6 +5,7 @@ import { CURRENCIES, zCurrencies } from "@peppol/utils/currencies";
 import { PAYMENT_MEANS } from "@peppol/utils/payment-means";
 import { ITEM_TYPE_IDENTIFICATION_CODES } from "@peppol/utils/item-type-identification-codes";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
+import { countrySpecificSchema } from "../country-specific/schemas";
 
 export const VAT_CATEGORIES = {
   AE: "Vat Reverse Charge",
@@ -488,7 +489,13 @@ export const _invoiceSchema = z.object({
   note: z
     .string()
     .nullish()
-    .openapi({ example: "Thank you for your business" }),
+    .openapi({
+      example: "Thank you for your business"
+    }),
+  countrySpecific: countrySpecificSchema.nullish().openapi({
+    description:
+      "Structured country-specific requirements. The FR variant is required for French regulated UBL, CII, and Factur-X document types.",
+  }),
   buyerReference: z.string().nullish().openapi({ example: "PO-2024-001" }),
   purchaseOrderReference: z.string().nullish().openapi({
     example: "PO-2024-001",

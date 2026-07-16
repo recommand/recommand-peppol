@@ -20,7 +20,8 @@ const parser = new XMLParser({
     name === "AdditionalReferencedDocument" ||
     name === "ApplicableProductCharacteristic" ||
     name === "DesignatedProductClassification" ||
-    name === "InvoiceReferencedDocument",
+    name === "InvoiceReferencedDocument" ||
+    name === "IncludedNote",
   parseAttributeValue: false,
   parseTagValue: false,
   removeNSPrefix: true,
@@ -142,13 +143,17 @@ export function parseBillingDocumentFromCII(xml: string) {
   const paymentTerms = settlement.SpecifiedTradePaymentTerms?.Description
     ? { note: getTextContent(settlement.SpecifiedTradePaymentTerms.Description) }
     : undefined;
+  const invoiceNotes = invoice.ExchangedDocument?.IncludedNote || [];
+  const generalNote = invoiceNotes.find(
+    (note: any) => !getTextContent(note.SubjectCode)
+  );
 
   return {
     documentNumber: getTextContent(invoice.ExchangedDocument?.ID),
     typeCode: getTextContent(invoice.ExchangedDocument?.TypeCode),
     issueDate: date(invoice.ExchangedDocument?.IssueDateTime),
     dueDate: nullableDate(settlement.SpecifiedTradePaymentTerms?.DueDateDateTime),
-    note: getTextContent(invoice.ExchangedDocument?.IncludedNote?.Content),
+    note: getTextContent(generalNote?.Content),
     purchaseOrderReference: getNullableTextContent(
       agreement.BuyerOrderReferencedDocument?.IssuerAssignedID
     ),
@@ -229,7 +234,7 @@ export function parseBillingDocumentFromCII(xml: string) {
         name: getTextContent(product?.Name),
         description: getTextContent(product?.Description),
         note: getNullableTextContent(
-          line.AssociatedDocumentLineDocument?.IncludedNote?.Content
+          first(line.AssociatedDocumentLineDocument?.IncludedNote)?.Content
         ),
         buyersId: getNullableTextContent(product?.BuyerAssignedID),
         sellersId: getNullableTextContent(product?.SellerAssignedID),

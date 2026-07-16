@@ -14,8 +14,8 @@ import type { Attachment, Invoice } from "@peppol/utils/parsing/invoice/schemas"
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import { findFirstEmbeddedPdfAttachment } from "@peppol/utils/pdf-attachment-helper";
 import { generateFacturXDocument } from "@peppol/data/factur-x/client";
-import { invoiceToCII } from "@peppol/utils/parsing/invoice/cii-d22b/to-xml";
-import { creditNoteToCII } from "@peppol/utils/parsing/creditnote/cii-d22b/to-xml";
+import { frenchRegulatedInvoiceToCII } from "@peppol/utils/parsing/invoice/cii-d22b-france-regulated/to-xml";
+import { frenchRegulatedCreditNoteToCII } from "@peppol/utils/parsing/creditnote/cii-d22b-france-regulated/to-xml";
 
 type OutgoingDocumentXmlResolution = {
   handler: DocumentXmlHandler;
@@ -43,8 +43,6 @@ type BinaryDocumentFormat = {
     parsedDocument: ParsedDocument;
   }) => Promise<OutgoingDocumentPayload>;
 };
-
-const FACTURX_EN16931_GUIDELINE_ID = "urn:cen.eu:en16931:2017";
 
 function getDocumentAttachments(document: ParsedDocument): Attachment[] {
   if ("attachments" in document && Array.isArray(document.attachments)) {
@@ -117,12 +115,12 @@ const BINARY_DOCUMENT_FORMATS: BinaryDocumentFormat[] = [
         recipientAddress,
         isDocumentValidationEnforced,
       }) =>
-        invoiceToCII({
+        frenchRegulatedInvoiceToCII({
           invoice: document as Invoice,
           senderAddress,
           recipientAddress,
           isDocumentValidationEnforced,
-          guidelineId: FACTURX_EN16931_GUIDELINE_ID,
+          documentTypeInfo: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
         }),
     }),
     resolvePayload: (options) =>
@@ -145,12 +143,12 @@ const BINARY_DOCUMENT_FORMATS: BinaryDocumentFormat[] = [
         recipientAddress,
         isDocumentValidationEnforced,
       }) =>
-        creditNoteToCII({
+        frenchRegulatedCreditNoteToCII({
           creditNote: document as CreditNote,
           senderAddress,
           recipientAddress,
           isDocumentValidationEnforced,
-          guidelineId: FACTURX_EN16931_GUIDELINE_ID,
+          documentTypeInfo: FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
         }),
     }),
     resolvePayload: (options) =>

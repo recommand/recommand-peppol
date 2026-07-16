@@ -12,7 +12,17 @@ import { invoiceToCII } from "./invoice/cii-d22b/to-xml";
 import { parseInvoiceFromCII } from "./invoice/cii-d22b/from-xml";
 import { creditNoteToCII } from "./creditnote/cii-d22b/to-xml";
 import { parseCreditNoteFromCII } from "./creditnote/cii-d22b/from-xml";
+import { frenchRegulatedInvoiceToCII } from "./invoice/cii-d22b-france-regulated/to-xml";
+import { parseFrenchRegulatedInvoiceFromCII } from "./invoice/cii-d22b-france-regulated/from-xml";
+import { frenchRegulatedCreditNoteToCII } from "./creditnote/cii-d22b-france-regulated/to-xml";
+import { parseFrenchRegulatedCreditNoteFromCII } from "./creditnote/cii-d22b-france-regulated/from-xml";
+import { frenchRegulatedInvoiceToUBL } from "./invoice/ubl-france-regulated/to-xml";
+import { parseFrenchRegulatedInvoiceFromUBL } from "./invoice/ubl-france-regulated/from-xml";
+import { frenchRegulatedCreditNoteToUBL } from "./creditnote/ubl-france-regulated/to-xml";
+import { parseFrenchRegulatedCreditNoteFromUBL } from "./creditnote/ubl-france-regulated/from-xml";
 import {
+  CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+  CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
   CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
   CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
   CREDIT_NOTE_DOCUMENT_TYPE_INFO,
@@ -20,6 +30,8 @@ import {
   MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
   SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
   SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO,
+  UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
+  UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
   type DocumentTypeInfo,
   type SupportedDocumentType,
 } from "@peppol/utils/document-types";
@@ -56,11 +68,16 @@ function isSelfBillingDocType(docTypeId: string): boolean {
   return docTypeId.includes("urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0");
 }
 
+function isFrenchRegulatedUblDocType(docTypeId: string): boolean {
+  return docTypeId === UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.docTypeId ||
+    docTypeId === UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO.docTypeId;
+}
+
 export const DOCUMENT_XML_HANDLERS: DocumentXmlHandler[] = [
   {
     ...INVOICE_DOCUMENT_TYPE_INFO,
     type: "invoice",
-    matchesDocTypeId: (docTypeId) => isUblInvoiceDocType(docTypeId) && !isSelfBillingDocType(docTypeId),
+    matchesDocTypeId: (docTypeId) => isUblInvoiceDocType(docTypeId) && !isSelfBillingDocType(docTypeId) && !isFrenchRegulatedUblDocType(docTypeId),
     toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
       invoiceToUBL({
         invoice: document as Invoice,
@@ -73,7 +90,7 @@ export const DOCUMENT_XML_HANDLERS: DocumentXmlHandler[] = [
   {
     ...CREDIT_NOTE_DOCUMENT_TYPE_INFO,
     type: "creditNote",
-    matchesDocTypeId: (docTypeId) => isUblCreditNoteDocType(docTypeId) && !isSelfBillingDocType(docTypeId),
+    matchesDocTypeId: (docTypeId) => isUblCreditNoteDocType(docTypeId) && !isSelfBillingDocType(docTypeId) && !isFrenchRegulatedUblDocType(docTypeId),
     toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
       creditNoteToUBL({
         creditNote: document as CreditNote,
@@ -122,9 +139,9 @@ export const DOCUMENT_XML_HANDLERS: DocumentXmlHandler[] = [
     fromXml: (xml) => parseMessageLevelResponseFromXML(xml),
   },
   {
-    ...CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    ...CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     type: "invoice",
-    matchesDocTypeId: (docTypeId) => docTypeId === CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    matchesDocTypeId: (docTypeId) => docTypeId === CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
     toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
       invoiceToCII({
         invoice: document as Invoice,
@@ -135,9 +152,35 @@ export const DOCUMENT_XML_HANDLERS: DocumentXmlHandler[] = [
     fromXml: (xml) => parseInvoiceFromCII(xml),
   },
   {
-    ...CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    ...UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
+    type: "invoice",
+    matchesDocTypeId: (docTypeId) => docTypeId === UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.docTypeId,
+    toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
+      frenchRegulatedInvoiceToUBL({
+        invoice: document as Invoice,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+      }),
+    fromXml: (xml) => parseFrenchRegulatedInvoiceFromUBL(xml),
+  },
+  {
+    ...UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
     type: "creditNote",
-    matchesDocTypeId: (docTypeId) => docTypeId === CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    matchesDocTypeId: (docTypeId) => docTypeId === UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO.docTypeId,
+    toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
+      frenchRegulatedCreditNoteToUBL({
+        creditNote: document as CreditNote,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+      }),
+    fromXml: (xml) => parseFrenchRegulatedCreditNoteFromUBL(xml),
+  },
+  {
+    ...CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    type: "creditNote",
+    matchesDocTypeId: (docTypeId) => docTypeId === CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
     toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
       creditNoteToCII({
         creditNote: document as CreditNote,
@@ -146,6 +189,34 @@ export const DOCUMENT_XML_HANDLERS: DocumentXmlHandler[] = [
         isDocumentValidationEnforced,
       }),
     fromXml: (xml) => parseCreditNoteFromCII(xml),
+  },
+  {
+    ...CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    type: "invoice",
+    matchesDocTypeId: (docTypeId) => docTypeId === CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
+      frenchRegulatedInvoiceToCII({
+        invoice: document as Invoice,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+        documentTypeInfo: CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+      }),
+    fromXml: (xml) => parseFrenchRegulatedInvoiceFromCII(xml),
+  },
+  {
+    ...CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    type: "creditNote",
+    matchesDocTypeId: (docTypeId) => docTypeId === CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    toXml: ({ document, senderAddress, recipientAddress, isDocumentValidationEnforced }) =>
+      frenchRegulatedCreditNoteToCII({
+        creditNote: document as CreditNote,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+        documentTypeInfo: CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+      }),
+    fromXml: (xml) => parseFrenchRegulatedCreditNoteFromCII(xml),
   },
 ];
 

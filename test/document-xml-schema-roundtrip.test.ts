@@ -50,20 +50,21 @@ function valueForPath(path: string[]): unknown {
   const field = path.at(-1) ?? "";
   const joined = path.join(".");
 
-  if (field === "country" || field === "originCountry") return "BE";
+  if (field === "country" || field === "originCountry") return "FR";
   if (field === "issueDate" || field === "dueDate" || field === "date") return "2025-01-01";
   if (field === "email") return "schema@example.com";
   if (field === "phone") return "+32123456789";
-  if (field === "vatNumber") return joined.includes("buyer") ? "BE9876543210" : "BE1234567894";
-  if (field === "enterpriseNumber") return joined.includes("buyer") ? "9876543210" : "1234567894";
-  if (field === "enterpriseNumberScheme" || field === "scheme") return "0208";
+  if (field === "vatNumber") return joined.includes("buyer") ? "FR23341815675" : "FR40303265045";
+  if (field === "enterpriseNumber") return joined.includes("buyer") ? "341815675" : "303265045";
+  if (field === "enterpriseNumberScheme") return "0002";
+  if (field === "scheme") return "0208";
   if (field === "identifier") return "1234567894";
   if (field === "paymentMethod") return "credit_transfer";
   if (field === "iban") return "BE1234567890";
   if (field === "financialInstitutionBranch") return "GEBABEBB";
   if (field === "currency") return "EUR";
   if (field === "category") return "S";
-  if (field === "percentage") return "21.00";
+  if (field === "percentage") return "20.00";
   if (field === "unitCode") return "C62";
   if (field === "quantity" || field === "baseQuantity") return "2";
   if (field.endsWith("Amount") || field === "amount") return "10.00";
@@ -104,6 +105,10 @@ function sampleFromSchema(schema: z.ZodTypeAny, path: string[] = []): unknown {
   }
 
   if (unwrapped instanceof z.ZodUnion) {
+    return sampleFromSchema(unwrapped._def.options[0], path);
+  }
+
+  if (unwrapped instanceof z.ZodDiscriminatedUnion) {
     return sampleFromSchema(unwrapped._def.options[0], path);
   }
 
@@ -152,6 +157,34 @@ function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
   return schema.parse(normalizeBillingDocument(generated as BillingDocument)) as ParsedDocument;
 }
 
+function documentForHandler(
+  handler: DocumentXmlHandler,
+  document: ParsedDocument
+): ParsedDocument {
+  if (!("lines" in document)) return document;
+  const {
+    countrySpecific: _countrySpecific,
+    ...sharedDocument
+  } = document;
+  if (!handler.title.includes("France")) return sharedDocument as ParsedDocument;
+  return {
+    ...sharedDocument,
+    countrySpecific: {
+      country: "FR",
+      billingMode: "B1",
+      recoveryCostsNote: "Indemnité forfaitaire de 40 EUR pour frais de recouvrement.",
+      latePaymentPenaltiesNote: "Pénalités de retard selon les conditions de paiement.",
+      earlyPaymentDiscountNote: "Aucun escompte accordé pour paiement anticipé.",
+    },
+  } as ParsedDocument;
+}
+
+function withoutCountrySpecific(document: ParsedDocument): ParsedDocument {
+  if (!("lines" in document)) return document;
+  const { countrySpecific: _countrySpecific, ...sharedDocument } = document;
+  return sharedDocument as ParsedDocument;
+}
+
 function handlersForType(type: SchemaDocumentType): DocumentXmlHandler[] {
   const handlers = DOCUMENT_XML_HANDLERS.filter((handler) => handler.type === type);
   if (type !== "invoice" && type !== "creditNote") {
@@ -184,8 +217,8 @@ function handlersForType(type: SchemaDocumentType): DocumentXmlHandler[] {
 
 // Types that must round-trip through both their UBL and CII (D22B) handlers.
 const minimumHandlerCount: Partial<Record<SchemaDocumentType, number>> = {
-  invoice: 3,
-  creditNote: 3,
+  invoice: 4,
+  creditNote: 4,
 };
 
 function roundTripHandler(handler: DocumentXmlHandler, document: ParsedDocument) {
@@ -222,7 +255,7 @@ describe("document XML handlers schema-driven round-trip", () => {
 
       for (const handler of handlers) {
         it(`round-trips via ${handler.title}`, () => {
-          const document = generatedDocumentFor(type);
+          const document = documentForHandler(handler, generatedDocumentFor(type));
           const { parsed, reparsed } = roundTripHandler(handler, document);
 
           expect(parsed, handler.title).toEqual(document);
@@ -234,7 +267,10 @@ describe("document XML handlers schema-driven round-trip", () => {
         it("handlers produce equivalent parsed documents", () => {
           const document = generatedDocumentFor(type);
           const parsedDocuments = handlers.map(
-            (handler) => roundTripHandler(handler, document).parsed
+            (handler) =>
+              withoutCountrySpecific(
+                roundTripHandler(handler, documentForHandler(handler, document)).parsed
+              )
           );
 
           const [firstDocument, ...otherDocuments] = parsedDocuments;

@@ -24,7 +24,7 @@ function getCiiSyntaxVersion(guidelineId: string): string {
     if (guidelineId.includes("urn:peppol:france:billing:cius:")) {
         return "D22B";
     }
-    return "D16B";
+    return "D22B";
 }
 
 function getSupportedDocTypeId(candidate: string): string | null {

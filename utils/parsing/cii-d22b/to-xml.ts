@@ -4,7 +4,7 @@ import type { CreditNote } from "../creditnote/schemas";
 import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
-import type { DocumentTypeInfo } from "@peppol/utils/document-types";
+import { getCustomizationId, type DocumentTypeInfo } from "@peppol/utils/document-types";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -14,10 +14,6 @@ const builder = new XMLBuilder({
 
 type XmlNode = Record<string, unknown>;
 type BillingDocument = Invoice | CreditNote;
-
-function customizationId(documentTypeInfo: DocumentTypeInfo): string {
-  return documentTypeInfo.docTypeId.split("##")[1].split("::")[0];
-}
 
 function amount(value: string | null | undefined, currency: string): XmlNode {
   void currency;
@@ -114,12 +110,35 @@ function tradeParty(party: Party, peppolAddress: string): XmlNode {
     }),
     ...(partyContact && { "ram:DefinedTradeContact": partyContact }),
     "ram:PostalTradeAddress": tradeAddress(party),
+    "ram:URIUniversalCommunication": {
+      "ram:URIID": id(parsedAddress.identifier, parsedAddress.schemeId),
+    },
     ...(party.vatNumber && {
       "ram:SpecifiedTaxRegistration": {
         "ram:ID": id(party.vatNumber, "VA"),
       },
     }),
   };
+}
+
+export type CiiIncludedNote = {
+  content: string;
+  subjectCode?: string;
+};
+
+function includedNotes(
+  document: BillingDocument,
+  additionalNotes: CiiIncludedNote[]
+): XmlNode[] | undefined {
+  const notes: XmlNode[] = [];
+  if (document.note) {
+    notes.push({ "ram:Content": document.note });
+  }
+  notes.push(...additionalNotes.map((note) => ({
+    "ram:Content": note.content,
+    ...(note.subjectCode && { "ram:SubjectCode": note.subjectCode }),
+  })));
+  return notes.length > 0 ? notes : undefined;
 }
 
 function deliveryTradeParty(document: BillingDocument): XmlNode | undefined {
@@ -351,7 +370,8 @@ export function billingDocumentToCII({
   isDocumentValidationEnforced,
   dueDate,
   invoiceReferences,
-  guidelineId = customizationId(documentTypeInfo),
+  businessProcessId = documentTypeInfo.processId,
+  additionalNotes = [],
 }: {
   document: BillingDocument;
   documentTypeInfo: DocumentTypeInfo;
@@ -362,7 +382,8 @@ export function billingDocumentToCII({
   isDocumentValidationEnforced: boolean;
   dueDate?: string | null;
   invoiceReferences?: { id: string; issueDate?: string | null }[];
-  guidelineId?: string;
+  businessProcessId?: string;
+  additionalNotes?: CiiIncludedNote[];
 }): string {
   const { vat, lines, extractedTotals } = calculateDocumentTotals({
     document,
@@ -374,6 +395,7 @@ export function billingDocumentToCII({
     document.paymentMeans
       ?.map((payment) => payment.reference)
       .filter((reference): reference is string => Boolean(reference)) ?? [];
+  const documentNotes = includedNotes(document, additionalNotes);
 
   return builder.build({
     CrossIndustryInvoice: {
@@ -384,20 +406,18 @@ export function billingDocumentToCII({
       "@_xmlns:udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
       ExchangedDocumentContext: {
         "ram:BusinessProcessSpecifiedDocumentContextParameter": {
-          "ram:ID": documentTypeInfo.processId,
+          "ram:ID": businessProcessId,
         },
         "ram:GuidelineSpecifiedDocumentContextParameter": {
-          "ram:ID": guidelineId,
+          "ram:ID": documentTypeInfo.ciiGuidelineIdOverride ?? getCustomizationId(documentTypeInfo),
         },
       },
       ExchangedDocument: {
         "ram:ID": documentNumber,
         "ram:TypeCode": typeCode,
         "ram:IssueDateTime": dateTime(document.issueDate),
-        ...(document.note && {
-          "ram:IncludedNote": {
-            "ram:Content": document.note,
-          },
+        ...(documentNotes && {
+          "ram:IncludedNote": documentNotes,
         }),
       },
       SupplyChainTradeTransaction: {

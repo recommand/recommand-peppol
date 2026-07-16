@@ -1,7 +1,7 @@
 import { XMLBuilder } from "fast-xml-parser";
 import type { MessageLevelResponse } from "./schemas";
 import { parsePeppolAddress } from "../peppol-address";
-import { MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
+import { getCustomizationId, MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 
 const builder = new XMLBuilder({
     ignoreAttributes: false,
@@ -27,7 +27,7 @@ export function messageLevelResponseToXML({
             "@_xmlns:cac": "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
             "@_xmlns:cbc": "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
             "@_xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-            "cbc:CustomizationID": "urn:fdc:peppol.eu:poacc:trns:mlr:3",
+            "cbc:CustomizationID": getCustomizationId(MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO),
             "cbc:ProfileID": MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO.processId,
             "cbc:ID": messageLevelResponse.id,
             "cbc:IssueDate": messageLevelResponse.issueDate,

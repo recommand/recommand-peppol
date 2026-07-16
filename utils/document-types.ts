@@ -11,6 +11,15 @@ export type DocumentTypeInfo = {
     title: string;
     docTypeId: string;
     processId: string;
+    ciiGuidelineIdOverride?: string;
+}
+
+export function getCustomizationId(documentTypeInfo: DocumentTypeInfo): string {
+    const match = documentTypeInfo.docTypeId.match(/##(.+)::[^:]+$/);
+    if (!match) {
+        throw new Error(`Cannot derive customization ID from document type '${documentTypeInfo.docTypeId}'.`);
+    }
+    return match[1];
 }
 
 export const INVOICE_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
@@ -77,18 +86,48 @@ export const CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     processId: "urn:peppol:france:billing:regulated"
 };
 
+export const UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "invoice",
+    title: "France UBL Invoice CIUS",
+    docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::2.1",
+    processId: "urn:peppol:france:billing:regulated"
+};
+
+export const UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "creditNote",
+    title: "France UBL Credit Note CIUS",
+    docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::2.1",
+    processId: UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.processId
+};
+
+export const CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "invoice",
+    title: "EN 16931 CII Invoice D22B",
+    docTypeId: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017::D22B",
+    processId: INVOICE_DOCUMENT_TYPE_INFO.processId
+};
+
+export const CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "creditNote",
+    title: "EN 16931 CII Credit Note D22B",
+    docTypeId: CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    processId: CREDIT_NOTE_DOCUMENT_TYPE_INFO.processId
+};
+
 export const FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
     title: "France Factur-X Invoice",
     docTypeId: "urn:peppol:doctype:pdf+xml##urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:Factur-X:1.0::D22B",
-    processId: "urn:peppol:france:billing:regulated"
+    processId: "urn:peppol:france:billing:regulated",
+    ciiGuidelineIdOverride: "urn:cen.eu:en16931:2017"
 };
 
 export const FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "creditNote",
     title: "France Factur-X Credit Note",
     docTypeId: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-    processId: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId
+    processId: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId,
+    ciiGuidelineIdOverride: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.ciiGuidelineIdOverride
 };
 
 export const CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
@@ -107,8 +146,12 @@ export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
     INVOICE_RESPONSE_DOCUMENT_TYPE_INFO,
     MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
+    CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
     CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
+    UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
     FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
 ];
@@ -118,8 +161,12 @@ export const BILLING_DOCUMENT_TYPE_INFO: DocumentTypeInfo[] = [
     CREDIT_NOTE_DOCUMENT_TYPE_INFO,
     SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO,
     SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+    CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
     CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
+    UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
     FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
 ];

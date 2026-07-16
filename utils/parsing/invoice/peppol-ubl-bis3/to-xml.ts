@@ -3,7 +3,7 @@ import type { Invoice } from "../schemas";
 import { calculateDocumentTotals } from "../calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
-import { INVOICE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
+import { getCustomizationId, INVOICE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -49,8 +49,7 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
       "@_xmlns:ext":
         "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
       "@_xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-      "cbc:CustomizationID":
-        "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0",
+      "cbc:CustomizationID": getCustomizationId(INVOICE_DOCUMENT_TYPE_INFO),
       "cbc:ProfileID": INVOICE_DOCUMENT_TYPE_INFO.processId,
       "cbc:ID": invoice.invoiceNumber,
       "cbc:IssueDate": invoice.issueDate,

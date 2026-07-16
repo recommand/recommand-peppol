@@ -3,7 +3,7 @@ import type { CreditNote } from "../schemas";
 import { calculateDocumentTotals } from "../../invoice/calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
-import { CREDIT_NOTE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
+import { CREDIT_NOTE_DOCUMENT_TYPE_INFO, getCustomizationId } from "@peppol/utils/document-types";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -50,8 +50,7 @@ export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddr
       "@_xmlns:ext":
         "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
       "@_xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-      "cbc:CustomizationID":
-        "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0",
+      "cbc:CustomizationID": getCustomizationId(CREDIT_NOTE_DOCUMENT_TYPE_INFO),
       "cbc:ProfileID": CREDIT_NOTE_DOCUMENT_TYPE_INFO.processId,
       "cbc:ID": creditNote.creditNoteNumber,
       "cbc:IssueDate": creditNote.issueDate,

@@ -6,8 +6,43 @@ import { parseCreditNoteFromXML } from "@peppol/utils/parsing/creditnote/peppol-
 import { parseCreditNoteFromCII } from "@peppol/utils/parsing/creditnote/cii-d22b/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
-import { FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
+import {
+    CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+} from "@peppol/utils/document-types";
 import { resolveOutgoingDocumentXmlHandler } from "@peppol/utils/outgoing-document-payload";
+
+function asFrenchRegulatedCreditNote(creditNote: CreditNote): CreditNote {
+    // EN16931 category O requires seller and buyer VAT identifiers to be omitted.
+    const hasOutsideScopeVat = [
+        ...creditNote.lines,
+        ...(creditNote.discounts ?? []),
+        ...(creditNote.surcharges ?? []),
+    ].some((item) => item.vat?.category === "O");
+
+    return {
+        ...creditNote,
+        currency: "EUR",
+        seller: {
+            ...creditNote.seller,
+            country: "FR",
+            vatNumber: hasOutsideScopeVat ? undefined : "FR40303265045",
+            enterpriseNumber: "303265045",
+            enterpriseNumberScheme: "0002",
+        },
+        buyer: {
+            ...creditNote.buyer,
+            vatNumber: hasOutsideScopeVat ? undefined : creditNote.buyer.vatNumber,
+        },
+        countrySpecific: {
+            country: "FR",
+            billingMode: "B1",
+            recoveryCostsNote: "Indemnité forfaitaire de 40 EUR pour frais de recouvrement.",
+            latePaymentPenaltiesNote: "Pénalités de retard selon les conditions de paiement.",
+            earlyPaymentDiscountNote: "Aucun escompte accordé pour paiement anticipé.",
+        },
+    };
+}
 
 function withDefaultCiiDelivery<T extends { buyer: CreditNote["buyer"]; delivery?: CreditNote["delivery"] }>(
     document: T
@@ -96,6 +131,7 @@ async function checkCreditNoteXML({
         recipientAddress,
         isDocumentValidationEnforced,
     });
+    const frenchCreditNote = asFrenchRegulatedCreditNote(creditNote);
     const facturXResolution = resolveOutgoingDocumentXmlHandler(
         FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
         "creditNote"
@@ -103,33 +139,62 @@ async function checkCreditNoteXML({
     if (!facturXResolution.ok) {
         throw new Error(facturXResolution.message);
     }
+    const frenchCiiResolution = resolveOutgoingDocumentXmlHandler(
+        CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+        "creditNote"
+    );
+    if (!frenchCiiResolution.ok) {
+        throw new Error(frenchCiiResolution.message);
+    }
+    const frenchCiiXml = frenchCiiResolution.resolution.handler.toXml({
+        document: frenchCreditNote,
+        senderAddress: "0225:303265045",
+        recipientAddress,
+        isDocumentValidationEnforced,
+    });
     const facturXXml = facturXResolution.resolution.handler.toXml({
-        document: creditNote,
-        senderAddress,
+        document: frenchCreditNote,
+        senderAddress: "0225:303265045",
         recipientAddress,
         isDocumentValidationEnforced,
     });
 
     checkUBLCreditNoteXML(ublXml, creditNote);
     checkCIICreditNoteXML(ciiXml, creditNote);
-    checkCIICreditNoteXML(facturXXml, creditNote);
-    expect(facturXXml).toContain("<ram:ID>urn:cen.eu:en16931:2017</ram:ID>");
+    checkCIICreditNoteXML(frenchCiiXml, frenchCreditNote);
+    checkCIICreditNoteXML(facturXXml, frenchCreditNote);
+    expect(facturXXml).toContain("<ram:SubjectCode>PMT</ram:SubjectCode>");
+    expect(facturXXml).toContain("<ram:SubjectCode>PMD</ram:SubjectCode>");
+    expect(facturXXml).toContain("<ram:SubjectCode>AAB</ram:SubjectCode>");
 
     await Promise.all([
         validateXml(ublXml, `${testName} UBL`),
         validateXml(ciiXml, `${testName} CII D22B`),
+        validateXml(frenchCiiXml, `${testName} French CII D22B`),
         validateXml(facturXXml, `${testName} Factur-X CII D22B`),
     ]);
 
     const parsedUbl = parseCreditNoteFromXML(ublXml);
     const parsedCii = parseCreditNoteFromCII(ciiXml);
+    const parsedFrenchCii = parseCreditNoteFromCII(frenchCiiXml);
     const parsedFacturX = parseCreditNoteFromCII(facturXXml);
+    const normalizedFrenchCreditNote = parseCreditNoteFromXML(
+        creditNoteToUBL({
+            creditNote: frenchCreditNote,
+            senderAddress: "0225:303265045",
+            recipientAddress,
+            isDocumentValidationEnforced,
+        })
+    );
     const expectedCii = withDefaultCiiDelivery(parsedUbl);
+    const expectedFacturX = withDefaultCiiDelivery(normalizedFrenchCreditNote);
 
     expect(parsedCii).toEqual(expectedCii);
-    expect(parsedFacturX).toEqual(expectedCii);
+    expect(parsedFrenchCii).toEqual(expectedFacturX);
+    expect(parsedFacturX).toEqual(expectedFacturX);
+    expect(parsedFacturX).toEqual(parsedFrenchCii);
 
-    return { ublXml, ciiXml, facturXXml, parsedCreditNote: parsedUbl };
+    return { ublXml, ciiXml, frenchCiiXml, facturXXml, parsedCreditNote: parsedUbl };
 }
 
 describe("creditNoteToUBL", () => {

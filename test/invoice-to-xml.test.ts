@@ -7,8 +7,43 @@ import { parseInvoiceFromCII } from "@peppol/utils/parsing/invoice/cii-d22b/from
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
 import Decimal from "decimal.js";
-import { FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
+import {
+  CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+  FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+} from "@peppol/utils/document-types";
 import { resolveOutgoingDocumentXmlHandler } from "@peppol/utils/outgoing-document-payload";
+
+function asFrenchRegulatedInvoice(invoice: Invoice): Invoice {
+  // EN16931 category O requires seller and buyer VAT identifiers to be omitted.
+  const hasOutsideScopeVat = [
+    ...invoice.lines,
+    ...(invoice.discounts ?? []),
+    ...(invoice.surcharges ?? []),
+  ].some((item) => item.vat?.category === "O");
+
+  return {
+    ...invoice,
+    currency: "EUR",
+    seller: {
+      ...invoice.seller,
+      country: "FR",
+      vatNumber: hasOutsideScopeVat ? undefined : "FR40303265045",
+      enterpriseNumber: "303265045",
+      enterpriseNumberScheme: "0002",
+    },
+    buyer: {
+      ...invoice.buyer,
+      vatNumber: hasOutsideScopeVat ? undefined : invoice.buyer.vatNumber,
+    },
+    countrySpecific: {
+      country: "FR",
+      billingMode: "B1",
+      recoveryCostsNote: "Indemnité forfaitaire de 40 EUR pour frais de recouvrement.",
+      latePaymentPenaltiesNote: "Pénalités de retard selon les conditions de paiement.",
+      earlyPaymentDiscountNote: "Aucun escompte accordé pour paiement anticipé.",
+    },
+  };
+}
 
 function expectDecimalEqual(actual: string | null | undefined, expected: string) {
   expect(new Decimal(actual ?? "0").equals(expected)).toBe(true);
@@ -109,6 +144,7 @@ async function checkInvoiceXML({
     recipientAddress,
     isDocumentValidationEnforced,
   });
+  const frenchInvoice = asFrenchRegulatedInvoice(invoice);
   const facturXResolution = resolveOutgoingDocumentXmlHandler(
     FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
     "invoice"
@@ -116,33 +152,61 @@ async function checkInvoiceXML({
   if (!facturXResolution.ok) {
     throw new Error(facturXResolution.message);
   }
-  const facturXXml = facturXResolution.resolution.handler.toXml({
-    document: invoice,
-    senderAddress,
+  const frenchCiiResolution = resolveOutgoingDocumentXmlHandler(
+    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    "invoice"
+  );
+  if (!frenchCiiResolution.ok) {
+    throw new Error(frenchCiiResolution.message);
+  }
+  const frenchCiiXml = frenchCiiResolution.resolution.handler.toXml({
+    document: frenchInvoice,
+    senderAddress: "0225:303265045",
     recipientAddress,
     isDocumentValidationEnforced,
   });
-
+  const facturXXml = facturXResolution.resolution.handler.toXml({
+    document: frenchInvoice,
+    senderAddress: "0225:303265045",
+    recipientAddress,
+    isDocumentValidationEnforced,
+  });
   checkUBLInvoiceXML(ublXml, invoice);
   checkCIIInvoiceXML(ciiXml, invoice);
-  checkCIIInvoiceXML(facturXXml, invoice);
-  expect(facturXXml).toContain("<ram:ID>urn:cen.eu:en16931:2017</ram:ID>");
+  checkCIIInvoiceXML(frenchCiiXml, frenchInvoice);
+  checkCIIInvoiceXML(facturXXml, frenchInvoice);
+  expect(facturXXml).toContain("<ram:SubjectCode>PMT</ram:SubjectCode>");
+  expect(facturXXml).toContain("<ram:SubjectCode>PMD</ram:SubjectCode>");
+  expect(facturXXml).toContain("<ram:SubjectCode>AAB</ram:SubjectCode>");
 
   await Promise.all([
     validateXml(ublXml, `${testName} UBL`),
     validateXml(ciiXml, `${testName} CII D22B`),
+    validateXml(frenchCiiXml, `${testName} French CII D22B`),
     validateXml(facturXXml, `${testName} Factur-X CII D22B`),
   ]);
 
   const parsedUbl = parseInvoiceFromXML(ublXml);
   const parsedCii = parseInvoiceFromCII(ciiXml);
+  const parsedFrenchCii = parseInvoiceFromCII(frenchCiiXml);
   const parsedFacturX = parseInvoiceFromCII(facturXXml);
+  const normalizedFrenchInvoice = parseInvoiceFromXML(
+    invoiceToUBL({
+      invoice: frenchInvoice,
+      senderAddress: "0225:303265045",
+      recipientAddress,
+      isDocumentValidationEnforced,
+    })
+  );
   const expectedCii = withDefaultCiiDelivery(parsedUbl);
+  const expectedFacturX = withDefaultCiiDelivery(normalizedFrenchInvoice);
 
   expect(parsedCii).toEqual(expectedCii);
-  expect(parsedFacturX).toEqual(expectedCii);
+  expect(parsedFrenchCii).toEqual(expectedFacturX);
+  expect(parsedFacturX).toEqual(expectedFacturX);
+  expect(parsedFacturX).toEqual(parsedFrenchCii);
 
-  return { ublXml, ciiXml, facturXXml, parsedInvoice: parsedUbl };
+  return { ublXml, ciiXml, frenchCiiXml, facturXXml, parsedInvoice: parsedUbl };
 }
 
 
