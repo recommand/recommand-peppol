@@ -4,6 +4,8 @@ import type { Company } from "../types/company";
 import { AsyncButton } from "@core/components/async-button";
 import { Checkbox } from "@core/components/ui/checkbox";
 import { CompanyDetailsFields, CompanyIdentityFields } from "@peppol/components/company-form-fields";
+import { StatusMessage } from "@recommand/components/status-feedback";
+import { AlertTriangle } from "lucide-react";
 
 type CompanyFormProps = {
     company: Partial<Company>;
@@ -12,9 +14,10 @@ type CompanyFormProps = {
     onCancel: () => void;
     isEditing?: boolean;
     showEnterpriseNumberForBelgianCompanies?: boolean;
+    showVerificationWarning?: boolean;
 };
 
-export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing = false, showEnterpriseNumberForBelgianCompanies = false }: CompanyFormProps) {
+export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing = false, showEnterpriseNumberForBelgianCompanies = false, showVerificationWarning = false }: CompanyFormProps) {
     const mergeCompany = (updates: Partial<Company>) => {
         onChange({ ...company, ...updates });
     };
@@ -39,17 +42,27 @@ export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing =
                 </div>
                 <p className="text-xs text-pretty text-muted-foreground">If enabled, the company will be registered as a recipient in our SMP (the Peppol address book). This will allow you to send and receive documents. If disabled, you will only be able to send documents via Recommand.</p>
             </div>
-            <div className="flex justify-end gap-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancel}
-                >
-                    Cancel
-                </Button>
-                <AsyncButton type="submit" onClick={onSubmit}>
-                    {isEditing ? "Save Changes" : "Create Company"}
-                </AsyncButton>
+            <div className="space-y-3 pt-2">
+                {showVerificationWarning && (
+                    <StatusMessage
+                        tone="warning"
+                        icon={AlertTriangle}
+                        title="Saving will require re-verification"
+                        description="The VAT or enterprise number changed. Saving will revoke open verification sessions and any current verification status, and the company will need to be verified again."
+                    />
+                )}
+                <div className="flex justify-end gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onCancel}
+                    >
+                        Cancel
+                    </Button>
+                    <AsyncButton type="submit" onClick={onSubmit}>
+                        {isEditing ? "Save Changes" : "Create Company"}
+                    </AsyncButton>
+                </div>
             </div>
         </div>
     );

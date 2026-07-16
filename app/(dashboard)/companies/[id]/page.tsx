@@ -24,6 +24,7 @@ import { BUILT_IN_INTEGRATIONS } from "@peppol/utils/integrations";
 import type { Subscription as SubscriptionType } from "@peppol/data/subscriptions";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { StatusMessage } from "@recommand/components/status-feedback";
+import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 
 const client = rc<Companies>("peppol");
 const subscriptionClient = rc<Subscription>("v1");
@@ -44,6 +45,12 @@ export default function CompanyDetailPage() {
   const isPlayground = useIsPlayground();
   const verificationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isVerificationRequired = verificationRequirements !== null && (verificationRequirements === "strict" || verificationRequirements === "lax") && !(isVerified ?? company?.isVerified);
+  const verificationIdentityChanged = Boolean(
+    (isVerified ?? company?.isVerified) && company && (
+      cleanEnterpriseNumber(formData.enterpriseNumber) !== cleanEnterpriseNumber(company.enterpriseNumber) ||
+      cleanVatNumber(formData.vatNumber) !== cleanVatNumber(company.vatNumber)
+    )
+  );
 
   useEffect(() => {
     if (id && activeTeam?.id) {
@@ -366,6 +373,7 @@ export default function CompanyDetailPage() {
               onCancel={() => navigate("/companies")}
               isEditing={true}
               showEnterpriseNumberForBelgianCompanies={true}
+              showVerificationWarning={verificationIdentityChanged}
             />
           </CardContent>
         </Card>

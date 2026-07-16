@@ -14,7 +14,7 @@ import { canUpsertCompanyIdentifier, createCompanyIdentifier, getCompanyIdentifi
 import { COUNTRIES, getCountrySupportLevel } from "@peppol/utils/countries";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { createVerificationSession, type VerificationExpectedDetails } from "./didit/client";
-import { getCompanyVerificationLog } from "./company-verification";
+import { getCompanyVerificationLog, revokeOpenCompanyVerificationSessions } from "./company-verification";
 import { companyDocumentsS3Prefix } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
 import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
@@ -361,13 +361,17 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     );
   }
 
-  if ((enterpriseNumberChanged || vatNumberChanged) && oldCompany.isVerified && !updatedCompany.isVerified) {
-    await publishCompanyVerificationEvent({
-      verificationEventId: updatedCompany.id,
-      teamId: updatedCompany.teamId,
-      companyId: updatedCompany.id,
-      status: "rejected",
-    });
+  if (enterpriseNumberChanged || vatNumberChanged) {
+    await revokeOpenCompanyVerificationSessions(updatedCompany.id);
+
+    if (oldCompany.isVerified && !updatedCompany.isVerified) {
+      await publishCompanyVerificationEvent({
+        verificationEventId: updatedCompany.id,
+        teamId: updatedCompany.teamId,
+        companyId: updatedCompany.id,
+        status: "rejected",
+      });
+    }
   }
 
   return updatedCompany;
