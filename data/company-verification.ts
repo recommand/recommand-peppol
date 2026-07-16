@@ -1,6 +1,6 @@
 import { companies, companyVerificationLog } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getEnterpriseData } from "./cbe-public-search/client";
 import { UserFacingError } from "@peppol/utils/util";
 import { getCompany, verifyCompany, type Company } from "./companies";
@@ -19,6 +19,11 @@ export type FinalizeCompanyVerificationResult = {
   errorMessage: string | null;
 };
 
+const OPEN_VERIFICATION_STATUSES = ["opened", "idVerificationRequested", "inReview"] as const;
+const FINAL_VERIFICATION_STATUSES = ["verified", "rejected", "error"] as const;
+const VERIFICATION_REVOKED_MESSAGE =
+  "Verification session revoked because the company enterprise number or VAT number changed.";
+
 export function namesMatch(a: string, b: string): boolean {
   const partsA = a.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
   const partsB = b.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -34,6 +39,21 @@ export async function getCompanyVerificationLog(
     .from(companyVerificationLog)
     .where(eq(companyVerificationLog.id, id))
     .then((rows) => rows[0]);
+}
+
+export async function revokeOpenCompanyVerificationSessions(companyId: string): Promise<void> {
+  await db
+    .update(companyVerificationLog)
+    .set({
+      status: "rejected",
+      errorMessage: VERIFICATION_REVOKED_MESSAGE,
+    })
+    .where(
+      and(
+        eq(companyVerificationLog.companyId, companyId),
+        inArray(companyVerificationLog.status, [...OPEN_VERIFICATION_STATUSES])
+      )
+    );
 }
 
 export function getBaseUrlOrThrow(): string {
@@ -93,6 +113,17 @@ export async function finalizeCompanyVerification({
   status: "verified" | "rejected";
   verificationProofReference: string;
 }): Promise<FinalizeCompanyVerificationResult> {
+  const existingLog = await getCompanyVerificationLog(companyVerificationLogId);
+  if (!existingLog) {
+    throw new UserFacingError("Company verification log not found");
+  }
+  if ((FINAL_VERIFICATION_STATUSES as readonly string[]).includes(existingLog.status)) {
+    return {
+      status: existingLog.status as CompanyVerificationFinalStatus,
+      errorMessage: existingLog.errorMessage,
+    };
+  }
+
   const isVerified = status === "verified";
   const teamExtension = await getTeamExtension(company.teamId);
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;

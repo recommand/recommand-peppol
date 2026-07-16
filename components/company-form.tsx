@@ -48,7 +48,7 @@ export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing =
                         tone="warning"
                         icon={AlertTriangle}
                         title="Saving will require re-verification"
-                        description="The VAT or enterprise number changed. Saving will revoke the current verification status, and the company will need to be verified again."
+                        description="The VAT or enterprise number changed. Saving will revoke open verification sessions and any current verification status, and the company will need to be verified again."
                     />
                 )}
                 <div className="flex justify-end gap-2">

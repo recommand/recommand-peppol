@@ -294,7 +294,11 @@ export default function Page() {
 
                 <StatusMessage tone="error" icon={XCircle}>
                     <div className="text-sm text-pretty text-muted-foreground">
-                        Your identity could not be verified. Please contact <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${statusData.companyId}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a> for assistance.
+                        {statusData.errorMessage || (
+                            <>
+                                Your identity could not be verified. Please contact <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${statusData.companyId}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a> for assistance.
+                            </>
+                        )}
                     </div>
                 </StatusMessage>
 
