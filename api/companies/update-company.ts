@@ -20,7 +20,7 @@ const server = new Server();
 
 const updateCompanyRouteDescription = describeRoute({
     operationId: "updateCompany",
-    description: "Update an existing company. Changing the VAT number or enterprise number of a verified company revokes its current verification status and requires the company to be verified again.",
+    description: "Update an existing company. Changing the VAT number or enterprise number revokes any open verification sessions for the company. If the company was already verified, its verification status is also revoked and the company must be verified again.",
     summary: "Update Company",
     tags: ["Companies"],
     responses: {
@@ -49,10 +49,10 @@ const updateCompanyJsonBodySchema = z.object({
     country: zodValidCountryCodes.optional(),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish(),
     enterpriseNumber: z.string().nullish().transform(cleanEnterpriseNumber).openapi({
-        description: "The enterprise number of the company. Changing its value on a verified company revokes the current verification status.",
+        description: "The enterprise number of the company. Changing its value revokes open verification sessions, and also revokes verification status if the company was verified.",
     }),
     vatNumber: z.string().nullish().transform(cleanVatNumber).openapi({
-        description: "The VAT number of the company. Changing its value on a verified company revokes the current verification status.",
+        description: "The VAT number of the company. Changing its value revokes open verification sessions, and also revokes verification status if the company was verified.",
     }),
     email: z.string().email().or(z.literal("")).nullish().transform((val) => val?.trim() === "" ? null : val),
     phone: z.string().nullish().transform((val) => val?.trim() === "" ? null : val),
