@@ -1,6 +1,6 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { DataTable } from "@core/components/data-table";
 import {
   type ColumnDef,
@@ -88,6 +88,8 @@ export default function Page() {
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const lastSelectedDocumentIdRef = useRef<string | null>(null);
+  const isShiftClickRef = useRef(false);
   const [isBulkMarkingAsRead, setIsBulkMarkingAsRead] = useState(false);
   const [isBulkExporting, setIsBulkExporting] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -227,6 +229,13 @@ export default function Page() {
   useEffect(() => {
     const visibleDocumentIds = new Set(documents.map((document) => document.id));
 
+    if (
+      lastSelectedDocumentIdRef.current &&
+      !visibleDocumentIds.has(lastSelectedDocumentIdRef.current)
+    ) {
+      lastSelectedDocumentIdRef.current = null;
+    }
+
     setRowSelection((prev) => {
       const next = Object.fromEntries(
         Object.entries(prev).filter(
@@ -237,6 +246,43 @@ export default function Page() {
       return Object.keys(next).length === Object.keys(prev).length ? prev : next;
     });
   }, [documents]);
+
+  const handleRowSelectionChange = useCallback((
+    documentId: string,
+    visibleDocumentIds: string[],
+    isSelected: boolean
+  ) => {
+    const lastSelectedDocumentId = lastSelectedDocumentIdRef.current;
+    const startIndex = lastSelectedDocumentId
+      ? visibleDocumentIds.indexOf(lastSelectedDocumentId)
+      : -1;
+    const endIndex = visibleDocumentIds.indexOf(documentId);
+    const shouldSelectRange =
+      isShiftClickRef.current && startIndex !== -1 && endIndex !== -1;
+
+    setRowSelection((prev) => {
+      const next = { ...prev };
+      const documentIds = shouldSelectRange
+        ? visibleDocumentIds.slice(
+            Math.min(startIndex, endIndex),
+            Math.max(startIndex, endIndex) + 1
+          )
+        : [documentId];
+
+      for (const id of documentIds) {
+        if (isSelected) {
+          next[id] = true;
+        } else {
+          delete next[id];
+        }
+      }
+
+      return next;
+    });
+
+    lastSelectedDocumentIdRef.current = documentId;
+    isShiftClickRef.current = false;
+  }, []);
 
   const selectedDocumentIds = useMemo(
     () =>
@@ -675,10 +721,17 @@ export default function Page() {
           aria-label="Select all rows"
         />
       ),
-      cell: ({ row }) => (
+      cell: ({ row, table }) => (
         <Checkbox
           checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          onClickCapture={(event) => {
+            isShiftClickRef.current = event.shiftKey;
+          }}
+          onCheckedChange={(value) => handleRowSelectionChange(
+            row.id,
+            table.getRowModel().rows.map((visibleRow) => visibleRow.id),
+            !!value
+          )}
           aria-label="Select row"
         />
       ),
@@ -1057,6 +1110,7 @@ export default function Page() {
     handleAssignLabel,
     handleDeleteDocument,
     handleDownloadDocument,
+    handleRowSelectionChange,
     handleToggleMarkAsRead,
     handleUnassignLabel,
     labels,
