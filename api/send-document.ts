@@ -28,7 +28,7 @@ import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
-import { addMonths, formatISO } from "date-fns";
+import { addMonths, format, formatISO } from "date-fns";
 import {
   sendCreditNoteSchema,
   type CreditNote,
@@ -76,6 +76,7 @@ import {
 } from "@peppol/utils/parsing/message-level-response/schemas";
 import {
   franceCdarSchema,
+  getFranceCdarPhaseForStatus,
   type SendFranceCdar,
 } from "@peppol/utils/parsing/france-cdar/schemas";
 import { parsePeppolAddress } from "@peppol/utils/parsing/peppol-address";
@@ -640,25 +641,22 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
 
       const franceCdar: SendFranceCdar & {
         recipientElectronicAddress?: string;
+        recipientElectronicAddressScheme?: string;
       } = { ...(document as SendFranceCdar) };
 
       if (!franceCdar.id) {
         franceCdar.id = Bun.randomUUIDv7();
       }
       if (!franceCdar.issueDate) {
-        franceCdar.issueDate = formatISO(new Date(), {
-          representation: "date",
-        });
+        franceCdar.issueDate = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
       }
       if (!franceCdar.phase) {
-        franceCdar.phase = "23";
+        franceCdar.phase = getFranceCdarPhaseForStatus(franceCdar.statusCode);
       }
-      if (
-        franceCdar.recipientRole !== "WK" &&
-        franceCdar.recipientRole !== "DFH"
-      ) {
-        franceCdar.recipientElectronicAddress =
-          parsePeppolAddress(recipientAddress!).identifier;
+      if (franceCdar.recipientRole !== "WK") {
+        const recipient = parsePeppolAddress(recipientAddress!);
+        franceCdar.recipientElectronicAddress = recipient.identifier;
+        franceCdar.recipientElectronicAddressScheme = recipient.schemeId;
       }
 
       const parsedFranceCdar = franceCdarSchema.safeParse(franceCdar);

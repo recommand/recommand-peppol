@@ -84,12 +84,22 @@ function valueForPath(path: string[]): unknown {
   if (field === "responseCode") return "AP";
   if (field === "phase") return "23";
   if (field === "businessProcess") return "REGULATED";
+  if (field === "statusCode") return "205";
   if (field === "senderRole") return "BY";
+  if (field === "issuerRole") return "BY";
   if (field === "recipientRole") return "SE";
   if (field === "issuerLegalId" || field === "sellerLegalId" || field === "recipientLegalId") {
     return "123456789";
   }
+  if (
+    field === "issuerLegalIdScheme" ||
+    field === "sellerLegalIdScheme" ||
+    field === "recipientLegalIdScheme"
+  ) {
+    return "0002";
+  }
   if (field === "recipientElectronicAddress") return "123456789_STATUTS";
+  if (field === "recipientElectronicAddressScheme") return "0225";
   if (field === "vatPercent") return "20.00";
   if (field === "schemeVersion") return "1.0";
   if (field === "value") return "Schema value";
@@ -170,7 +180,18 @@ function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
 
   const schema = schemasByType[type];
 
-  const generated = schema.parse(sampleFromSchema(schema)) as ParsedDocument;
+  const sample = sampleFromSchema(schema);
+  if (type === "frenchInvoicingCdar") {
+    const franceCdarSample = sample as Record<string, unknown>;
+    Object.assign(franceCdarSample, {
+      issueDate: "2025-01-01T12:00:00",
+      invoiceIssueDate: "2025-01-01",
+    });
+    delete franceCdarSample.reasonCode;
+    delete franceCdarSample.reason;
+    delete franceCdarSample.reasonNote;
+  }
+  const generated = schema.parse(sample) as ParsedDocument;
   if (type === "messageLevelResponse" || type === "frenchInvoicingCdar") return generated;
   return schema.parse(normalizeBillingDocument(generated as BillingDocument)) as ParsedDocument;
 }

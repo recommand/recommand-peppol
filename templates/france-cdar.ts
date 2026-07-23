@@ -45,22 +45,26 @@ export const FRANCE_CDAR_TEMPLATE = `<!DOCTYPE html>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-6 text-sm">
+        <div class="grid grid-cols-3 gap-6 text-sm">
           <div>
             <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">Sender</p>
             <p class="text-slate-700">Role: {{senderRoleLabel}} ({{senderRole}})</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">Issuer</p>
+            <p class="text-slate-700">Role: {{issuerRoleLabel}} ({{issuerRole}})</p>
             {{#issuerLegalId}}
-              <p class="text-slate-700 font-mono break-all mt-1">Issuer ID: {{issuerLegalId}}</p>
+              <p class="text-slate-700 font-mono break-all mt-1">{{issuerLegalIdScheme}}:{{issuerLegalId}}</p>
             {{/issuerLegalId}}
           </div>
           <div>
             <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">Recipient</p>
             <p class="text-slate-700">Role: {{recipientRoleLabel}} ({{recipientRole}})</p>
             {{#recipientLegalId}}
-              <p class="text-slate-700 font-mono break-all mt-1">{{recipientLegalId}}</p>
+              <p class="text-slate-700 font-mono break-all mt-1">{{recipientLegalIdScheme}}:{{recipientLegalId}}</p>
             {{/recipientLegalId}}
             {{#recipientElectronicAddress}}
-              <p class="text-slate-700 font-mono break-all mt-1">{{recipientElectronicAddress}}</p>
+              <p class="text-slate-700 font-mono break-all mt-1">{{recipientElectronicAddressScheme}}:{{recipientElectronicAddress}}</p>
             {{/recipientElectronicAddress}}
           </div>
         </div>
@@ -81,7 +85,7 @@ export const FRANCE_CDAR_TEMPLATE = `<!DOCTYPE html>
             {{#sellerLegalId}}
               <div>
                 <dt class="text-xs text-slate-500">Seller legal ID</dt>
-                <dd class="text-slate-700 font-mono break-all">{{sellerLegalId}}</dd>
+                <dd class="text-slate-700 font-mono break-all">{{sellerLegalIdScheme}}:{{sellerLegalId}}</dd>
               </div>
             {{/sellerLegalId}}
           </dl>
@@ -96,6 +100,9 @@ export const FRANCE_CDAR_TEMPLATE = `<!DOCTYPE html>
             {{#reason}}
               <p class="text-sm text-slate-700{{#reasonCode}} mt-1{{/reasonCode}}">{{reason}}</p>
             {{/reason}}
+            {{#reasonNote}}
+              <p class="text-sm text-slate-700 mt-1">{{reasonNote}}</p>
+            {{/reasonNote}}
           </div>
         {{/hasReason}}
 
@@ -104,7 +111,7 @@ export const FRANCE_CDAR_TEMPLATE = `<!DOCTYPE html>
             <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">Collected amounts</p>
             <ul class="space-y-1 text-sm text-slate-700">
               {{#collectedAmounts}}
-                <li>{{amount}} (VAT {{vatPercent}}%)</li>
+                <li>{{amount}} {{currency}} (VAT {{vatPercent}}%)</li>
               {{/collectedAmounts}}
             </ul>
           </div>

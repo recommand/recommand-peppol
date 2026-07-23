@@ -6,6 +6,7 @@ import { PAYMENT_MEANS } from "@peppol/utils/payment-means";
 import { getUnitCodeName } from "@peppol/utils/unit-codes";
 import type {
   FranceCdar,
+  FranceCdarCollectedAmount,
   FranceCdarRoleCode,
   FranceCdarStatusCode,
 } from "@peppol/utils/parsing/france-cdar/schemas";
@@ -121,20 +122,27 @@ type FranceCdarTemplateData = {
   phaseLabel: string;
   senderRole: string;
   senderRoleLabel: string;
+  issuerRole: string;
+  issuerRoleLabel: string;
   issuerLegalId?: string;
+  issuerLegalIdScheme?: string;
   recipientRole: string;
   recipientRoleLabel: string;
   recipientLegalId?: string;
+  recipientLegalIdScheme?: string;
   recipientElectronicAddress?: string;
+  recipientElectronicAddressScheme?: string;
   statusCode: string;
   statusCodeLabel: string;
   invoiceId: string;
   invoiceIssueDate?: string;
   sellerLegalId?: string;
+  sellerLegalIdScheme?: string;
   reasonCode?: string;
   reason?: string;
+  reasonNote?: string;
   hasReason: boolean;
-  collectedAmounts?: Array<{ amount: string; vatPercent: string }>;
+  collectedAmounts?: FranceCdarCollectedAmount[];
   hasCollectedAmounts: boolean;
   isPositive: boolean;
   isNegative: boolean;
@@ -172,7 +180,6 @@ const FRANCE_CDAR_ROLE_LABELS: Record<FranceCdarRoleCode, string> = {
   PR: "Payer",
   II: "Invoicer",
   IV: "Invoicee",
-  DFH: "French Public Billing Portal (PPF)",
 };
 
 const RECOMMAND_RENDER_ENDPOINT = "https://render.recommand.dev";
@@ -466,19 +473,27 @@ function buildFranceCdarTemplateData(
     phaseLabel: parsed.phase === "305" ? "Transmission" : "Processing",
     senderRole: parsed.senderRole,
     senderRoleLabel: FRANCE_CDAR_ROLE_LABELS[parsed.senderRole],
+    issuerRole: parsed.issuerRole,
+    issuerRoleLabel: FRANCE_CDAR_ROLE_LABELS[parsed.issuerRole],
     issuerLegalId: parsed.issuerLegalId,
+    issuerLegalIdScheme: parsed.issuerLegalIdScheme,
     recipientRole: parsed.recipientRole,
     recipientRoleLabel: FRANCE_CDAR_ROLE_LABELS[parsed.recipientRole],
     recipientLegalId: parsed.recipientLegalId,
+    recipientLegalIdScheme: parsed.recipientLegalIdScheme,
     recipientElectronicAddress: parsed.recipientElectronicAddress,
+    recipientElectronicAddressScheme:
+      parsed.recipientElectronicAddressScheme,
     statusCode: parsed.statusCode,
     statusCodeLabel: FRANCE_CDAR_STATUS_LABELS[parsed.statusCode] ?? parsed.statusCode,
     invoiceId: parsed.invoiceId,
     invoiceIssueDate: parsed.invoiceIssueDate,
     sellerLegalId: parsed.sellerLegalId,
+    sellerLegalIdScheme: parsed.sellerLegalIdScheme,
     reasonCode: parsed.reasonCode,
     reason: parsed.reason,
-    hasReason: Boolean(parsed.reasonCode || parsed.reason),
+    reasonNote: parsed.reasonNote,
+    hasReason: Boolean(parsed.reasonCode || parsed.reason || parsed.reasonNote),
     collectedAmounts: parsed.collectedAmounts,
     hasCollectedAmounts: Boolean(parsed.collectedAmounts?.length),
     isPositive,

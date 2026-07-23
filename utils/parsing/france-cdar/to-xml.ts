@@ -7,8 +7,11 @@ const builder = new XMLBuilder({
   suppressBooleanAttributes: true,
 });
 
-function formatDate102(date: string): string {
-  return date.replaceAll("-", "");
+function formatDate204(date: string): string {
+  if (!date.includes("T")) {
+    return `${date.replaceAll("-", "")}000000`;
+  }
+  return date.replaceAll("-", "").replaceAll(":", "").replace("T", "");
 }
 
 export function franceCdarToXML({
@@ -18,13 +21,17 @@ export function franceCdarToXML({
 }): string {
   const characteristics = (franceCdar.collectedAmounts ?? []).map((collected) => ({
     "ram:TypeCode": "MEN",
-    "ram:ValueAmount": collected.amount,
+    "ram:ValueAmount": {
+      "@_currencyID": collected.currency,
+      "#text": collected.amount,
+    },
     "ram:ValuePercent": collected.vatPercent,
   }));
 
   const hasStatusDetail =
     Boolean(franceCdar.reasonCode) ||
     Boolean(franceCdar.reason) ||
+    Boolean(franceCdar.reasonNote) ||
     characteristics.length > 0;
 
   const statusDetail = hasStatusDetail
@@ -34,6 +41,13 @@ export function franceCdarToXML({
             ? { "ram:ReasonCode": franceCdar.reasonCode }
             : {}),
           ...(franceCdar.reason ? { "ram:Reason": franceCdar.reason } : {}),
+          ...(franceCdar.reasonNote
+            ? {
+                "ram:IncludedNote": {
+                  "ram:Content": franceCdar.reasonNote,
+                },
+              }
+            : {}),
           ...(characteristics.length > 0
             ? { "ram:SpecifiedDocumentCharacteristic": characteristics }
             : {}),
@@ -62,8 +76,8 @@ export function franceCdarToXML({
         "ram:ID": franceCdar.id,
         "ram:IssueDateTime": {
           "udt:DateTimeString": {
-            "@_format": "102",
-            "#text": formatDate102(franceCdar.issueDate),
+            "@_format": "204",
+            "#text": formatDate204(franceCdar.issueDate),
           },
         },
         "ram:SenderTradeParty": {
@@ -73,18 +87,18 @@ export function franceCdarToXML({
           ...(franceCdar.issuerLegalId
             ? {
                 "ram:GlobalID": {
-                  "@_schemeID": "0002",
+                  "@_schemeID": franceCdar.issuerLegalIdScheme,
                   "#text": franceCdar.issuerLegalId,
                 },
               }
             : {}),
-          "ram:RoleCode": franceCdar.phase === "305" ? "WK" : franceCdar.senderRole,
+          "ram:RoleCode": franceCdar.issuerRole,
         },
         "ram:RecipientTradeParty": {
           ...(franceCdar.recipientLegalId
             ? {
                 "ram:GlobalID": {
-                  "@_schemeID": "0002",
+                  "@_schemeID": franceCdar.recipientLegalIdScheme,
                   "#text": franceCdar.recipientLegalId,
                 },
               }
@@ -94,7 +108,7 @@ export function franceCdarToXML({
             ? {
                 "ram:URIUniversalCommunication": {
                   "ram:URIID": {
-                    "@_schemeID": "0225",
+                    "@_schemeID": franceCdar.recipientElectronicAddressScheme,
                     "#text": franceCdar.recipientElectronicAddress,
                   },
                 },
@@ -110,8 +124,8 @@ export function franceCdarToXML({
             ? {
                 "ram:FormattedIssueDateTime": {
                   "qdt:DateTimeString": {
-                    "@_format": "102",
-                    "#text": formatDate102(franceCdar.invoiceIssueDate),
+                    "@_format": "204",
+                    "#text": formatDate204(franceCdar.invoiceIssueDate),
                   },
                 },
               }
@@ -121,7 +135,7 @@ export function franceCdarToXML({
             ? {
                 "ram:IssuerTradeParty": {
                   "ram:GlobalID": {
-                    "@_schemeID": "0002",
+                    "@_schemeID": franceCdar.sellerLegalIdScheme,
                     "#text": franceCdar.sellerLegalId,
                   },
                 },
