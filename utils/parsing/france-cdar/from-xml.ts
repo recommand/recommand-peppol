@@ -82,33 +82,19 @@ function nullableDate(value: unknown, field: string): string | undefined {
 
 function partyLegalId(
   party: any
-): { identifier: string; scheme: string } {
-  const globalId = first(party?.GlobalID);
-  if (globalId) {
-    return {
-      identifier: getTextContent(globalId["#text"] ?? globalId),
-      scheme: getTextContent(globalId?.["@_schemeID"]),
-    };
-  }
-  const legalOrgId = party?.SpecifiedLegalOrganization?.ID;
-  if (legalOrgId) {
-    return {
-      identifier: getTextContent(legalOrgId["#text"] ?? legalOrgId),
-      scheme: getTextContent(legalOrgId?.["@_schemeID"]),
-    };
-  }
-  return {
-    identifier: getTextContent(party?.ID),
-    scheme: getTextContent(party?.ID?.["@_schemeID"]),
-  };
-}
-
-function nullablePartyLegalId(
-  party: any
 ): { identifier: string; scheme: string } | undefined {
   if (!party) return undefined;
-  const legalId = partyLegalId(party);
-  return legalId.identifier || legalId.scheme ? legalId : undefined;
+  // A legal identifier is always a GlobalID carrying its ISO 6523 scheme. ram:ID
+  // (MDT-17/36/55) is free-form internal nomenclature rather than a legal ID, so
+  // it only qualifies when it carries a scheme of its own. An identifier without
+  // a scheme cannot be represented and is skipped instead of being reported with
+  // an empty scheme.
+  for (const candidate of [...asArray(party.GlobalID), ...asArray(party.ID)]) {
+    const identifier = getTextContent(candidate?.["#text"] ?? candidate);
+    const scheme = getTextContent(candidate?.["@_schemeID"]);
+    if (identifier && scheme) return { identifier, scheme };
+  }
+  return undefined;
 }
 
 function getCdarRoot(parsed: any): any {
@@ -130,27 +116,41 @@ export function parseFranceCdarFromXML(xml: string): FranceCdar {
 
   const exchangedDocument = cdar.ExchangedDocument;
   const exchangedDocumentContext = cdar.ExchangedDocumentContext;
+  // AcknowledgementDocument (MDB-03) and ReferenceReferencedDocument (MDG-32)
+  // may both repeat. This JSON model holds a single status for a single invoice,
+  // so any further blocks are not represented.
   const acknowledgement = first(cdar.AcknowledgementDocument);
   const referencedDocument = first(acknowledgement?.ReferenceReferencedDocument);
   if (!referencedDocument) {
     throw new Error("Invalid XML: No ReferenceReferencedDocument element found");
   }
 
-  const projectedStatusDetail = first(
-    referencedDocument.SpecifiedDocumentStatus
-  );
+  const statusCode = getTextContent(referencedDocument.ProcessConditionCode);
+  // SpecifiedDocumentStatus repeats when a status history is transmitted, and
+  // history entries carry their own status code in ProcessConditionCode. Select
+  // the detail describing the status this CDAR reports rather than whichever
+  // block happens to come first; the historical ones are not represented.
+  const statusDetails = asArray(referencedDocument.SpecifiedDocumentStatus);
+  const currentStatusDetail =
+    statusDetails.find((detail) => {
+      const detailStatusCode = getNullableTextContent(
+        detail?.ProcessConditionCode
+      );
+      return !detailStatusCode || detailStatusCode === statusCode;
+    }) ?? statusDetails[0];
+
   const reasonCode =
-    getNullableTextContent(projectedStatusDetail?.ReasonCode) ?? undefined;
+    getNullableTextContent(currentStatusDetail?.ReasonCode) ?? undefined;
   const reason =
-    getNullableTextContent(first(projectedStatusDetail?.Reason)) ?? undefined;
+    getNullableTextContent(first(currentStatusDetail?.Reason)) ?? undefined;
   const reasonNote =
     getNullableTextContent(
-      first(first(projectedStatusDetail?.IncludedNote)?.Content)
+      first(first(currentStatusDetail?.IncludedNote)?.Content)
     ) ?? undefined;
   const collectedAmounts: FranceCdarCollectedAmount[] = [];
 
   for (const characteristic of asArray(
-    projectedStatusDetail?.SpecifiedDocumentCharacteristic
+    currentStatusDetail?.SpecifiedDocumentCharacteristic
   )) {
     if (getTextContent(characteristic?.TypeCode) !== "MEN") continue;
     const valueAmount = characteristic?.ValueAmount;
@@ -162,9 +162,9 @@ export function parseFranceCdarFromXML(xml: string): FranceCdar {
 
   const recipient = first(exchangedDocument?.RecipientTradeParty);
   const issuer = exchangedDocument?.IssuerTradeParty;
-  const issuerLegalId = nullablePartyLegalId(issuer);
-  const sellerLegalId = nullablePartyLegalId(referencedDocument.IssuerTradeParty);
-  const recipientLegalId = nullablePartyLegalId(recipient);
+  const issuerLegalId = partyLegalId(issuer);
+  const sellerLegalId = partyLegalId(referencedDocument.IssuerTradeParty);
+  const recipientLegalId = partyLegalId(recipient);
   const recipientUriId = recipient?.URIUniversalCommunication?.URIID;
   let recipientElectronicAddress =
     getNullableTextContent(recipientUriId) ?? undefined;
@@ -222,7 +222,7 @@ export function parseFranceCdarFromXML(xml: string): FranceCdar {
           recipientElectronicAddressScheme,
         }
       : {}),
-    statusCode: getTextContent(referencedDocument.ProcessConditionCode),
+    statusCode,
     statusDate,
     invoiceId: getTextContent(referencedDocument.IssuerAssignedID),
     ...(invoiceTypeCode ? { invoiceTypeCode } : {}),

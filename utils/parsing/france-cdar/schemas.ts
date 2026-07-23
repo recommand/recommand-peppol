@@ -402,7 +402,7 @@ ${franceCdarRoleCodeDescription}`,
       "Number of the invoice this status relates to. For status 501, this is the filename of the inadmissible file.",
   }),
   invoiceTypeCode: franceCdarInvoiceTypeCodeSchema.optional().openapi({
-    description: `Type of the referenced invoice. Required unless statusCode is 501, where the inadmissible file cannot be read.
+    description: `Type of the referenced invoice.
 
 ${franceCdarInvoiceTypeCodeDescription}`,
     example: "380",
@@ -510,13 +510,6 @@ function refineFranceCdar(
         code: z.ZodIssueCode.custom,
         path: ["sellerLegalId"],
         message: "sellerLegalId is required unless statusCode is 501",
-      });
-    }
-    if (!data.invoiceTypeCode) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["invoiceTypeCode"],
-        message: "invoiceTypeCode is required unless statusCode is 501",
       });
     }
   }

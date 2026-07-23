@@ -405,27 +405,12 @@ describe("France CDAR JSON sending", () => {
     expect(parseFranceCdarFromXML(xml)).toEqual(document);
   });
 
-  it("requires an invoice type code unless the file is inadmissible", () => {
+  it("treats the invoice type code as optional but codelist-constrained", () => {
+    // MDT-91 carries no obligation rule; BR-FR-04 only constrains its value.
     expect(
       sendFranceCdarSchema.safeParse({
         ...request.document,
         invoiceTypeCode: undefined,
-      }).success
-    ).toBe(false);
-
-    expect(
-      sendFranceCdarSchema.safeParse({
-        ...request.document,
-        statusCode: "501",
-        invoiceTypeCode: undefined,
-        invoiceIssueDate: undefined,
-        sellerLegalId: undefined,
-        sellerLegalIdScheme: undefined,
-        senderRole: "WK",
-        issuerRole: "WK",
-        issuerLegalId: undefined,
-        issuerLegalIdScheme: undefined,
-        invoiceId: "unreadable-file.xml",
       }).success
     ).toBe(true);
 
@@ -465,6 +450,33 @@ describe("France CDAR JSON sending", () => {
     expect(parseFranceCdarFromXML(withoutStatusDate)).toEqual({
       ...document,
       statusDate: "2026-07-23T14:05:09",
+    });
+  });
+
+  it("accepts an incoming CDAR that omits the invoice type code", () => {
+    // MDT-91 is 0..1 in a received CDAR; only sending requires it.
+    const incoming = `<rsm:CrossDomainAcknowledgementAndResponse xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:100" xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossDomainAcknowledgementAndResponse:100"><rsm:ExchangedDocumentContext><ram:BusinessProcessSpecifiedDocumentContextParameter><ram:ID>REGULATED</ram:ID></ram:BusinessProcessSpecifiedDocumentContextParameter><ram:GuidelineSpecifiedDocumentContextParameter><ram:ID>urn.cpro.gouv.fr:1p0:CDV:invoice</ram:ID></ram:GuidelineSpecifiedDocumentContextParameter></rsm:ExchangedDocumentContext><rsm:ExchangedDocument><ram:ID>253ae4e3-6857-4652-8d30-5f02bb4a247d</ram:ID><ram:Name>Cycle de vie</ram:Name><ram:IssueDateTime><udt:DateTimeString format="102">20260723</udt:DateTimeString></ram:IssueDateTime><ram:SenderTradeParty><ram:GlobalID schemeID="0225">133512194</ram:GlobalID><ram:RoleCode>BY</ram:RoleCode></ram:SenderTradeParty><ram:IssuerTradeParty><ram:GlobalID schemeID="0225">133512194</ram:GlobalID><ram:RoleCode>BY</ram:RoleCode></ram:IssuerTradeParty><ram:RecipientTradeParty><ram:GlobalID schemeID="0225">133512194</ram:GlobalID><ram:RoleCode>SE</ram:RoleCode><ram:URIUniversalCommunication><ram:URIID>0225:133512194</ram:URIID></ram:URIUniversalCommunication></ram:RecipientTradeParty></rsm:ExchangedDocument><rsm:AcknowledgementDocument><ram:TypeCode>23</ram:TypeCode><ram:ReferenceReferencedDocument><ram:IssuerAssignedID>INV-TEST-UBL-FR</ram:IssuerAssignedID><ram:FormattedIssueDateTime><qdt:DateTimeString format="102">20260716</qdt:DateTimeString></ram:FormattedIssueDateTime><ram:ProcessConditionCode>202</ram:ProcessConditionCode><ram:ProcessCondition>Reçue</ram:ProcessCondition><ram:IssuerTradeParty><ram:GlobalID schemeID="0225">133512194</ram:GlobalID><ram:RoleCode>SE</ram:RoleCode></ram:IssuerTradeParty></ram:ReferenceReferencedDocument></rsm:AcknowledgementDocument></rsm:CrossDomainAcknowledgementAndResponse>`;
+
+    expect(parseFranceCdarFromXML(incoming)).toEqual({
+      id: "253ae4e3-6857-4652-8d30-5f02bb4a247d",
+      issueDate: "2026-07-23",
+      businessProcess: "REGULATED",
+      phase: "23",
+      senderRole: "BY",
+      issuerRole: "BY",
+      issuerLegalId: "133512194",
+      issuerLegalIdScheme: "0225",
+      recipientRole: "SE",
+      recipientLegalId: "133512194",
+      recipientLegalIdScheme: "0225",
+      recipientElectronicAddress: "133512194",
+      recipientElectronicAddressScheme: "0225",
+      statusCode: "202",
+      statusDate: "2026-07-23",
+      invoiceId: "INV-TEST-UBL-FR",
+      invoiceIssueDate: "2026-07-16",
+      sellerLegalId: "133512194",
+      sellerLegalIdScheme: "0225",
     });
   });
 
@@ -765,6 +777,132 @@ describe("France CDAR JSON sending", () => {
     );
 
     expect(parseFranceCdarFromXML(xml)).toEqual(document);
+  });
+
+  it("skips a preceding status-history block and projects the current status", () => {
+    const document = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-STATUS-HISTORY",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "23",
+      statusCode: "207",
+      reasonCode: "DOUBLON",
+      reasonNote: "Current status-detail note.",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme:
+        parsePeppolAddress(request.recipient).schemeId,
+    });
+    // MDT-115 marks this block as a historical entry for a different status.
+    const historyStatusDetail = [
+      "<ram:SpecifiedDocumentStatus>",
+      "<ram:ReasonCode>AUTRE</ram:ReasonCode>",
+      "<ram:Reason>Must not leak from the history block.</ram:Reason>",
+      "<ram:ProcessConditionCode>204</ram:ProcessConditionCode>",
+      "<ram:SequenceNumeric>1</ram:SequenceNumeric>",
+      "<ram:IncludedNote><ram:Content>Must not leak from the history block.</ram:Content></ram:IncludedNote>",
+      "</ram:SpecifiedDocumentStatus>",
+    ].join("");
+    const xml = franceCdarToXML({ franceCdar: document }).replace(
+      "<ram:SpecifiedDocumentStatus>",
+      `${historyStatusDetail}<ram:SpecifiedDocumentStatus>`
+    );
+
+    expect(parseFranceCdarFromXML(xml)).toEqual(document);
+  });
+
+  it("projects the first of several acknowledgement blocks", () => {
+    const document = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-MULTI-ACK",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "23",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme:
+        parsePeppolAddress(request.recipient).schemeId,
+    });
+    const xml = franceCdarToXML({ franceCdar: document });
+    const secondAcknowledgement = xml
+      .slice(
+        xml.indexOf("<rsm:AcknowledgementDocument>"),
+        xml.indexOf("</rsm:AcknowledgementDocument>") +
+          "</rsm:AcknowledgementDocument>".length
+      )
+      .replace("INV-2026-001", "INV-2026-002");
+
+    expect(
+      parseFranceCdarFromXML(
+        xml.replace(
+          "</rsm:AcknowledgementDocument>",
+          `</rsm:AcknowledgementDocument>${secondAcknowledgement}`
+        )
+      )
+    ).toEqual(document);
+  });
+
+  it("projects the first of several referenced documents", () => {
+    const document = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-MULTI-REF",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "23",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme:
+        parsePeppolAddress(request.recipient).schemeId,
+    });
+    const xml = franceCdarToXML({ franceCdar: document });
+
+    const secondReferencedDocument = xml
+      .slice(
+        xml.indexOf("<ram:ReferenceReferencedDocument>"),
+        xml.indexOf("</ram:ReferenceReferencedDocument>") +
+          "</ram:ReferenceReferencedDocument>".length
+      )
+      .replace("INV-2026-001", "INV-2026-002");
+    expect(
+      parseFranceCdarFromXML(
+        xml.replace(
+          "</ram:ReferenceReferencedDocument>",
+          `</ram:ReferenceReferencedDocument>${secondReferencedDocument}`
+        )
+      )
+    ).toEqual(document);
+  });
+
+  it("ignores an unschemed party ID instead of failing the whole document", () => {
+    const document = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-PARTY-ID",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "23",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme:
+        parsePeppolAddress(request.recipient).schemeId,
+    });
+    const xml = franceCdarToXML({ franceCdar: document });
+
+    // MDT-55 is free-form internal nomenclature and carries no ISO 6523 scheme.
+    expect(
+      parseFranceCdarFromXML(
+        xml.replace(
+          "<ram:RecipientTradeParty>",
+          "<ram:RecipientTradeParty><ram:ID>INTERNAL-REF-42</ram:ID>"
+        )
+      )
+    ).toEqual(document);
+
+    // A schemed ram:ID is a usable legal identifier.
+    expect(
+      parseFranceCdarFromXML(
+        xml.replace(
+          "<ram:RecipientTradeParty>",
+          '<ram:RecipientTradeParty><ram:ID schemeID="0002">987654321</ram:ID>'
+        )
+      )
+    ).toEqual({
+      ...document,
+      recipientLegalId: "987654321",
+      recipientLegalIdScheme: "0002",
+    });
   });
 
   it("retains the first repeated reason within the projected status detail", () => {
