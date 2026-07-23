@@ -656,7 +656,10 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       if (!franceCdar.phase) {
         franceCdar.phase = getFranceCdarPhaseForStatus(franceCdar.statusCode);
       }
-      if (franceCdar.recipientRole !== "WK") {
+      if (
+        franceCdar.recipientRole !== "WK" &&
+        franceCdar.recipientRole !== "DFH"
+      ) {
         const recipient = parsePeppolAddress(recipientAddress!);
         franceCdar.recipientElectronicAddress = recipient.identifier;
         franceCdar.recipientElectronicAddressScheme = recipient.schemeId;

@@ -127,7 +127,37 @@ describe("France CDAR JSON sending", () => {
     expect(franceCdarBusinessProcessSchema.safeParse("B2CINT").success).toBe(
       true
     );
-    expect(franceCdarRoleCodeSchema.safeParse("DFH").success).toBe(false);
+    expect(franceCdarRoleCodeSchema.safeParse("DFH").success).toBe(true);
+  });
+
+  it("exempts a DFH recipient from the phase-305 and address rules", () => {
+    const base = {
+      ...request.document,
+      id: "CDAR-2026-DFH",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "305",
+      statusCode: "200",
+      recipientRole: "DFH",
+    } as const;
+
+    // BR-FR-CDV-07: issuerLegalId is allowed at phase 305 when addressed to DFH.
+    expect(franceCdarSchema.safeParse(base).success).toBe(true);
+    // BR-FR-CDV-08: a DFH recipient needs no electronic address.
+    expect(base).not.toHaveProperty("recipientElectronicAddress");
+
+    // A non-DFH, non-WK recipient still must omit issuerLegalId at phase 305...
+    expect(
+      franceCdarSchema.safeParse({ ...base, recipientRole: "SE" }).success
+    ).toBe(false);
+    // ...and still requires an electronic address.
+    expect(
+      franceCdarSchema.safeParse({
+        ...base,
+        recipientRole: "SE",
+        issuerLegalId: undefined,
+        issuerLegalIdScheme: undefined,
+      }).success
+    ).toBe(false);
   });
 
   it("requires an electronic address and scheme for every non-WK recipient", () => {
@@ -581,7 +611,7 @@ describe("France CDAR JSON sending", () => {
     ).toBe(false);
   });
 
-  it("accepts status 501 with or without a valid reason code", () => {
+  it("requires a reason code for status 501 (BR-FR-CDV-15)", () => {
     const status501 = {
       ...request.document,
       statusCode: "501",
@@ -594,18 +624,11 @@ describe("France CDAR JSON sending", () => {
       sellerLegalIdScheme: undefined,
     } as const;
 
-    expect(sendFranceCdarSchema.safeParse(status501).success).toBe(true);
+    expect(sendFranceCdarSchema.safeParse(status501).success).toBe(false);
     expect(
       sendFranceCdarSchema.safeParse({
         ...status501,
-        reason: "The submitted file could not be accepted.",
-        reasonNote: "The payload format is not supported.",
-      }).success
-    ).toBe(true);
-    expect(
-      sendFranceCdarSchema.safeParse({
-        ...status501,
-        reasonCode: "DOUBLON",
+        reasonCode: "REJ_SEMAN",
       }).success
     ).toBe(true);
 
@@ -614,8 +637,8 @@ describe("France CDAR JSON sending", () => {
       id: "CDAR-2026-501",
       issueDate: "2026-07-23T14:05:09",
       phase: "305",
+      reasonCode: "REJ_SEMAN",
       reason: "The submitted file could not be accepted.",
-      reasonNote: "The payload format is not supported.",
       recipientElectronicAddress:
         parsePeppolAddress(request.recipient).identifier,
       recipientElectronicAddressScheme:
@@ -624,13 +647,12 @@ describe("France CDAR JSON sending", () => {
     const xml = franceCdarToXML({ franceCdar: document });
     const parsed = parseFranceCdarFromXML(xml);
 
-    expect(xml).not.toContain("<ram:ReasonCode>");
+    expect(xml).toContain("<ram:ReasonCode>REJ_SEMAN</ram:ReasonCode>");
     expect(parsed).toMatchObject({
       statusCode: "501",
+      reasonCode: "REJ_SEMAN",
       reason: "The submitted file could not be accepted.",
-      reasonNote: "The payload format is not supported.",
     });
-    expect(parsed).not.toHaveProperty("reasonCode");
   });
 
   it("requires an explanation for the AUTRE reason code", () => {
@@ -990,11 +1012,18 @@ describe("France CDAR JSON sending", () => {
         vatPercent: "21",
       }).success
     ).toBe(true);
+    // MDT-215 (MONTANT 19,6) carries no non-zero constraint.
+    expect(
+      franceCdarCollectedAmountSchema.safeParse({
+        amount: "0.00",
+        currency: "EUR",
+        vatPercent: "20",
+      }).success
+    ).toBe(true);
 
     for (const collectedAmount of [
       { amount: "1.1234567", currency: "EUR", vatPercent: "20" },
       { amount: "12345678901234.123456", currency: "EUR", vatPercent: "20" },
-      { amount: "0.00", currency: "EUR", vatPercent: "20" },
       { amount: "1.00", currency: "ZZZ", vatPercent: "20" },
       { amount: "1.00", currency: "EUR", vatPercent: "20.000" },
     ]) {

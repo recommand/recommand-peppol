@@ -176,6 +176,7 @@ const FRANCE_CDAR_ROLE_LABELS: Record<FranceCdarRoleCode, string> = {
   SE: "Seller",
   SR: "Seller's agent",
   WK: "Platform or dematerialisation operator",
+  DFH: "French public invoicing portal (PPF)",
   PE: "Payee",
   PR: "Payer",
   II: "Invoicer",

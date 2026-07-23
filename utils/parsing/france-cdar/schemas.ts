@@ -51,6 +51,7 @@ const franceCdarRoleCodeDescription = `CDAR party role code (UNCL 3035).
 | \`SE\` | Seller |
 | \`SR\` | Seller's agent |
 | \`WK\` | Platform or dematerialisation operator |
+| \`DFH\` | French public invoicing portal (PPF) |
 | \`PE\` | Payee |
 | \`PR\` | Payer |
 | \`II\` | Invoicer (invoice issuer) |
@@ -158,6 +159,7 @@ export const franceCdarRoleCodeSchema = z.enum([
   "SE", // Seller
   "SR", // Seller's agent
   "WK", // Platform or dematerialisation operator
+  "DFH", // French public invoicing portal (PPF)
   "PE", // Payee
   "PR", // Payer
   "II", // Invoicer (invoice issuer)
@@ -231,9 +233,6 @@ const franceCdarAmountSchema = z
   .refine((amount) => amount.replace(".", "").length <= 19, {
     message:
       "Amount must not exceed 19 positions (the decimal point is excluded and the minus sign is included)",
-  })
-  .refine((amount) => /[1-9]/.test(amount), {
-    message: "Collected amount must be positive or negative, not zero",
   });
 
 const franceCdarVatPercentSchema = z
@@ -286,12 +285,14 @@ export const franceCdarCollectedAmountSchema = z.object({
   }),
 });
 
+// BR-FR-CDV-15: a reason code (MDT-113) is mandatory for these statuses.
 const statusesRequiringReason = new Set([
   "206",
   "207",
   "208",
   "210",
   "213",
+  "501",
 ]);
 
 const franceCdarTransmissionStatusCodes = new Set([
@@ -351,7 +352,7 @@ ${franceCdarRoleCodeDescription}`,
   }),
   issuerLegalId: franceCdarLegalIdSchema.optional().openapi({
     description:
-      "Legal identifier of the party setting the status. Required when phase is 23; must be omitted when phase is 305.",
+      "Legal identifier of the party setting the status. Required when phase is 23; must be omitted when phase is 305 unless recipientRole is DFH.",
     example: "200000008",
   }),
   issuerLegalIdScheme: franceCdarIdentifierSchemeSchema.optional().openapi({
@@ -378,7 +379,7 @@ ${franceCdarRoleCodeDescription}`,
     .optional()
     .openapi({
       description:
-        "Electronic address of the CDAR recipient. Required when recipientRole is not WK.",
+        "Electronic address of the CDAR recipient. Required when recipientRole is not WK or DFH.",
       example: "100000009",
     }),
   recipientElectronicAddressScheme: franceCdarIdentifierSchemeSchema
@@ -522,23 +523,34 @@ function refineFranceCdar(
     });
   }
 
-  if (data.phase === "305" && data.issuerLegalId) {
+  // BR-FR-CDV-07: at phase 305 the issuer legal ID is omitted unless the CDAR is
+  // addressed to the PPF (recipient role DFH).
+  if (
+    data.phase === "305" &&
+    data.recipientRole !== "DFH" &&
+    data.issuerLegalId
+  ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["issuerLegalId"],
-      message: "issuerLegalId must be omitted when phase is 305",
+      message:
+        "issuerLegalId must be omitted when phase is 305 unless recipientRole is DFH",
     });
   }
 
+  // BR-FR-CDV-08: the recipient electronic address is required unless the
+  // recipient is a platform (WK) or the PPF (DFH).
   if (
     requireRecipientElectronicAddress &&
     data.recipientRole !== "WK" &&
+    data.recipientRole !== "DFH" &&
     !data.recipientElectronicAddress
   ) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["recipientElectronicAddress"],
-      message: "recipientElectronicAddress is required when recipientRole is not WK",
+      message:
+        "recipientElectronicAddress is required when recipientRole is not WK or DFH",
     });
   }
 }
