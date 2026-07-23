@@ -56,6 +56,27 @@ const franceCdarRoleCodeDescription = `CDAR party role code (UNCL 3035).
 | \`II\` | Invoicer (invoice issuer) |
 | \`IV\` | Invoicee (party invoiced) |`;
 
+const franceCdarInvoiceTypeCodeDescription = `Type of the referenced invoice (UNTDID 1001, restricted to the values allowed by BR-FR-04).
+
+| Value | Meaning |
+| --- | --- |
+| \`380\` | Commercial invoice |
+| \`389\` | Self-billed invoice |
+| \`393\` | Factored invoice |
+| \`501\` | Self-billed factored invoice |
+| \`386\` | Advance payment invoice |
+| \`500\` | Self-billed advance payment invoice |
+| \`384\` | Corrective invoice |
+| \`471\` | Self-billed corrective invoice |
+| \`472\` | Factored corrective invoice |
+| \`473\` | Self-billed factored corrective invoice |
+| \`261\` | Self-billed credit note |
+| \`262\` | Global rebate credit note |
+| \`381\` | Credit note |
+| \`396\` | Factored credit note |
+| \`502\` | Self-billed factored credit note |
+| \`503\` | Credit note for an advance payment invoice |`;
+
 const franceCdarReasonCodeDescription = `Coded reason for the invoice lifecycle status.
 
 | Value | Meaning |
@@ -142,6 +163,25 @@ export const franceCdarRoleCodeSchema = z.enum([
   "II", // Invoicer (invoice issuer)
   "IV", // Invoicee (party invoiced)
 ]).openapi({ description: franceCdarRoleCodeDescription });
+
+export const franceCdarInvoiceTypeCodeSchema = z.enum([
+  "380", // Commercial invoice
+  "389", // Self-billed invoice
+  "393", // Factored invoice
+  "501", // Self-billed factored invoice
+  "386", // Advance payment invoice
+  "500", // Self-billed advance payment invoice
+  "384", // Corrective invoice
+  "471", // Self-billed corrective invoice
+  "472", // Factored corrective invoice
+  "473", // Self-billed factored corrective invoice
+  "261", // Self-billed credit note
+  "262", // Global rebate credit note
+  "381", // Credit note
+  "396", // Factored credit note
+  "502", // Self-billed factored credit note
+  "503", // Credit note for an advance payment invoice
+]).openapi({ description: franceCdarInvoiceTypeCodeDescription });
 
 export const franceCdarReasonCodeSchema = z.enum([
   "JUSTIF_ABS", // Supporting document missing or insufficient
@@ -352,9 +392,20 @@ ${franceCdarRoleCodeDescription}`,
     description: franceCdarStatusCodeDescription,
     example: "200",
   }),
+  statusDate: franceCdarIncomingIssueDateSchema.openapi({
+    description:
+      "Date and time at which the status itself was set, without a timezone and with second precision. This is distinct from issueDate, which is the creation date and time of the CDAR message. Date-only values are accepted for incoming format-102 documents.",
+    example: "2024-03-20T14:05:09",
+  }),
   invoiceId: franceCdarInvoiceIdSchema.openapi({
     description:
       "Number of the invoice this status relates to. For status 501, this is the filename of the inadmissible file.",
+  }),
+  invoiceTypeCode: franceCdarInvoiceTypeCodeSchema.optional().openapi({
+    description: `Type of the referenced invoice. Required unless statusCode is 501, where the inadmissible file cannot be read.
+
+${franceCdarInvoiceTypeCodeDescription}`,
+    example: "380",
   }),
   invoiceIssueDate: z.string().date().optional().openapi({
     description:
@@ -390,9 +441,13 @@ ${franceCdarRoleCodeDescription}`,
 });
 
 function refineFranceCdar(
-  data: Omit<z.infer<typeof franceCdarObjectSchema>, "id" | "issueDate"> & {
+  data: Omit<
+    z.infer<typeof franceCdarObjectSchema>,
+    "id" | "issueDate" | "statusDate"
+  > & {
     id?: string;
     issueDate?: string;
+    statusDate?: string;
   },
   ctx: z.RefinementCtx,
   requireRecipientElectronicAddress = true
@@ -457,6 +512,13 @@ function refineFranceCdar(
         message: "sellerLegalId is required unless statusCode is 501",
       });
     }
+    if (!data.invoiceTypeCode) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["invoiceTypeCode"],
+        message: "invoiceTypeCode is required unless statusCode is 501",
+      });
+    }
   }
 
   if (data.phase === "23" && !data.issuerLegalId) {
@@ -511,6 +573,11 @@ export const sendFranceCdarSchema = franceCdarObjectSchema
       description:
         "If not provided, the issue date and time will be the current local date and time.",
     }),
+    statusDate: franceCdarDateTimeSchema.optional().openapi({
+      example: "2024-03-20T14:05:09",
+      description:
+        "Date and time at which the status was set. If not provided, the issue date and time of the CDAR is used.",
+    }),
     phase: franceCdarPhaseSchema.optional().openapi({
       description: `${franceCdarPhaseDescription}
 
@@ -535,6 +602,9 @@ export type FranceCdarPhase = z.infer<typeof franceCdarPhaseSchema>;
 export type FranceCdarBusinessProcess = z.infer<typeof franceCdarBusinessProcessSchema>;
 export type FranceCdarRoleCode = z.infer<typeof franceCdarRoleCodeSchema>;
 export type FranceCdarReasonCode = z.infer<typeof franceCdarReasonCodeSchema>;
+export type FranceCdarInvoiceTypeCode = z.infer<
+  typeof franceCdarInvoiceTypeCodeSchema
+>;
 export type FranceCdarCollectedAmount = z.infer<typeof franceCdarCollectedAmountSchema>;
 export type FranceCdar = z.infer<typeof franceCdarSchema>;
 export type SendFranceCdar = z.infer<typeof sendFranceCdarSchema>;

@@ -650,6 +650,9 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       if (!franceCdar.issueDate) {
         franceCdar.issueDate = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss");
       }
+      if (!franceCdar.statusDate) {
+        franceCdar.statusDate = franceCdar.issueDate;
+      }
       if (!franceCdar.phase) {
         franceCdar.phase = getFranceCdarPhaseForStatus(franceCdar.statusCode);
       }

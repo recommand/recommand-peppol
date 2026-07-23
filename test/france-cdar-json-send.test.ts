@@ -31,7 +31,9 @@ const request = {
     issuerLegalIdScheme: "0002",
     recipientRole: "SE",
     statusCode: "205",
+    statusDate: "2026-07-23T14:05:09",
     invoiceId: "INV-2026-001",
+    invoiceTypeCode: "380",
     invoiceIssueDate: "2026-07-23",
     sellerLegalId: "123456789",
     sellerLegalIdScheme: "0002",
@@ -374,6 +376,98 @@ describe("France CDAR JSON sending", () => {
     expect(parseFranceCdarFromXML(arratechXml)).toEqual(document);
   });
 
+  it("emits the mandatory acknowledgement elements", () => {
+    const document = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-MANDATORY",
+      issueDate: "2026-07-23T14:05:09",
+      statusDate: "2026-07-22T09:30:00",
+      phase: "23",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme:
+        parsePeppolAddress(request.recipient).schemeId,
+    });
+
+    const xml = franceCdarToXML({ franceCdar: document });
+
+    // MDG-30/MDT-74, MDT-77 and MDG-31/MDT-78, in CDAR sequence order.
+    expect(xml).toMatch(
+      /<rsm:AcknowledgementDocument>\s*<ram:MultipleReferencesIndicator>\s*<udt:Indicator>false<\/udt:Indicator>\s*<\/ram:MultipleReferencesIndicator>\s*<ram:TypeCode>23<\/ram:TypeCode>\s*<ram:IssueDateTime>\s*<udt:DateTimeString format="204">20260722093000<\/udt:DateTimeString>\s*<\/ram:IssueDateTime>/
+    );
+    // MDT-91, between MDT-87 and MDG-35.
+    expect(xml).toMatch(
+      /<ram:IssuerAssignedID>INV-2026-001<\/ram:IssuerAssignedID>\s*<ram:TypeCode>380<\/ram:TypeCode>\s*<ram:FormattedIssueDateTime>/
+    );
+    // The status date is independent of the CDAR creation date.
+    expect(xml).toContain(
+      '<udt:DateTimeString format="204">20260723140509</udt:DateTimeString>'
+    );
+    expect(parseFranceCdarFromXML(xml)).toEqual(document);
+  });
+
+  it("requires an invoice type code unless the file is inadmissible", () => {
+    expect(
+      sendFranceCdarSchema.safeParse({
+        ...request.document,
+        invoiceTypeCode: undefined,
+      }).success
+    ).toBe(false);
+
+    expect(
+      sendFranceCdarSchema.safeParse({
+        ...request.document,
+        statusCode: "501",
+        invoiceTypeCode: undefined,
+        invoiceIssueDate: undefined,
+        sellerLegalId: undefined,
+        sellerLegalIdScheme: undefined,
+        senderRole: "WK",
+        issuerRole: "WK",
+        issuerLegalId: undefined,
+        issuerLegalIdScheme: undefined,
+        invoiceId: "unreadable-file.xml",
+      }).success
+    ).toBe(true);
+
+    expect(
+      sendFranceCdarSchema.safeParse({
+        ...request.document,
+        invoiceTypeCode: "999",
+      }).success
+    ).toBe(false);
+  });
+
+  it("treats the status date as optional when sending", () => {
+    const parsed = sendFranceCdarSchema.safeParse({
+      ...request.document,
+      statusDate: undefined,
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("falls back to the CDAR creation date when MDT-78 is absent", () => {
+    const document = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-NO-MDT78",
+      issueDate: "2026-07-23T14:05:09",
+      statusDate: "2026-07-22T09:30:00",
+      phase: "23",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme:
+        parsePeppolAddress(request.recipient).schemeId,
+    });
+    const withoutStatusDate = franceCdarToXML({ franceCdar: document }).replace(
+      /<ram:IssueDateTime>\s*<udt:DateTimeString format="204">20260722093000<\/udt:DateTimeString>\s*<\/ram:IssueDateTime>/,
+      ""
+    );
+
+    expect(parseFranceCdarFromXML(withoutStatusDate)).toEqual({
+      ...document,
+      statusDate: "2026-07-23T14:05:09",
+    });
+  });
+
   it("parses CDAR dates in UN/CEFACT formats 102 and 204", () => {
     const document = franceCdarSchema.parse({
       ...request.document,
@@ -398,6 +492,7 @@ describe("France CDAR JSON sending", () => {
     expect(parseFranceCdarFromXML(format102Xml)).toEqual({
       ...document,
       issueDate: "2026-07-23",
+      statusDate: "2026-07-23",
     });
     expect(() => parseFranceCdarFromXML(unsupportedFormatXml)).toThrow(
       "IssueDateTime DateTimeString format must be 102 or 204"
@@ -572,7 +667,7 @@ describe("France CDAR JSON sending", () => {
     const xml = franceCdarToXML({ franceCdar: document });
 
     expect(xml).toMatch(
-      /<ram:ReasonCode>AUTRE<\/ram:ReasonCode>\s*<ram:Reason>Optional MDT-114 reason\.<\/ram:Reason>\s*<ram:IncludedNote>\s*<ram:Content>The invoice needs manual review\.<\/ram:Content>\s*<\/ram:IncludedNote>\s*<ram:SpecifiedDocumentCharacteristic>/
+      /<ram:ReasonCode>AUTRE<\/ram:ReasonCode>\s*<ram:Reason>Optional MDT-114 reason\.<\/ram:Reason>\s*<ram:SequenceNumeric>1<\/ram:SequenceNumeric>\s*<ram:IncludedNote>\s*<ram:Content>The invoice needs manual review\.<\/ram:Content>\s*<\/ram:IncludedNote>\s*<ram:SpecifiedDocumentCharacteristic>/
     );
     expect(parseFranceCdarFromXML(xml)).toEqual(document);
   });

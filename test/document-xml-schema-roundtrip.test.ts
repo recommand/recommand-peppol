@@ -185,6 +185,7 @@ function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
     const franceCdarSample = sample as Record<string, unknown>;
     Object.assign(franceCdarSample, {
       issueDate: "2025-01-01T12:00:00",
+      statusDate: "2025-01-01T12:00:00",
       invoiceIssueDate: "2025-01-01",
     });
     delete franceCdarSample.reasonCode;

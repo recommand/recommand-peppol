@@ -41,6 +41,7 @@ export function franceCdarToXML({
             ? { "ram:ReasonCode": franceCdar.reasonCode }
             : {}),
           ...(franceCdar.reason ? { "ram:Reason": franceCdar.reason } : {}),
+          "ram:SequenceNumeric": "1",
           ...(franceCdar.reasonNote
             ? {
                 "ram:IncludedNote": {
@@ -117,9 +118,21 @@ export function franceCdarToXML({
         },
       },
       "rsm:AcknowledgementDocument": {
+        "ram:MultipleReferencesIndicator": {
+          "udt:Indicator": "false",
+        },
         "ram:TypeCode": franceCdar.phase,
+        "ram:IssueDateTime": {
+          "udt:DateTimeString": {
+            "@_format": "204",
+            "#text": formatDate204(franceCdar.statusDate),
+          },
+        },
         "ram:ReferenceReferencedDocument": {
           "ram:IssuerAssignedID": franceCdar.invoiceId,
+          ...(franceCdar.invoiceTypeCode
+            ? { "ram:TypeCode": franceCdar.invoiceTypeCode }
+            : {}),
           ...(franceCdar.invoiceIssueDate
             ? {
                 "ram:FormattedIssueDateTime": {

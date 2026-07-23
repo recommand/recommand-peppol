@@ -69,6 +69,11 @@ function dateOrDateTime(value: unknown, field: string): string {
   );
 }
 
+function nullableDateTime(value: unknown, field: string): string | undefined {
+  if (!value) return undefined;
+  return dateOrDateTime(value, field);
+}
+
 function nullableDate(value: unknown, field: string): string | undefined {
   if (!value) return undefined;
   const parsedDate = dateOrDateTime(value, field);
@@ -179,6 +184,15 @@ export function parseFranceCdarFromXML(xml: string): FranceCdar {
     referencedDocument.FormattedIssueDateTime,
     "FormattedIssueDateTime"
   );
+  const invoiceTypeCode =
+    getNullableTextContent(referencedDocument.TypeCode) ?? undefined;
+  // The status date is mandatory, but fall back to the CDAR creation date so a
+  // non-conformant document still parses instead of failing as a whole.
+  const statusDate =
+    nullableDateTime(
+      acknowledgement?.IssueDateTime,
+      "AcknowledgementDocument IssueDateTime"
+    ) ?? dateOrDateTime(exchangedDocument?.IssueDateTime, "IssueDateTime");
 
   return franceCdarSchema.parse({
     id: getTextContent(exchangedDocument?.ID),
@@ -209,7 +223,9 @@ export function parseFranceCdarFromXML(xml: string): FranceCdar {
         }
       : {}),
     statusCode: getTextContent(referencedDocument.ProcessConditionCode),
+    statusDate,
     invoiceId: getTextContent(referencedDocument.IssuerAssignedID),
+    ...(invoiceTypeCode ? { invoiceTypeCode } : {}),
     ...(invoiceIssueDate ? { invoiceIssueDate } : {}),
     ...(sellerLegalId
       ? {
