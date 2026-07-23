@@ -1,10 +1,11 @@
 import { UserFacingError } from "./util";
+import type { FranceCdarBusinessProcess } from "./parsing/france-cdar/schemas";
 
 export type BillingDocumentType = "invoice" | "creditNote" | "selfBillingInvoice" | "selfBillingCreditNote";
-export type TransactionDocumentType = "invoiceResponse" | "messageLevelResponse";
+export type TransactionDocumentType = "invoiceResponse" | "messageLevelResponse" | "frenchInvoicingCdar";
 export type UnknownDocumentType = "unknown";
 export type DocumentType = BillingDocumentType | TransactionDocumentType | UnknownDocumentType;
-export type SupportedDocumentType = BillingDocumentType | "messageLevelResponse" | UnknownDocumentType;
+export type SupportedDocumentType = BillingDocumentType | "messageLevelResponse" | "frenchInvoicingCdar" | UnknownDocumentType;
 
 export type DocumentTypeInfo = {
     type: BillingDocumentType | TransactionDocumentType;
@@ -79,6 +80,24 @@ export const MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     processId: "urn:fdc:peppol.eu:poacc:bis:mlr:3"
 };
 
+export const FRANCE_CDAR_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "frenchInvoicingCdar",
+    title: "French Invoicing CDAR",
+    docTypeId: "urn:un:unece:uncefact:data:standard:CrossDomainAcknowledgementAndResponse:100::CrossDomainAcknowledgementAndResponse##urn:peppol:france:billing:cdv:1.0::D22B",
+    processId: "urn:peppol:france:billing:regulated"
+};
+
+export const FRANCE_CDAR_NON_REGULATED_PROCESS_ID =
+    "urn:peppol:france:billing:non-regulated";
+
+export function getFranceCdarProcessId(
+    businessProcess: FranceCdarBusinessProcess
+): string {
+    return businessProcess === "REGULATED"
+        ? FRANCE_CDAR_DOCUMENT_TYPE_INFO.processId
+        : FRANCE_CDAR_NON_REGULATED_PROCESS_ID;
+}
+
 export const CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
     title: "France CII Invoice CIUS",
@@ -146,6 +165,7 @@ export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
     INVOICE_RESPONSE_DOCUMENT_TYPE_INFO,
     MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
+    FRANCE_CDAR_DOCUMENT_TYPE_INFO,
     CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
     CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,

@@ -8,6 +8,8 @@ import { selfBillingCreditNoteToUBL } from "./self-billing-creditnote/to-xml";
 import { parseSelfBillingCreditNoteFromXML } from "./self-billing-creditnote/from-xml";
 import { messageLevelResponseToXML } from "./message-level-response/to-xml";
 import { parseMessageLevelResponseFromXML } from "./message-level-response/from-xml";
+import { franceCdarToXML } from "./france-cdar/to-xml";
+import { parseFranceCdarFromXML } from "./france-cdar/from-xml";
 import { invoiceToCII } from "./invoice/cii-d22b/to-xml";
 import { parseInvoiceFromCII } from "./invoice/cii-d22b/from-xml";
 import { creditNoteToCII } from "./creditnote/cii-d22b/to-xml";
@@ -26,6 +28,7 @@ import {
   CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
   CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
   CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+  FRANCE_CDAR_DOCUMENT_TYPE_INFO,
   INVOICE_DOCUMENT_TYPE_INFO,
   MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
   SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
@@ -40,6 +43,7 @@ import type { CreditNote } from "./creditnote/schemas";
 import type { SelfBillingInvoice } from "./self-billing-invoice/schemas";
 import type { SelfBillingCreditNote } from "./self-billing-creditnote/schemas";
 import type { MessageLevelResponse } from "./message-level-response/schemas";
+import type { FranceCdar } from "./france-cdar/schemas";
 import type { ParsedDocument } from "@peppol/utils/document-filename";
 
 type ToXmlOptions = {
@@ -137,6 +141,16 @@ export const DOCUMENT_XML_HANDLERS: DocumentXmlHandler[] = [
         recipientAddress,
       }),
     fromXml: (xml) => parseMessageLevelResponseFromXML(xml),
+  },
+  {
+    ...FRANCE_CDAR_DOCUMENT_TYPE_INFO,
+    type: "frenchInvoicingCdar",
+    matchesDocTypeId: (docTypeId) => docTypeId === FRANCE_CDAR_DOCUMENT_TYPE_INFO.docTypeId,
+    toXml: ({ document }) =>
+      franceCdarToXML({
+        franceCdar: document as FranceCdar,
+      }),
+    fromXml: (xml) => parseFranceCdarFromXML(xml),
   },
   {
     ...CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,

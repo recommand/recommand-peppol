@@ -18,6 +18,8 @@ export function getDocumentTypeLabel(type: DocumentType): string {
       return "Self Billing Credit Note";
     case "messageLevelResponse":
       return "Message Level Response";
+    case "frenchInvoicingCdar":
+      return "French Invoicing CDAR";
     default:
       return "Document";
   }

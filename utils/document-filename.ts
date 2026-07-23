@@ -1,4 +1,5 @@
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
+import type { FranceCdar } from "@peppol/utils/parsing/france-cdar/schemas";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import type { SelfBillingCreditNote } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
@@ -10,7 +11,8 @@ export type ParsedDocument =
   | CreditNote
   | SelfBillingInvoice
   | SelfBillingCreditNote
-  | MessageLevelResponse;
+  | MessageLevelResponse
+  | FranceCdar;
 
 export function getDocumentFilename(
   type: DocumentType,
@@ -30,6 +32,10 @@ export function getDocumentFilename(
     return type === "selfBillingCreditNote"
       ? `self-billing-credit-note-${parsedDocument.creditNoteNumber}`
       : `credit-note-${parsedDocument.creditNoteNumber}`;
+  }
+
+  if (type === "frenchInvoicingCdar" && "invoiceId" in parsedDocument) {
+    return `french-invoicing-cdar-${parsedDocument.invoiceId}`;
   }
 
   return "document";

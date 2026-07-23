@@ -631,6 +631,20 @@
       "when": 1783957816431,
       "tag": "20260713155016_unknown_goblin_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1784228400000,
+      "tag": "20260716214000_add_cdar_document_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1784794983584,
+      "tag": "20260723082303_slippery_hammerhead",
+      "breakpoints": true
     }
   ]
 }

@@ -61,6 +61,8 @@ import type { ValidationResponse } from "@peppol/types/validation";
 import {
   BILLING_DOCUMENT_TYPE_INFO,
   CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+  FRANCE_CDAR_DOCUMENT_TYPE_INFO,
+  getFranceCdarProcessId,
   getDocumentTypeInfo,
   INVOICE_DOCUMENT_TYPE_INFO,
   MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
@@ -72,6 +74,11 @@ import {
   messageLevelResponseSchema,
   type MessageLevelResponse,
 } from "@peppol/utils/parsing/message-level-response/schemas";
+import {
+  franceCdarSchema,
+  type SendFranceCdar,
+} from "@peppol/utils/parsing/france-cdar/schemas";
+import { parsePeppolAddress } from "@peppol/utils/parsing/peppol-address";
 import { ulid } from "ulid";
 import { generateAndAttachPdf } from "@peppol/utils/pdf-attachment-helper";
 import {
@@ -619,6 +626,84 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       } else {
         parsedDocument = messageLevelResponse;
       }
+    } else if (
+      input.documentType === DocumentType.FRENCH_INVOICING_CDAR
+    ) {
+      if (input.pdfGeneration?.enabled) {
+        return c.json(
+          actionFailure(
+            "PDF generation is not supported for French Invoicing CDAR messages."
+          ),
+          400
+        );
+      }
+
+      const franceCdar: SendFranceCdar & {
+        recipientElectronicAddress?: string;
+      } = { ...(document as SendFranceCdar) };
+
+      if (!franceCdar.id) {
+        franceCdar.id = Bun.randomUUIDv7();
+      }
+      if (!franceCdar.issueDate) {
+        franceCdar.issueDate = formatISO(new Date(), {
+          representation: "date",
+        });
+      }
+      if (!franceCdar.phase) {
+        franceCdar.phase = "23";
+      }
+      if (
+        franceCdar.recipientRole !== "WK" &&
+        franceCdar.recipientRole !== "DFH"
+      ) {
+        franceCdar.recipientElectronicAddress =
+          parsePeppolAddress(recipientAddress!).identifier;
+      }
+
+      const parsedFranceCdar = franceCdarSchema.safeParse(franceCdar);
+      if (!parsedFranceCdar.success) {
+        return c.json(
+          actionFailure(
+            "Invalid French Invoicing CDAR data provided. The document you provided does not correspond to the required JSON object as laid out by our API reference."
+          ),
+          400
+        );
+      }
+
+      doctypeId = input.doctypeId ?? FRANCE_CDAR_DOCUMENT_TYPE_INFO.docTypeId;
+      const xmlResolution = resolveOutgoingDocumentXmlHandler(
+        doctypeId,
+        "frenchInvoicingCdar"
+      );
+      if (!xmlResolution.ok) {
+        return c.json(actionFailure(xmlResolution.message), 400);
+      }
+
+      generatedXmlDocument = xmlResolution.resolution.handler.toXml({
+        document: parsedFranceCdar.data,
+        senderAddress,
+        recipientAddress: recipientAddress!,
+        isDocumentValidationEnforced: true,
+      });
+      type = "frenchInvoicingCdar";
+      outgoingDocumentProcessId = getFranceCdarProcessId(
+        parsedFranceCdar.data.businessProcess
+      );
+
+      const parsed = parseDocument(
+        xmlResolution.resolution.parseDocTypeId,
+        generatedXmlDocument,
+        company,
+        senderAddress
+      );
+
+      if (parsed.parsedDocument) {
+        parsedDocument = parsed.parsedDocument;
+        type = parsed.type;
+      } else {
+        parsedDocument = parsedFranceCdar.data;
+      }
     } else if (input.documentType === DocumentType.XML) {
       if (input.pdfGeneration?.enabled) {
         return c.json(
@@ -707,7 +792,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         });
         outgoingDocumentBody = outgoingPayload.body;
         outgoingDocumentContentType = outgoingPayload.contentType;
-        outgoingDocumentProcessId = outgoingPayload.processId ?? null;
+        outgoingDocumentProcessId =
+          outgoingPayload.processId ?? outgoingDocumentProcessId;
         originalOutgoingPayload = outgoingPayload.originalPayload ?? null;
       } catch (error) {
         return c.json(

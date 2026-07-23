@@ -1113,6 +1113,8 @@ export default function Page() {
         { label: "Credit Note", value: "creditNote" },
         { label: "Self Billing Invoice", value: "selfBillingInvoice" },
         { label: "Self Billing Credit Note", value: "selfBillingCreditNote" },
+        { label: "Message Level Response", value: "messageLevelResponse" },
+        { label: "French Invoicing CDAR", value: "frenchInvoicingCdar" },
         { label: "Unknown", value: "unknown" },
       ],
     },

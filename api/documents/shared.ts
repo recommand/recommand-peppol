@@ -4,9 +4,20 @@ import { invoiceSchema } from "@peppol/utils/parsing/invoice/schemas";
 import { selfBillingCreditNoteSchema } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
 import { selfBillingInvoiceSchema } from "@peppol/utils/parsing/self-billing-invoice/schemas";
 import { creditNoteSchema } from "@peppol/utils/parsing/creditnote/schemas";
-import { documentTypeSchema } from "@peppol/utils/parsing/send-document";
+import { messageLevelResponseSchema } from "@peppol/utils/parsing/message-level-response/schemas";
+import { franceCdarSchema } from "@peppol/utils/parsing/france-cdar/schemas";
 import { labelResponse } from "@peppol/api/labels/shared";
 import { validationResponse } from "@peppol/types/validation";
+
+const transmittedDocumentTypeSchema = z.enum([
+    "invoice",
+    "creditNote",
+    "selfBillingInvoice",
+    "selfBillingCreditNote",
+    "messageLevelResponse",
+    "frenchInvoicingCdar",
+    "unknown",
+]);
 
 export const transmittedDocumentResponse = z.object({
     id: z.string(),
@@ -18,12 +29,20 @@ export const transmittedDocumentResponse = z.object({
     docTypeId: z.string(),
     processId: z.string(),
     countryC1: z.string(),
-    type: documentTypeSchema,
+    type: transmittedDocumentTypeSchema,
     readAt: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
     xml: z.string().nullable(),
-    parsed: z.union([invoiceSchema, creditNoteSchema, selfBillingInvoiceSchema, selfBillingCreditNoteSchema, z.null()]),
+    parsed: z.union([
+        invoiceSchema,
+        creditNoteSchema,
+        selfBillingInvoiceSchema,
+        selfBillingCreditNoteSchema,
+        messageLevelResponseSchema,
+        franceCdarSchema,
+        z.null(),
+    ]),
     validation: validationResponse.nullable(),
     sentOverPeppol: z.boolean(),
     sentOverEmail: z.boolean(),

@@ -1,7 +1,11 @@
 import type { Company } from "@peppol/data/companies";
 import { sendSystemAlert } from "../system-notifications/telegram";
 import { XMLParser } from "fast-xml-parser";
-import { MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO, type SupportedDocumentType } from "../document-types";
+import {
+  FRANCE_CDAR_DOCUMENT_TYPE_INFO,
+  MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
+  type SupportedDocumentType,
+} from "../document-types";
 import { getDocumentXmlHandlersByDocTypeId } from "./document-handlers";
 import { getTextContent } from "./xml-helpers";
 
@@ -107,6 +111,22 @@ export function detectDoctypeId(xml: string): string | null {
         // If the document tag is a Message Level Response, return the message level response doctype id
         if (parsed.ApplicationResponse) {
             return getSupportedDocTypeId(MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO.docTypeId);
+        }
+
+        const cdar =
+            parsed.CrossDomainAcknowledgementAndResponse ??
+            parsed.StandardBusinessDocument?.CrossDomainAcknowledgementAndResponse;
+        if (cdar) {
+            const guidelineId = getTextContent(
+                cdar.ExchangedDocumentContext
+                    ?.GuidelineSpecifiedDocumentContextParameter?.ID
+            );
+            if (guidelineId === "urn.cpro.gouv.fr:1p0:CDV:invoice") {
+                return getSupportedDocTypeId(
+                    FRANCE_CDAR_DOCUMENT_TYPE_INFO.docTypeId
+                );
+            }
+            return null;
         }
 
         if (parsed.CrossIndustryInvoice) {

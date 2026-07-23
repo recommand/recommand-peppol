@@ -1,8 +1,14 @@
 import type { PublicTransmittedDocument } from "@peppol/data/transmitted-documents";
 import { BILLING_DOCUMENT_TEMPLATE } from "@peppol/templates/billing-document";
+import { FRANCE_CDAR_TEMPLATE } from "@peppol/templates/france-cdar";
 import { MESSAGE_LEVEL_RESPONSE_TEMPLATE } from "@peppol/templates/message-level-response";
 import { PAYMENT_MEANS } from "@peppol/utils/payment-means";
 import { getUnitCodeName } from "@peppol/utils/unit-codes";
+import type {
+  FranceCdar,
+  FranceCdarRoleCode,
+  FranceCdarStatusCode,
+} from "@peppol/utils/parsing/france-cdar/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import { Decimal } from "decimal.js";
 
@@ -104,6 +110,71 @@ type MessageLevelResponseTemplateData = {
   isAcknowledgement: boolean;
 };
 
+type FranceCdarTemplateData = {
+  documentId: string;
+  documentType: string;
+  documentTypeLabel: string;
+  responseId: string;
+  issueDate: string;
+  businessProcess: string;
+  phase: string;
+  phaseLabel: string;
+  senderRole: string;
+  senderRoleLabel: string;
+  issuerLegalId?: string;
+  recipientRole: string;
+  recipientRoleLabel: string;
+  recipientLegalId?: string;
+  recipientElectronicAddress?: string;
+  statusCode: string;
+  statusCodeLabel: string;
+  invoiceId: string;
+  invoiceIssueDate?: string;
+  sellerLegalId?: string;
+  reasonCode?: string;
+  reason?: string;
+  hasReason: boolean;
+  collectedAmounts?: Array<{ amount: string; vatPercent: string }>;
+  hasCollectedAmounts: boolean;
+  isPositive: boolean;
+  isNegative: boolean;
+  isWarning: boolean;
+  isInfo: boolean;
+};
+
+const FRANCE_CDAR_STATUS_LABELS: Record<FranceCdarStatusCode, string> = {
+  "200": "Submitted",
+  "201": "Issued",
+  "202": "Received",
+  "203": "Made available",
+  "204": "In hand",
+  "205": "Approved",
+  "206": "Partially approved",
+  "207": "In dispute",
+  "208": "Suspended",
+  "209": "Completed",
+  "210": "Refused",
+  "211": "Payment sent",
+  "212": "Payment received",
+  "213": "Rejected",
+  "214": "Endorsed",
+  "501": "Inadmissible",
+};
+
+const FRANCE_CDAR_ROLE_LABELS: Record<FranceCdarRoleCode, string> = {
+  BY: "Buyer",
+  AB: "Buyer's agent or representative",
+  DL: "Factor",
+  SE: "Seller",
+  SR: "Seller's agent",
+  WK: "Platform or dematerialisation operator",
+  PE: "Payee",
+  PR: "Payer",
+  II: "Invoicer",
+  IV: "Invoicee",
+  DFH: "French Public Billing Portal (PPF)",
+};
+
 const RECOMMAND_RENDER_ENDPOINT = "https://render.recommand.dev";
 
 function reverseAmountSign(value: string): string {
@@ -142,6 +213,8 @@ function getDocumentTypeLabel(type: PublicTransmittedDocument["type"]): string {
       return "Self-billing credit note";
     case "messageLevelResponse":
       return "Message Level Response";
+    case "frenchInvoicingCdar":
+      return "French Invoicing CDAR";
     default:
       return "Document";
   }
@@ -360,9 +433,64 @@ function buildMessageLevelResponseTemplateData(
   };
 }
 
+function buildFranceCdarTemplateData(
+  document: PublicTransmittedDocument,
+): FranceCdarTemplateData {
+  const parsed = document.parsed as FranceCdar;
+
+  if (!parsed) {
+    throw new Error("French Invoicing CDAR document missing parsed data");
+  }
+
+  const isNegative = parsed.statusCode === "210"
+    || parsed.statusCode === "213"
+    || parsed.statusCode === "501";
+  const isWarning = parsed.statusCode === "206"
+    || parsed.statusCode === "207"
+    || parsed.statusCode === "208";
+  const isPositive = parsed.statusCode === "205"
+    || parsed.statusCode === "209"
+    || parsed.statusCode === "211"
+    || parsed.statusCode === "212"
+    || parsed.statusCode === "214";
+  const isInfo = !isNegative && !isWarning && !isPositive;
+
+  return {
+    documentId: document.id,
+    documentType: document.type,
+    documentTypeLabel: getDocumentTypeLabel(document.type),
+    responseId: parsed.id,
+    issueDate: parsed.issueDate,
+    businessProcess: parsed.businessProcess,
+    phase: parsed.phase,
+    phaseLabel: parsed.phase === "305" ? "Transmission" : "Processing",
+    senderRole: parsed.senderRole,
+    senderRoleLabel: FRANCE_CDAR_ROLE_LABELS[parsed.senderRole],
+    issuerLegalId: parsed.issuerLegalId,
+    recipientRole: parsed.recipientRole,
+    recipientRoleLabel: FRANCE_CDAR_ROLE_LABELS[parsed.recipientRole],
+    recipientLegalId: parsed.recipientLegalId,
+    recipientElectronicAddress: parsed.recipientElectronicAddress,
+    statusCode: parsed.statusCode,
+    statusCodeLabel: FRANCE_CDAR_STATUS_LABELS[parsed.statusCode] ?? parsed.statusCode,
+    invoiceId: parsed.invoiceId,
+    invoiceIssueDate: parsed.invoiceIssueDate,
+    sellerLegalId: parsed.sellerLegalId,
+    reasonCode: parsed.reasonCode,
+    reason: parsed.reason,
+    hasReason: Boolean(parsed.reasonCode || parsed.reason),
+    collectedAmounts: parsed.collectedAmounts,
+    hasCollectedAmounts: Boolean(parsed.collectedAmounts?.length),
+    isPositive,
+    isNegative,
+    isWarning,
+    isInfo,
+  };
+}
+
 async function callTailwindPdfGenerator(
   templateHtml: string,
-  data: BillingTemplateData | MessageLevelResponseTemplateData,
+  data: BillingTemplateData | MessageLevelResponseTemplateData | FranceCdarTemplateData,
   options: { preview: boolean; pdfa?: boolean },
 ): Promise<string | Buffer> {
   const body = JSON.stringify({ html: templateHtml, data });
@@ -413,6 +541,15 @@ export async function renderDocumentHtml(
     );
     return html.toString();
   }
+  if (document.type === "frenchInvoicingCdar") {
+    const data = buildFranceCdarTemplateData(document);
+    const html = await callTailwindPdfGenerator(
+      FRANCE_CDAR_TEMPLATE,
+      data,
+      { preview: true },
+    );
+    return html.toString();
+  }
 
   const data = buildTemplateData(document);
   const html = await callTailwindPdfGenerator(
@@ -434,6 +571,15 @@ export async function renderDocumentPdf(
     const data = buildMessageLevelResponseTemplateData(document);
     const pdf = await callTailwindPdfGenerator(
       MESSAGE_LEVEL_RESPONSE_TEMPLATE,
+      data,
+      { preview: false, pdfa: options.pdfa },
+    );
+    return pdf as Buffer;
+  }
+  if (document.type === "frenchInvoicingCdar") {
+    const data = buildFranceCdarTemplateData(document);
+    const pdf = await callTailwindPdfGenerator(
+      FRANCE_CDAR_TEMPLATE,
       data,
       { preview: false, pdfa: options.pdfa },
     );

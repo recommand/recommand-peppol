@@ -19,6 +19,7 @@ import {
   calculateVat,
 } from "../utils/parsing/invoice/calculations";
 import { messageLevelResponseSchema } from "../utils/parsing/message-level-response/schemas";
+import { franceCdarSchema } from "../utils/parsing/france-cdar/schemas";
 import {
   selfBillingCreditNoteSchema,
   type SelfBillingCreditNote,
@@ -37,6 +38,7 @@ const schemasByType = {
   selfBillingInvoice: selfBillingInvoiceSchema,
   selfBillingCreditNote: selfBillingCreditNoteSchema,
   messageLevelResponse: messageLevelResponseSchema,
+  frenchInvoicingCdar: franceCdarSchema,
 } satisfies Record<Exclude<SupportedDocumentType, "unknown">, z.ZodTypeAny>;
 
 type SchemaDocumentType = keyof typeof schemasByType;
@@ -51,7 +53,14 @@ function valueForPath(path: string[]): unknown {
   const joined = path.join(".");
 
   if (field === "country" || field === "originCountry") return "FR";
-  if (field === "issueDate" || field === "dueDate" || field === "date") return "2025-01-01";
+  if (
+    field === "issueDate" ||
+    field === "invoiceIssueDate" ||
+    field === "dueDate" ||
+    field === "date"
+  ) {
+    return "2025-01-01";
+  }
   if (field === "email") return "schema@example.com";
   if (field === "phone") return "+32123456789";
   if (field === "vatNumber") return joined.includes("buyer") ? "FR23341815675" : "FR40303265045";
@@ -73,6 +82,15 @@ function valueForPath(path: string[]): unknown {
   if (field === "embeddedDocument") return "SGVsbG8=";
   if (field === "url") return "https://example.com/schema.txt";
   if (field === "responseCode") return "AP";
+  if (field === "phase") return "23";
+  if (field === "businessProcess") return "REGULATED";
+  if (field === "senderRole") return "BY";
+  if (field === "recipientRole") return "SE";
+  if (field === "issuerLegalId" || field === "sellerLegalId" || field === "recipientLegalId") {
+    return "123456789";
+  }
+  if (field === "recipientElectronicAddress") return "123456789_STATUTS";
+  if (field === "vatPercent") return "20.00";
   if (field === "schemeVersion") return "1.0";
   if (field === "value") return "Schema value";
 
@@ -153,7 +171,7 @@ function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
   const schema = schemasByType[type];
 
   const generated = schema.parse(sampleFromSchema(schema)) as ParsedDocument;
-  if (type === "messageLevelResponse") return generated;
+  if (type === "messageLevelResponse" || type === "frenchInvoicingCdar") return generated;
   return schema.parse(normalizeBillingDocument(generated as BillingDocument)) as ParsedDocument;
 }
 

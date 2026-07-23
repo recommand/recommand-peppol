@@ -67,7 +67,9 @@ export function getTransmittedDocumentSearchFields({
       ? parsed?.invoiceNumber
       : type === "creditNote" || type === "selfBillingCreditNote"
         ? parsed?.creditNoteNumber
-        : null;
+        : type === "frenchInvoicingCdar"
+          ? (parsed as { invoiceId?: string | null } | null | undefined)?.invoiceId
+          : null;
 
   const normalizedSenderName = normalizeSearchValue(senderName);
   const normalizedReceiverName = normalizeSearchValue(receiverName);

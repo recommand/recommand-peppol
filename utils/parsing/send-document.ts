@@ -5,6 +5,7 @@ import { sendCreditNoteSchema } from "./creditnote/schemas";
 import { sendSelfBillingInvoiceSchema } from "./self-billing-invoice/schemas";
 import { sendSelfBillingCreditNoteSchema } from "./self-billing-creditnote/schemas";
 import { sendMessageLevelResponseSchema } from "./message-level-response/schemas";
+import { sendFranceCdarSchema } from "./france-cdar/schemas";
 
 export const DocumentType = {
   INVOICE: "invoice",
@@ -12,6 +13,7 @@ export const DocumentType = {
   SELF_BILLING_INVOICE: "selfBillingInvoice",
   SELF_BILLING_CREDIT_NOTE: "selfBillingCreditNote",
   MESSAGE_LEVEL_RESPONSE: "messageLevelResponse",
+  FRENCH_INVOICING_CDAR: "frenchInvoicingCdar",
   XML: "xml",
 } as const;
 
@@ -22,6 +24,7 @@ export const documentTypeSchema = z
     DocumentType.SELF_BILLING_INVOICE,
     DocumentType.SELF_BILLING_CREDIT_NOTE,
     DocumentType.MESSAGE_LEVEL_RESPONSE,
+    DocumentType.FRENCH_INVOICING_CDAR,
     DocumentType.XML,
   ])
   .openapi({
@@ -88,7 +91,7 @@ export const sendDocumentSchema = z.object({
     .openapi({
       ref: "PDFGeneration",
       description:
-        "Optionally generate a PDF of the document and include it as an embedded attachment (also included in email attachments when email sending is enabled). Not supported for message level responses or raw XML documents.",
+        "Optionally generate a PDF of the document and include it as an embedded attachment (also included in email attachments when email sending is enabled). Not supported for message level responses, French Invoicing CDAR messages, or raw XML documents.",
     }),
   documentType: documentTypeSchema,
   document: z.union([
@@ -97,6 +100,7 @@ export const sendDocumentSchema = z.object({
     sendSelfBillingInvoiceSchema,
     sendSelfBillingCreditNoteSchema,
     sendMessageLevelResponseSchema,
+    sendFranceCdarSchema,
     z.string().openapi({
       ref: "XML",
       title: "XML",
@@ -111,7 +115,7 @@ export const sendDocumentSchema = z.object({
   }),
   processId: z.string().optional().openapi({
     description:
-      'The process identifier. Not required, only used when documentType is "xml". For supported document types, the processId can be detected automatically from your XML document, if that\'s not the case you can provide it manually.',
+      "Optional process identifier override. It is detected automatically for supported JSON and XML document types.",
     example: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
   }),
 });
