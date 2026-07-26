@@ -4,6 +4,7 @@ import { Logger } from "@recommand/lib/logger";
 import subscriptionServer from "./api/subscription";
 import billingProfileServer from "./api/billing-profile";
 import billingServer from "./api/billing";
+import b2cReportingServer from "./api/b2c-reporting";
 import companiesServer from "./api/companies";
 import labelsServer from "./api/labels";
 import sendDocumentServer from "./api/send-document";
@@ -120,6 +121,11 @@ For additional support or questions, don't hesitate to contact our support team.
           description: "Endpoints for sending documents",
         },
         {
+          name: "Reporting",
+          description:
+            "Submit B2C sales and payment information that Recommand reports to the relevant tax administration on your behalf.",
+        },
+        {
           name: "Recipients",
           description:
             "Interaction with the Peppol directory. For now, this always returns results from the production Peppol directory, even in playground teams.",
@@ -204,6 +210,7 @@ for (const prefix of ["/peppol/", "/v1/"]) {
 
   server.route(prefix, billingProfileServer); 
   server.route(prefix, billingServer); 
+  server.route(prefix, b2cReportingServer);
   server.route(prefix, subscriptionServer);
   server.route(prefix, teamsServer);
 }
