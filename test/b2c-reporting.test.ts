@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
   buildFrenchDeclarant,
-  toArratechB2cFlow,
+  toArratechB2CFlow,
 } from "../data/at/b2c-reporting";
 import {
-  frenchB2cReportSchema,
-  getFrenchB2cReportDocumentTypeInfo,
+  frenchB2CReportSchema,
+  getFrenchB2CReportDocumentTypeInfo,
 } from "../utils/parsing/b2c-reporting/france";
 import { sendDocumentSchema } from "../utils/parsing/send-document";
 import {
@@ -38,7 +38,7 @@ const salesReport = {
 
 describe("French B2C reporting", () => {
   it("keeps the public French sales payload simple and maps provider codes internally", () => {
-    const report = frenchB2cReportSchema.parse({
+    const report = frenchB2CReportSchema.parse({
       reference: "SALES-2026-07-01-GOODS",
       type: "sales",
       date: "2026-07-01",
@@ -56,7 +56,7 @@ describe("French B2C reporting", () => {
     });
 
     expect(report.action).toBe("submit");
-    expect(toArratechB2cFlow(report, declarant)).toEqual({
+    expect(toArratechB2CFlow(report, declarant)).toEqual({
       subFlux: "10.3",
       clientOperationRef: "SALES-2026-07-01-GOODS",
       transmissionType: "IN",
@@ -81,7 +81,7 @@ describe("French B2C reporting", () => {
   });
 
   it("maps cash-basis payment corrections without exposing provider fields", () => {
-    const report = frenchB2cReportSchema.parse({
+    const report = frenchB2CReportSchema.parse({
       reference: "PAYMENTS-2026-07-01",
       action: "correct",
       type: "payments",
@@ -94,7 +94,7 @@ describe("French B2C reporting", () => {
       ],
     });
 
-    expect(toArratechB2cFlow(report, declarant)).toEqual({
+    expect(toArratechB2CFlow(report, declarant)).toEqual({
       subFlux: "10.4",
       clientOperationRef: "PAYMENTS-2026-07-01",
       transmissionType: "RE",
@@ -114,7 +114,7 @@ describe("French B2C reporting", () => {
   });
 
   it("does not invent a provider transmission mode for cancellations", () => {
-    const report = frenchB2cReportSchema.parse({
+    const report = frenchB2CReportSchema.parse({
       reference: "SALES-2026-07-01-SERVICES",
       action: "cancel",
       type: "sales",
@@ -132,13 +132,13 @@ describe("French B2C reporting", () => {
       ],
     });
 
-    const providerPayload = toArratechB2cFlow(report, declarant);
+    const providerPayload = toArratechB2CFlow(report, declarant);
     expect(providerPayload.operation).toBe("CANCEL");
     expect("transmissionType" in providerPayload).toBe(false);
   });
 
   it("rejects unsupported sales categories and empty VAT breakdowns", () => {
-    const unsupportedCategory = frenchB2cReportSchema.safeParse({
+    const unsupportedCategory = frenchB2CReportSchema.safeParse({
       reference: "SALES-2026-07-01-OTHER",
       type: "sales",
       date: "2026-07-01",
@@ -167,11 +167,11 @@ describe("French B2C reporting", () => {
   });
 
   it("files sales and payment reports as distinct document types", () => {
-    const sales = getFrenchB2cReportDocumentTypeInfo("sales");
-    const payments = getFrenchB2cReportDocumentTypeInfo("payments");
+    const sales = getFrenchB2CReportDocumentTypeInfo("sales");
+    const payments = getFrenchB2CReportDocumentTypeInfo("payments");
 
-    expect(sales.type).toBe("frenchB2cSalesReport");
-    expect(payments.type).toBe("frenchB2cPaymentReport");
+    expect(sales.type).toBe("frenchB2CSalesReport");
+    expect(payments.type).toBe("frenchB2CPaymentReport");
     expect(sales.docTypeId).not.toBe(payments.docTypeId);
   });
 
@@ -186,7 +186,7 @@ describe("French B2C reporting", () => {
     for (const reportType of ["sales", "payments"] as const) {
       expect(
         getDocumentXmlHandlersByDocTypeId(
-          getFrenchB2cReportDocumentTypeInfo(reportType).docTypeId
+          getFrenchB2CReportDocumentTypeInfo(reportType).docTypeId
         )
       ).toHaveLength(0);
     }

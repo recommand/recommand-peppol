@@ -4,7 +4,7 @@ import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import type { SelfBillingCreditNote } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
 import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
-import type { FrenchB2cReport } from "@peppol/utils/parsing/b2c-reporting/france";
+import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
 import {
   isReportingDocumentType,
   type DocumentType,
@@ -17,7 +17,7 @@ export type ParsedDocument =
   | SelfBillingCreditNote
   | MessageLevelResponse
   | FranceCdar
-  | FrenchB2cReport;
+  | FrenchB2CReport;
 
 export function getDocumentFilename(
   type: DocumentType,
@@ -44,7 +44,7 @@ export function getDocumentFilename(
   }
 
   if (isReportingDocumentType(type) && "reference" in parsedDocument) {
-    return type === "frenchB2cPaymentReport"
+    return type === "frenchB2CPaymentReport"
       ? `french-b2c-payment-report-${parsedDocument.reference}`
       : `french-b2c-sales-report-${parsedDocument.reference}`;
   }

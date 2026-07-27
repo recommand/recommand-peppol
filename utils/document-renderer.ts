@@ -11,7 +11,7 @@ import type {
   FranceCdarStatusCode,
 } from "@peppol/utils/parsing/france-cdar/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
-import type { FrenchB2cReport } from "@peppol/utils/parsing/b2c-reporting/france";
+import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
 import {
   isReportingDocumentType,
   type DocumentType,
@@ -156,7 +156,7 @@ type FranceCdarTemplateData = {
   isInfo: boolean;
 };
 
-type FranceB2cReportVatSubtotal = {
+type FranceB2CReportVatSubtotal = {
   percentage: string;
   taxableAmount?: string;
   taxAmount?: string;
@@ -164,7 +164,7 @@ type FranceB2cReportVatSubtotal = {
   currency?: string;
 };
 
-type FranceB2cReportTemplateData = {
+type FranceB2CReportTemplateData = {
   documentId: string;
   documentType: string;
   documentTypeLabel: string;
@@ -183,11 +183,11 @@ type FranceB2cReportTemplateData = {
   transactionCount?: number;
   taxExclusiveAmount?: string;
   taxAmount?: string;
-  salesVatBreakdown: FranceB2cReportVatSubtotal[];
-  paymentVatBreakdown: FranceB2cReportVatSubtotal[];
+  salesVatBreakdown: FranceB2CReportVatSubtotal[];
+  paymentVatBreakdown: FranceB2CReportVatSubtotal[];
 };
 
-const FRANCE_B2C_REPORT_ACTION_LABELS: Record<FrenchB2cReport["action"], string> = {
+const FRANCE_B2C_REPORT_ACTION_LABELS: Record<FrenchB2CReport["action"], string> = {
   submit: "Submission",
   correct: "Correction",
   cancel: "Cancellation",
@@ -266,9 +266,9 @@ function getDocumentTypeLabel(type: PublicTransmittedDocument["type"]): string {
       return "Message Level Response";
     case "frenchInvoicingCdar":
       return "French Invoicing CDAR";
-    case "frenchB2cSalesReport":
+    case "frenchB2CSalesReport":
       return "French B2C sales report";
-    case "frenchB2cPaymentReport":
+    case "frenchB2CPaymentReport":
       return "French B2C payment report";
     default:
       return "Document";
@@ -551,10 +551,10 @@ function buildFranceCdarTemplateData(
   };
 }
 
-export function buildFranceB2cReportTemplateData(
+export function buildFranceB2CReportTemplateData(
   document: PublicTransmittedDocument,
-): FranceB2cReportTemplateData {
-  const parsed = document.parsed as FrenchB2cReport;
+): FranceB2CReportTemplateData {
+  const parsed = document.parsed as FrenchB2CReport;
 
   if (!parsed) {
     throw new Error("French B2C report document missing parsed data");
@@ -601,7 +601,7 @@ async function callTailwindPdfGenerator(
     | BillingTemplateData
     | MessageLevelResponseTemplateData
     | FranceCdarTemplateData
-    | FranceB2cReportTemplateData,
+    | FranceB2CReportTemplateData,
   options: { preview: boolean; pdfa?: boolean },
 ): Promise<string | Buffer> {
   const body = JSON.stringify({ html: templateHtml, data });
@@ -670,7 +670,7 @@ export async function renderDocumentHtml(
     return html.toString();
   }
   if (isReportingDocumentType(document.type)) {
-    const data = buildFranceB2cReportTemplateData(document);
+    const data = buildFranceB2CReportTemplateData(document);
     const html = await callTailwindPdfGenerator(
       FRANCE_B2C_REPORT_TEMPLATE,
       data,
@@ -714,7 +714,7 @@ export async function renderDocumentPdf(
     return pdf as Buffer;
   }
   if (isReportingDocumentType(document.type)) {
-    const data = buildFranceB2cReportTemplateData(document);
+    const data = buildFranceB2CReportTemplateData(document);
     const pdf = await callTailwindPdfGenerator(
       FRANCE_B2C_REPORT_TEMPLATE,
       data,

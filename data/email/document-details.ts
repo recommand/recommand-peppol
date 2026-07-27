@@ -3,7 +3,7 @@ import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import type { SelfBillingCreditNote } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
 import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
-import type { FrenchB2cReport } from "@peppol/utils/parsing/b2c-reporting/france";
+import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
 import {
   FRENCH_TAX_ADMINISTRATION_NAME,
   isReportingDocumentType,
@@ -41,7 +41,7 @@ export function extractDocumentDetails(
   // Reports are filed with a tax administration, so they have no sender or buyer to
   // name, and they carry daily totals instead of a document total.
   if (isReportingDocumentType(type)) {
-    const report = parsedDocument as FrenchB2cReport;
+    const report = parsedDocument as FrenchB2CReport;
     return {
       documentNumber: report.reference,
       amount: report.type === "sales" ? report.taxExclusiveAmount : undefined,

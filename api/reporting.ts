@@ -9,7 +9,7 @@ import {
 import { audit } from "@core/lib/audit";
 import {
   buildFrenchDeclarant,
-  submitArratechB2cReport,
+  submitArratechB2CReport,
 } from "@peppol/data/at/b2c-reporting";
 import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
@@ -20,8 +20,8 @@ import {
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import {
-  frenchB2cReportSchema,
-  getFrenchB2cReportDocumentTypeInfo,
+  frenchB2CReportSchema,
+  getFrenchB2CReportDocumentTypeInfo,
 } from "@peppol/utils/parsing/b2c-reporting/france";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -32,7 +32,7 @@ import { z } from "zod";
 
 const server = new Server();
 
-const frenchB2cReportResponseSchema = z.object({
+const frenchB2CReportResponseSchema = z.object({
   id: z.string().openapi({
     description:
       "Identifier of the report. Keep it for support and future status checks. The report is also listed with your other documents.",
@@ -55,7 +55,7 @@ A submitted report is recorded alongside your sent documents and counts towards 
   responses: {
     ...describeSuccessResponseWithZod(
       "The report was accepted for processing",
-      frenchB2cReportResponseSchema
+      frenchB2CReportResponseSchema
     ),
     ...describeErrorResponse(400, "Invalid reporting data or company details"),
     ...describeErrorResponse(
@@ -65,23 +65,23 @@ A submitted report is recorded alongside your sent documents and counts towards 
   },
 });
 
-type FrenchB2cReportingContext = Context<
+type FrenchB2CReportingContext = Context<
   AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext,
   string,
   {
-    in: { json: z.input<typeof frenchB2cReportSchema> };
-    out: { json: z.infer<typeof frenchB2cReportSchema> };
+    in: { json: z.input<typeof frenchB2CReportSchema> };
+    out: { json: z.infer<typeof frenchB2CReportSchema> };
   }
 >;
 
-const _submitFrenchB2cReport = server.post(
+const _submitFrenchB2CReport = server.post(
   "/:companyId/reporting/fr/b2c",
   requireIntegrationSupportedCompanyAccess(),
   requireValidSubscription(),
   requireCompanyVerificationForStrictTeams(),
   routeDescription,
-  zodValidator("json", frenchB2cReportSchema),
-  async (c: FrenchB2cReportingContext) => {
+  zodValidator("json", frenchB2CReportSchema),
+  async (c: FrenchB2CReportingContext) => {
     const report = c.req.valid("json");
     const company = c.var.company;
     const isPlayground = c.var.team.isPlayground;
@@ -111,7 +111,7 @@ const _submitFrenchB2cReport = server.post(
       externalReferenceId = "sim_" + ulid();
     } else {
       try {
-        const result = await submitArratechB2cReport({
+        const result = await submitArratechB2CReport({
           input: report,
           declarant,
           useTestNetwork,
@@ -146,7 +146,7 @@ const _submitFrenchB2cReport = server.post(
     // The report is filed rather than transmitted, so it has no XML and no
     // recipient. The sending identifier still records which company filed it.
     const senderIdentifier = await getSendingCompanyIdentifier(company.id);
-    const documentTypeInfo = getFrenchB2cReportDocumentTypeInfo(report.type);
+    const documentTypeInfo = getFrenchB2CReportDocumentTypeInfo(report.type);
     const transmittedDocument = await recordOutgoingDocument({
       c,
       id: "doc_" + ulid(),
@@ -171,6 +171,6 @@ const _submitFrenchB2cReport = server.post(
   }
 );
 
-export type SubmitFrenchB2cReport = typeof _submitFrenchB2cReport;
+export type SubmitFrenchB2CReport = typeof _submitFrenchB2CReport;
 
 export default server;

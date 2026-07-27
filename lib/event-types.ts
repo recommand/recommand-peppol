@@ -15,8 +15,8 @@ const receivedDocumentTypes = [
   "selfBillingCreditNote",
   "messageLevelResponse",
   "frenchInvoicingCdar",
-  "frenchB2cSalesReport",
-  "frenchB2cPaymentReport",
+  "frenchB2CSalesReport",
+  "frenchB2CPaymentReport",
   "unknown",
 ] as const;
 

@@ -5,16 +5,19 @@ interface TransmissionStatusIconsProps {
   sentOverPeppol: boolean;
   sentOverEmail: boolean;
   emailRecipients?: string[];
+  /** Reports are filed with a tax administration, not sent over Peppol — suppress the warning. */
+  isReporting?: boolean;
 }
 
-export function TransmissionStatusIcons({ 
-  sentOverPeppol, 
-  sentOverEmail, 
-  emailRecipients 
+export function TransmissionStatusIcons({
+  sentOverPeppol,
+  sentOverEmail,
+  emailRecipients,
+  isReporting = false,
 }: TransmissionStatusIconsProps) {
   return (
     <div className="flex items-center gap-1">
-      {!sentOverPeppol && (
+      {!sentOverPeppol && !isReporting && (
         <Tooltip>
           <TooltipTrigger asChild>
             <CloudAlert className="h-4 w-4 text-muted-foreground" />

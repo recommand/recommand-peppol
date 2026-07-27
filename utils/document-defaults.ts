@@ -55,8 +55,8 @@ export function extractDocumentNumberForType(
     | "selfBillingCreditNote"
     | "messageLevelResponse"
     | "frenchInvoicingCdar"
-    | "frenchB2cSalesReport"
-    | "frenchB2cPaymentReport"
+    | "frenchB2CSalesReport"
+    | "frenchB2CPaymentReport"
     | "unknown"
 ): string | null {
   const anyParsed = parsed as any;

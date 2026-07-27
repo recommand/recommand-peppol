@@ -6,7 +6,7 @@ import { selfBillingInvoiceSchema } from "@peppol/utils/parsing/self-billing-inv
 import { creditNoteSchema } from "@peppol/utils/parsing/creditnote/schemas";
 import { messageLevelResponseSchema } from "@peppol/utils/parsing/message-level-response/schemas";
 import { franceCdarSchema } from "@peppol/utils/parsing/france-cdar/schemas";
-import { frenchB2cReportSchema } from "@peppol/utils/parsing/b2c-reporting/france";
+import { frenchB2CReportSchema } from "@peppol/utils/parsing/b2c-reporting/france";
 import { labelResponse } from "@peppol/api/labels/shared";
 import { validationResponse } from "@peppol/types/validation";
 
@@ -17,8 +17,8 @@ const transmittedDocumentTypeSchema = z.enum([
     "selfBillingCreditNote",
     "messageLevelResponse",
     "frenchInvoicingCdar",
-    "frenchB2cSalesReport",
-    "frenchB2cPaymentReport",
+    "frenchB2CSalesReport",
+    "frenchB2CPaymentReport",
     "unknown",
 ]);
 
@@ -44,7 +44,7 @@ export const transmittedDocumentResponse = z.object({
         selfBillingCreditNoteSchema,
         messageLevelResponseSchema,
         franceCdarSchema,
-        frenchB2cReportSchema,
+        frenchB2CReportSchema,
         z.null(),
     ]),
     validation: validationResponse.nullable(),

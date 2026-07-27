@@ -55,6 +55,7 @@ import type { ValidationResponse } from "@peppol/types/validation";
 import { CsvAttachmentTable } from "@peppol/components/csv-attachment-table";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
+import { isReportingDocumentType } from "@peppol/utils/document-types";
 
 const client = rc<TransmittedDocuments>("peppol");
 const labelsClient = rc<Labels>("v1");
@@ -427,6 +428,7 @@ export default function TransmittedDocumentDetailPage() {
     parsed?.selfBillingInvoiceNumber ??
     parsed?.selfBillingCreditNoteNumber;
   const hasStructuredData = !!parsed && doc.type !== "unknown";
+  const hasXml = Boolean(doc.xml);
   const titleNumber =
     documentNumber || `${doc.id.slice(0, 6)}...${doc.id.slice(-6)}`;
   const directionLabel =
@@ -524,6 +526,7 @@ export default function TransmittedDocumentDetailPage() {
                 sentOverPeppol={doc.sentOverPeppol}
                 sentOverEmail={doc.sentOverEmail}
                 emailRecipients={doc.emailRecipients || undefined}
+                isReporting={isReportingDocumentType(doc.type)}
               />
               {doc.labels &&
                 doc.labels.map((label) => (
@@ -541,8 +544,9 @@ export default function TransmittedDocumentDetailPage() {
           <Alert className="border-dashed">
             <AlertTitle>Limited document details</AlertTitle>
             <AlertDescription>
-              This document could not be fully parsed. Only technical metadata
-              and raw XML are available.
+              {hasXml
+                ? "This document could not be fully parsed. Only technical metadata and raw XML are available."
+                : "This document could not be fully parsed. Only technical metadata is available."}
             </AlertDescription>
           </Alert>
         )}
@@ -847,18 +851,31 @@ export default function TransmittedDocumentDetailPage() {
               <CardHeader>
                 <CardTitle>Technical details & raw data</CardTitle>
                 <CardDescription>
-                  Inspect metadata, parsed JSON structure, or the original XML
-                  payload.
+                  {hasStructuredData && hasXml
+                    ? "Inspect metadata, parsed JSON structure, or the original XML payload."
+                    : hasStructuredData
+                      ? "Inspect metadata or the parsed JSON structure."
+                      : hasXml
+                        ? "Inspect metadata or the original XML payload."
+                        : "Inspect document metadata."}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="metadata">
-                  <TabsList className="grid w-full grid-cols-3 mb-3">
-                    <TabsTrigger value="metadata">Metadata</TabsTrigger>
-                    <TabsTrigger value="json" disabled={!hasStructuredData}>
-                      JSON
+                  <TabsList className="flex w-full gap-2 mb-3">
+                    <TabsTrigger value="metadata" className="flex-1">
+                      Metadata
                     </TabsTrigger>
-                    <TabsTrigger value="xml">XML</TabsTrigger>
+                    {hasStructuredData && (
+                      <TabsTrigger value="json" className="flex-1">
+                        JSON
+                      </TabsTrigger>
+                    )}
+                    {hasXml && (
+                      <TabsTrigger value="xml" className="flex-1">
+                        XML
+                      </TabsTrigger>
+                    )}
                   </TabsList>
                   <TabsContent value="metadata">
                     <div className="grid grid-cols-1 gap-3 text-xs md:text-sm">
@@ -1062,8 +1079,8 @@ export default function TransmittedDocumentDetailPage() {
                       )}
                     </div>
                   </TabsContent>
-                  <TabsContent value="json">
-                    {hasStructuredData && (
+                  {hasStructuredData && (
+                    <TabsContent value="json">
                       <div className="space-y-2">
                         <div className="h-[320px] overflow-auto w-full rounded-md border bg-card">
                           <SyntaxHighlighter
@@ -1087,31 +1104,33 @@ export default function TransmittedDocumentDetailPage() {
                           Copy JSON
                         </Button>
                       </div>
-                    )}
-                  </TabsContent>
-                  <TabsContent value="xml">
-                    <div className="space-y-2">
-                      <div className="h-[320px] overflow-auto w-full rounded-md border bg-card">
-                        <SyntaxHighlighter
-                          code={doc.xml ?? ""}
-                          language="xml"
-                          className="p-4 h-full min-w-full"
-                        />
+                    </TabsContent>
+                  )}
+                  {hasXml && (
+                    <TabsContent value="xml">
+                      <div className="space-y-2">
+                        <div className="h-[320px] overflow-auto w-full rounded-md border bg-card">
+                          <SyntaxHighlighter
+                            code={doc.xml ?? ""}
+                            language="xml"
+                            className="p-4 h-full min-w-full"
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            navigator.clipboard.writeText(doc.xml ?? "");
+                            toast.success("XML copied to clipboard");
+                          }}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy XML
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => {
-                          navigator.clipboard.writeText(doc.xml ?? "");
-                          toast.success("XML copied to clipboard");
-                        }}
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy XML
-                      </Button>
-                    </div>
-                  </TabsContent>
+                    </TabsContent>
+                  )}
                 </Tabs>
               </CardContent>
             </Card>

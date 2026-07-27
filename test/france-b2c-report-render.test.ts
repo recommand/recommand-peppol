@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
-  buildFranceB2cReportTemplateData,
+  buildFranceB2CReportTemplateData,
   isRenderableDocumentType,
 } from "../utils/document-renderer";
 import type { PublicTransmittedDocument } from "../data/transmitted-documents";
@@ -9,15 +9,15 @@ import type { ParsedDocument } from "../utils/document-filename";
 import { FRANCE_B2C_REPORT_TEMPLATE } from "../templates/france-b2c-report";
 import { REPORTING_DOCUMENT_TYPES } from "../utils/document-types";
 import {
-  frenchB2cReportSchema,
-  getFrenchB2cReportDocumentTypeInfo,
+  frenchB2CReportSchema,
+  getFrenchB2CReportDocumentTypeInfo,
 } from "../utils/parsing/b2c-reporting/france";
 
 function documentFor(report: unknown): PublicTransmittedDocument {
-  const parsed = frenchB2cReportSchema.parse(report);
+  const parsed = frenchB2CReportSchema.parse(report);
   return {
     id: "doc_report",
-    type: getFrenchB2cReportDocumentTypeInfo(parsed.type).type,
+    type: getFrenchB2CReportDocumentTypeInfo(parsed.type).type,
     parsed,
   } as unknown as PublicTransmittedDocument;
 }
@@ -53,12 +53,12 @@ describe("French B2C report rendering", () => {
   });
 
   it("uses the document type the report was filed as", () => {
-    expect(salesDocument.type).toBe("frenchB2cSalesReport");
-    expect(paymentsDocument.type).toBe("frenchB2cPaymentReport");
+    expect(salesDocument.type).toBe("frenchB2CSalesReport");
+    expect(paymentsDocument.type).toBe("frenchB2CPaymentReport");
   });
 
   it("lays out a sales report with its totals and VAT breakdown", () => {
-    const data = buildFranceB2cReportTemplateData(salesDocument);
+    const data = buildFranceB2CReportTemplateData(salesDocument);
 
     expect(data).toMatchObject({
       reference: "SALES-2026-07-01-GOODS",
@@ -95,7 +95,7 @@ describe("French B2C report rendering", () => {
   });
 
   it("lays out a payment report as received amounts in EUR", () => {
-    const data = buildFranceB2cReportTemplateData(paymentsDocument);
+    const data = buildFranceB2CReportTemplateData(paymentsDocument);
 
     expect(data).toMatchObject({
       reference: "PAYMENTS-2026-07-01",
@@ -118,7 +118,7 @@ describe("French B2C report rendering", () => {
   });
 
   it("marks a cancellation so the preview cannot be mistaken for a filing", () => {
-    const data = buildFranceB2cReportTemplateData(
+    const data = buildFranceB2CReportTemplateData(
       documentFor({
         reference: "SALES-2026-07-01-CANCEL",
         action: "cancel",
@@ -142,12 +142,12 @@ describe("French B2C report rendering", () => {
 
   it("only uses placeholders the template data provides", () => {
     // The template is an untyped string, so a typo would silently render a blank.
-    const data = buildFranceB2cReportTemplateData(salesDocument);
+    const data = buildFranceB2CReportTemplateData(salesDocument);
     const available = new Set([
       ...Object.keys(data),
       ...Object.keys(data.salesVatBreakdown[0] ?? {}),
       ...Object.keys(
-        buildFranceB2cReportTemplateData(paymentsDocument)
+        buildFranceB2CReportTemplateData(paymentsDocument)
           .paymentVatBreakdown[0] ?? {}
       ),
     ]);
@@ -183,9 +183,9 @@ describe("French B2C report rendering", () => {
 
   it("refuses to render a report row with no parsed data", () => {
     expect(() =>
-      buildFranceB2cReportTemplateData({
+      buildFranceB2CReportTemplateData({
         id: "doc_report",
-        type: "frenchB2cReport",
+        type: "frenchB2CReport",
         parsed: null,
       } as unknown as PublicTransmittedDocument)
     ).toThrow("French B2C report document missing parsed data");

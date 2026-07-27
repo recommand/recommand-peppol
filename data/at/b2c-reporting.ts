@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { fetchArratech } from "@peppol/data/at/client";
-import type { FrenchB2cReport } from "@peppol/utils/parsing/b2c-reporting/france";
+import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
 
 type FrenchDeclarant = {
   siren: string;
@@ -67,8 +67,8 @@ async function getReportingErrorMessage(response: Response): Promise<string> {
   }
 }
 
-export function toArratechB2cFlow(
-  input: FrenchB2cReport,
+export function toArratechB2CFlow(
+  input: FrenchB2CReport,
   declarant: FrenchDeclarant
 ) {
   const action = arratechActionByPublicAction[input.action];
@@ -111,19 +111,19 @@ export function toArratechB2cFlow(
   };
 }
 
-export async function submitArratechB2cReport({
+export async function submitArratechB2CReport({
   input,
   declarant,
   useTestNetwork,
 }: {
-  input: FrenchB2cReport;
+  input: FrenchB2CReport;
   declarant: FrenchDeclarant;
   useTestNetwork: boolean;
 }): Promise<{ flowId: string }> {
   const response = await fetchArratech("/api/reporting/flows", {
     useTestNetwork,
     method: "POST",
-    body: JSON.stringify(toArratechB2cFlow(input, declarant)),
+    body: JSON.stringify(toArratechB2CFlow(input, declarant)),
     headers: {
       "Content-Type": "application/json",
     },

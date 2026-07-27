@@ -41,7 +41,10 @@ import type { Label } from "@peppol/types/label";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { ExportDocumentsDialog } from "@peppol/components/export-documents-dialog";
-import type { SupportedDocumentType } from "@peppol/utils/document-types";
+import {
+  isReportingDocumentType,
+  type SupportedDocumentType,
+} from "@peppol/utils/document-types";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
@@ -862,6 +865,7 @@ export default function Page() {
         const sentOverPeppol = document.sentOverPeppol;
         const sentOverEmail = document.sentOverEmail;
         const emailRecipients = document.emailRecipients;
+        const isReporting = isReportingDocumentType(documentType);
 
         // Check if document type is recognized and has parsed data
         const isRecognizedType = ["invoice", "creditNote", "selfBillingInvoice", "selfBillingCreditNote"].includes(documentType);
@@ -882,6 +886,7 @@ export default function Page() {
                     sentOverPeppol={sentOverPeppol}
                     sentOverEmail={sentOverEmail}
                     emailRecipients={emailRecipients || undefined}
+                    isReporting={isReporting}
                   />
                 </div>
               </div>
@@ -897,6 +902,7 @@ export default function Page() {
               sentOverPeppol={sentOverPeppol}
               sentOverEmail={sentOverEmail}
               emailRecipients={emailRecipients || undefined}
+              isReporting={isReporting}
             />
           </div>
         );
@@ -1169,8 +1175,8 @@ export default function Page() {
         { label: "Self Billing Credit Note", value: "selfBillingCreditNote" },
         { label: "Message Level Response", value: "messageLevelResponse" },
         { label: "French Invoicing CDAR", value: "frenchInvoicingCdar" },
-        { label: "French B2C Sales Report", value: "frenchB2cSalesReport" },
-        { label: "French B2C Payment Report", value: "frenchB2cPaymentReport" },
+        { label: "French B2C Sales Report", value: "frenchB2CSalesReport" },
+        { label: "French B2C Payment Report", value: "frenchB2CPaymentReport" },
         { label: "Unknown", value: "unknown" },
       ],
     },

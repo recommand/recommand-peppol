@@ -8,7 +8,7 @@ import {
 import type { Company } from "../data/companies";
 import { FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO } from "../utils/document-types";
 import { INVOICE_DOCUMENT_TYPE_INFO } from "../utils/document-types";
-import { frenchB2cReportSchema } from "../utils/parsing/b2c-reporting/france";
+import { frenchB2CReportSchema } from "../utils/parsing/b2c-reporting/france";
 
 const company = {
   id: "cmp_1",
@@ -25,7 +25,7 @@ const storage = {
   originalPayloadContainerFormat: "none",
 } as const;
 
-const report = frenchB2cReportSchema.parse({
+const report = frenchB2CReportSchema.parse({
   reference: "SALES-2026-07-01-GOODS",
   type: "sales",
   date: "2026-07-01",
@@ -44,7 +44,7 @@ const reportingDocument: OutgoingDocumentPayload = {
   docTypeId: FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO.docTypeId,
   processId: FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO.processId,
   countryC1: "FR",
-  type: "frenchB2cSalesReport",
+  type: "frenchB2CSalesReport",
   parsed: report,
   xml: null,
 };
@@ -92,7 +92,7 @@ describe("outgoing document recording", () => {
 
     expect(row).toMatchObject({
       direction: "outgoing",
-      type: "frenchB2cSalesReport",
+      type: "frenchB2CSalesReport",
       receiverId: null,
       xml: null,
       xmlLocation: "none",

@@ -6,8 +6,8 @@ export type TransactionDocumentType = "invoiceResponse" | "messageLevelResponse"
 // Documents that are filed with a tax administration instead of being exchanged
 // over Peppol. They have no XML representation and no Peppol recipient.
 export const REPORTING_DOCUMENT_TYPES = [
-    "frenchB2cSalesReport",
-    "frenchB2cPaymentReport",
+    "frenchB2CSalesReport",
+    "frenchB2CPaymentReport",
 ] as const;
 
 export type ReportingDocumentType = (typeof REPORTING_DOCUMENT_TYPES)[number];
@@ -121,14 +121,14 @@ export type ReportingDocumentTypeInfo = DocumentTypeInfo & {
 };
 
 export const FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO: ReportingDocumentTypeInfo = {
-    type: "frenchB2cSalesReport",
+    type: "frenchB2CSalesReport",
     title: "French B2C Sales Report",
     docTypeId: "urn:recommand:reporting:france:b2c:sales:1.0",
     processId: "urn:recommand:reporting:france:b2c"
 };
 
 export const FRANCE_B2C_PAYMENT_REPORT_DOCUMENT_TYPE_INFO: ReportingDocumentTypeInfo = {
-    type: "frenchB2cPaymentReport",
+    type: "frenchB2CPaymentReport",
     title: "French B2C Payment Report",
     docTypeId: "urn:recommand:reporting:france:b2c:payments:1.0",
     processId: "urn:recommand:reporting:france:b2c"
