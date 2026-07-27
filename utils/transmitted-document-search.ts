@@ -1,5 +1,8 @@
 import type { ParsedDocument } from "@peppol/utils/document-filename";
-import type { SupportedDocumentType } from "@peppol/utils/document-types";
+import {
+  isReportingDocumentType,
+  type SupportedDocumentType,
+} from "@peppol/utils/document-types";
 
 export type TransmittedDocumentSearchFields = {
   senderName: string | null;
@@ -13,6 +16,7 @@ type SearchableParsedDocument = ParsedDocument & {
   buyer?: { name?: string | null } | null;
   invoiceNumber?: string | null;
   creditNoteNumber?: string | null;
+  reference?: string | null;
 };
 
 function normalizeSearchValue(value: string | null | undefined): string | null {
@@ -69,7 +73,9 @@ export function getTransmittedDocumentSearchFields({
         ? parsed?.creditNoteNumber
         : type === "frenchInvoicingCdar"
           ? (parsed as { invoiceId?: string | null } | null | undefined)?.invoiceId
-          : null;
+          : isReportingDocumentType(type)
+            ? parsed?.reference
+            : null;
 
   const normalizedSenderName = normalizeSearchValue(senderName);
   const normalizedReceiverName = normalizeSearchValue(receiverName);

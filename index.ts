@@ -4,7 +4,7 @@ import { Logger } from "@recommand/lib/logger";
 import subscriptionServer from "./api/subscription";
 import billingProfileServer from "./api/billing-profile";
 import billingServer from "./api/billing";
-import b2cReportingServer from "./api/b2c-reporting";
+import reportingServer from "./api/reporting";
 import companiesServer from "./api/companies";
 import labelsServer from "./api/labels";
 import sendDocumentServer from "./api/send-document";
@@ -209,8 +209,8 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, labelsServer);
 
   server.route(prefix, billingProfileServer); 
-  server.route(prefix, billingServer); 
-  server.route(prefix, b2cReportingServer);
+  server.route(prefix, billingServer);
+  server.route(prefix, reportingServer);
   server.route(prefix, subscriptionServer);
   server.route(prefix, teamsServer);
 }

@@ -2,6 +2,11 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zCurrencies } from "@peppol/utils/currencies";
 import { decimalSchema } from "@peppol/utils/parsing/invoice/schemas";
+import {
+  FRANCE_B2C_PAYMENT_REPORT_DOCUMENT_TYPE_INFO,
+  FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO,
+  type ReportingDocumentTypeInfo,
+} from "@peppol/utils/document-types";
 
 const salesCurrencySchema = zCurrencies.default("EUR").openapi({
   example: "EUR",
@@ -80,7 +85,7 @@ const frenchB2cSalesReportSchema = z
     category: z.enum(["goods", "services"]).openapi({
       example: "goods",
       description:
-        "Whether this daily total covers taxable goods or taxable services. Use a separate report when both were sold on the same day. These are the two categories currently supported by this API; other French sales categories are not yet supported.",
+        "Whether this daily total covers taxable goods or taxable services. Use a separate report when both were sold on the same day. These are the two categories currently supported by this API.",
     }),
     currency: salesCurrencySchema,
     taxExclusiveAmount: decimalSchema.openapi({
@@ -142,7 +147,19 @@ export const frenchB2cReportSchema = z
     ref: "FrenchB2CReport",
     title: "French B2C reporting request",
     description:
-      "Choose a sales report for normal daily B2C transaction totals. Choose a payment report only as an additional report for service payments using cash-basis VAT. Recommand converts the request to the French regulatory format and submits it through its approved reporting partner.",
+      "Choose a sales report for normal daily B2C transaction totals. Choose a payment report only as an additional report for service payments using cash-basis VAT.",
   });
 
 export type FrenchB2cReport = z.infer<typeof frenchB2cReportSchema>;
+
+/**
+ * The document type a report is filed as. Sales and payment reports are distinct
+ * filings, so each is recorded under its own document type.
+ */
+export function getFrenchB2cReportDocumentTypeInfo(
+  reportType: FrenchB2cReport["type"]
+): ReportingDocumentTypeInfo {
+  return reportType === "sales"
+    ? FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO
+    : FRANCE_B2C_PAYMENT_REPORT_DOCUMENT_TYPE_INFO;
+}

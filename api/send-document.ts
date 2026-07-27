@@ -11,13 +11,8 @@ import {
   getAccessPointProvider,
   type SendAs4Response,
 } from "@peppol/data/access-point-providers";
-import { db } from "@recommand/db";
-import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
-import {
-  parsedHasAttachments,
-  uploadDocumentOriginalPayload,
-  type OriginalPayloadContainerFormat,
-} from "@peppol/data/offload/storage";
+import { type OriginalPayloadContainerFormat } from "@peppol/data/offload/storage";
+import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
 import {
   requireIntegrationSupportedCompanyAccess,
   requireValidSubscription,
@@ -49,9 +44,7 @@ import {
   sendSelfBillingCreditNoteSchema,
   type SelfBillingCreditNote,
 } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
-import { sendOutgoingDocumentNotifications } from "@peppol/data/send-document-notifications";
 import { z } from "zod";
-import { publishEvent } from "@core/data/rules/events";
 import type {
   AuthenticatedUserContext,
   AuthenticatedTeamContext,
@@ -85,7 +78,6 @@ import { generateAndAttachPdf } from "@peppol/utils/pdf-attachment-helper";
 import {
   type ParsedDocument as FilenameParsedDocument,
 } from "@peppol/utils/document-filename";
-import { getTransmittedDocumentSearchFields } from "@peppol/utils/transmitted-document-search";
 import {
   resolveDocumentXmlHandler,
 } from "@peppol/utils/parsing/document-handlers";
@@ -960,170 +952,31 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       );
     }
 
-    // Create a new transmittedDocument
-    const transmittedDocumentSearchFields = getTransmittedDocumentSearchFields({
+    const transmittedDocument = await recordOutgoingDocument({
+      c,
       id: transmittedDocumentId,
-      senderId: senderAddress,
-      receiverId: recipientAddress,
-      docTypeId: doctypeId,
-      processId,
-      countryC1,
-      type,
-      parsedDocument,
-    });
-    const transmittedDocumentCreatedAt = new Date();
-    let s3KeyPrefix: string | null = null;
-    let originalPayloadLocation: "none" | "s3" = "none";
-    let originalPayloadContainerFormat: OriginalPayloadContainerFormat = "none";
-
-    if (originalOutgoingPayload) {
-      try {
-        s3KeyPrefix = await uploadDocumentOriginalPayload(
-          {
-            id: transmittedDocumentId,
-            teamId: c.var.team.id,
-            companyId: company.id,
-            createdAt: transmittedDocumentCreatedAt,
-          },
-          originalOutgoingPayload.content,
-          originalOutgoingPayload.containerFormat
-        );
-        originalPayloadLocation = "s3";
-        originalPayloadContainerFormat = originalOutgoingPayload.containerFormat;
-      } catch (error) {
-        console.error("Failed to upload original payload:", error);
-        sendSystemAlert(
-          "Original Payload Upload Failed",
-          `Failed to upload original payload. Error: \`\`\`\n${error}\n\`\`\``,
-          "error"
-        );
-      }
-    }
-
-    const transmittedDocument = await db
-      .insert(transmittedDocuments)
-      .values({
-        id: transmittedDocumentId,
-        teamId: c.var.team.id,
-        companyId: company.id,
-        createdAt: transmittedDocumentCreatedAt,
-        direction: "outgoing",
+      teamId: c.var.team.id,
+      company,
+      isPlayground,
+      inputFormat,
+      document: {
         senderId: senderAddress,
         receiverId: recipientAddress,
         docTypeId: doctypeId,
         processId,
-        countryC1: countryC1,
-        accessPointProvider: company.accessPointProvider,
-        smpProvider: company.smpProvider,
-        xml: xmlDocument,
-        xmlLocation: xmlDocument != null ? "db" : "none",
-        attachmentsLocation: parsedHasAttachments(parsedDocument) ? "db" : "none",
-        originalPayloadLocation,
-        originalPayloadContainerFormat,
-        s3KeyPrefix,
-
-        sentOverPeppol: sentPeppol,
-        sentOverEmail: sentEmailRecipients.length > 0,
-        emailRecipients: sentEmailRecipients,
-
+        countryC1,
         type,
         parsed: parsedDocument,
+        xml: xmlDocument,
         validation,
-        ...transmittedDocumentSearchFields,
-
-        peppolMessageId: as4Response?.peppolMessageId ?? null,
-        peppolConversationId: as4Response?.peppolConversationId ?? null,
-        receivedPeppolSignalMessage:
-          as4Response?.receivedPeppolSignalMessage ?? null,
-        envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
-        apTransactionId: as4Response?.apTransactionId ?? null,
-      })
-    .returning({ id: transmittedDocuments.id })
-    .then((rows) => rows[0]);
-
-    await publishEvent("peppol.document.sent.v1", {
-      teamId: c.var.team.id,
-      aggregateType: "peppol.document",
-      aggregateId: transmittedDocument.id,
-      idempotencyKey: `peppol.document.sent:${transmittedDocument.id}`,
-      payload: {
-        companyId: company.id,
-        docType: type,
-        senderId: senderAddress,
-        receiverId: recipientAddress,
-        peppolMessageId: as4Response?.peppolMessageId ?? null,
-        peppolConversationId: as4Response?.peppolConversationId ?? null,
-        envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
-        countryC1,
       },
-    });
-
-    // Create a new transferEvent for billing
-    if (!isPlayground) {
-      const te: (typeof transferEvents.$inferInsert)[] = [];
-      if (sentPeppol) {
-        te.push({
-          teamId: c.var.team.id,
-          companyId: company.id,
-          direction: "outgoing",
-          type: "peppol",
-          transmittedDocumentId: transmittedDocument.id,
-        });
-      }
-      for (const _ of sentEmailRecipients) {
-        te.push({
-          teamId: c.var.team.id,
-          companyId: company.id,
-          direction: "outgoing",
-          type: "email",
-          transmittedDocumentId: transmittedDocument.id,
-        });
-      }
-      await db.insert(transferEvents).values(te);
-    }
-
-    // Send notification emails to configured addresses
-    try {
-      await sendOutgoingDocumentNotifications({
-        transmittedDocumentId: transmittedDocument.id,
-        companyId: company.id,
-        companyName: company.name,
-        type,
-        parsedDocument,
-        xmlDocument,
-        isPlayground,
-      });
-    } catch (error) {
-      console.error("Failed to send outgoing document notifications:", error);
-      sendSystemAlert(
-        "Document Notification Sending Failed",
-        `Failed to send outgoing document notification for document ${transmittedDocument.id}.`,
-        "error"
-      );
-    }
-
-    await audit(c, {
-      action: "create",
-      subsystem: "peppol.documents",
-      objectType: "peppol.document",
-      objectId: transmittedDocument.id,
-      teamId: c.var.team.id,
-      after: {
-        companyId: company.id,
-        direction: "outgoing",
-        type,
-        sentOverPeppol: sentPeppol,
-        sentOverEmail: sentEmailRecipients.length > 0,
+      delivery: {
+        kind: "peppol",
+        sentPeppol,
+        emailRecipients: sentEmailRecipients,
+        as4Response,
       },
-      metadata: {
-        inputFormat,
-        senderId: senderAddress,
-        receiverId: recipientAddress,
-        docTypeId: doctypeId,
-        processId,
-        peppolMessageId: as4Response?.peppolMessageId ?? null,
-        envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
-      },
+      originalPayload: originalOutgoingPayload,
     });
 
     return c.json(

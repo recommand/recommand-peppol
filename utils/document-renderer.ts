@@ -11,6 +11,12 @@ import type {
   FranceCdarStatusCode,
 } from "@peppol/utils/parsing/france-cdar/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
+import type { FrenchB2cReport } from "@peppol/utils/parsing/b2c-reporting/france";
+import {
+  isReportingDocumentType,
+  type DocumentType,
+} from "@peppol/utils/document-types";
+import { FRANCE_B2C_REPORT_TEMPLATE } from "@peppol/templates/france-b2c-report";
 import { Decimal } from "decimal.js";
 
 type ParsedBillingDocument =
@@ -150,6 +156,43 @@ type FranceCdarTemplateData = {
   isInfo: boolean;
 };
 
+type FranceB2cReportVatSubtotal = {
+  percentage: string;
+  taxableAmount?: string;
+  taxAmount?: string;
+  amount?: string;
+  currency?: string;
+};
+
+type FranceB2cReportTemplateData = {
+  documentId: string;
+  documentType: string;
+  documentTypeLabel: string;
+  reference: string;
+  reportTypeLabel: string;
+  dateLabel: string;
+  date: string;
+  actionLabel: string;
+  isSubmission: boolean;
+  isCorrection: boolean;
+  isCancellation: boolean;
+  isSales: boolean;
+  isPayments: boolean;
+  currency: string;
+  categoryLabel?: string;
+  transactionCount?: number;
+  taxExclusiveAmount?: string;
+  taxAmount?: string;
+  salesVatBreakdown: FranceB2cReportVatSubtotal[];
+  paymentVatBreakdown: FranceB2cReportVatSubtotal[];
+};
+
+const FRANCE_B2C_REPORT_ACTION_LABELS: Record<FrenchB2cReport["action"], string> = {
+  submit: "Submission",
+  correct: "Correction",
+  cancel: "Cancellation",
+};
+
 const FRANCE_CDAR_STATUS_LABELS: Record<FranceCdarStatusCode, string> = {
   "200": "Submitted",
   "201": "Issued",
@@ -223,6 +266,10 @@ function getDocumentTypeLabel(type: PublicTransmittedDocument["type"]): string {
       return "Message Level Response";
     case "frenchInvoicingCdar":
       return "French Invoicing CDAR";
+    case "frenchB2cSalesReport":
+      return "French B2C sales report";
+    case "frenchB2cPaymentReport":
+      return "French B2C payment report";
     default:
       return "Document";
   }
@@ -504,9 +551,57 @@ function buildFranceCdarTemplateData(
   };
 }
 
+export function buildFranceB2cReportTemplateData(
+  document: PublicTransmittedDocument,
+): FranceB2cReportTemplateData {
+  const parsed = document.parsed as FrenchB2cReport;
+
+  if (!parsed) {
+    throw new Error("French B2C report document missing parsed data");
+  }
+
+  const isSales = parsed.type === "sales";
+  const currency = isSales ? parsed.currency : "EUR";
+
+  return {
+    documentId: document.id,
+    documentType: document.type,
+    documentTypeLabel: getDocumentTypeLabel(document.type),
+    reference: parsed.reference,
+    reportTypeLabel: isSales ? "Daily sales" : "Daily payments received",
+    dateLabel: isSales ? "Sales date" : "Payment date",
+    date: parsed.date,
+    actionLabel: FRANCE_B2C_REPORT_ACTION_LABELS[parsed.action],
+    isSubmission: parsed.action === "submit",
+    isCorrection: parsed.action === "correct",
+    isCancellation: parsed.action === "cancel",
+    isSales,
+    isPayments: !isSales,
+    currency,
+    categoryLabel: isSales
+      ? parsed.category === "goods"
+        ? "Taxable goods"
+        : "Taxable services"
+      : undefined,
+    transactionCount: isSales ? parsed.transactionCount : undefined,
+    taxExclusiveAmount: isSales ? parsed.taxExclusiveAmount : undefined,
+    taxAmount: isSales ? parsed.taxAmount : undefined,
+    // The template renders one table per report type, so each breakdown is only
+    // populated for the type it belongs to.
+    salesVatBreakdown: isSales
+      ? parsed.vatBreakdown.map((subtotal) => ({ ...subtotal, currency }))
+      : [],
+    paymentVatBreakdown: isSales ? [] : parsed.vatBreakdown,
+  };
+}
+
 async function callTailwindPdfGenerator(
   templateHtml: string,
-  data: BillingTemplateData | MessageLevelResponseTemplateData | FranceCdarTemplateData,
+  data:
+    | BillingTemplateData
+    | MessageLevelResponseTemplateData
+    | FranceCdarTemplateData
+    | FranceB2cReportTemplateData,
   options: { preview: boolean; pdfa?: boolean },
 ): Promise<string | Buffer> {
   const body = JSON.stringify({ html: templateHtml, data });
@@ -542,11 +637,19 @@ async function callTailwindPdfGenerator(
   return Buffer.from(arrayBuffer);
 }
 
+/**
+ * Whether a document has a layout to render to HTML or PDF. Callers that render
+ * opportunistically (notification attachments, exports) should check this first.
+ */
+export function isRenderableDocumentType(type: DocumentType): boolean {
+  return type !== "unknown";
+}
+
 export async function renderDocumentHtml(
   document: PublicTransmittedDocument,
 ): Promise<string> {
-  if (document.type === "unknown") {
-    throw new Error("Unknown document type");
+  if (!isRenderableDocumentType(document.type)) {
+    throw new Error(`Document type ${document.type} cannot be rendered`);
   }
   if (document.type === "messageLevelResponse") {
     const data = buildMessageLevelResponseTemplateData(document);
@@ -561,6 +664,15 @@ export async function renderDocumentHtml(
     const data = buildFranceCdarTemplateData(document);
     const html = await callTailwindPdfGenerator(
       FRANCE_CDAR_TEMPLATE,
+      data,
+      { preview: true },
+    );
+    return html.toString();
+  }
+  if (isReportingDocumentType(document.type)) {
+    const data = buildFranceB2cReportTemplateData(document);
+    const html = await callTailwindPdfGenerator(
+      FRANCE_B2C_REPORT_TEMPLATE,
       data,
       { preview: true },
     );
@@ -580,8 +692,8 @@ export async function renderDocumentPdf(
   document: PublicTransmittedDocument,
   options: { pdfa?: boolean } = {},
 ): Promise<Buffer> {
-  if (document.type === "unknown") {
-    throw new Error("Unknown document type");
+  if (!isRenderableDocumentType(document.type)) {
+    throw new Error(`Document type ${document.type} cannot be rendered`);
   }
   if (document.type === "messageLevelResponse") {
     const data = buildMessageLevelResponseTemplateData(document);
@@ -596,6 +708,15 @@ export async function renderDocumentPdf(
     const data = buildFranceCdarTemplateData(document);
     const pdf = await callTailwindPdfGenerator(
       FRANCE_CDAR_TEMPLATE,
+      data,
+      { preview: false, pdfa: options.pdfa },
+    );
+    return pdf as Buffer;
+  }
+  if (isReportingDocumentType(document.type)) {
+    const data = buildFranceB2cReportTemplateData(document);
+    const pdf = await callTailwindPdfGenerator(
+      FRANCE_B2C_REPORT_TEMPLATE,
       data,
       { preview: false, pdfa: options.pdfa },
     );

@@ -4,7 +4,10 @@ import {
   DOCUMENT_XML_HANDLERS,
   type DocumentXmlHandler,
 } from "../utils/parsing/document-handlers";
-import type { SupportedDocumentType } from "../utils/document-types";
+import type {
+  ReportingDocumentType,
+  SupportedDocumentType,
+} from "../utils/document-types";
 import type { ParsedDocument } from "../utils/document-filename";
 import {
   FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
@@ -39,7 +42,12 @@ const schemasByType = {
   selfBillingCreditNote: selfBillingCreditNoteSchema,
   messageLevelResponse: messageLevelResponseSchema,
   frenchInvoicingCdar: franceCdarSchema,
-} satisfies Record<Exclude<SupportedDocumentType, "unknown">, z.ZodTypeAny>;
+  // Reporting types are filed as data and have no XML representation, so they are
+  // deliberately outside this roundtrip.
+} satisfies Record<
+  Exclude<SupportedDocumentType, "unknown" | ReportingDocumentType>,
+  z.ZodTypeAny
+>;
 
 type SchemaDocumentType = keyof typeof schemasByType;
 type BillingDocument = Invoice | CreditNote | SelfBillingInvoice | SelfBillingCreditNote;

@@ -1,3 +1,5 @@
+import { isReportingDocumentType } from "@peppol/utils/document-types";
+
 export function incrementDocumentNumber(input: string): string | null {
   const raw = typeof input === "string" ? input : "";
   const value = raw.trim();
@@ -53,6 +55,8 @@ export function extractDocumentNumberForType(
     | "selfBillingCreditNote"
     | "messageLevelResponse"
     | "frenchInvoicingCdar"
+    | "frenchB2cSalesReport"
+    | "frenchB2cPaymentReport"
     | "unknown"
 ): string | null {
   const anyParsed = parsed as any;
@@ -68,6 +72,10 @@ export function extractDocumentNumberForType(
   }
   if (type === "frenchInvoicingCdar") {
     const n = anyParsed?.invoiceId;
+    return typeof n === "string" && n.trim() ? n.trim() : null;
+  }
+  if (isReportingDocumentType(type)) {
+    const n = anyParsed?.reference;
     return typeof n === "string" && n.trim() ? n.trim() : null;
   }
   return null;

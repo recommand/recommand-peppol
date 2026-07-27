@@ -20,6 +20,10 @@ export function getDocumentTypeLabel(type: DocumentType): string {
       return "Message Level Response";
     case "frenchInvoicingCdar":
       return "French Invoicing CDAR";
+    case "frenchB2cSalesReport":
+      return "French B2C Sales Report";
+    case "frenchB2cPaymentReport":
+      return "French B2C Payment Report";
     default:
       return "Document";
   }

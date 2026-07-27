@@ -13,8 +13,11 @@ import type { DocumentType } from "@peppol/utils/document-types";
 import {
   buildIncomingDocumentNotificationAttachmentParts,
   buildOutgoingDocumentNotificationAttachmentParts,
-  extractDocumentDetails,
 } from "@peppol/data/email/document-notification-props";
+import {
+  extractDocumentDetails,
+  UNNAMED_PARTY,
+} from "@peppol/data/email/document-details";
 
 function getDocumentUrl(transmittedDocumentId: string) {
   const baseUrl = (process.env.BASE_URL ?? "https://app.recommand.eu").replace(/\/$/, "");
@@ -99,7 +102,7 @@ export async function sendIncomingDocumentNotifications(options: {
           subject,
           email: DocumentIncomingNotification({
             companyName: options.companyName,
-            senderName: senderName,
+            senderName: senderName ?? UNNAMED_PARTY,
             documentType: documentTypeLabel,
             documentNumber: documentNumber,
             amount: amount,
@@ -208,7 +211,7 @@ export async function sendOutgoingDocumentNotifications(options: {
           subject,
           email: DocumentOutgoingNotification({
             companyName: options.companyName,
-            recipientName: receiverName,
+            recipientName: receiverName ?? UNNAMED_PARTY,
             documentType: documentTypeLabel,
             documentNumber: documentNumber,
             amount: amount,

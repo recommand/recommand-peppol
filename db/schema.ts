@@ -32,6 +32,7 @@ import type {
 import { validationResponse, validationResult } from "@peppol/types/validation";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import type { FranceCdar } from "@peppol/utils/parsing/france-cdar/schemas";
+import type { FrenchB2cReport } from "@peppol/utils/parsing/b2c-reporting/france";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
 
@@ -77,6 +78,8 @@ export const supportedDocumentTypes = z.enum([
   "selfBillingCreditNote",
   "messageLevelResponse",
   "frenchInvoicingCdar",
+  "frenchB2cSalesReport",
+  "frenchB2cPaymentReport",
   "unknown",
 ]);
 export const supportedDocumentTypeEnum = pgEnum(
@@ -92,6 +95,7 @@ export const transferEventDirectionEnum = pgEnum(
 export const transferEventTypeEnum = pgEnum("peppol_transfer_event_type", [
   "peppol",
   "email",
+  "reporting",
 ]);
 
 export const validationResultEnum = pgEnum(
@@ -541,6 +545,7 @@ export const transmittedDocuments = pgTable(
       | SelfBillingCreditNote
       | MessageLevelResponse
       | FranceCdar
+      | FrenchB2cReport
     >(),
     validation: jsonb("validation").$type<z.infer<typeof validationResponse>>(),
 
@@ -561,6 +566,10 @@ export const transmittedDocuments = pgTable(
     // Arratech transaction id), used to correlate provider callbacks/webhooks
     // with this document. Null for providers that don't expose one.
     apTransactionId: text("ap_transaction_id"),
+    // Identifier assigned by an external filing service to a document that was not
+    // exchanged over Peppol (e.g. the reporting partner's flow id for a French B2C
+    // report). Null for documents sent over Peppol or email.
+    externalReferenceId: text("external_reference_id"),
 
     readAt: timestamp("read_at"), // defaults to null, set when the document is read
     createdAt: timestamp("created_at", { withTimezone: true })

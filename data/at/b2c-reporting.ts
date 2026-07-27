@@ -7,6 +7,34 @@ type FrenchDeclarant = {
   name: string;
 };
 
+function getFrenchSiren({
+  enterpriseNumber,
+}: {
+  enterpriseNumber: string | null;
+}): string | null {
+  const normalizedEnterpriseNumber = enterpriseNumber?.replace(/\s/g, "");
+  if (normalizedEnterpriseNumber && /^\d{9}$/.test(normalizedEnterpriseNumber)) {
+    return normalizedEnterpriseNumber;
+  }
+
+  return null;
+}
+
+/**
+ * Builds the declarant block for a French filing from a company. Returns null when
+ * the company has no usable 9-digit SIREN, which the caller must reject.
+ */
+export function buildFrenchDeclarant(company: {
+  name: string;
+  enterpriseNumber: string | null;
+}): FrenchDeclarant | null {
+  const siren = getFrenchSiren(company);
+  if (!siren) {
+    return null;
+  }
+  return { siren, name: company.name };
+}
+
 const arratechFlowResponseSchema = z.object({
   flowId: z.string().min(1),
 });

@@ -1169,6 +1169,8 @@ export default function Page() {
         { label: "Self Billing Credit Note", value: "selfBillingCreditNote" },
         { label: "Message Level Response", value: "messageLevelResponse" },
         { label: "French Invoicing CDAR", value: "frenchInvoicingCdar" },
+        { label: "French B2C Sales Report", value: "frenchB2cSalesReport" },
+        { label: "French B2C Payment Report", value: "frenchB2cPaymentReport" },
         { label: "Unknown", value: "unknown" },
       ],
     },

@@ -3,12 +3,20 @@ import type { FranceCdarBusinessProcess } from "./parsing/france-cdar/schemas";
 
 export type BillingDocumentType = "invoice" | "creditNote" | "selfBillingInvoice" | "selfBillingCreditNote";
 export type TransactionDocumentType = "invoiceResponse" | "messageLevelResponse" | "frenchInvoicingCdar";
+// Documents that are filed with a tax administration instead of being exchanged
+// over Peppol. They have no XML representation and no Peppol recipient.
+export const REPORTING_DOCUMENT_TYPES = [
+    "frenchB2cSalesReport",
+    "frenchB2cPaymentReport",
+] as const;
+
+export type ReportingDocumentType = (typeof REPORTING_DOCUMENT_TYPES)[number];
 export type UnknownDocumentType = "unknown";
-export type DocumentType = BillingDocumentType | TransactionDocumentType | UnknownDocumentType;
-export type SupportedDocumentType = BillingDocumentType | "messageLevelResponse" | "frenchInvoicingCdar" | UnknownDocumentType;
+export type DocumentType = BillingDocumentType | TransactionDocumentType | ReportingDocumentType | UnknownDocumentType;
+export type SupportedDocumentType = BillingDocumentType | "messageLevelResponse" | "frenchInvoicingCdar" | ReportingDocumentType | UnknownDocumentType;
 
 export type DocumentTypeInfo = {
-    type: BillingDocumentType | TransactionDocumentType;
+    type: BillingDocumentType | TransactionDocumentType | ReportingDocumentType;
     title: string;
     docTypeId: string;
     processId: string;
@@ -96,6 +104,41 @@ export function getFranceCdarProcessId(
     return businessProcess === "REGULATED"
         ? FRANCE_CDAR_DOCUMENT_TYPE_INFO.processId
         : FRANCE_CDAR_NON_REGULATED_PROCESS_ID;
+}
+
+// French B2C reporting is filed with the tax administration through our reporting
+// partner, not exchanged over Peppol. The identifiers below are internal markers so
+// the transmitted document row stays queryable; they are deliberately kept out of
+// DOCUMENT_TYPE_PRESETS (they must never be offered as an SMP receiving capability)
+// and out of DOCUMENT_XML_HANDLERS (there is no XML representation).
+//
+// Sales and payment reports are distinct filings: a sales report covers the daily
+// transaction totals, a payment report the amounts received for services under
+// cash-basis VAT. They are separate document types so they can be filtered, billed
+// and matched by rules independently.
+export type ReportingDocumentTypeInfo = DocumentTypeInfo & {
+    type: ReportingDocumentType;
+};
+
+export const FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO: ReportingDocumentTypeInfo = {
+    type: "frenchB2cSalesReport",
+    title: "French B2C Sales Report",
+    docTypeId: "urn:recommand:reporting:france:b2c:sales:1.0",
+    processId: "urn:recommand:reporting:france:b2c"
+};
+
+export const FRANCE_B2C_PAYMENT_REPORT_DOCUMENT_TYPE_INFO: ReportingDocumentTypeInfo = {
+    type: "frenchB2cPaymentReport",
+    title: "French B2C Payment Report",
+    docTypeId: "urn:recommand:reporting:france:b2c:payments:1.0",
+    processId: "urn:recommand:reporting:france:b2c"
+};
+
+// Shown as the counterparty of a French B2C report, which is filed rather than sent.
+export const FRENCH_TAX_ADMINISTRATION_NAME = "French tax administration";
+
+export function isReportingDocumentType(type: string): type is ReportingDocumentType {
+    return (REPORTING_DOCUMENT_TYPES as readonly string[]).includes(type);
 }
 
 export const CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
