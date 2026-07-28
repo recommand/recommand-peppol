@@ -256,6 +256,10 @@ export async function createCompanyVerificationLog({
       companyId,
       companyName: company.name,
       enterpriseNumber: company.enterpriseNumber,
+      address: company.address,
+      postalCode: company.postalCode,
+      city: company.city,
+      country: company.country,
     })
     .returning()
     .then((rows) => rows[0]);

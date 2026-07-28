@@ -319,6 +319,10 @@ export const companyVerificationLog = pgTable(
     lastName: text("last_name"),
     companyName: text("company_name"),
     enterpriseNumber: text("enterprise_number"),
+    address: text("address"),
+    postalCode: text("postal_code"),
+    city: text("city"),
+    country: validCountryCodes("country"),
     verificationProofReference: text("verification_proof_reference"),
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at", { withTimezone: true })
