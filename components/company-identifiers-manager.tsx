@@ -229,7 +229,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                         </div>
 
                         <p className="text-xs text-muted-foreground mt-2">
-                            Common schemes: 0208 (Belgium), 0106 (Netherlands), 0002 (France)
+                            Common schemes: 0208 (Belgium), 0106 (Netherlands), 0225 (France)
                         </p>
                         <div className="flex gap-2 mt-4 justify-end">
                             <AsyncButton onClick={handleAdd} size="sm" disabled={isSubmitting}>
