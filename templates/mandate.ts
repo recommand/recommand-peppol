@@ -65,21 +65,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
               <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">
                 The platform
               </p>
-              <p class="font-medium text-slate-900">{{name}}</p>
-              <p class="text-slate-700 mt-1">{{role}}</p>
-              {{#registration}}
-                <dl class="mt-3 space-y-1 text-slate-700">
-                  <div class="flex gap-2">
-                    <dt class="text-slate-500">Registration</dt>
-                    <dd class="font-mono">{{registration}}</dd>
-                  </div>
-                </dl>
-              {{/registration}}
-              {{#operator}}
-                <p class="mt-3 text-xs text-slate-500">
-                  Mandate concluded through {{name}}, {{role}}.
-                </p>
-              {{/operator}}
+              <p class="text-slate-700">{{description}}</p>
             </div>
           {{/platform}}
         </div>
@@ -154,18 +140,20 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
                 <dd>{{signedAt}}</dd>
               </div>
             </dl>
-            <div class="mt-4 rounded-md border border-slate-200 px-4 py-3 mandate-section">
-              <p class="text-xs font-semibold tracking-wide uppercase text-slate-500">
-                Electronic signature
-              </p>
-              <p class="mt-1 text-sm text-slate-700">
-                Signed electronically after the identity of the signatory was verified by
-                {{proofMethod}}.
-              </p>
-              <p class="mt-1 text-xs text-slate-500">
-                Proof reference: <span class="font-mono break-all">{{proofReference}}</span>
-              </p>
-            </div>
+            {{#proofReference}}
+              <div class="mt-4 rounded-md border border-slate-200 px-4 py-3 mandate-section">
+                <p class="text-xs font-semibold tracking-wide uppercase text-slate-500">
+                  Electronic signature
+                </p>
+                <p class="mt-1 text-sm text-slate-700">
+                  Signed electronically after the identity of the signatory was verified by
+                  {{proofMethod}}.
+                </p>
+                <p class="mt-1 text-xs text-slate-500">
+                  Proof reference: <span class="font-mono break-all">{{proofReference}}</span>
+                </p>
+              </div>
+            {{/proofReference}}
           </div>
         {{/signatory}}
       </div>

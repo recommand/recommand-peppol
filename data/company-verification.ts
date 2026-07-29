@@ -2,6 +2,7 @@ import { companies, companyVerificationLog } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { getEnterpriseData } from "./cbe-public-search/client";
+import { requiresArratechKycReview } from "./at/kyc";
 import { UserFacingError } from "@peppol/utils/util";
 import { getCompany, verifyCompany, type Company } from "./companies";
 import { getTeamExtension } from "./teams";
@@ -285,10 +286,18 @@ export async function submitIdentityForm(
   log: CompanyVerificationLog,
   company: Company,
   firstName: string,
-  lastName: string
+  lastName: string,
+  mandateAccepted: boolean
 ): Promise<string> {
   if (log.status !== "opened") {
     throw new UserFacingError("This verification has already been submitted.");
+  }
+
+  // Companies filed with Arratech sign a mandate, and their identity check is
+  // what signs it, so it has to be accepted before we hand over to Didit.
+  const mandateRequired = await requiresArratechKycReview(company);
+  if (mandateRequired && !mandateAccepted) {
+    throw new UserFacingError("The mandate has to be signed before the identity check can start.");
   }
 
   let effectiveFirstName = firstName;
@@ -332,6 +341,7 @@ export async function submitIdentityForm(
       firstName: effectiveFirstName,
       lastName: effectiveLastName,
       status: "idVerificationRequested",
+      mandateAcceptedAt: mandateRequired ? new Date() : null,
     })
     .where(eq(companyVerificationLog.id, companyVerificationLogId))
     .returning()

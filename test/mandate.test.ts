@@ -214,17 +214,15 @@ describe("Mandate document", () => {
     expect(data.signatory.signedAt).toBe("2026-07-28 11:30");
   });
 
-  it("presents Arratech as the French PDP for a French company", () => {
+  it("presents Arratech as the French PA for a French company", () => {
     const data = buildMandateTemplateData(mandateInput);
 
     expect(data.frenchTitle).toBe(
       "Mandat de facturation électronique et de e-reporting"
     );
-    expect(data.platform).toMatchObject({
-      name: "Arratech",
-      role: "Plateforme de Dématérialisation Partenaire (PDP)",
-      registration: "3309",
-    });
+    expect(data.platform.description).toBe(
+      "Plateforme agréée (PA) Arratech, immatriculation 3309. Mandate concluded through Recommand, e-invoicing operator."
+    );
   });
 
   it("drops the French regime wording for a company elsewhere", () => {
@@ -235,9 +233,8 @@ describe("Mandate document", () => {
     });
 
     expect(data.frenchTitle).toBeNull();
-    expect(data.platform.registration).toBeNull();
-    expect(data.platform.role).toBe(
-      "Peppol access point and service metadata publisher"
+    expect(data.platform.description).toBe(
+      "Arratech, Peppol access point and service metadata publisher. Mandate concluded through Recommand, e-invoicing operator."
     );
     expect(data.scopeItems.map((item) => item.title)).toEqual([
       "Receiving electronic invoices",
@@ -269,6 +266,28 @@ describe("Mandate document", () => {
     );
   });
 
+  it("names the signatory but carries no proof while unsigned", () => {
+    // The draft the representative reads before Didit has no signature proof yet.
+    const data = buildMandateTemplateData({ ...mandateInput, proofReference: null });
+
+    expect(data.signatory).toMatchObject({
+      fullName: "Jeanne Durand",
+      role: "Gérante",
+      proofReference: null,
+    });
+  });
+
+  it("keeps the electronic signature block out of the unsigned draft", () => {
+    const signedOnly = MANDATE_TEMPLATE.slice(
+      MANDATE_TEMPLATE.indexOf("{{#proofReference}}"),
+      MANDATE_TEMPLATE.indexOf("{{/proofReference}}")
+    );
+
+    // Rendering the block only inside the section is what drops it from the draft.
+    expect(signedOnly).toContain("Electronic signature");
+    expect(MANDATE_TEMPLATE.split("Electronic signature")).toHaveLength(2);
+  });
+
   it("fills every placeholder the template renders", () => {
     const data = buildMandateTemplateData(mandateInput);
     const placeholders = new Set(
@@ -281,7 +300,6 @@ describe("Mandate document", () => {
       ...Object.keys(data.company),
       ...Object.keys(data.company.rows[0]),
       ...Object.keys(data.platform),
-      ...Object.keys(data.platform.operator),
       ...Object.keys(data.scopeItems[0]),
       ...Object.keys(data.electronicAddresses[0]),
       ...Object.keys(data.signatory),

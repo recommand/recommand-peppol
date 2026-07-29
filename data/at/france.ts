@@ -141,12 +141,12 @@ export function resolveFrenchCompanyIdentity(
 
 /**
  * What the mandate of a French company states on top of, or instead of, the
- * wording that holds for any country: Arratech acts as a registered PDP and the
+ * wording that holds for any country: Arratech acts as a registered PA and the
  * company delegates the flows the French regime adds.
  */
 export const FRANCE_MANDATE_COPY = {
   title: "Mandat de facturation électronique et de e-reporting",
-  platformRole: "Plateforme de Dématérialisation Partenaire (PDP)",
+  platformRole: "Plateforme agréée (PA)",
   platformRegistration: "3309",
   receivingDescription:
     "Receiving the electronic invoices, credit notes and lifecycle statuses (CDAR) addressed to the company's electronic addresses, on its behalf.",

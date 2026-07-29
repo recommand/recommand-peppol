@@ -91,7 +91,8 @@ type MandateSignatory = {
   role: string;
   signedAt: string;
   proofMethod: string;
-  proofReference: string;
+  /** Null while the mandate is still the draft the signatory is reading. */
+  proofReference: string | null;
 };
 
 export type MandateTemplateData = {
@@ -100,10 +101,7 @@ export type MandateTemplateData = {
   frenchTitle: string | null;
   company: MandateParty;
   platform: {
-    name: string;
-    role: string;
-    registration: string | null;
-    operator: typeof OPERATOR;
+    description: string;
   };
   scopeItems: MandateScopeItem[];
   electronicAddresses: MandateElectronicAddress[];
@@ -123,7 +121,11 @@ export type MandateInput = {
     role: string;
   };
   signedAt: Date;
-  proofReference: string;
+  /**
+   * The identity verification that signs the mandate. Null renders the draft
+   * shown to the signatory before they hand over to Didit.
+   */
+  proofReference: string | null;
 };
 
 function formatMandateDate(date: Date): string {
@@ -168,6 +170,18 @@ function buildScopeItems(company: Company, isFrance: boolean): MandateScopeItem[
   return scopeItems;
 }
 
+/**
+ * One sentence naming the mandatary and, for France, its PA registration,
+ * followed by the operator the mandate was concluded through.
+ */
+function buildPlatformDescription(isFrance: boolean): string {
+  const platform = isFrance
+    ? `${FRANCE_MANDATE_COPY.platformRole} ${MANDATARY.name}, immatriculation ${FRANCE_MANDATE_COPY.platformRegistration}`
+    : `${MANDATARY.name}, ${MANDATARY.role}`;
+
+  return `${platform}. Mandate concluded through ${OPERATOR.name}, ${OPERATOR.role}.`;
+}
+
 export function buildMandateTemplateData(input: MandateInput): MandateTemplateData {
   const { company, identifiers, identity, signatory, signedAt } = input;
   const isFrance = company.country === "FR";
@@ -185,10 +199,7 @@ export function buildMandateTemplateData(input: MandateInput): MandateTemplateDa
       rows: identity.rows,
     },
     platform: {
-      name: MANDATARY.name,
-      role: isFrance ? FRANCE_MANDATE_COPY.platformRole : MANDATARY.role,
-      registration: isFrance ? FRANCE_MANDATE_COPY.platformRegistration : null,
-      operator: OPERATOR,
+      description: buildPlatformDescription(isFrance),
     },
     scopeItems: buildScopeItems(company, isFrance),
     electronicAddresses: identifiers.map((identifier) => ({

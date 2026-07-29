@@ -1,5 +1,6 @@
 import { getCompanyIdentifiers } from "@peppol/data/company-identifiers";
 import type { Company } from "@peppol/data/companies";
+import { getTeamExtension } from "@peppol/data/teams";
 import { UserFacingError } from "@peppol/utils/util";
 import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 import { getParticipantByIdentifier } from "./smp";
@@ -8,7 +9,61 @@ import {
   renderMandatePdf,
   resolveCompanyKycIdentity,
   type CompanyKycIdentity,
+  type MandateInput,
 } from "./mandate";
+
+/**
+ * Companies on the Arratech SMP are only verified once Arratech accepts their
+ * KYC, and that KYC is filed with a mandate the representative signs. Playground
+ * teams never reach Arratech, so they neither sign nor get filed.
+ */
+export async function requiresArratechKycReview(company: Company): Promise<boolean> {
+  if (company.smpProvider !== "at-shared-smp") {
+    return false;
+  }
+
+  const teamExtension = await getTeamExtension(company.teamId);
+  return !(teamExtension?.isPlayground ?? false);
+}
+
+/**
+ * Assembles the mandate for a company. A null proof reference renders the draft
+ * the signatory reads before their identity verification signs it.
+ */
+export async function buildMandateInput({
+  company,
+  signatory,
+  signedAt,
+  proofReference,
+  reference,
+}: {
+  company: Company;
+  signatory: { firstName: string; lastName: string; role?: string };
+  signedAt: Date;
+  proofReference: string | null;
+  reference: string;
+}): Promise<MandateInput> {
+  const identifiers = await getCompanyIdentifiers(company.id);
+  if (identifiers.length === 0) {
+    throw new UserFacingError(
+      "Company has no identifiers, cannot submit KYC to Arratech",
+    );
+  }
+
+  return {
+    reference,
+    company,
+    identifiers,
+    identity: resolveCompanyKycIdentity(company, identifiers),
+    signatory: {
+      firstName: signatory.firstName,
+      lastName: signatory.lastName,
+      role: signatory.role ?? DEFAULT_SIGNATORY_ROLE,
+    },
+    signedAt,
+    proofReference,
+  };
+}
 
 async function submitParticipantKyc({
   participantId,
@@ -99,28 +154,16 @@ export async function buildArratechKycFiling({
   proofReference: string;
   reference: string;
 }): Promise<ArratechKycFiling> {
-  const identifiers = await getCompanyIdentifiers(company.id);
-  if (identifiers.length === 0) {
-    throw new UserFacingError(
-      "Company has no identifiers, cannot submit KYC to Arratech",
-    );
-  }
-
-  const identity = resolveCompanyKycIdentity(company, identifiers);
-
-  const mandate = await renderMandatePdf({
-    reference,
+  const input = await buildMandateInput({
     company,
-    identifiers,
-    identity,
-    signatory: {
-      firstName: signatory.firstName,
-      lastName: signatory.lastName,
-      role: signatory.role ?? DEFAULT_SIGNATORY_ROLE,
-    },
+    signatory,
     signedAt,
     proofReference,
+    reference,
   });
+  const { identity, identifiers } = input;
+
+  const mandate = await renderMandatePdf(input);
 
   return {
     jurisdiction: company.country,

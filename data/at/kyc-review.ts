@@ -20,20 +20,6 @@ import {
 } from "./kyc";
 
 /**
- * Companies on the Arratech SMP are only verified once Arratech accepts their
- * KYC. Arratech has no webhook for that, so their verification session waits in
- * review until support completes it.
- */
-export async function requiresArratechKycReview(company: Company): Promise<boolean> {
-  if (company.smpProvider !== "at-shared-smp") {
-    return false;
-  }
-
-  const teamExtension = await getTeamExtension(company.teamId);
-  return !(teamExtension?.isPlayground ?? false);
-}
-
-/**
  * Files the company's KYC with Arratech and parks the verification session in
  * review. The mandate is signed by the representative whose identity Didit just
  * verified, and support is emailed to follow the acceptance up with Arratech.
@@ -106,7 +92,9 @@ export async function startArratechKycReview({
         firstName: existingLog.firstName,
         lastName: existingLog.lastName,
       },
-      signedAt: new Date(),
+      // The mandate carries the moment the representative signed it, not the
+      // moment their identity check came back.
+      signedAt: existingLog.mandateAcceptedAt ?? new Date(),
       proofReference: verificationProofReference,
       reference: existingLog.id,
     });

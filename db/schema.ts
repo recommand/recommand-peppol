@@ -324,6 +324,8 @@ export const companyVerificationLog = pgTable(
     city: text("city"),
     country: validCountryCodes("country"),
     verificationProofReference: text("verification_proof_reference"),
+    // When the representative signed the mandate that is filed with the KYC.
+    mandateAcceptedAt: timestamp("mandate_accepted_at", { withTimezone: true }),
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

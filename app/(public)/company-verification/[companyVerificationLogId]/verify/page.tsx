@@ -10,8 +10,9 @@ import { Checkbox } from "@core/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@core/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@core/components/ui/radio-group";
 import { StatusHero, StatusMessage } from "@recommand/components/status-feedback";
-import { Loader2, AlertCircle, ShieldCheck, RefreshCw, XCircle } from "lucide-react";
+import { Loader2, AlertCircle, ShieldCheck, RefreshCw, XCircle, FileSignature } from "lucide-react";
 import { ForwardSection } from "./forward-section";
+import { MandateSection } from "./mandate-section";
 
 const client = rc<Companies>("v1");
 const VERIFICATION_ALREADY_SUBMITTED_ERROR = "This verification has already been submitted.";
@@ -40,7 +41,10 @@ type VerificationContext = {
     isRepresentativeSelectionRequired: boolean;
     representatives: Representative[];
     isPlayground: boolean;
+    isMandateRequired: boolean;
 };
+
+type VerificationStep = "details" | "mandate";
 
 export default function Page() {
     const { companyVerificationLogId } = useParams<{ companyVerificationLogId: string }>();
@@ -55,6 +59,7 @@ export default function Page() {
     const [acceptTerms, setAcceptTerms] = useState(false);
     const [confirmPermission, setConfirmPermission] = useState(false);
 
+    const [step, setStep] = useState<VerificationStep>("details");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submittingPlaygroundOutcome, setSubmittingPlaygroundOutcome] = useState<PlaygroundVerificationOutcome | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
@@ -139,7 +144,21 @@ export default function Page() {
         }
     };
 
-    const handleSubmit = async () => {
+    const handleContinue = () => {
+        if (!isFormComplete) return;
+
+        // Companies filed with Arratech sign a mandate first; the identity check
+        // they are sent to next is what signs it.
+        if (context?.isMandateRequired) {
+            setSubmitError(null);
+            setStep("mandate");
+            return;
+        }
+
+        void handleSubmit(false);
+    };
+
+    const handleSubmit = async (mandateAccepted: boolean) => {
         if (!companyVerificationLogId || context?.isPlayground) return;
 
         if (!isFormComplete) return;
@@ -152,6 +171,7 @@ export default function Page() {
                 json: {
                     firstName: effectiveFirstName,
                     lastName: effectiveLastName,
+                    mandateAccepted,
                 },
             });
             const json = await response.json();
@@ -313,11 +333,19 @@ export default function Page() {
             <div className="w-full max-w-lg space-y-8">
                 <div className="text-center space-y-2">
                     <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-2">
-                        <ShieldCheck className="h-6 w-6 text-primary" />
+                        {step === "mandate" ? (
+                            <FileSignature className="h-6 w-6 text-primary" />
+                        ) : (
+                            <ShieldCheck className="h-6 w-6 text-primary" />
+                        )}
                     </div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Company Verification</h1>
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        {step === "mandate" ? "Sign the mandate" : "Company Verification"}
+                    </h1>
                     <p className="text-sm text-muted-foreground max-w-sm mx-auto text-balance">
-                        {context.isPlayground ? (
+                        {step === "mandate" ? (
+                            <>Sign the mandate that lets us act for <span className="font-medium text-foreground">{companyName}</span> on the Peppol network, then confirm your identity.</>
+                        ) : context.isPlayground ? (
                             <>Choose the simulated verification outcome for <span className="font-medium text-foreground">{companyName}</span> in this playground environment.</>
                         ) : (
                             <>Verify your identity as a representative of <span className="font-medium text-foreground">{companyName}</span> to activate this company on the Peppol network.</>
@@ -383,6 +411,17 @@ export default function Page() {
                         )}
                         <ForwardSection companyVerificationLogId={companyVerificationLogId!} />
                     </>
+                ) : step === "mandate" ? (
+                    <MandateSection
+                        companyVerificationLogId={companyVerificationLogId!}
+                        companyName={companyName}
+                        firstName={effectiveFirstName}
+                        lastName={effectiveLastName}
+                        isSigning={isSubmitting}
+                        signError={submitError}
+                        onBack={() => setStep("details")}
+                        onSign={() => void handleSubmit(true)}
+                    />
                 ) : (
                     <>
                         {noRepresentativesFound ? (
@@ -489,7 +528,7 @@ export default function Page() {
                         )}
 
                         <Button
-                            onClick={handleSubmit}
+                            onClick={handleContinue}
                             disabled={!isFormComplete || isSubmitting}
                             className="w-full"
                             size="lg"
@@ -498,6 +537,11 @@ export default function Page() {
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                     Verifying...
+                                </>
+                            ) : context.isMandateRequired ? (
+                                <>
+                                    <FileSignature className="h-4 w-4" />
+                                    Continue to the Mandate
                                 </>
                             ) : (
                                 <>
@@ -508,7 +552,9 @@ export default function Page() {
                         </Button>
 
                         <p className="text-xs text-center text-muted-foreground">
-                            You will be redirected to our verification partner to complete the identity check.
+                            {context.isMandateRequired
+                                ? "You will read and sign the mandate for this company before your identity is checked."
+                                : "You will be redirected to our verification partner to complete the identity check."}
                         </p>
                         <ForwardSection companyVerificationLogId={companyVerificationLogId!} />
                     </>
