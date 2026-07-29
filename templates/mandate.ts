@@ -5,12 +5,23 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
     <title>Mandate for electronic invoicing - {{reference}}</title>
     <style>
       /* Tailwind preflight is injected by the Tailwind PDF generator */
-      body { margin: 0; padding: 0; }
+      @page { size: A4; margin: 16mm; }
+      body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+      }
+      .mandate-section,
+      .mandate-party,
+      .mandate-scope-item {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
     </style>
   </head>
-  <body class="bg-slate-100 text-slate-900">
-    <div class="max-w-3xl mx-auto my-8 bg-white shadow-sm rounded-lg overflow-hidden">
-      <div class="px-8 pt-8 pb-4 border-b border-slate-200">
+  <body class="text-slate-900">
+    <div class="max-w-3xl mx-auto">
+      <div class="pb-4 border-b border-slate-200 mandate-section">
         <p class="text-xs font-semibold tracking-wide uppercase text-slate-500">
           Mandate
         </p>
@@ -27,10 +38,10 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
         </p>
       </div>
 
-      <div class="px-8 py-6 space-y-6">
-        <div class="grid grid-cols-2 gap-6 text-sm">
+      <div class="py-6 space-y-6">
+        <div class="grid grid-cols-2 gap-6 text-sm mandate-section">
           {{#company}}
-            <div>
+            <div class="mandate-party">
               <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">
                 The company
               </p>
@@ -50,7 +61,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
           {{/company}}
 
           {{#platform}}
-            <div>
+            <div class="mandate-party">
               <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">
                 The platform
               </p>
@@ -73,7 +84,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
           {{/platform}}
         </div>
 
-        <div>
+        <div class="mandate-section">
           <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">
             Purpose of the mandate
           </p>
@@ -83,7 +94,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
           </p>
           <ul class="mt-3 space-y-2 text-sm text-slate-700">
             {{#scopeItems}}
-              <li class="flex gap-2">
+              <li class="flex gap-2 mandate-scope-item">
                 <span class="text-slate-400">&bull;</span>
                 <span>
                   <span class="font-medium text-slate-900">{{title}}</span>
@@ -94,7 +105,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
           </ul>
         </div>
 
-        <div>
+        <div class="mandate-section">
           <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">
             Electronic addresses covered
           </p>
@@ -108,7 +119,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
           </p>
         </div>
 
-        <div>
+        <div class="mandate-section">
           <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">
             Effective date and duration
           </p>
@@ -121,7 +132,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
         </div>
 
         {{#signatory}}
-          <div class="pt-4 border-t border-slate-200 break-inside-avoid">
+          <div class="pt-4 border-t border-slate-200 mandate-section">
             <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">
               Signature of the company
             </p>
@@ -143,7 +154,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
                 <dd>{{signedAt}}</dd>
               </div>
             </dl>
-            <div class="mt-4 rounded-md bg-slate-50 border border-slate-200 px-4 py-3">
+            <div class="mt-4 rounded-md border border-slate-200 px-4 py-3 mandate-section">
               <p class="text-xs font-semibold tracking-wide uppercase text-slate-500">
                 Electronic signature
               </p>
