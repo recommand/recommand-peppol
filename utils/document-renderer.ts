@@ -17,6 +17,7 @@ import {
   type DocumentType,
 } from "@peppol/utils/document-types";
 import { FRANCE_B2C_REPORT_TEMPLATE } from "@peppol/templates/france-b2c-report";
+import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
 import { Decimal } from "decimal.js";
 
 type ParsedBillingDocument =
@@ -225,8 +226,6 @@ const FRANCE_CDAR_ROLE_LABELS: Record<FranceCdarRoleCode, string> = {
   II: "Invoicer",
   IV: "Invoicee",
 };
-
-const RECOMMAND_RENDER_ENDPOINT = "https://render.recommand.dev";
 
 function reverseAmountSign(value: string): string {
   const trimmedValue = value.trim();
@@ -595,48 +594,6 @@ export function buildFranceB2CReportTemplateData(
   };
 }
 
-async function callTailwindPdfGenerator(
-  templateHtml: string,
-  data:
-    | BillingTemplateData
-    | MessageLevelResponseTemplateData
-    | FranceCdarTemplateData
-    | FranceB2CReportTemplateData,
-  options: { preview: boolean; pdfa?: boolean },
-): Promise<string | Buffer> {
-  const body = JSON.stringify({ html: templateHtml, data });
-  const searchParams = new URLSearchParams();
-  if (options.preview) {
-    searchParams.set("preview", "true");
-  }
-  if (options.pdfa) {
-    searchParams.set("pdfa", "true");
-  }
-  const query = searchParams.toString();
-  const url = query
-    ? `${RECOMMAND_RENDER_ENDPOINT}/?${query}`
-    : RECOMMAND_RENDER_ENDPOINT;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body,
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to generate document using Tailwind PDF generator");
-  }
-
-  if (options.preview) {
-    return await response.text();
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-}
-
 /**
  * Whether a document has a layout to render to HTML or PDF. Callers that render
  * opportunistically (notification attachments, exports) should check this first.
@@ -653,7 +610,7 @@ export async function renderDocumentHtml(
   }
   if (document.type === "messageLevelResponse") {
     const data = buildMessageLevelResponseTemplateData(document);
-    const html = await callTailwindPdfGenerator(
+    const html = await renderTailwindTemplate(
       MESSAGE_LEVEL_RESPONSE_TEMPLATE,
       data,
       { preview: true },
@@ -662,7 +619,7 @@ export async function renderDocumentHtml(
   }
   if (document.type === "frenchInvoicingCdar") {
     const data = buildFranceCdarTemplateData(document);
-    const html = await callTailwindPdfGenerator(
+    const html = await renderTailwindTemplate(
       FRANCE_CDAR_TEMPLATE,
       data,
       { preview: true },
@@ -671,7 +628,7 @@ export async function renderDocumentHtml(
   }
   if (isReportingDocumentType(document.type)) {
     const data = buildFranceB2CReportTemplateData(document);
-    const html = await callTailwindPdfGenerator(
+    const html = await renderTailwindTemplate(
       FRANCE_B2C_REPORT_TEMPLATE,
       data,
       { preview: true },
@@ -680,7 +637,7 @@ export async function renderDocumentHtml(
   }
 
   const data = buildTemplateData(document);
-  const html = await callTailwindPdfGenerator(
+  const html = await renderTailwindTemplate(
     BILLING_DOCUMENT_TEMPLATE,
     data,
     { preview: true },
@@ -697,7 +654,7 @@ export async function renderDocumentPdf(
   }
   if (document.type === "messageLevelResponse") {
     const data = buildMessageLevelResponseTemplateData(document);
-    const pdf = await callTailwindPdfGenerator(
+    const pdf = await renderTailwindTemplate(
       MESSAGE_LEVEL_RESPONSE_TEMPLATE,
       data,
       { preview: false, pdfa: options.pdfa },
@@ -706,7 +663,7 @@ export async function renderDocumentPdf(
   }
   if (document.type === "frenchInvoicingCdar") {
     const data = buildFranceCdarTemplateData(document);
-    const pdf = await callTailwindPdfGenerator(
+    const pdf = await renderTailwindTemplate(
       FRANCE_CDAR_TEMPLATE,
       data,
       { preview: false, pdfa: options.pdfa },
@@ -715,7 +672,7 @@ export async function renderDocumentPdf(
   }
   if (isReportingDocumentType(document.type)) {
     const data = buildFranceB2CReportTemplateData(document);
-    const pdf = await callTailwindPdfGenerator(
+    const pdf = await renderTailwindTemplate(
       FRANCE_B2C_REPORT_TEMPLATE,
       data,
       { preview: false, pdfa: options.pdfa },
@@ -724,7 +681,7 @@ export async function renderDocumentPdf(
   }
 
   const data = buildTemplateData(document);
-  const pdf = await callTailwindPdfGenerator(
+  const pdf = await renderTailwindTemplate(
     BILLING_DOCUMENT_TEMPLATE,
     data,
     { preview: false, pdfa: options.pdfa },

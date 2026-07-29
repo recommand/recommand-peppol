@@ -24,6 +24,12 @@ const FINAL_VERIFICATION_STATUSES = ["verified", "rejected", "error"] as const;
 const VERIFICATION_REVOKED_MESSAGE =
   "Verification session revoked because the company enterprise number or VAT number changed.";
 
+export function isFinalVerificationStatus(
+  status: CompanyVerificationStatus
+): status is CompanyVerificationFinalStatus {
+  return (FINAL_VERIFICATION_STATUSES as readonly string[]).includes(status);
+}
+
 export function namesMatch(a: string, b: string): boolean {
   const partsA = a.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
   const partsB = b.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -117,9 +123,9 @@ export async function finalizeCompanyVerification({
   if (!existingLog) {
     throw new UserFacingError("Company verification log not found");
   }
-  if ((FINAL_VERIFICATION_STATUSES as readonly string[]).includes(existingLog.status)) {
+  if (isFinalVerificationStatus(existingLog.status)) {
     return {
-      status: existingLog.status as CompanyVerificationFinalStatus,
+      status: existingLog.status,
       errorMessage: existingLog.errorMessage,
     };
   }
@@ -134,7 +140,13 @@ export async function finalizeCompanyVerification({
     isSmpRecipient: company.isSmpRecipient,
     verificationRequirements,
   };
-  const wasRegistered = shouldRegisterWithSmp({ ...smpStateBase, isVerified: company.isVerified });
+  const wasRegistered =
+    shouldRegisterWithSmp({ ...smpStateBase, isVerified: company.isVerified }) ||
+    // A session waiting on Arratech's KYC already registered the participant, so
+    // a refusal has to take it back off their SMP.
+    (existingLog.status === "inReview" &&
+      company.smpProvider === "at-shared-smp" &&
+      shouldRegisterWithSmp({ ...smpStateBase, isVerified: true }));
   const shouldBeRegistered = shouldRegisterWithSmp({ ...smpStateBase, isVerified });
   const smpTransition =
     !wasRegistered && shouldBeRegistered

@@ -295,6 +295,10 @@ export const COUNTRIES: CountryInfo[] = ([
     },
 ] satisfies CountryInfo[]).sort((a, b) => a.name.localeCompare(b.name));
 
+export function getCountryName(countryCode: string): string {
+    return COUNTRIES.find((country) => country.code === countryCode)?.name ?? countryCode;
+}
+
 export function getCountrySupportLevel(countryCode: string | null | undefined): CountrySupportLevel | undefined {
     return COUNTRIES.find((country) => country.code === countryCode)?.supportLevel;
 }

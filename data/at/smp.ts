@@ -166,7 +166,7 @@ async function resolveArratechDocumentTypes(
   return resolvedDocumentTypes;
 }
 
-async function getParticipantByIdentifier({
+export async function getParticipantByIdentifier({
   identifier,
   useTestNetwork,
 }: {

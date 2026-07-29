@@ -8,6 +8,7 @@ import { db } from "@recommand/db";
 import { companyVerificationLog } from "@peppol/db/schema";
 import { UserFacingError } from "@peppol/utils/util";
 import { finalizeCompanyVerification, getCompanyVerificationLog } from "@peppol/data/company-verification";
+import { requiresArratechKycReview, startArratechKycReview } from "@peppol/data/at/kyc-review";
 import { getCompanyById } from "@peppol/data/companies";
 import { sendManualVerificationDeclinedEmail, sendManualVerificationEmail } from "@peppol/data/send-manual-verification-email";
 
@@ -118,6 +119,25 @@ server.post(
       if (!isVerified && !lastManualReview && company.isVerified) {
         console.log(`Ignoring automated rejection for already-verified company ${companyVerificationLogRecord.companyId}`);
         return c.json(actionSuccess({ message: "Verification status not changed (already verified)" }), 200);
+      }
+
+      // Arratech companies are only verified once Arratech accepts their KYC,
+      // which support confirms manually.
+      if (isVerified && await requiresArratechKycReview(company)) {
+        const kycReview = await startArratechKycReview({
+          companyVerificationLogId: companyVerificationLogRecord.id,
+          company,
+          verificationProofReference,
+        });
+        return c.json(
+          actionSuccess({
+            message:
+              kycReview.status === "inReview"
+                ? "Verification is awaiting Arratech KYC acceptance"
+                : "Verification status not changed (already finalized)",
+          }),
+          200
+        );
       }
 
       const result = await finalizeCompanyVerification({
