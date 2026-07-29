@@ -4,6 +4,7 @@ import {
   EmailHeading,
   InfoSection,
 } from "@core/emails/components/shared";
+import { DANGER } from "@core/lib/config/colors";
 
 interface ArratechKycReviewNotificationProps {
   companyName: string;
@@ -34,7 +35,7 @@ export const ArratechKycReviewNotification = ({
     <EmailHeading>Arratech KYC awaiting acceptance</EmailHeading>
     <Text className="mb-4">Hello,</Text>
     {submissionError ? (
-      <Text className="mb-4">
+      <Text className={`mb-4 text-[${DANGER}]`}>
         The identity of a representative of <strong>{companyName}</strong> was
         verified, but filing its KYC with Arratech failed. The mandate is
         attached to this email and has to be filed manually.
@@ -86,7 +87,7 @@ export const ArratechKycReviewNotification = ({
         <strong>Network:</strong> {network}
       </Text>
       {submissionError ? (
-        <Text className="my-1 text-sm">
+        <Text className={`my-1 text-sm text-[${DANGER}]`}>
           <strong>Submission error:</strong> {submissionError}
         </Text>
       ) : null}
