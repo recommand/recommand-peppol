@@ -132,7 +132,7 @@ export const MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
 
 export const FRANCE_CDAR_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "frenchInvoicingCdar",
-    title: "French Invoicing CDAR",
+    title: "France Invoicing CDAR",
     docTypeId: "urn:un:unece:uncefact:data:standard:CrossDomainAcknowledgementAndResponse:100::CrossDomainAcknowledgementAndResponse##urn:peppol:france:billing:cdv:1.0::D22B",
     processId: FRANCE_REGULATED_PROCESS_ID
 };
@@ -140,7 +140,7 @@ export const FRANCE_CDAR_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
 export const FRANCE_CDAR_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
     toNonRegulated(
         FRANCE_CDAR_DOCUMENT_TYPE_INFO,
-        "French Invoicing CDAR (Non-Regulated)"
+        "France Invoicing CDAR (Non-Regulated)"
     );
 
 export function getFranceCdarProcessId(
