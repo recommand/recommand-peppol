@@ -220,6 +220,8 @@ function documentForHandler(
     countrySpecific: {
       country: "FR",
       billingMode: "B1",
+      // The schema defaults this, so a parsed document always carries it.
+      businessProcess: "REGULATED",
       recoveryCostsNote: "Indemnité forfaitaire de 40 EUR pour frais de recouvrement.",
       latePaymentPenaltiesNote: "Pénalités de retard selon les conditions de paiement.",
       earlyPaymentDiscountNote: "Aucun escompte accordé pour paiement anticipé.",

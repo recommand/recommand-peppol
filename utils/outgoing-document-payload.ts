@@ -3,8 +3,10 @@ import {
   CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
   FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
   FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+  getDocumentTypeInfo,
   type SupportedDocumentType,
 } from "@peppol/utils/document-types";
+import { resolveCountrySpecificProcessId } from "@peppol/utils/parsing/country-specific/process";
 import {
   type DocumentXmlHandler,
   resolveDocumentXmlHandler,
@@ -217,4 +219,43 @@ export async function prepareOutgoingDocumentPayload(options: {
 
 export function requiresPdfAForGeneratedPdf(docTypeId: string, type: SupportedDocumentType): boolean {
   return getBinaryDocumentFormat(docTypeId, type)?.requiresPdfA ?? false;
+}
+
+/**
+ * Determine the Peppol process an outgoing document travels over.
+ *
+ * The document type decides the process, except where the country the document is
+ * governed by lets the document select between several of them. That choice is not
+ * visible in the XML, so it is read from the request document rather than from the
+ * parsed result.
+ *
+ * Throws when the document type is unknown, leaving the caller to ask for an explicit
+ * process id.
+ */
+export function resolveOutgoingProcessId(options: {
+  doctypeId: string;
+  type: SupportedDocumentType;
+  probableType: SupportedDocumentType;
+  payloadProcessId: string | null;
+  document: unknown;
+}): string {
+  const typeToInspect =
+    options.type === "unknown" && options.probableType !== "unknown"
+      ? options.probableType
+      : options.type;
+
+  let processId: string;
+  if (options.payloadProcessId) {
+    processId = options.payloadProcessId;
+  } else {
+    const resolvedHandler = resolveDocumentXmlHandler(
+      options.doctypeId,
+      typeToInspect
+    );
+    processId = resolvedHandler.ok
+      ? resolvedHandler.handler.processId
+      : getDocumentTypeInfo(typeToInspect).processId;
+  }
+
+  return resolveCountrySpecificProcessId(processId, options.document);
 }

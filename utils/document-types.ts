@@ -31,6 +31,34 @@ export function getCustomizationId(documentTypeInfo: DocumentTypeInfo): string {
     return match[1];
 }
 
+// French billing runs over two Peppol processes that share the same document type
+// identifiers. The regulated process carries the flows inside the French e-invoicing
+// perimeter (they are reported to the tax administration), the non-regulated process
+// carries everything exchanged over the same network but outside that perimeter.
+export const FRANCE_REGULATED_PROCESS_ID = "urn:peppol:france:billing:regulated";
+export const FRANCE_NON_REGULATED_PROCESS_ID = "urn:peppol:france:billing:non-regulated";
+
+export type FranceBillingBusinessProcess = "REGULATED" | "NON_REGULATED";
+
+export function getFranceBillingProcessId(
+    businessProcess: FranceBillingBusinessProcess
+): string {
+    return businessProcess === "REGULATED"
+        ? FRANCE_REGULATED_PROCESS_ID
+        : FRANCE_NON_REGULATED_PROCESS_ID;
+}
+
+function toNonRegulated(
+    documentTypeInfo: DocumentTypeInfo,
+    title: string
+): DocumentTypeInfo {
+    return {
+        ...documentTypeInfo,
+        title,
+        processId: FRANCE_NON_REGULATED_PROCESS_ID,
+    };
+}
+
 export const INVOICE_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
     title: "Invoice",
@@ -50,14 +78,14 @@ export const FRANCE_UBL_INVOICE_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
     title: "France Peppol BIS Billing UBL Invoice",
     docTypeId: INVOICE_DOCUMENT_TYPE_INFO.docTypeId,
-    processId: "urn:peppol:france:billing:regulated"
+    processId: FRANCE_REGULATED_PROCESS_ID
 };
 
 export const FRANCE_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "creditNote",
     title: "France Peppol BIS Billing UBL Credit Note",
     docTypeId: CREDIT_NOTE_DOCUMENT_TYPE_INFO.docTypeId,
-    processId: "urn:peppol:france:billing:regulated"
+    processId: FRANCE_REGULATED_PROCESS_ID
 };
 
 export const SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
@@ -106,18 +134,24 @@ export const FRANCE_CDAR_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "frenchInvoicingCdar",
     title: "French Invoicing CDAR",
     docTypeId: "urn:un:unece:uncefact:data:standard:CrossDomainAcknowledgementAndResponse:100::CrossDomainAcknowledgementAndResponse##urn:peppol:france:billing:cdv:1.0::D22B",
-    processId: "urn:peppol:france:billing:regulated"
+    processId: FRANCE_REGULATED_PROCESS_ID
 };
 
-export const FRANCE_CDAR_NON_REGULATED_PROCESS_ID =
-    "urn:peppol:france:billing:non-regulated";
+export const FRANCE_CDAR_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        FRANCE_CDAR_DOCUMENT_TYPE_INFO,
+        "French Invoicing CDAR (Non-Regulated)"
+    );
 
 export function getFranceCdarProcessId(
     businessProcess: FranceCdarBusinessProcess
 ): string {
-    return businessProcess === "REGULATED"
-        ? FRANCE_CDAR_DOCUMENT_TYPE_INFO.processId
-        : FRANCE_CDAR_NON_REGULATED_PROCESS_ID;
+    // Only the regulated perimeter travels over the regulated process; every other
+    // classification (non-regulated, B2C, international, out of scope) uses the
+    // non-regulated one.
+    return getFranceBillingProcessId(
+        businessProcess === "REGULATED" ? "REGULATED" : "NON_REGULATED"
+    );
 }
 
 // French B2C reporting is filed with the tax administration through our reporting
@@ -159,14 +193,14 @@ export const CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
     title: "France CII Invoice CIUS",
     docTypeId: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::D22B",
-    processId: "urn:peppol:france:billing:regulated"
+    processId: FRANCE_REGULATED_PROCESS_ID
 };
 
 export const UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
     title: "France UBL Invoice CIUS",
     docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::2.1",
-    processId: "urn:peppol:france:billing:regulated"
+    processId: FRANCE_REGULATED_PROCESS_ID
 };
 
 export const UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
@@ -215,7 +249,7 @@ export const FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = 
     type: "invoice",
     title: "France Factur-X Invoice",
     docTypeId: "urn:peppol:doctype:pdf+xml##urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:Factur-X:1.0::D22B",
-    processId: "urn:peppol:france:billing:regulated",
+    processId: FRANCE_REGULATED_PROCESS_ID,
     ciiGuidelineIdOverride: "urn:cen.eu:en16931:2017"
 };
 
@@ -233,6 +267,90 @@ export const CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = 
     docTypeId: CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
     processId: CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId
 };
+
+// Non-regulated counterparts of the French billing document types. They carry the same
+// document type identifiers and are converted by the same handlers; only the Peppol
+// process differs, so a participant has to advertise them separately in its SMP.
+export const FRANCE_UBL_INVOICE_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        FRANCE_UBL_INVOICE_DOCUMENT_TYPE_INFO,
+        "France Peppol BIS Billing UBL Invoice (Non-Regulated)"
+    );
+
+export const FRANCE_UBL_CREDIT_NOTE_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        FRANCE_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+        "France Peppol BIS Billing UBL Credit Note (Non-Regulated)"
+    );
+
+export const UBL_FRANCE_INVOICE_CIUS_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
+        "France UBL Invoice CIUS (Non-Regulated)"
+    );
+
+export const UBL_FRANCE_CREDIT_NOTE_CIUS_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
+        "France UBL Credit Note CIUS (Non-Regulated)"
+    );
+
+export const UBL_FRANCE_INVOICE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
+        "France UBL Invoice Extended (Non-Regulated)"
+    );
+
+export const UBL_FRANCE_CREDIT_NOTE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO,
+        "France UBL Credit Note Extended (Non-Regulated)"
+    );
+
+export const CII_FRANCE_INVOICE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+        "France CII Invoice CIUS (Non-Regulated)"
+    );
+
+export const CII_FRANCE_CREDIT_NOTE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+        "France CII Credit Note CIUS (Non-Regulated)"
+    );
+
+export const CII_FRANCE_INVOICE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
+        "France CII Invoice Extended (Non-Regulated)"
+    );
+
+export const FACTURX_FRANCE_INVOICE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+        "France Factur-X Invoice (Non-Regulated)"
+    );
+
+export const FACTURX_FRANCE_CREDIT_NOTE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+    toNonRegulated(
+        FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+        "France Factur-X Credit Note (Non-Regulated)"
+    );
+
+export const FRANCE_NON_REGULATED_DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
+    FRANCE_UBL_INVOICE_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    FRANCE_UBL_CREDIT_NOTE_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    UBL_FRANCE_INVOICE_CIUS_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    UBL_FRANCE_CREDIT_NOTE_CIUS_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    UBL_FRANCE_INVOICE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    UBL_FRANCE_CREDIT_NOTE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_INVOICE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_CREDIT_NOTE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_INVOICE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    FACTURX_FRANCE_INVOICE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    FACTURX_FRANCE_CREDIT_NOTE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    FRANCE_CDAR_NON_REGULATED_DOCUMENT_TYPE_INFO,
+];
 
 export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     INVOICE_DOCUMENT_TYPE_INFO,
@@ -257,6 +375,7 @@ export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
     FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
     FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    ...FRANCE_NON_REGULATED_DOCUMENT_TYPE_PRESETS,
 ];
 
 export const BILLING_DOCUMENT_TYPE_INFO: DocumentTypeInfo[] = [

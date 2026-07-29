@@ -1,5 +1,30 @@
 import { z } from "zod";
 import "zod-openapi/extend";
+import {
+  FRANCE_NON_REGULATED_PROCESS_ID,
+  FRANCE_REGULATED_PROCESS_ID,
+  getFranceBillingProcessId,
+} from "@peppol/utils/document-types";
+import type { CountrySpecificProcessResolver } from "./process";
+
+export function isFranceBillingProcessId(processId: string): boolean {
+  return processId === FRANCE_REGULATED_PROCESS_ID
+    || processId === FRANCE_NON_REGULATED_PROCESS_ID;
+}
+
+const frenchBusinessProcessDescription = `Determines which French Peppol process the document is sent over. Defaults to \`REGULATED\`.
+
+| Value | Description |
+| --- | --- |
+| \`REGULATED\` | Transaction inside the French e-invoicing perimeter. Sent over \`urn:peppol:france:billing:regulated\`. |
+| \`NON_REGULATED\` | Transaction outside the French e-invoicing perimeter. Sent over \`urn:peppol:france:billing:non-regulated\`. |
+
+The recipient must have registered the matching process for the document type in its SMP.`;
+
+export const frenchBusinessProcessSchema = z.enum([
+  "REGULATED", // Inside the French e-invoicing perimeter
+  "NON_REGULATED", // Outside the French e-invoicing perimeter
+]);
 
 const frenchBillingModeDescription = `Required only for French regulated UBL, CII, and Factur-X. Select the invoicing framework that matches the invoice.
 
@@ -57,6 +82,10 @@ export const frenchCountrySpecificSchema = z.object({
   billingMode: frenchBillingModeSchema.openapi({
     description: frenchBillingModeDescription,
   }),
+  businessProcess: frenchBusinessProcessSchema.optional().default("REGULATED").openapi({
+    description: frenchBusinessProcessDescription,
+    example: "REGULATED",
+  }),
   recoveryCostsNote: z.string().min(1).openapi({
     example: "Indemnite forfaitaire de 40 EUR pour frais de recouvrement.",
     description:
@@ -80,3 +109,38 @@ export const frenchCountrySpecificSchema = z.object({
 });
 
 export type FrenchCountrySpecific = z.infer<typeof frenchCountrySpecificSchema>;
+
+const frenchBusinessProcessCarrierSchema = z.object({
+  countrySpecific: z.object({
+    country: z.literal("FR"),
+    businessProcess: frenchBusinessProcessSchema.optional(),
+  }),
+});
+
+/**
+ * Read the French business process off an unvalidated send request document.
+ * Returns undefined for documents that are not French or that leave it unspecified,
+ * so the regulated process stays the default.
+ */
+export function getFrenchBusinessProcess(
+  document: unknown
+): z.infer<typeof frenchBusinessProcessSchema> | undefined {
+  const parsed = frenchBusinessProcessCarrierSchema.safeParse(document);
+  return parsed.success ? parsed.data.countrySpecific.businessProcess : undefined;
+}
+
+/**
+ * France exchanges the same document types over a regulated and a non-regulated
+ * process, and the document decides which one. Claims only documents that travel over a
+ * French billing process and state the business process they belong to.
+ */
+export const resolveFrenchProcessId: CountrySpecificProcessResolver = (
+  processId,
+  document
+) => {
+  if (!isFranceBillingProcessId(processId)) {
+    return undefined;
+  }
+  const businessProcess = getFrenchBusinessProcess(document);
+  return businessProcess ? getFranceBillingProcessId(businessProcess) : undefined;
+};

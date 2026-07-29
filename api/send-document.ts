@@ -56,7 +56,6 @@ import {
   CREDIT_NOTE_DOCUMENT_TYPE_INFO,
   FRANCE_CDAR_DOCUMENT_TYPE_INFO,
   getFranceCdarProcessId,
-  getDocumentTypeInfo,
   INVOICE_DOCUMENT_TYPE_INFO,
   MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
   SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
@@ -79,12 +78,10 @@ import {
   type ParsedDocument as FilenameParsedDocument,
 } from "@peppol/utils/document-filename";
 import {
-  resolveDocumentXmlHandler,
-} from "@peppol/utils/parsing/document-handlers";
-import {
   prepareOutgoingDocumentPayload,
   requiresPdfAForGeneratedPdf,
   resolveOutgoingDocumentXmlHandler,
+  resolveOutgoingProcessId,
 } from "@peppol/utils/outgoing-document-payload";
 import { audit } from "@core/lib/audit";
 
@@ -813,18 +810,13 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
       processId = input.processId;
     } else {
       try {
-        let typeToInspect = type;
-        if (type === "unknown" && probableType !== "unknown") {
-          typeToInspect = probableType;
-        }
-        if (outgoingDocumentProcessId) {
-          processId = outgoingDocumentProcessId;
-        } else {
-          const resolvedHandler = resolveDocumentXmlHandler(doctypeId, typeToInspect);
-          processId = resolvedHandler.ok
-            ? resolvedHandler.handler.processId
-            : getDocumentTypeInfo(typeToInspect).processId;
-        }
+        processId = resolveOutgoingProcessId({
+          doctypeId,
+          type,
+          probableType,
+          payloadProcessId: outgoingDocumentProcessId,
+          document,
+        });
       } catch (error) {
         console.error("Failed to get process id:", error);
         sendSystemAlert(

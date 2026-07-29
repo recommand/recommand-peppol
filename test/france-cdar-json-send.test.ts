@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   FRANCE_CDAR_DOCUMENT_TYPE_INFO,
-  FRANCE_CDAR_NON_REGULATED_PROCESS_ID,
+  FRANCE_NON_REGULATED_PROCESS_ID,
   getFranceCdarProcessId,
 } from "../utils/document-types";
 import { franceCdarToXML } from "../utils/parsing/france-cdar/to-xml";
@@ -568,13 +568,13 @@ describe("France CDAR JSON sending", () => {
       FRANCE_CDAR_DOCUMENT_TYPE_INFO.processId
     );
     expect(getFranceCdarProcessId("NON_REGULATED")).toBe(
-      FRANCE_CDAR_NON_REGULATED_PROCESS_ID
+      FRANCE_NON_REGULATED_PROCESS_ID
     );
     expect(getFranceCdarProcessId("B2C")).toBe(
-      FRANCE_CDAR_NON_REGULATED_PROCESS_ID
+      FRANCE_NON_REGULATED_PROCESS_ID
     );
     expect(getFranceCdarProcessId("B2CINT")).toBe(
-      FRANCE_CDAR_NON_REGULATED_PROCESS_ID
+      FRANCE_NON_REGULATED_PROCESS_ID
     );
   });
 
