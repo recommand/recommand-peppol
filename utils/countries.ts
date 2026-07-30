@@ -253,6 +253,13 @@ export const COUNTRIES: CountryInfo[] = ([
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
     {
+        code: "HK",
+        name: "Hong Kong",
+        flag: "🇭🇰",
+        supportLevel: "unsupported",
+        defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
+    },
+    {
         code: "JP",
         name: "Japan",
         flag: "🇯🇵",
