@@ -96,7 +96,16 @@ function validateDutchVatNumber(identifier: string): void {
   }
 }
 
+function validateDanishOrganizationNumber(identifier: string): void {
+  if (!/^(DK)?\d{8}$/.test(identifier.toUpperCase())) {
+    throw new UserFacingError(
+      "Danish organization number (CVR) must be 8 digits, optionally prefixed with 'DK'"
+    );
+  }
+}
+
 const schemeValidators: Record<string, IdentifierValidator> = {
+  "0184": validateDanishOrganizationNumber,
   "0208": validateBelgianEnterpriseNumber,
   "9925": validateBelgianVatNumber,
   "0106": validateDutchEnterpriseNumber,
