@@ -2,8 +2,11 @@ import { describe, expect, it } from "bun:test";
 import {
   CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
   CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+  CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
   FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+  UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO,
   UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
+  UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
 } from "../utils/document-types";
 import { resolveDocumentXmlHandler } from "../utils/parsing/document-handlers";
 import { resolveOutgoingDocumentXmlHandler } from "../utils/outgoing-document-payload";
@@ -170,5 +173,44 @@ describe("CII D22B profiles", () => {
     const parsed = resolved.handler.fromXml(xml) as Invoice;
     expect(parsed.note).toBe(invoice.note);
     expect(parsed.countrySpecific).toEqual(invoice.countrySpecific);
+  });
+
+  it("converts the French EXTENDED profiles with the CIUS handlers", () => {
+    const ublXml = toXml(UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId);
+
+    expect(ublXml).toContain(
+      "<cbc:CustomizationID>urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0</cbc:CustomizationID>"
+    );
+    expect(ublXml).toContain("<cbc:ProfileID>S1</cbc:ProfileID>");
+    expect(ublXml).toContain("<cbc:Note>#PMT#");
+
+    const ciiXml = toXml(CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId);
+
+    expect(ciiXml).toContain(
+      "<ram:ID>urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0</ram:ID>"
+    );
+    expect(ciiXml).toContain("<ram:ID>S1</ram:ID>");
+    expect(ciiXml).toContain("<ram:SubjectCode>PMT</ram:SubjectCode>");
+
+    for (const [docTypeId, xml] of [
+      [UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId, ublXml],
+      [CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId, ciiXml],
+    ] as const) {
+      const resolved = resolveDocumentXmlHandler(docTypeId, "invoice");
+      if (!resolved.ok) throw new Error(resolved.message);
+      const parsed = resolved.handler.fromXml(xml) as Invoice;
+      expect(parsed.countrySpecific).toEqual(invoice.countrySpecific);
+    }
+  });
+
+  it("resolves credit notes for both EXTENDED syntaxes", () => {
+    for (const docTypeId of [
+      UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId,
+      CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId,
+    ]) {
+      const resolved = resolveDocumentXmlHandler(docTypeId, "creditNote");
+      if (!resolved.ok) throw new Error(resolved.message);
+      expect(resolved.handler.docTypeId).toBe(docTypeId);
+    }
   });
 });

@@ -53,11 +53,12 @@ import type {
 import { validateXmlDocument } from "@peppol/data/validation/client";
 import type { ValidationResponse } from "@peppol/types/validation";
 import {
-  BILLING_DOCUMENT_TYPE_INFO,
+  BILLING_DOCUMENT_TYPES,
   CREDIT_NOTE_DOCUMENT_TYPE_INFO,
   FRANCE_CDAR_DOCUMENT_TYPE_INFO,
   getFranceCdarProcessId,
   INVOICE_DOCUMENT_TYPE_INFO,
+  isBillingDocumentType,
   MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
   SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
   SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO,
@@ -163,11 +164,10 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
     // Check if recipient is null - only billing document types are supported
     const isRecipientNull = input.recipient === null;
     if (isRecipientNull) {
-      const billingTypes = BILLING_DOCUMENT_TYPE_INFO.map(dt => dt.type) as DocumentType[];
-      if (!billingTypes.includes(input.documentType)) {
+      if (!isBillingDocumentType(input.documentType)) {
         return c.json(
           actionFailure(
-            `Only billing document types (${billingTypes.join(", ")}) are supported when recipient is null.`
+            `Only billing document types (${BILLING_DOCUMENT_TYPES.join(", ")}) are supported when recipient is null.`
           ),
           400
         );

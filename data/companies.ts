@@ -118,7 +118,7 @@ export async function getCompanyByPeppolId({
       )
     );
   if (results.length === 0) {
-    throw new Error(`Company with peppol id ${originalPeppolId} not found`);
+    throw new Error(`Company with peppol id ${originalPeppolId} not found as ${useTestNetwork ? "test" : "production"} company`);
   }
   return results[0].peppol_companies;
 }

@@ -1,7 +1,18 @@
 import { UserFacingError } from "./util";
 import type { FranceCdarBusinessProcess } from "./parsing/france-cdar/schemas";
 
-export type BillingDocumentType = "invoice" | "creditNote" | "selfBillingInvoice" | "selfBillingCreditNote";
+// The document types that carry a billing transaction. Every format we support (UBL,
+// CII, Factur-X, and their French variants) serialises one of these, so the formats do
+// not appear here: the document type decides what a document is, the doc type id
+// decides how it is written.
+export const BILLING_DOCUMENT_TYPES = [
+    "invoice",
+    "creditNote",
+    "selfBillingInvoice",
+    "selfBillingCreditNote",
+] as const;
+
+export type BillingDocumentType = (typeof BILLING_DOCUMENT_TYPES)[number];
 export type TransactionDocumentType = "invoiceResponse" | "messageLevelResponse" | "frenchInvoicingCdar";
 // Documents that are filed with a tax administration instead of being exchanged
 // over Peppol. They have no XML representation and no Peppol recipient.
@@ -189,6 +200,10 @@ export function isReportingDocumentType(type: string): type is ReportingDocument
     return (REPORTING_DOCUMENT_TYPES as readonly string[]).includes(type);
 }
 
+export function isBillingDocumentType(type: string): type is BillingDocumentType {
+    return (BILLING_DOCUMENT_TYPES as readonly string[]).includes(type);
+}
+
 export const CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
     title: "France CII Invoice CIUS",
@@ -231,6 +246,13 @@ export const CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO: DocumentTypeInfo = 
     processId: UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.processId
 };
 
+export const CII_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
+    type: "creditNote",
+    title: "France CII Credit Note Extended",
+    docTypeId: CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId,
+    processId: CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.processId
+};
+
 export const CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = {
     type: "invoice",
     title: "EN 16931 CII Invoice D22B",
@@ -267,6 +289,37 @@ export const CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO: DocumentTypeInfo = 
     docTypeId: CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
     processId: CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId
 };
+
+// CII and Factur-X carry invoices and credit notes under a single document type
+// identifier and process, so a participant registers one SMP capability for both. The
+// presets below offer that capability once, under a combined title; the per-type infos
+// above stay separate because the serializers and parsers differ.
+function forInvoiceAndCreditNote(
+    documentTypeInfo: DocumentTypeInfo,
+    title: string
+): DocumentTypeInfo {
+    return { ...documentTypeInfo, title };
+}
+
+const CII_EN16931_D22B_PRESET = forInvoiceAndCreditNote(
+    CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    "EN 16931 CII Invoice + Credit Note D22B"
+);
+
+const CII_FRANCE_CIUS_PRESET = forInvoiceAndCreditNote(
+    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    "France CII Invoice + Credit Note CIUS"
+);
+
+const CII_FRANCE_EXTENDED_PRESET = forInvoiceAndCreditNote(
+    CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
+    "France CII Invoice + Credit Note Extended"
+);
+
+const FACTURX_FRANCE_PRESET = forInvoiceAndCreditNote(
+    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
+    "France Factur-X Invoice + Credit Note"
+);
 
 // Non-regulated counterparts of the French billing document types. They carry the same
 // document type identifiers and are converted by the same handlers; only the Peppol
@@ -307,34 +360,22 @@ export const UBL_FRANCE_CREDIT_NOTE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO: D
         "France UBL Credit Note Extended (Non-Regulated)"
     );
 
-export const CII_FRANCE_INVOICE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+export const CII_FRANCE_CIUS_NON_REGULATED_PRESET: DocumentTypeInfo =
     toNonRegulated(
-        CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-        "France CII Invoice CIUS (Non-Regulated)"
+        CII_FRANCE_CIUS_PRESET,
+        "France CII Invoice + Credit Note CIUS (Non-Regulated)"
     );
 
-export const CII_FRANCE_CREDIT_NOTE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+export const CII_FRANCE_EXTENDED_NON_REGULATED_PRESET: DocumentTypeInfo =
     toNonRegulated(
-        CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-        "France CII Credit Note CIUS (Non-Regulated)"
+        CII_FRANCE_EXTENDED_PRESET,
+        "France CII Invoice + Credit Note Extended (Non-Regulated)"
     );
 
-export const CII_FRANCE_INVOICE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
+export const FACTURX_FRANCE_NON_REGULATED_PRESET: DocumentTypeInfo =
     toNonRegulated(
-        CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-        "France CII Invoice Extended (Non-Regulated)"
-    );
-
-export const FACTURX_FRANCE_INVOICE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
-    toNonRegulated(
-        FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-        "France Factur-X Invoice (Non-Regulated)"
-    );
-
-export const FACTURX_FRANCE_CREDIT_NOTE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO: DocumentTypeInfo =
-    toNonRegulated(
-        FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-        "France Factur-X Credit Note (Non-Regulated)"
+        FACTURX_FRANCE_PRESET,
+        "France Factur-X Invoice + Credit Note (Non-Regulated)"
     );
 
 export const FRANCE_NON_REGULATED_DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
@@ -344,11 +385,9 @@ export const FRANCE_NON_REGULATED_DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     UBL_FRANCE_CREDIT_NOTE_CIUS_NON_REGULATED_DOCUMENT_TYPE_INFO,
     UBL_FRANCE_INVOICE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO,
     UBL_FRANCE_CREDIT_NOTE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_CREDIT_NOTE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_EXTENDED_NON_REGULATED_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_INVOICE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_CREDIT_NOTE_D22B_NON_REGULATED_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_CIUS_NON_REGULATED_PRESET,
+    CII_FRANCE_EXTENDED_NON_REGULATED_PRESET,
+    FACTURX_FRANCE_NON_REGULATED_PRESET,
     FRANCE_CDAR_NON_REGULATED_DOCUMENT_TYPE_INFO,
 ];
 
@@ -363,37 +402,16 @@ export const DOCUMENT_TYPE_PRESETS: DocumentTypeInfo[] = [
     SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
     INVOICE_RESPONSE_DOCUMENT_TYPE_INFO,
     MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
-    CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    CII_EN16931_D22B_PRESET,
+    CII_FRANCE_CIUS_PRESET,
     UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
     UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
     UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
     UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    CII_FRANCE_EXTENDED_PRESET,
+    FACTURX_FRANCE_PRESET,
     FRANCE_CDAR_DOCUMENT_TYPE_INFO,
     ...FRANCE_NON_REGULATED_DOCUMENT_TYPE_PRESETS,
-];
-
-export const BILLING_DOCUMENT_TYPE_INFO: DocumentTypeInfo[] = [
-    INVOICE_DOCUMENT_TYPE_INFO,
-    CREDIT_NOTE_DOCUMENT_TYPE_INFO,
-    SELF_BILLING_INVOICE_DOCUMENT_TYPE_INFO,
-    SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
-    CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
 ];
 
 export function getDocumentTypeInfo(type: string): DocumentTypeInfo {

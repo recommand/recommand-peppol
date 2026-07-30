@@ -54,6 +54,13 @@ describe("France non-regulated process", () => {
     const titles = DOCUMENT_TYPE_PRESETS.map((preset) => preset.title);
     expect(new Set(titles).size).toBe(titles.length);
 
+    // A preset is one SMP capability to register, so syntaxes that carry invoices and
+    // credit notes under the same identifier are offered once under a combined title.
+    const capabilities = DOCUMENT_TYPE_PRESETS.map(
+      (preset) => `${preset.docTypeId}|${preset.processId}`
+    );
+    expect(new Set(capabilities).size).toBe(capabilities.length);
+
     expect(getDocumentTypeInfo("invoice")).toBe(INVOICE_DOCUMENT_TYPE_INFO);
   });
 
