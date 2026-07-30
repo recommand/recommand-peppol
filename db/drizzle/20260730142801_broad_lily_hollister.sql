@@ -1,0 +1,1 @@
+ALTER TYPE "public"."peppol_valid_country_codes" ADD VALUE 'HK' BEFORE 'HU';
