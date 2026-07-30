@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { PARTICIPANT_SCHEME, DOCUMENT_SCHEME } from "./phoss-smp/service-metadata";
+import { PARTICIPANT_SCHEME, DOCUMENT_SCHEME, PROCESS_SCHEME } from "./phoss-smp/service-metadata";
 import { XMLParser } from "fast-xml-parser";
 import { base32Encode } from "@peppol/utils/base32";
 import { resolveNaptr } from "@peppol/utils/naptr";
@@ -156,9 +156,25 @@ export type ServiceMetadataResult = {
 };
 
 /**
- * Fetch a ServiceMetadata XML from an SMP and parse endpoint details.
+ * Bring a process id to its `scheme::value` form, so a caller-supplied id and an SMP
+ * ProcessIdentifier (which carries its scheme in an attribute) can be compared. An
+ * unqualified id is assumed to use the default process scheme.
  */
-export async function fetchServiceMetadata(serviceMetadataUrl: string): Promise<ServiceMetadataResult | null> {
+function qualifiedProcessId(value: unknown): string | null {
+  if (typeof value === "string") {
+    const processId = value.trim();
+    return processId.includes("::") ? processId : `${PROCESS_SCHEME}::${processId}`;
+  }
+  const node = value as { "#text"?: unknown; "@_scheme"?: unknown } | undefined;
+  if (typeof node?.["#text"] !== "string") return null;
+  return `${node["@_scheme"] ?? PROCESS_SCHEME}::${node["#text"].trim()}`;
+}
+
+/**
+ * Fetch a ServiceMetadata XML from an SMP and parse endpoint details.
+ * When a processId is given, only the matching process is considered.
+ */
+export async function fetchServiceMetadata(serviceMetadataUrl: string, options?: { processId?: string }): Promise<ServiceMetadataResult | null> {
   try {
     const response = await fetch(serviceMetadataUrl);
     if (!response.ok) return null;
@@ -170,7 +186,15 @@ export async function fetchServiceMetadata(serviceMetadataUrl: string): Promise<
     const serviceMetadata = doc.ServiceMetadata || doc.SignedServiceMetadata?.ServiceMetadata;
     const serviceInfo = serviceMetadata?.ServiceInformation;
     const processList = serviceInfo?.ProcessList;
-    const process = Array.isArray(processList?.Process) ? processList.Process[0] : processList?.Process;
+    const processes = Array.isArray(processList?.Process)
+      ? processList.Process
+      : processList?.Process
+        ? [processList.Process]
+        : [];
+    const expectedProcessId = options?.processId ? qualifiedProcessId(options.processId) : null;
+    const process = expectedProcessId
+      ? processes.find((p: any) => qualifiedProcessId(p?.ProcessIdentifier) === expectedProcessId)
+      : processes[0];
     const endpointList = process?.ServiceEndpointList;
     const endpoint = Array.isArray(endpointList?.Endpoint) ? endpointList.Endpoint[0] : endpointList?.Endpoint;
 
@@ -193,7 +217,7 @@ export async function fetchServiceMetadata(serviceMetadataUrl: string): Promise<
   }
 }
 
-export async function verifyDocumentSupport({recipientAddress, documentType, useTestNetwork}: {recipientAddress: string, documentType: string, useTestNetwork: boolean}) {
+export async function verifyDocumentSupport({recipientAddress, documentType, processId, useTestNetwork}: {recipientAddress: string, documentType: string, processId?: string, useTestNetwork: boolean}) {
   const smpUrl = await getSmpUrl({recipientAddress, useTestNetwork});
 
   // Map the document type to the Peppol document type code, if not possible, just use the document type as is
@@ -208,7 +232,7 @@ export async function verifyDocumentSupport({recipientAddress, documentType, use
   // Construct SMP URL according to Peppol spec with proper encoding
   const smpUrlWithDocumentType = `${smpUrl}/services/${DOCUMENT_SCHEME}::${encodedDocumentType}`;
 
-  const endpointDetails = await fetchServiceMetadata(smpUrlWithDocumentType);
+  const endpointDetails = await fetchServiceMetadata(smpUrlWithDocumentType, { processId });
 
   if (!endpointDetails) {
     throw new Error("Failed to verify document type capabilities: no endpoint found");

@@ -34,6 +34,7 @@ const verifyDocumentSupportRouteDescription = describeRoute({
 const verifyDocumentSupportJsonBodySchema = z.object({
     peppolAddress: z.string().openapi({ description: "The Peppol address of the recipient to verify.", example: "0208:987654321" }),
     documentType: z.string().openapi({ description: "The document type to verify. You can use a full document type ID, or the simplified versions (e.g. \"invoice\", \"creditNote\", \"selfBillingInvoice\", \"selfBillingCreditNote\", ...).", example: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1" }),
+    processId: z.string().optional().openapi({ description: "Optional process to verify the document type against, with or without its scheme prefix. When omitted, any process published for the document type is accepted.", example: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0" }),
 });
 
 type VerifyDocumentSupportContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { json: z.input<typeof verifyDocumentSupportJsonBodySchema> }, out: { json: z.infer<typeof verifyDocumentSupportJsonBodySchema> } }>;
@@ -56,9 +57,9 @@ const _verifyDocumentSupport = server.post(
 
 async function _verifyDocumentSupportImplementation(c: VerifyDocumentSupportContext) {
     try {
-        const { peppolAddress, documentType } = c.req.valid("json");
+        const { peppolAddress, documentType, processId } = c.req.valid("json");
         const teamExtension = await getTeamExtension(c.var.team.id);
-        const { smpUrl, endpointDetails } = await verifyDocumentSupport({ recipientAddress: peppolAddress, documentType, useTestNetwork: teamExtension?.useTestNetwork ?? false });
+        const { smpUrl, endpointDetails } = await verifyDocumentSupport({ recipientAddress: peppolAddress, documentType, processId, useTestNetwork: teamExtension?.useTestNetwork ?? false });
         return c.json(actionSuccess({ isValid: true, smpUrl, ...endpointDetails }));
     } catch (error) {
         console.error(error);

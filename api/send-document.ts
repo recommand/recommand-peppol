@@ -29,6 +29,7 @@ import {
   type CreditNote,
 } from "@peppol/utils/parsing/creditnote/schemas";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
+import { PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
 import { simulateSendAs4 } from "@peppol/data/playground/simulate-ap";
 import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import {
@@ -831,6 +832,13 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
           400
         );
       }
+    }
+
+    // Callers may qualify the process id with the default scheme. Drop it here so the
+    // recorded document and every access point provider see the same canonical value.
+    const processSchemePrefix = `${PROCESS_SCHEME}::`;
+    if (processId.startsWith(processSchemePrefix)) {
+      processId = processId.substring(processSchemePrefix.length);
     }
 
     let as4Response: SendAs4Response | null = null;

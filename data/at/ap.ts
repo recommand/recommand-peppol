@@ -13,7 +13,7 @@ import { UserFacingError } from "@peppol/utils/util";
 import { fetchArratechJson, getArratechConfig } from "./client";
 
 // Arratech does not synchronously check receiver support before accepting a transaction, so
-// we perform the SMP-level document type check ourselves.
+// we perform the SMP-level document type and process check ourselves.
 async function checkReceiverSupportsDocumentType(options: {
   receiverId: string;
   docTypeId: string;
@@ -26,6 +26,7 @@ async function checkReceiverSupportsDocumentType(options: {
     await verifyDocumentSupport({
       recipientAddress: receiverId,
       documentType: docTypeId,
+      processId,
       useTestNetwork,
     });
   } catch {
@@ -67,6 +68,19 @@ export async function sendAs4(options: {
 }): Promise<SendAs4Response> {
   const config = getArratechConfig(options.useTestNetwork);
 
+  // The SBDH carries the process id and its scheme separately, so split a qualified id
+  // rather than assuming the default scheme. Document type ids are left alone: they
+  // contain "::" themselves and Peppol fixes their scheme.
+  const processSchemeSeparator = options.processId.indexOf("::");
+  const processIdScheme =
+    processSchemeSeparator === -1
+      ? PROCESS_SCHEME
+      : options.processId.substring(0, processSchemeSeparator);
+  const processId =
+    processSchemeSeparator === -1
+      ? options.processId
+      : options.processId.substring(processSchemeSeparator + 2);
+
   try {
     await checkReceiverSupportsDocumentType({
       receiverId: options.receiverId,
@@ -81,10 +95,10 @@ export async function sendAs4(options: {
       senderId: options.senderId,
       receiverId: options.receiverId,
       docTypeId: options.docTypeId,
-      processId: options.processId,
+      processId,
       countryC1: options.countryC1,
       documentIdScheme: DOCUMENT_SCHEME,
-      processIdScheme: PROCESS_SCHEME,
+      processIdScheme,
       payload: await toSbdhPayload(options.body, options.contentType),
     });
 
