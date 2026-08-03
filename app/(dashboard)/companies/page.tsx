@@ -37,6 +37,7 @@ import { DataTableToolbar } from "@core/components/data-table/toolbar";
 import { DataTablePagination } from "@core/components/data-table/pagination";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
 const teamsClient = rc<GetTeamExtension>("v1");
@@ -59,16 +60,19 @@ const handleApiResponse = async (
 // Utility function to create column definition
 const createColumn = (
   key: keyof Company,
-  title: string
+  title: string,
+  emptyValue: string
 ): ColumnDef<Company> => ({
   accessorKey: key,
   header: ({ column }) => <ColumnHeader column={column} title={title} />,
-  cell: ({ row }) => (row.getValue(key) as string) ?? "N/A",
+  meta: { label: title },
+  cell: ({ row }) => (row.getValue(key) as string) ?? emptyValue,
   enableGlobalFilter: true,
 });
 
 export default function Page() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const {
     columnVisibility,
@@ -106,14 +110,14 @@ export default function Page() {
 
       if (!json.success || !Array.isArray(json.companies)) {
         console.error("Invalid API response format:", json);
-        toast.error("Failed to load companies");
+        toast.error(t`Failed to load companies`);
         setCompanies([]);
       } else {
         setCompanies(json.companies);
       }
     } catch (error) {
       console.error("Error fetching companies:", error);
-      toast.error("Failed to load companies");
+      toast.error(t`Failed to load companies`);
       setCompanies([]);
     } finally {
       setIsLoading(false);
@@ -151,7 +155,7 @@ export default function Page() {
     setCompanies((prev) => [...prev, company]);
     setCompanyCreatedInSession(true);
     setIsDialogOpen(false);
-    toast.success("Company created successfully");
+    toast.success(t`Company created successfully`);
   };
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -175,7 +179,7 @@ export default function Page() {
           companyId: id,
         },
       });
-      await handleApiResponse(response, "Company deleted successfully");
+      await handleApiResponse(response, t`Company deleted successfully`);
       fetchCompanies();
     } catch (error) {
       console.error("Error deleting company:", error);
@@ -187,7 +191,8 @@ export default function Page() {
   const columns: ColumnDef<Company>[] = [
     {
       accessorKey: "id",
-      header: ({ column }) => <ColumnHeader column={column} title="ID" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`ID`} />,
+      meta: { label: t`ID` },
       cell: ({ row }) => {
         const id = row.getValue("id") as string;
         return (
@@ -203,7 +208,7 @@ export default function Page() {
               size="icon"
               onClick={() => {
                 navigator.clipboard.writeText(id);
-                toast.success("Company ID copied to clipboard");
+                toast.success(t`Company ID copied to clipboard`);
               }}
             >
               <Copy className="h-4 w-4" />
@@ -215,7 +220,8 @@ export default function Page() {
     },
     {
       accessorKey: "name",
-      header: ({ column }) => <ColumnHeader column={column} title="Name" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Name`} />,
+      meta: { label: t`Name` },
       cell: ({ row }) => {
         const name = row.getValue("name") as string;
         const id = row.original.id;
@@ -230,14 +236,15 @@ export default function Page() {
       },
       enableGlobalFilter: true,
     },
-    createColumn("enterpriseNumber", "Enterprise Number"),
-    createColumn("city", "City"),
-    createColumn("country", "Country"),
+    createColumn("enterpriseNumber", t`Enterprise Number`, t`N/A`),
+    createColumn("city", t`City`, t`N/A`),
+    createColumn("country", t`Country`, t`N/A`),
     ...(verificationRequirements && (verificationRequirements === "strict" || verificationRequirements === "lax")
       ? [
           {
             accessorKey: "isVerified",
-            header: ({ column }: { column: Column<Company> }) => <ColumnHeader column={column} title="Verification" />,
+            header: ({ column }: { column: Column<Company> }) => <ColumnHeader column={column} title={t`Verification`} />,
+            meta: { label: t`Verification` },
             cell: ({ row }: { row: Row<Company> }) => {
               const isVerified = row.getValue("isVerified") as boolean;
               return <VerificationStatusIcon isVerified={isVerified} />;
@@ -260,14 +267,14 @@ export default function Page() {
               variant="ghost"
               size="icon"
               onClick={() => navigate(`/companies/${id}`)}
-              title="Edit"
+              title={t`Edit`}
             >
               <Pencil className="h-4 w-4" />
             </Button>
             <ConfirmDialog
-              title="Delete Company"
-              description="Are you sure you want to delete this company? This action cannot be undone."
-              confirmButtonText="Delete"
+              title={t`Delete Company`}
+              description={t`Are you sure you want to delete this company? This action cannot be undone.`}
+              confirmButtonText={t`Delete`}
               onConfirm={async () => await handleDeleteCompany(id)}
               isLoading={deletingCompanyId === id}
               variant="destructive"
@@ -275,7 +282,7 @@ export default function Page() {
                 <Button
                   variant="ghost-destructive"
                   size="icon"
-                  title="Delete"
+                  title={t`Delete`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -308,8 +315,8 @@ export default function Page() {
 
   return (
     <PageTemplate
-      breadcrumbs={[{ label: "Peppol" }, { label: "Companies" }]}
-      description="Add all companies for which you want to send or receive Peppol documents."
+      breadcrumbs={[{ label: "Peppol" }, { label: t`Companies` }]}
+      description={t`Add all companies for which you want to send or receive Peppol documents.`}
       buttons={[
         <Dialog
           key="create-company-dialog"
@@ -318,12 +325,12 @@ export default function Page() {
         >
           <DialogTrigger asChild>
             <Button>
-              Create Company
+              {t`Create Company`}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
-              <DialogTitle>Create New Company</DialogTitle>
+              <DialogTitle>{t`Create New Company`}</DialogTitle>
             </DialogHeader>
             {activeTeam && (
               <CreateCompanyWizard

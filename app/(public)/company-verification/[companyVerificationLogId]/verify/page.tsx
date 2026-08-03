@@ -13,6 +13,7 @@ import { StatusHero, StatusMessage } from "@recommand/components/status-feedback
 import { Loader2, AlertCircle, ShieldCheck, RefreshCw, XCircle, FileSignature } from "lucide-react";
 import { ForwardSection } from "./forward-section";
 import { MandateSection } from "./mandate-section";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("v1");
 const VERIFICATION_ALREADY_SUBMITTED_ERROR = "This verification has already been submitted.";
@@ -47,6 +48,7 @@ type VerificationContext = {
 type VerificationStep = "details" | "mandate";
 
 export default function Page() {
+    const { t } = useTranslation();
     const { companyVerificationLogId } = useParams<{ companyVerificationLogId: string }>();
 
     const [context, setContext] = useState<VerificationContext | null>(null);
@@ -110,14 +112,14 @@ export default function Page() {
                 }
                 setContext(json as unknown as VerificationContext & { success: true; errors: undefined });
             } catch (error) {
-                setLoadError("Failed to load verification data. Please try again.");
+                setLoadError(t`Failed to load verification data. Please try again.`);
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchContext();
-    }, [companyVerificationLogId]);
+    }, [companyVerificationLogId, t]);
 
     const handlePlaygroundSubmit = async (outcome: PlaygroundVerificationOutcome) => {
         if (!companyVerificationLogId) return;
@@ -137,7 +139,7 @@ export default function Page() {
             }
             window.location.href = `/company-verification/${companyVerificationLogId}/status`;
         } catch (error) {
-            setSubmitError("An unexpected error occurred. Please try again.");
+            setSubmitError(t`An unexpected error occurred. Please try again.`);
         } finally {
             setIsSubmitting(false);
             setSubmittingPlaygroundOutcome(null);
@@ -188,7 +190,7 @@ export default function Page() {
                 window.location.href = json.verificationUrl as string;
             }
         } catch (error) {
-            setSubmitError("An unexpected error occurred. Please try again.");
+            setSubmitError(t`An unexpected error occurred. Please try again.`);
         } finally {
             setIsSubmitting(false);
         }
@@ -212,7 +214,7 @@ export default function Page() {
                 window.location.href = json.verificationUrl as string;
             }
         } catch {
-            setRestartError("An unexpected error occurred. Please try again.");
+            setRestartError(t`An unexpected error occurred. Please try again.`);
         } finally {
             setIsRestarting(false);
         }
@@ -223,7 +225,7 @@ export default function Page() {
             <div className="min-h-svh flex items-center justify-center bg-muted/30">
                 <div className="text-center space-y-4">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Loading verification...</p>
+                    <p className="text-sm text-muted-foreground">{t`Loading verification...`}</p>
                 </div>
             </div>
         );
@@ -236,8 +238,8 @@ export default function Page() {
                     <StatusHero
                         tone="error"
                         icon={AlertCircle}
-                        title="Verification unavailable"
-                        description={loadError || "Verification data could not be loaded."}
+                        title={t`Verification unavailable`}
+                        description={loadError || t`Verification data could not be loaded.`}
                     />
                 </div>
             </div>
@@ -254,8 +256,8 @@ export default function Page() {
                         tone="info"
                         icon={Loader2}
                         iconClassName="animate-spin"
-                        title="Verification Already in Progress"
-                        description={<>A verification session has already been started for <span className="font-medium text-foreground">{companyName}</span>. If the previous link expired or was closed, you can request a new one below.</>}
+                        title={t`Verification Already in Progress`}
+                        description={t`A verification session has already been started for ${companyName}. If the previous link expired or was closed, you can request a new one below.`}
                     />
 
                     {restartError && (
@@ -272,12 +274,12 @@ export default function Page() {
                             {isRestarting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Restarting...
+                                    {t`Restarting...`}
                                 </>
                             ) : (
                                 <>
                                     <RefreshCw className="h-4 w-4" />
-                                    Restart Identity Verification
+                                    {t`Restart Identity Verification`}
                                 </>
                             )}
                         </Button>
@@ -290,7 +292,7 @@ export default function Page() {
                                     window.location.href = statusPageUrl;
                                 }}
                             >
-                                View Verification Status
+                                {t`View Verification Status`}
                             </Button>
                         )}
                     </div>
@@ -308,8 +310,8 @@ export default function Page() {
                     <StatusHero
                         tone="info"
                         icon={ShieldCheck}
-                        title="Verification Already Finalized"
-                        description={<>This verification for <span className="font-medium text-foreground">{companyName}</span> has already reached a final state.</>}
+                        title={t`Verification Already Finalized`}
+                        description={t`This verification for ${companyName} has already reached a final state.`}
                     />
 
                     {statusPageUrl && (
@@ -320,7 +322,7 @@ export default function Page() {
                                 window.location.href = statusPageUrl;
                             }}
                         >
-                            View Verification Status
+                            {t`View Verification Status`}
                         </Button>
                     )}
                 </div>
@@ -340,15 +342,15 @@ export default function Page() {
                         )}
                     </div>
                     <h1 className="text-2xl font-semibold tracking-tight">
-                        {step === "mandate" ? "Sign the mandate" : "Company Verification"}
+                        {step === "mandate" ? t`Sign the mandate` : t`Company Verification`}
                     </h1>
                     <p className="text-sm text-muted-foreground max-w-sm mx-auto text-balance">
                         {step === "mandate" ? (
-                            <>Sign the mandate that lets us act for <span className="font-medium text-foreground">{companyName}</span> on the Peppol network, then confirm your identity.</>
+                            t`Sign the mandate that lets us act for ${companyName} on the Peppol network, then confirm your identity.`
                         ) : context.isPlayground ? (
-                            <>Choose the simulated verification outcome for <span className="font-medium text-foreground">{companyName}</span> in this playground environment.</>
+                            t`Choose the simulated verification outcome for ${companyName} in this playground environment.`
                         ) : (
-                            <>Verify your identity as a representative of <span className="font-medium text-foreground">{companyName}</span> to activate this company on the Peppol network.</>
+                            t`Verify your identity as a representative of ${companyName} to activate this company on the Peppol network.`
                         )}
                     </p>
                 </div>
@@ -357,9 +359,9 @@ export default function Page() {
                     <>
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-base">Simulate Verification Result</CardTitle>
+                                <CardTitle className="text-base">{t`Simulate Verification Result`}</CardTitle>
                                 <CardDescription>
-                                    This is a playground team, so identity verification is simulated. Choose whether the verification for <span className="font-medium text-foreground">{companyName}</span> should be accepted or rejected.
+                                    {t`This is a playground team, so identity verification is simulated. Choose whether the verification for ${companyName} should be accepted or rejected.`}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-3">
@@ -373,12 +375,12 @@ export default function Page() {
                                         {isSubmitting && submittingPlaygroundOutcome === "verified" ? (
                                             <>
                                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                                Accepting...
+                                                {t`Accepting...`}
                                             </>
                                         ) : (
                                             <>
                                                 <ShieldCheck className="h-4 w-4" />
-                                                Accept
+                                                {t`Accept`}
                                             </>
                                         )}
                                     </Button>
@@ -393,12 +395,12 @@ export default function Page() {
                                         {isSubmitting && submittingPlaygroundOutcome === "rejected" ? (
                                             <>
                                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                                Rejecting...
+                                                {t`Rejecting...`}
                                             </>
                                         ) : (
                                             <>
                                                 <XCircle className="h-4 w-4" />
-                                                Reject
+                                                {t`Reject`}
                                             </>
                                         )}
                                     </Button>
@@ -427,20 +429,20 @@ export default function Page() {
                         {noRepresentativesFound ? (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-base">Representative Details</CardTitle>
+                                    <CardTitle className="text-base">{t`Representative Details`}</CardTitle>
                                     <CardDescription>
-                                        No registered representatives could be found for this company in the CBE registry. You can still proceed with identity verification but your request will be manually reviewed.
+                                        {t`No registered representatives could be found for this company in the CBE registry. You can still proceed with identity verification but your request will be manually reviewed.`}
                                     </CardDescription>
                                 </CardHeader>
                             </Card>
                         ) : (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-base">Representative Details</CardTitle>
+                                    <CardTitle className="text-base">{t`Representative Details`}</CardTitle>
                                     <CardDescription>
                                         {showRepresentativeSelection
-                                            ? "Select your name from the list of registered representatives."
-                                            : "Enter the name of the person authorised to represent this company."
+                                            ? t`Select your name from the list of registered representatives.`
+                                            : t`Enter the name of the person authorised to represent this company.`
                                         }
                                     </CardDescription>
                                 </CardHeader>
@@ -470,7 +472,7 @@ export default function Page() {
                                     ) : (
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <div className="space-y-2">
-                                                <Label htmlFor="firstName">First name</Label>
+                                                <Label htmlFor="firstName">{t`First name`}</Label>
                                                 <Input
                                                     id="firstName"
                                                     value={firstName}
@@ -479,7 +481,7 @@ export default function Page() {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label htmlFor="lastName">Last name</Label>
+                                                <Label htmlFor="lastName">{t`Last name`}</Label>
                                                 <Input
                                                     id="lastName"
                                                     value={lastName}
@@ -502,11 +504,11 @@ export default function Page() {
                                         className="mt-0.5"
                                     />
                                     <span className="text-sm leading-snug text-muted-foreground">
-                                        I accept the{" "}
+                                        {t`I accept the`}{" "}
                                         <a href="https://recommand.eu/en/legal/terms" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-4 hover:text-primary/80">
-                                            terms and conditions
+                                            {t`terms and conditions`}
                                         </a>{" "}
-                                        of Recommand on behalf of <span className="font-medium text-foreground">{companyName}</span>.
+                                        {t`of Recommand on behalf of ${companyName}.`}
                                     </span>
                                 </label>
 
@@ -517,7 +519,7 @@ export default function Page() {
                                         className="mt-0.5"
                                     />
                                     <span className="text-sm leading-snug text-muted-foreground">
-                                        I confirm that I am authorised to act on behalf of <span className="font-medium text-foreground">{companyName}</span> on the Peppol network.
+                                        {t`I confirm that I am authorised to act on behalf of ${companyName} on the Peppol network.`}
                                     </span>
                                 </label>
                             </CardContent>
@@ -536,25 +538,25 @@ export default function Page() {
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Verifying...
+                                    {t`Verifying...`}
                                 </>
                             ) : context.isMandateRequired ? (
                                 <>
                                     <FileSignature className="h-4 w-4" />
-                                    Continue to the Mandate
+                                    {t`Continue to the Mandate`}
                                 </>
                             ) : (
                                 <>
                                     <ShieldCheck className="h-4 w-4" />
-                                    Continue to Identity Verification
+                                    {t`Continue to Identity Verification`}
                                 </>
                             )}
                         </Button>
 
                         <p className="text-xs text-center text-muted-foreground">
                             {context.isMandateRequired
-                                ? "You will read and sign the mandate for this company before your identity is checked."
-                                : "You will be redirected to our verification partner to complete the identity check."}
+                                ? t`You will read and sign the mandate for this company before your identity is checked.`
+                                : t`You will be redirected to our verification partner to complete the identity check.`}
                         </p>
                         <ForwardSection companyVerificationLogId={companyVerificationLogId!} />
                     </>

@@ -6,6 +6,7 @@ import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
 import type { Company, CompanyFormData } from "@peppol/types/company";
 import { stringifyActionFailure } from "@recommand/lib/utils";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
 
@@ -17,6 +18,7 @@ type Step4Props = {
 };
 
 export function Step4Create({ teamId, data, onNext, onBack }: Step4Props) {
+    const { t } = useTranslation();
     const [error, setError] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const hasStarted = useRef(false);
@@ -42,7 +44,7 @@ export function Step4Create({ teamId, data, onNext, onBack }: Step4Props) {
             }
             onNext(json.company as Company, json.verificationUrl, json.verificationLogId);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            setError(err instanceof Error ? err.message : t`An unexpected error occurred`);
         } finally {
             setIsCreating(false);
         }
@@ -52,7 +54,7 @@ export function Step4Create({ teamId, data, onNext, onBack }: Step4Props) {
         return (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Creating your company...</p>
+                <p className="text-sm text-muted-foreground">{t`Creating your company...`}</p>
             </div>
         );
     }
@@ -63,15 +65,15 @@ export function Step4Create({ teamId, data, onNext, onBack }: Step4Props) {
                 <StatusMessage
                     tone="error"
                     icon={AlertCircle}
-                    title="Failed to create company"
+                    title={t`Failed to create company`}
                     description={error}
                 />
                 <div className="flex justify-between gap-2">
                     <Button type="button" variant="outline" onClick={onBack}>
-                        Back
+                        {t`Back`}
                     </Button>
                     <Button type="button" onClick={createCompany}>
-                        Try again
+                        {t`Try again`}
                     </Button>
                 </div>
             </div>

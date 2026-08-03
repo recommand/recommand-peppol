@@ -7,6 +7,7 @@ import {
   PopoverTrigger,
 } from "@core/components/ui/popover";
 import type { Label } from "@peppol/types/label";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface DocumentLabelPickerProps {
   labels: Label[];
@@ -27,10 +28,13 @@ export function DocumentLabelPicker({
   onAssign,
   onUnassign,
   showAssignedLabels = false,
-  title = "Assign labels",
-  emptyText = "No available labels",
+  title,
+  emptyText,
   align = "start",
 }: DocumentLabelPickerProps) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t`Assign labels`;
+  const resolvedEmptyText = emptyText ?? t`No available labels`;
   const [updatingLabelId, setUpdatingLabelId] = useState<string | null>(null);
   const assignedLabelIds = new Set(assignedLabels.map((label) => label.id));
   const visibleLabels = showAssignedLabels
@@ -60,7 +64,7 @@ export function DocumentLabelPicker({
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-64 p-0" align={align}>
         <div className="p-2">
-          <div className="mb-2 text-sm font-medium">{title}</div>
+          <div className="mb-2 text-sm font-medium">{resolvedTitle}</div>
           <div className="max-h-64 space-y-1 overflow-y-auto">
             {visibleLabels.map((label) => {
               const isAssigned = assignedLabelIds.has(label.id);
@@ -89,7 +93,7 @@ export function DocumentLabelPicker({
             })}
             {visibleLabels.length === 0 && (
               <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                {emptyText}
+                {resolvedEmptyText}
               </div>
             )}
           </div>

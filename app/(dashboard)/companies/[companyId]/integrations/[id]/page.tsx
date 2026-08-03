@@ -24,7 +24,6 @@ import type { SortingState } from "@tanstack/react-table";
 import { useDataTableState } from "@core/hooks/use-data-table-state";
 import { DataTablePagination } from "@core/components/data-table/pagination";
 import { ColumnHeader } from "@core/components/data-table/column-header";
-import { format } from "date-fns";
 import { Badge } from "@core/components/ui/badge";
 import { getBuiltInIntegration, getIntegrationEventDescription } from "@peppol/utils/integrations";
 import BearerAuthentication from "@peppol/components/integrations/authentication/bearer-authentication";
@@ -33,6 +32,7 @@ import FieldsConfiguration from "@peppol/components/integrations/fields/fields-c
 import type { Integration, IntegrationTaskLog } from "@peppol/types/integration";
 import { AsyncButton } from "@core/components/async-button";
 import { Popover, PopoverContent, PopoverTrigger } from "@core/components/ui/popover";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const integrationsClient = rc<Integrations>("peppol");
 const companiesClient = rc<Companies>("peppol");
@@ -43,6 +43,7 @@ type Company = {
 };
 
 export default function IntegrationDetailPage() {
+  const { t, language } = useTranslation();
   const { companyId, id } = useParams<{ companyId: string; id: string }>();
   const navigate = useNavigate();
 
@@ -93,7 +94,7 @@ export default function IntegrationDetailPage() {
       const integrationData = json.integration as Integration;
       
       if (companyId && integrationData.companyId !== companyId) {
-        toast.error("Integration does not belong to this company");
+        toast.error(t`Integration does not belong to this company`);
         navigate("/companies");
         return;
       }
@@ -109,7 +110,7 @@ export default function IntegrationDetailPage() {
       const companyJson = await companyResponse.json();
 
       if (!companyJson.success) {
-        toast.error("Failed to load company");
+        toast.error(t`Failed to load company`);
         navigate("/companies");
         return;
       }
@@ -117,7 +118,7 @@ export default function IntegrationDetailPage() {
       setCompany(companyJson.company as Company);
     } catch (error) {
       console.error("Error fetching integration:", error);
-      toast.error("Failed to load integration");
+      toast.error(t`Failed to load integration`);
       navigate("/companies");
     } finally {
       setIsLoading(false);
@@ -150,7 +151,7 @@ export default function IntegrationDetailPage() {
       setTotal(json.pagination?.total || 0);
     } catch (error) {
       console.error("Error fetching task logs:", error);
-      toast.error("Failed to load task logs");
+      toast.error(t`Failed to load task logs`);
     } finally {
       setIsLoadingLogs(false);
     }
@@ -172,7 +173,7 @@ export default function IntegrationDetailPage() {
     if (!id || !activeTeam?.id || !integration) return;
 
     if (!integration.configuration) {
-      toast.error("Integration configuration is required. Please configure the integration first.");
+      toast.error(t`Integration configuration is required. Please configure the integration first.`);
       return;
     }
 
@@ -196,12 +197,12 @@ export default function IntegrationDetailPage() {
 
       const updatedIntegration = json.integration as Integration;
       setIntegration(updatedIntegration);
-      toast.success("Integration updated successfully");
+      toast.success(t`Integration updated successfully`);
     } catch (error) {
       console.error("Error updating integration:", error);
-      toast.error("Failed to update integration: " + (error instanceof Error ? error.message : String(error)));
+      toast.error(t`Failed to update integration: ${error instanceof Error ? error.message : String(error)}`);
     }
-  }, [id, activeTeam?.id, integration]);
+  }, [id, activeTeam?.id, integration, t]);
 
   const handleDeleteIntegration = useCallback(async () => {
     if (!id || !activeTeam?.id) return;
@@ -221,15 +222,15 @@ export default function IntegrationDetailPage() {
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Integration deleted successfully");
+      toast.success(t`Integration deleted successfully`);
       navigate(`/companies/${company?.id || ""}`);
     } catch (error) {
       console.error("Error deleting integration:", error);
-      toast.error("Failed to delete integration: " + (error instanceof Error ? error.message : String(error)));
+      toast.error(t`Failed to delete integration: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsDeleting(false);
     }
-  }, [id, activeTeam?.id, navigate, company?.id]);
+  }, [id, activeTeam?.id, navigate, company?.id, t]);
 
   const handleResetState = useCallback(async () => {
     if (!id || !activeTeam?.id) return;
@@ -249,15 +250,15 @@ export default function IntegrationDetailPage() {
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Integration state reset successfully");
+      toast.success(t`Integration state reset successfully`);
       await fetchIntegration();
     } catch (error) {
       console.error("Error resetting integration state:", error);
-      toast.error("Failed to reset integration state: " + (error instanceof Error ? error.message : String(error)));
+      toast.error(t`Failed to reset integration state: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsResetting(false);
     }
-  }, [id, activeTeam?.id, fetchIntegration]);
+  }, [id, activeTeam?.id, fetchIntegration, t]);
 
   function MessageCell({ message }: { message: string }) {
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -288,11 +289,11 @@ export default function IntegrationDetailPage() {
   const columns: ColumnDef<IntegrationTaskLog>[] = [
     {
       accessorKey: "event",
-      header: ({ column }) => <ColumnHeader column={column} title="Event" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Event`} />,
       cell: ({ row }) => {
         const event = row.getValue("event") as string;
         const eventDescription = getIntegrationEventDescription(event);
-        const eventName = eventDescription?.title || event;
+        const eventName = eventDescription?.title ? t(eventDescription.title) : event;
         return (
           <div className="font-medium">{eventName}</div>
         );
@@ -300,14 +301,14 @@ export default function IntegrationDetailPage() {
     },
     {
       accessorKey: "task",
-      header: ({ column }) => <ColumnHeader column={column} title="Task" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Task`} />,
       cell: ({ row }) => (
         <div className="max-w-[200px] truncate">{row.getValue("task")}</div>
       ),
     },
     {
       accessorKey: "success",
-      header: ({ column }) => <ColumnHeader column={column} title="Status" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Status`} />,
       cell: ({ row }) => {
         const success = row.getValue("success") as boolean;
         return (
@@ -317,14 +318,14 @@ export default function IntegrationDetailPage() {
             ) : (
               <XCircle className="h-3 w-3" />
             )}
-            {success ? "Success" : "Failed"}
+            {success ? t`Success` : t`Failed`}
           </Badge>
         );
       },
     },
     {
       accessorKey: "message",
-      header: ({ column }) => <ColumnHeader column={column} title="Message" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Message`} />,
       cell: ({ row }) => {
         const message = row.getValue("message") as string;
         return <MessageCell message={message} />;
@@ -332,7 +333,7 @@ export default function IntegrationDetailPage() {
     },
     {
       accessorKey: "context",
-      header: ({ column }) => <ColumnHeader column={column} title="Context" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Context`} />,
       cell: ({ row }) => {
         const context = row.getValue("context") as string;
         return (
@@ -344,10 +345,17 @@ export default function IntegrationDetailPage() {
     },
     {
       accessorKey: "createdAt",
-      header: ({ column }) => <ColumnHeader column={column} title="Created At" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Created At`} />,
       cell: ({ row }) => {
         const date = row.getValue("createdAt") as string;
-        return <div>{format(new Date(date), "PPp")}</div>;
+        return (
+          <div>
+            {new Date(date).toLocaleString(language, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </div>
+        );
       },
     },
   ];
@@ -377,15 +385,15 @@ export default function IntegrationDetailPage() {
       <PageTemplate
         breadcrumbs={[
           { label: "Peppol", href: "/" },
-          { label: "Companies", href: "/companies" },
-          { label: "Loading..." },
+          { label: t`Companies`, href: "/companies" },
+          { label: t`Loading...` },
         ]}
-        description="Loading integration details..."
+        description={t`Loading integration details...`}
       >
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin" />
-            <div className="text-lg">Loading integration details...</div>
+            <div className="text-lg">{t`Loading integration details...`}</div>
           </div>
         </div>
       </PageTemplate>
@@ -397,16 +405,16 @@ export default function IntegrationDetailPage() {
       <PageTemplate
         breadcrumbs={[
           { label: "Peppol", href: "/" },
-          { label: "Companies", href: "/companies" },
-          { label: "Not Found" },
+          { label: t`Companies`, href: "/companies" },
+          { label: t`Not Found` },
         ]}
-        description="Integration not found"
+        description={t`Integration not found`}
       >
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <div className="text-lg mb-4">Integration not found</div>
+            <div className="text-lg mb-4">{t`Integration not found`}</div>
             <Button onClick={() => navigate("/companies")}>
-              Back to Companies
+              {t`Back to Companies`}
             </Button>
           </div>
         </div>
@@ -418,24 +426,28 @@ export default function IntegrationDetailPage() {
     <PageTemplate
       breadcrumbs={[
         { label: "Peppol", href: "/" },
-        { label: "Companies", href: "/companies" },
+        { label: t`Companies`, href: "/companies" },
         { label: company.name, href: `/companies/${company.id}` },
-        { label: integration.manifest.name },
+        { label: t(integration.manifest.name) },
       ]}
-      description={getBuiltInIntegration(integration.manifest.url)?.description || ""}
+      description={
+        getBuiltInIntegration(integration.manifest.url)?.description
+          ? t(getBuiltInIntegration(integration.manifest.url)!.description)
+          : ""
+      }
       buttons={[
         <ConfirmDialog
           key="delete-button"
-          title="Delete Integration"
-          description="Are you sure you want to delete this integration? This action cannot be undone."
-          confirmButtonText="Delete"
+          title={t`Delete Integration`}
+          description={t`Are you sure you want to delete this integration? This action cannot be undone.`}
+          confirmButtonText={t`Delete`}
           onConfirm={handleDeleteIntegration}
           isLoading={isDeleting}
           variant="destructive"
           trigger={
             <Button variant="destructive">
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete
+              {t`Delete`}
             </Button>
           }
         />,
@@ -444,7 +456,7 @@ export default function IntegrationDetailPage() {
           onClick={handleSaveIntegration}
         >
           <Save className="h-4 w-4 mr-2" />
-          Save Changes
+          {t`Save Changes`}
         </AsyncButton>,
       ]}
     >
@@ -453,9 +465,9 @@ export default function IntegrationDetailPage() {
           <Card>
             <CardHeader>
               <div>
-                <CardTitle>Authentication</CardTitle>
+                <CardTitle>{t`Authentication`}</CardTitle>
                 <CardDescription>
-                  Configure authentication settings
+                  {t`Configure authentication settings`}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -467,9 +479,9 @@ export default function IntegrationDetailPage() {
           <Card>
             <CardHeader>
               <div>
-                <CardTitle>Configuration</CardTitle>
+                <CardTitle>{t`Configuration`}</CardTitle>
                 <CardDescription>
-                  Make configuration changes to the integration
+                  {t`Make configuration changes to the integration`}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -481,9 +493,9 @@ export default function IntegrationDetailPage() {
           <Card>
             <CardHeader>
               <div>
-                <CardTitle>Capabilities</CardTitle>
+                <CardTitle>{t`Capabilities`}</CardTitle>
                 <CardDescription>
-                  Enable or disable integration capabilities
+                  {t`Enable or disable integration capabilities`}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -497,9 +509,9 @@ export default function IntegrationDetailPage() {
           <Card>
             <CardHeader>
               <div>
-                <CardTitle>Task Logs</CardTitle>
+                <CardTitle>{t`Task Logs`}</CardTitle>
                 <CardDescription>
-                  Recent integration task execution logs
+                  {t`Recent integration task execution logs`}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -510,7 +522,7 @@ export default function IntegrationDetailPage() {
                 </div>
               ) : taskLogs.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p>No task logs available</p>
+                  <p>{t`No task logs available`}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -524,21 +536,21 @@ export default function IntegrationDetailPage() {
           <Card>
             <CardHeader>
               <div>
-                <CardTitle>Advanced</CardTitle>
+                <CardTitle>{t`Advanced`}</CardTitle>
                 <CardDescription>
-                  View and manage integration state
+                  {t`View and manage integration state`}
                 </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <div className="mb-2 text-sm font-medium">Integration State</div>
+                <div className="mb-2 text-sm font-medium">{t`Integration State`}</div>
                 {integration.state && typeof integration.state === "object" && integration.state !== null && Object.keys(integration.state as IntegrationState).length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Key</TableHead>
-                        <TableHead>Value</TableHead>
+                        <TableHead>{t`Key`}</TableHead>
+                        <TableHead>{t`Value`}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -552,21 +564,21 @@ export default function IntegrationDetailPage() {
                   </Table>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>No state data available</p>
+                    <p>{t`No state data available`}</p>
                   </div>
                 )}
               </div>
               <ConfirmDialog
-                title="Reset Integration State"
-                description="Are you sure you want to reset the integration state? This will clear all stored state data."
-                confirmButtonText="Reset State"
+                title={t`Reset Integration State`}
+                description={t`Are you sure you want to reset the integration state? This will clear all stored state data.`}
+                confirmButtonText={t`Reset State`}
                 onConfirm={handleResetState}
                 isLoading={isResetting}
                 variant="default"
                 trigger={
                   <Button variant="outline">
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    Reset State
+                    {t`Reset State`}
                   </Button>
                 }
               />
@@ -577,4 +589,3 @@ export default function IntegrationDetailPage() {
     </PageTemplate>
   );
 }
-

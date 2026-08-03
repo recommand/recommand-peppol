@@ -1,0 +1,911 @@
+(Required),(Erforderlich)
+{0} copied to clipboard,{0} in die Zwischenablage kopiert
+{0} documents,{0} Dokumente
+{0} documents deleted,{0} Dokumente gelöscht
+{0} documents marked as read,{0} Dokumente als gelesen markiert
+{0} documents over limit,{0} Dokumente über dem Limit
+{0} documents remaining this month,Noch {0} Dokumente in diesem Monat
+{0} has been successfully verified and is now active on the Peppol network.,{0} wurde erfolgreich verifiziert und ist jetzt im Peppol-Netzwerk aktiv.
+{0} is currently not supported,{0} wird derzeit nicht unterstützt
+{0} is partially supported,{0} wird teilweise unterstützt
+{0} Plan,Tarif {0}
+{0} selected,{0} ausgewählt
+{0} total,{0} insgesamt
+/month excl. VAT,/Monat zzgl. USt.
+✓ Sent over Peppol network,✓ Über das Peppol-Netzwerk gesendet
+✓ Sent to {0},✓ An {0} gesendet
+€{0} per extra document,{0} € pro zusätzlichem Dokument
+A billing profile is required to get started.,Zum Einstieg ist ein Abrechnungsprofil erforderlich.
+A document has been received for your company. If enabled\, the integration will be notified and can process the document.,Ein Dokument wurde für Ihr Unternehmen empfangen. Wenn diese Option aktiviert ist\, wird die Integration benachrichtigt und kann das Dokument verarbeiten.
+A document label has been assigned to the document. If enabled\, the integration will be notified and can process the document.,Dem Dokument wurde ein Label zugewiesen. Wenn diese Option aktiviert ist\, wird die Integration benachrichtigt und kann das Dokument verarbeiten.
+A document label has been unassigned from the document. If enabled\, the integration will be notified and can process the document.,Ein Label wurde vom Dokument entfernt. Wenn diese Option aktiviert ist\, wird die Integration benachrichtigt und kann das Dokument verarbeiten.
+A playground is used to test the Recommand API without affecting production data or communicating over the Peppol network. {0} You can switch to a production environment by clicking the team switcher in the top left.,Eine Testumgebung dient dazu\, die Recommand API zu testen\, ohne Produktionsdaten zu beeinflussen oder über das Peppol-Netzwerk zu kommunizieren. {0} Über den Teamumschalter oben links können Sie zu einer Produktionsumgebung wechseln.
+A verification session has already been started for {0}. If the previous link expired or was closed\, you can request a new one below.,Für {0} wurde bereits eine Verifizierungssitzung gestartet. Wenn der vorherige Link abgelaufen oder geschlossen wurde\, können Sie unten einen neuen anfordern.
+Accept,Annehmen
+Accepting...,Wird angenommen...
+Active,Aktiv
+Active subscription with full access,Aktives Abonnement mit vollem Zugriff
+Add,Hinzufügen
+Add Address,Adresse hinzufügen
+Add all companies for which you want to send or receive Peppol documents.,Fügen Sie alle Unternehmen hinzu\, für die Sie Peppol-Dokumente senden oder empfangen möchten.
+Add an email address to receive notifications,Fügen Sie eine E-Mail-Adresse hinzu\, um Benachrichtigungen zu erhalten
+Add an integration to get started,Fügen Sie zunächst eine Integration hinzu
+Add Document Type,Dokumenttyp hinzufügen
+Add Email,E-Mail hinzufügen
+Add Identifier,Kennung hinzufügen
+Add Integration,Integration hinzufügen
+Add Invoice Reference,Rechnungsreferenz hinzufügen
+Add label,Label hinzufügen
+Add Line,Position hinzufügen
+Add Payment Method,Zahlungsmethode hinzufügen
+Add playground,Testumgebung hinzufügen
+Add Recipient,Empfänger hinzufügen
+Add your first document type to get started,Fügen Sie zunächst Ihren ersten Dokumenttyp hinzu
+Add your first identifier to get started,Fügen Sie zunächst Ihre erste Kennung hinzu
+Additional Notes,Zusätzliche Hinweise
+Address,Adresse
+Address *,Adresse *
+Advanced,Erweitert
+All companies,Alle Unternehmen
+All documents deleted successfully,Alle Dokumente erfolgreich gelöscht
+Always (in addition to Peppol),Immer (zusätzlich zu Peppol)
+Amount (excl. VAT),Betrag (ohne USt.)
+An identifier assigned by the buyer for internal routing purposes.,Eine vom Käufer für interne Weiterleitungszwecke vergebene Kennung.
+An notification has been received from the external service. If enabled\, the integration will be notified and can process the notification.,Eine Benachrichtigung wurde vom externen Dienst empfangen. Wenn diese Option aktiviert ist\, wird die Integration benachrichtigt und kann die Benachrichtigung verarbeiten.
+An unexpected error occurred,Ein unerwarteter Fehler ist aufgetreten
+An unexpected error occurred. Please try again.,Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.
+API Preview,API-Vorschau
+Are you sure you want to delete {0} selected documents? This action cannot be undone.,Möchten Sie wirklich {0} ausgewählte Dokumente löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+Are you sure you want to delete all documents? This action cannot be undone. All documents in this playground will be permanently removed.,Möchten Sie wirklich alle Dokumente löschen? Diese Aktion kann nicht rückgängig gemacht werden. Alle Dokumente in dieser Testumgebung werden dauerhaft entfernt.
+Are you sure you want to delete customer "{0}"?,Möchten Sie den Kunden „{0}“ wirklich löschen?
+Are you sure you want to delete this company? This action cannot be undone.,Möchten Sie dieses Unternehmen wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+Are you sure you want to delete this document?,Möchten Sie dieses Dokument wirklich löschen?
+Are you sure you want to delete this integration? This action cannot be undone.,Möchten Sie diese Integration wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+Are you sure you want to delete this supplier? This action cannot be undone.,Möchten Sie diesen Lieferanten wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+Are you sure you want to reset the integration state? This will clear all stored state data.,Möchten Sie den Integrationsstatus wirklich zurücksetzen? Dadurch werden alle gespeicherten Statusdaten gelöscht.
+Assign label,Label zuweisen
+Assign labels,Labels zuweisen
+Assign Labels,Labels zuweisen
+At least one direction (incoming or outgoing) must be selected,Mindestens eine Richtung (eingehend oder ausgehend) muss ausgewählt werden
+At least one direction must be selected,Mindestens eine Richtung muss ausgewählt werden
+Attachment,Anhang
+Attachment {0},Anhang {0}
+Attachments,Anhänge
+Authentication,Authentifizierung
+Authorized,Autorisiert
+Automatically send invoices made in Harvest to your customers via Peppol.,Senden Sie in Harvest erstellte Rechnungen automatisch über Peppol an Ihre Kunden.
+Automatically sync documents with your accounting software,Dokumente automatisch mit Ihrer Buchhaltungssoftware synchronisieren
+Available integrations:,Verfügbare Integrationen:
+Available Plans,Verfügbare Tarife
+Awaiting verification result,Warten auf das Verifizierungsergebnis
+Back,Zurück
+Back to Companies,Zurück zu den Unternehmen
+Back to documents,Zurück zu den Dokumenten
+Back to your details,Zurück zu Ihren Angaben
+Billing,Abrechnung
+Billing Date,Abrechnungsdatum
+Billing Email,Abrechnungs-E-Mail
+Billing Email (Optional),E-Mail-Adresse für die Abrechnung (optional)
+Billing History,Abrechnungsverlauf
+Billing Peppol Address,Peppol-Abrechnungsadresse
+Billing Peppol Address (Optional),Peppol-Adresse für die Abrechnung (optional)
+Billing Profile,Abrechnungsprofil
+Blue,Blau
+Brussels,Brüssel
+Buyer details,Käuferdetails
+Buyer Information (Auto-populated),Käuferinformationen (automatisch ausgefüllt)
+Buyer Information *,Käuferinformationen *
+Buyer Reference,Käuferreferenz
+Canary Islands general indirect tax,Allgemeine indirekte Steuer der Kanarischen Inseln
+Cancel,Abbrechen
+Cancel Edit,Bearbeitung abbrechen
+Cancel Subscription,Abonnement kündigen
+Cancel Subscription?,Abonnement kündigen?
+Canceled,Gekündigt
+Capabilities,Funktionen
+Checking status every few seconds...,Der Status wird alle paar Sekunden geprüft...
+Choose a plan below to get started with Peppol document transmission,Wählen Sie unten einen Tarif aus\, um mit der Übertragung von Peppol-Dokumenten zu beginnen
+Choose file,Datei auswählen
+Choose the perfect plan for your needs,Wählen Sie den passenden Tarif für Ihre Anforderungen
+Choose the simulated verification outcome for {0} in this playground environment.,Wählen Sie das simulierte Verifizierungsergebnis für {0} in dieser Testumgebung aus.
+Choose the type of document you want to send,Wählen Sie den Dokumenttyp aus\, den Sie senden möchten
+City,Stadt
+City *,Stadt *
+Clear,Leeren
+Color,Farbe
+Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France),Gängige Schemata: 0208 (Belgien)\, 0106 (Niederlande)\, 0225 (Frankreich)
+Companies,Unternehmen
+Companies are the legal entities you send or receive Peppol documents for.,Unternehmen sind die juristischen Personen\, für die Sie Peppol-Dokumente senden oder empfangen.
+Companies in {0} are functional\, but some country-specific features or requirements may not be covered yet.,Unternehmen in {0} sind funktionsfähig\, einige landesspezifische Funktionen oder Anforderungen werden jedoch möglicherweise noch nicht abgedeckt.
+Company,Unternehmen
+Company (Optional),Unternehmen (optional)
+Company created successfully,Unternehmen erfolgreich erstellt
+Company deleted successfully,Unternehmen erfolgreich gelöscht
+Company Document Types,Dokumenttypen des Unternehmens
+Company ID,Unternehmens-ID
+Company ID copied to clipboard,Unternehmens-ID in die Zwischenablage kopiert
+Company Identifiers,Unternehmenskennungen
+Company information,Unternehmensinformationen
+Company is not verified,Unternehmen ist nicht verifiziert
+Company is verified,Unternehmen ist verifiziert
+Company Name,Unternehmensname
+Company not found,Unternehmen nicht gefunden
+Company updated successfully,Unternehmen erfolgreich aktualisiert
+Company Verification,Unternehmensverifizierung
+Company Verification Required,Unternehmensverifizierung erforderlich
+Complete payment setup to activate your subscription.,Schließen Sie die Einrichtung der Zahlungsmethode ab\, um Ihr Abonnement zu aktivieren.
+Complete the form below to create your document.,Füllen Sie das folgende Formular aus\, um Ihr Dokument zu erstellen.
+Configuration,Konfiguration
+Configure authentication settings,Authentifizierungseinstellungen konfigurieren
+Configure email addresses to receive notifications when documents are sent or received.,Konfigurieren Sie E-Mail-Adressen\, um Benachrichtigungen zu erhalten\, wenn Dokumente gesendet oder empfangen werden.
+Connect external services to automate document processing and workflows.,Verbinden Sie externe Dienste\, um die Dokumentverarbeitung und Arbeitsabläufe zu automatisieren.
+Connect external services to automate document processing and workflows. Integrations are available on Starter\, Professional\, or Enterprise plans.,Verbinden Sie externe Dienste\, um die Dokumentverarbeitung und Arbeitsabläufe zu automatisieren. Integrationen sind in den Tarifen Starter\, Professional und Enterprise verfügbar.
+Context,Kontext
+Continue,Weiter
+Continue to Identity Verification,Weiter zur Identitätsprüfung
+Continue to the Mandate,Weiter zum Mandat
+Copied!,Kopiert!
+Copy JSON,JSON kopieren
+Copy verification URL,Verifizierungs-URL kopieren
+Copy XML,XML kopieren
+Country,Land
+Country (C1),Land (C1)
+Country *,Land *
+Country & VAT,Land und USt.
+Create,Erstellen
+Create a billing profile,Abrechnungsprofil erstellen
+Create a credit note for refunds\, adjustments\, or corrections to previous invoices.,Erstellen Sie eine Gutschrift für Erstattungen\, Anpassungen oder Korrekturen früherer Rechnungen.
+Create a new customer with the details below.,Erstellen Sie einen neuen Kunden mit den unten stehenden Angaben.
+Create a new playground to test your Peppol API integrations.,Erstellen Sie eine neue Testumgebung\, um Ihre Peppol-API-Integrationen zu testen.
+Create a new supplier with the details below.,Erstellen Sie einen neuen Lieferanten mit den unten stehenden Angaben.
+Create a playground to test integrations without billing requirements\, or switch to an existing team.,Erstellen Sie eine Testumgebung\, um Integrationen ohne Abrechnungsanforderungen zu testen\, oder wechseln Sie zu einem bestehenden Team.
+Create a self billing credit note for adjustments or corrections in a self billing flow.,Erstellen Sie eine Self-Billing-Gutschrift für Anpassungen oder Korrekturen in einem Self-Billing-Ablauf.
+Create a self billing invoice where the buyer issues the invoice on behalf of the seller.,Erstellen Sie eine Self-Billing-Rechnung\, bei der der Käufer die Rechnung im Namen des Verkäufers ausstellt.
+Create Company,Unternehmen erstellen
+Create Customer,Kunden erstellen
+Create Label,Label erstellen
+Create New Company,Neues Unternehmen erstellen
+Create New Customer,Neuen Kunden erstellen
+Create New Label,Neues Label erstellen
+Create new playground,Neue Testumgebung erstellen
+Create New Supplier,Neuen Lieferanten erstellen
+Create playground,Testumgebung erstellen
+Create Playground,Testumgebung erstellen
+Create Supplier,Lieferanten erstellen
+Create webhooks and automations that react to Peppol events.,Erstellen Sie Webhooks und Automatisierungen\, die auf Peppol-Ereignisse reagieren.
+Created {0},Erstellt am {0}
+Created At,Erstellt am
+Creating your company...,Ihr Unternehmen wird erstellt...
+Creating...,Wird erstellt...
+Credit item,Gutschriftsposten
+Credit Note,Gutschrift
+Credit Note Lines *,Gutschriftpositionen *
+Credit Note Number *,Gutschriftnummer *
+Credited Invoices,Gutgeschriebene Rechnungen
+cURL Command,cURL-Befehl
+Current,Aktuell
+Current Plan,Aktueller Tarif
+Custom Email Content (Optional),Benutzerdefinierter E-Mail-Inhalt (optional)
+Custom UBL document,Benutzerdefiniertes UBL-Dokument
+Customer,Kunde
+Customer created successfully,Kunde erfolgreich erstellt
+Customer deleted successfully,Kunde erfolgreich gelöscht
+Customer updated successfully,Kunde erfolgreich aktualisiert
+Customers,Kunden
+Daily Sync,Tägliche Synchronisierung
+Date range must not exceed 1 month (31 days),Der Datumsbereich darf 1 Monat (31 Tage) nicht überschreiten
+Day,Tag
+Default: Dear {buyer name}\, you can find your invoice attached.,Standard: Guten Tag {buyer name}\, Ihre Rechnung finden Sie im Anhang.
+Default: Invoice {number} or Credit Note {number},Standard: Rechnung {number} oder Gutschrift {number}
+Delete,Löschen
+Delete All,Alle löschen
+Delete All Documents,Alle Dokumente löschen
+Delete Company,Unternehmen löschen
+Delete document,Dokument löschen
+Delete Integration,Integration löschen
+Delete Selected Documents,Ausgewählte Dokumente löschen
+Deleting...,Wird gelöscht...
+Description,Beschreibung
+Developer,Entwickler
+Did not complete the identity check?,Identitätsprüfung nicht abgeschlossen?
+Direction,Richtung
+DocType ID,DocType-ID
+Document deleted successfully,Dokument erfolgreich gelöscht
+Document Details,Dokumentdetails
+Document direction,Dokumentrichtung
+Document downloaded successfully,Dokument erfolgreich heruntergeladen
+Document ID,Dokument-ID
+Document ID copied to clipboard,Dokument-ID in die Zwischenablage kopiert
+Document Label Assigned,Dokument-Label zugewiesen
+Document Label Unassigned,Dokument-Label entfernt
+Document labels,Dokument-Labels
+Document marked as read,Dokument als gelesen markiert
+Document marked as unread,Dokument als ungelesen markiert
+Document not found,Dokument nicht gefunden
+Document Number,Dokumentnummer
+Document preview,Dokumentvorschau
+Document Received,Dokument empfangen
+Document sent successfully!,Dokument erfolgreich gesendet!
+Document Type,Dokumenttyp
+Document type added successfully,Dokumenttyp erfolgreich hinzugefügt
+Document type deleted successfully,Dokumenttyp erfolgreich gelöscht
+Document Type ID,Dokumenttyp-ID
+Document Type ID (optional),Dokumenttyp-ID (optional)
+Document Type ID is required,Dokumenttyp-ID ist erforderlich
+Document type updated successfully,Dokumenttyp erfolgreich aktualisiert
+Document types define what types of documents your company can receive over the Peppol network. This does not limit the types of documents you can send.,Dokumenttypen legen fest\, welche Arten von Dokumenten Ihr Unternehmen über das Peppol-Netzwerk empfangen kann. Dies schränkt die Dokumenttypen\, die Sie senden können\, nicht ein.
+Document Usage,Dokumentnutzung
+Document Validation Issues,Probleme bei der Dokumentvalidierung
+Documents,Dokumente
+Documents exported successfully,Dokumente erfolgreich exportiert
+documents included,Dokumente enthalten
+Documents per month,Dokumente pro Monat
+Documents with the referenced envelope ID.,Dokumente mit der referenzierten Umschlag-ID.
+Done,Fertig
+Download,Herunterladen
+Download attachment,Anhang herunterladen
+Download document package,Dokumentpaket herunterladen
+Download invoice (UBL/PDF),Rechnung herunterladen (UBL/PDF)
+Download package,Paket herunterladen
+Download XML,XML herunterladen
+Download ZIP,ZIP herunterladen
+Drag & drop an XML file,XML-Datei hierher ziehen
+Due Date,Fälligkeitsdatum
+E.g. 0208:[Belgian Enterprise Number],Z. B. 0208:[belgische Unternehmensnummer]
+e.g. 0208:1012081766,z. B. 0208:1012081766
+e.g.\, 0208 (Belgium),z. B. 0208 (Belgien)
+e.g.\, 1012081766,z. B. 1012081766
+e.g.\, urn:fdc:peppol.eu:2017:poacc:billing:01:1.0,z. B. urn:fdc:peppol.eu:2017:poacc:billing:01:1.0
+e.g.\, urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1,z. B. urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1
+Edit,Bearbeiten
+Edit Billing Profile,Abrechnungsprofil bearbeiten
+Edit Company,Unternehmen bearbeiten
+Edit company details for {0},Unternehmensdaten für {0} bearbeiten
+Edit Customer,Kunden bearbeiten
+Edit Label,Label bearbeiten
+Edit Supplier,Lieferanten bearbeiten
+Email,E-Mail
+Email (Optional),E-Mail-Adresse (optional)
+Email Address,E-Mail-Adresse
+Email address to receive invoices. If not set\, invoices will be sent to all team members.,E-Mail-Adresse für den Empfang von Rechnungen. Wenn keine festgelegt ist\, werden Rechnungen an alle Teammitglieder gesendet.
+Email Body (HTML),E-Mail-Text (HTML)
+Email is required,E-Mail-Adresse ist erforderlich
+Email Recipients,E-Mail-Empfänger
+Email Subject,E-Mail-Betreff
+Email-only delivery is only supported for (self-billing) invoices and credit notes,Die ausschließliche Zustellung per E-Mail wird nur für Self-Billing-Rechnungen und -Gutschriften unterstützt
+EN 16931 CII Credit Note D22B,EN-16931-CII-Gutschrift D22B
+EN 16931 CII Invoice + Credit Note D22B,EN-16931-CII-Rechnung + Gutschrift D22B
+EN 16931 CII Invoice D22B,EN-16931-CII-Rechnung D22B
+Enable or disable integration capabilities,Integrationsfunktionen aktivieren oder deaktivieren
+End Date,Enddatum
+End datetime (exclusive) *,Endzeitpunkt (exklusiv) *
+End datetime is required,Endzeitpunkt ist erforderlich
+End datetime must be after start datetime,Der Endzeitpunkt muss nach dem Startzeitpunkt liegen
+Endpoint,Endpunkt
+Enter the name of the person authorised to represent this company.,Geben Sie den Namen der Person ein\, die dieses Unternehmen vertreten darf.
+Enter the recipient's Peppol ID. Format: [scheme]:[identifier],Geben Sie die Peppol-ID des Empfängers ein. Format: [Schema]:[Kennung]
+Enterprise,Enterprise
+Enterprise Number,Unternehmensnummer
+Enterprise Number (Optional),Unternehmensnummer (optional)
+Enterprise number scheme 0106 or 0190 required,Unternehmensnummernschema 0106 oder 0190 erforderlich
+Envelope ID,Umschlag-ID
+Errors:,Fehler:
+Event,Ereignis
+Example Company,Beispielunternehmen
+Exempt from Tax,Steuerbefreit
+Expired,Abgelaufen
+Export,Exportieren
+Export all sent/received documents within a date range (max 1 month) as a ZIP archive.,Exportieren Sie alle gesendeten/empfangenen Dokumente innerhalb eines Datumsbereichs (max. 1 Monat) als ZIP-Archiv.
+Export Documents,Dokumente exportieren
+Exporting...,Wird exportiert...
+External ID,Externe ID
+External ID (Optional),Externe ID (optional)
+External link,Externer Link
+External Service Notification,Benachrichtigung eines externen Dienstes
+Failed,Fehlgeschlagen
+Failed to add document type: {0},Dokumenttyp konnte nicht hinzugefügt werden: {0}
+Failed to add identifier: {0},Kennung konnte nicht hinzugefügt werden: {0}
+Failed to add integration: {0},Integration konnte nicht hinzugefügt werden: {0}
+Failed to add notification email address: {0},Benachrichtigungs-E-Mail-Adresse konnte nicht hinzugefügt werden: {0}
+Failed to assign label,Label konnte nicht zugewiesen werden
+Failed to cancel subscription,Abonnement konnte nicht gekündigt werden
+Failed to copy URL. Please try again.,URL konnte nicht kopiert werden. Bitte versuchen Sie es erneut.
+Failed to create company,Unternehmen konnte nicht erstellt werden
+Failed to create playground,Testumgebung konnte nicht erstellt werden
+Failed to create verification session: {0},Verifizierungssitzung konnte nicht erstellt werden: {0}
+Failed to delete all documents,Löschen aller Dokumente fehlgeschlagen
+Failed to delete company: {0},Unternehmen konnte nicht gelöscht werden: {0}
+Failed to delete customer,Kunde konnte nicht gelöscht werden
+Failed to delete document,Dokument konnte nicht gelöscht werden
+Failed to delete document type: {0},Dokumenttyp konnte nicht gelöscht werden: {0}
+Failed to delete documents,Dokumente konnten nicht gelöscht werden
+Failed to delete identifier: {0},Kennung konnte nicht gelöscht werden: {0}
+Failed to delete integration: {0},Integration konnte nicht gelöscht werden: {0}
+Failed to delete notification email address: {0},Benachrichtigungs-E-Mail-Adresse konnte nicht gelöscht werden: {0}
+Failed to delete supplier,Lieferant konnte nicht gelöscht werden
+Failed to download document,Dokument konnte nicht heruntergeladen werden
+Failed to export documents,Dokumente konnten nicht exportiert werden
+Failed to export documents. Please try again.,Dokumente konnten nicht exportiert werden. Bitte versuchen Sie es erneut.
+Failed to load billing events,Abrechnungsereignisse konnten nicht geladen werden
+Failed to load companies,Unternehmen konnten nicht geladen werden
+Failed to load company,Unternehmen konnte nicht geladen werden
+Failed to load company document types,Dokumenttypen des Unternehmens konnten nicht geladen werden
+Failed to load company identifiers: {0},Unternehmenskennungen konnten nicht geladen werden: {0}
+Failed to load current usage,Aktuelle Nutzung konnte nicht geladen werden
+Failed to load customers,Kunden konnten nicht geladen werden
+Failed to load document,Dokument konnte nicht geladen werden
+Failed to load documents,Dokumente konnten nicht geladen werden
+Failed to load integration,Integration konnte nicht geladen werden
+Failed to load integrations: {0},Integrationen konnten nicht geladen werden: {0}
+Failed to load labels,Labels konnten nicht geladen werden
+Failed to load notification email addresses: {0},Benachrichtigungs-E-Mail-Adressen konnten nicht geladen werden: {0}
+Failed to load rule builder options,Optionen für den Regel-Builder konnten nicht geladen werden
+Failed to load subscription,Abonnement konnte nicht geladen werden
+Failed to load suppliers,Lieferanten konnten nicht geladen werden
+Failed to load task logs,Aufgabenprotokolle konnten nicht geladen werden
+Failed to load verification data. Please try again.,Verifizierungsdaten konnten nicht geladen werden. Bitte versuchen Sie es erneut.
+Failed to load verification status. Please try again.,Verifizierungsstatus konnte nicht geladen werden. Bitte versuchen Sie es erneut.
+Failed to mark documents as read,Dokumente konnten nicht als gelesen markiert werden
+Failed to read file,Datei konnte nicht gelesen werden
+Failed to remove label,Label konnte nicht entfernt werden
+Failed to reset integration state: {0},Integrationsstatus konnte nicht zurückgesetzt werden: {0}
+Failed to save customer,Kunde konnte nicht gespeichert werden
+Failed to save supplier,Lieferant konnte nicht gespeichert werden
+Failed to send document,Dokument konnte nicht gesendet werden
+Failed to unassign label,Label-Zuweisung konnte nicht aufgehoben werden
+Failed to update company. ({0}),Unternehmen konnte nicht aktualisiert werden. ({0})
+Failed to update document read status,Lesestatus des Dokuments konnte nicht aktualisiert werden
+Failed to update document type: {0},Dokumenttyp konnte nicht aktualisiert werden: {0}
+Failed to update identifier: {0},Kennung konnte nicht aktualisiert werden: {0}
+Failed to update integration: {0},Integration konnte nicht aktualisiert werden: {0}
+Failed to update notification email address: {0},Benachrichtigungs-E-Mail-Adresse konnte nicht aktualisiert werden: {0}
+Failed to update subscription,Abonnement konnte nicht aktualisiert werden
+False,Falsch
+Fill in the company\, recipient\, and required invoice fields to see a preview.,Füllen Sie die Angaben zu Unternehmen und Empfänger sowie die erforderlichen Rechnungsfelder aus\, um eine Vorschau anzuzeigen.
+Fill in the invoice details including buyer information\, line items\, and payment terms.,Geben Sie die Rechnungsdaten einschließlich Käuferinformationen\, Positionen und Zahlungsbedingungen ein.
+Fill in the required fields to see a preview.,Füllen Sie die erforderlichen Felder aus\, um eine Vorschau anzuzeigen.
+First name,Vorname
+Flat UBL ZIP,Flaches UBL-ZIP
+Flat UBLs (all XMLs in root),Flache UBL-Struktur (alle XML-Dateien im Stammverzeichnis)
+for assistance.,um Unterstützung zu erhalten.
+For Belgian businesses\, the VAT number will be used to infer the enterprise number.,Bei belgischen Unternehmen wird die Unternehmensnummer aus der Umsatzsteuer-Identifikationsnummer abgeleitet.
+For Dutch businesses\, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).,Bei niederländischen Unternehmen hat die Umsatzsteuer-Identifikationsnummer das Format NL + 9 Ziffern + B + 2 Ziffern (z. B. NL123456789B01).
+For Dutch sellers\, the scheme identifier is required to be able to send invoices and credit notes.,Bei niederländischen Verkäufern ist die Schemakennung erforderlich\, um Rechnungen und Gutschriften senden zu können.
+For growing businesses with higher volumes,Für wachsende Unternehmen mit höherem Volumen
+For small businesses sending every month,Für kleine Unternehmen\, die jeden Monat senden
+Forward,Weiterleiten
+Forward to,Weiterleiten an
+Forward to someone else,An eine andere Person weiterleiten
+France CII Credit Note CIUS,Französische CII-Gutschrift CIUS
+France CII Credit Note Extended,Französische erweiterte CII-Gutschrift
+France CII Invoice + Credit Note CIUS,Französische CII-Rechnung + Gutschrift CIUS
+France CII Invoice + Credit Note CIUS (Non-Regulated),Französische CII-Rechnung + Gutschrift CIUS (nicht reguliert)
+France CII Invoice + Credit Note Extended,Französische erweiterte CII-Rechnung + Gutschrift
+France CII Invoice + Credit Note Extended (Non-Regulated),Französische erweiterte CII-Rechnung + Gutschrift (nicht reguliert)
+France CII Invoice CIUS,Französische CII-Rechnung CIUS
+France CII Invoice Extended,Französische erweiterte CII-Rechnung
+France Factur-X Credit Note,Französische Factur-X-Gutschrift
+France Factur-X Invoice,Französische Factur-X-Rechnung
+France Factur-X Invoice + Credit Note,Französische Factur-X-Rechnung + Gutschrift
+France Factur-X Invoice + Credit Note (Non-Regulated),Französische Factur-X-Rechnung + Gutschrift (nicht reguliert)
+France Invoicing CDAR,Französisches Rechnungs-CDAR
+France Invoicing CDAR (Non-Regulated),Französisches Rechnungs-CDAR (nicht reguliert)
+France Peppol BIS Billing UBL Credit Note,Französische Peppol-BIS-Billing-UBL-Gutschrift
+France Peppol BIS Billing UBL Credit Note (Non-Regulated),Französische Peppol-BIS-Billing-UBL-Gutschrift (nicht reguliert)
+France Peppol BIS Billing UBL Invoice,Französische Peppol-BIS-Billing-UBL-Rechnung
+France Peppol BIS Billing UBL Invoice (Non-Regulated),Französische Peppol-BIS-Billing-UBL-Rechnung (nicht reguliert)
+France UBL Credit Note CIUS,Französische UBL-Gutschrift CIUS
+France UBL Credit Note CIUS (Non-Regulated),Französische UBL-Gutschrift CIUS (nicht reguliert)
+France UBL Credit Note Extended,Französische erweiterte UBL-Gutschrift
+France UBL Credit Note Extended (Non-Regulated),Französische erweiterte UBL-Gutschrift (nicht reguliert)
+France UBL Invoice CIUS,Französische UBL-Rechnung CIUS
+France UBL Invoice CIUS (Non-Regulated),Französische UBL-Rechnung CIUS (nicht reguliert)
+France UBL Invoice Extended,Französische erweiterte UBL-Rechnung
+France UBL Invoice Extended (Non-Regulated),Französische erweiterte UBL-Rechnung (nicht reguliert)
+Free,Kostenlos
+Free export item\, VAT not charged,Steuerfreie Ausfuhr\, keine Umsatzsteuer berechnet
+French B2C Payment Report,Französischer B2C-Zahlungsbericht
+French B2C Sales Report,Französischer B2C-Umsatzbericht
+French Invoicing CDAR,Französische Rechnungs-CDAR
+Frequent Sync,Häufige Synchronisierung
+Full Peppol participation: send documents and receive them from your network.,Vollständige Peppol-Teilnahme: Senden Sie Dokumente und empfangen Sie sie aus Ihrem Netzwerk.
+Generated document preview,Generierte Dokumentvorschau
+Generates a PDF of the document and embeds it as an attachment.,Erstellt ein PDF des Dokuments und bettet es als Anhang ein.
+Go to Companies,Zu den Unternehmen
+Green,Grün
+Harvest,Harvest
+Hour,Stunde
+Hourly Sync,Stündliche Synchronisierung
+I accept the,Ich akzeptiere die
+I confirm that I am authorised to act on behalf of {0} on the Peppol network.,Ich bestätige\, dass ich berechtigt bin\, im Peppol-Netzwerk im Namen von {0} zu handeln.
+I\, {0}\, have read the mandate and sign it electronically on behalf of {1}.,Ich\, {0}\, habe das Mandat gelesen und unterzeichne es elektronisch im Namen von {1}.
+IBAN *,IBAN *
+ID,ID
+Identifier,Kennung
+Identifier added successfully,Kennung erfolgreich hinzugefügt
+Identifier deleted successfully,Kennung erfolgreich gelöscht
+Identifier is required,Kennung ist erforderlich
+Identifier updated successfully,Kennung erfolgreich aktualisiert
+Identifiers are used to identify your company in the Peppol network.,Kennungen dienen dazu\, Ihr Unternehmen im Peppol-Netzwerk zu identifizieren.
+Identity verification completed successfully. You can close this page.,Identitätsprüfung erfolgreich abgeschlossen. Sie können diese Seite schließen.
+Identity verification may have succeeded\, but we could not activate this company on the Peppol network. Please contact support@recommand.eu for assistance.,Die Identitätsprüfung war möglicherweise erfolgreich\, aber wir konnten dieses Unternehmen nicht im Peppol-Netzwerk aktivieren. Wenden Sie sich an support@recommand.eu\, um Unterstützung zu erhalten.
+If enabled\, the company will be registered as a recipient in our SMP (the Peppol address book). This will allow you to send and receive documents. If disabled\, you will only be able to send documents via Recommand.,Wenn diese Option aktiviert ist\, wird das Unternehmen als Empfänger in unserem SMP (dem Peppol-Adressbuch) registriert. Dadurch können Sie Dokumente senden und empfangen. Wenn die Option deaktiviert ist\, können Sie über Recommand nur Dokumente senden.
+If no Peppol recipient is provided\, email will be the primary delivery method regardless of this setting.,Wenn kein Peppol-Empfänger angegeben ist\, erfolgt die Zustellung unabhängig von dieser Einstellung vorrangig per E-Mail.
+If you want to test the Recommand API without affecting production data or communicating over the Peppol network\, you can create a playground team by clicking the team switcher in the top left.,Wenn Sie die Recommand API testen möchten\, ohne Produktionsdaten zu beeinflussen oder über das Peppol-Netzwerk zu kommunizieren\, können Sie über den Teamumschalter oben links ein Testteam erstellen.
+Image attachment,Bildanhang
+Include generated PDF,Erstelltes PDF einschließen
+Include incoming documents,Eingehende Dokumente einschließen
+Include outgoing documents,Ausgehende Dokumente einschließen
+Included Documents,Enthaltene Dokumente
+incoming,eingehend
+Incoming,Eingehend
+Incoming document,Eingehendes Dokument
+Incoming documents,Eingehende Dokumente
+Incoming invoices,Eingehende Rechnungen
+Inspect document metadata.,Dokumentmetadaten prüfen.
+Inspect metadata or the original XML payload.,Metadaten oder die ursprüngliche XML-Nutzlast prüfen.
+Inspect metadata or the parsed JSON structure.,Metadaten oder die geparste JSON-Struktur prüfen.
+Inspect metadata\, parsed JSON structure\, or the original XML payload.,Metadaten\, die geparste JSON-Struktur oder die ursprüngliche XML-Nutzlast prüfen.
+Integration added successfully,Integration erfolgreich hinzugefügt
+Integration configuration is required. Please configure the integration first.,Eine Integrationskonfiguration ist erforderlich. Konfigurieren Sie zuerst die Integration.
+Integration deleted successfully,Integration erfolgreich gelöscht
+Integration does not belong to this company,Die Integration gehört nicht zu diesem Unternehmen
+Integration not found,Integration nicht gefunden
+Integration Setup,Integration einrichten
+Integration State,Integrationsstatus
+Integration state reset successfully,Integrationsstatus erfolgreich zurückgesetzt
+Integration Teardown,Integration abbauen
+Integration updated successfully,Integration erfolgreich aktualisiert
+Integrations,Integrationen
+Invoice,Rechnung
+Invoice #,Rechnungsnr.
+Invoice ID *,Rechnungs-ID *
+Invoice Lines *,Rechnungspositionen *
+Invoice Number *,Rechnungsnummer *
+Invoice number or reference,Rechnungsnummer oder Referenz
+Invoice Response,Rechnungsantwort
+Issue Date,Ausstellungsdatum
+Item Name *,Artikelbezeichnung *
+JavaScript Fetch,JavaScript Fetch
+JSON,JSON
+JSON copied to clipboard,JSON in die Zwischenablage kopiert
+JSON document,JSON-Dokument
+Keep Subscription,Abonnement beibehalten
+Key,Schlüssel
+Kilogram,Kilogramm
+Label,Label
+Label added to {0} documents,Label zu {0} Dokumenten hinzugefügt
+Label created successfully,Label erfolgreich erstellt
+Label deleted successfully,Label erfolgreich gelöscht
+Label ID copied to clipboard,Label-ID in die Zwischenablage kopiert
+Label Name,Labelname
+Label not found,Label nicht gefunden
+Label updated successfully,Label erfolgreich aktualisiert
+Labels,Labels
+Last month,Letzter Monat
+Last name,Nachname
+Leave blank to auto-detect from the document type,Leer lassen\, um die Angabe automatisch anhand des Dokumenttyps zu ermitteln
+Leave blank to auto-detect from your XML (if possible),Leer lassen\, um die Angabe nach Möglichkeit automatisch aus Ihrer XML-Datei zu ermitteln
+Leave empty to send via email only.,Leer lassen\, um ausschließlich per E-Mail zu senden.
+Limited document details,Eingeschränkte Dokumentdetails
+Line Total:,Positionssumme:
+Liter,Liter
+Live preview of the API request that will be sent,Live-Vorschau der zu sendenden API-Anfrage
+Loaded: {0},Geladen: {0}
+Loading companies...,Unternehmen werden geladen...
+Loading company details...,Unternehmensdetails werden geladen...
+Loading document details...,Dokumentdetails werden geladen...
+Loading integration details...,Integrationsdetails werden geladen...
+Loading preview...,Vorschau wird geladen...
+Loading verification status...,Verifizierungsstatus wird geladen...
+Loading verification...,Verifizierung wird geladen...
+Loading...,Wird geladen...
+Main Street 123,Hauptstraße 123
+Make changes to the company information below,Ändern Sie unten die Unternehmensdaten
+Make configuration changes to the integration,Ändern Sie die Konfiguration der Integration
+Manage email notifications for documents,E-Mail-Benachrichtigungen für Dokumente verwalten
+Manage integrations for this company,Integrationen für dieses Unternehmen verwalten
+Manage labels for organizing and categorizing your data.,Labels zum Ordnen und Kategorisieren Ihrer Daten verwalten.
+Manage your companies\, send and receive Peppol documents\, and monitor your subscription all in one place.,Verwalten Sie Ihre Unternehmen\, senden und empfangen Sie Peppol-Dokumente und überwachen Sie Ihr Abonnement an einem Ort.
+Manage your company document types,Dokumenttypen Ihres Unternehmens verwalten
+Manage your company identifiers,Kennungen Ihres Unternehmens verwalten
+Manage your subscription plan and billing information,Abonnementtarif und Abrechnungsinformationen verwalten
+Mandate for electronic invoicing,Mandat für die elektronische Rechnungsstellung
+Mandate Status: Not yet validated,Mandatsstatus: Noch nicht validiert
+Mandate Status: Validated,Mandatsstatus: Validiert
+Manual review in progress,Manuelle Prüfung läuft
+Mark as read,Als gelesen markieren
+Mark as unread,Als ungelesen markieren
+Megawatt hour (MWh),Megawattstunde (MWh)
+Message,Nachricht
+Message Level Response,Antwort auf Nachrichtenebene
+Metadata,Metadaten
+Meter,Meter
+Month,Monat
+Monthly Price,Monatlicher Preis
+Most popular,Am beliebtesten
+N/A,k. A.
+Name,Name
+Name *,Name *
+Name is required,Name ist erforderlich
+Need more than {0} documents per month? Contact us for a custom plan.,Benötigen Sie mehr als {0} Dokumente pro Monat? Kontaktieren Sie uns für einen individuellen Tarif.
+Nested structure (document packages),Verschachtelte Struktur (Dokumentpakete)
+Nested ZIP,Verschachteltes ZIP
+Net Total:,Nettosumme:
+Net: €{0},Netto: {0} €
+New companies cannot be created in {0}\, and existing companies cannot switch to it. We are working on supporting more countries in the future. Would you like to see support for {1}? Let us know via support@recommand.eu.,In {0} können keine neuen Unternehmen erstellt werden und bestehende Unternehmen können nicht dorthin wechseln. Wir arbeiten daran\, künftig weitere Länder zu unterstützen. Möchten Sie\, dass {1} unterstützt wird? Schreiben Sie uns an support@recommand.eu.
+Next,Weiter
+No Active Subscription,Kein aktives Abonnement
+No active team selected,Kein aktives Team ausgewählt
+No attachments added yet.,Noch keine Anhänge hinzugefügt.
+No attachments found on this document.,In diesem Dokument wurden keine Anhänge gefunden.
+No available labels,Keine verfügbaren Labels
+No billing events found,Keine Abrechnungsereignisse gefunden
+No billing profile set up yet.,Noch kein Abrechnungsprofil eingerichtet.
+No companies available,Keine Unternehmen verfügbar
+No configurable capabilities available for this integration.,Für diese Integration sind keine konfigurierbaren Funktionen verfügbar.
+No configurable fields available for this integration.,Für diese Integration sind keine konfigurierbaren Felder verfügbar.
+No customers found.,Keine Kunden gefunden.
+No detailed error information available.,Keine detaillierten Fehlerinformationen verfügbar.
+No document type selected for editing,Kein Dokumenttyp zur Bearbeitung ausgewählt
+No document types found,Keine Dokumenttypen gefunden
+No embedded content or external reference available for this attachment.,Für diesen Anhang sind weder eingebettete Inhalte noch eine externe Referenz verfügbar.
+No identifier selected for editing,Keine Kennung zur Bearbeitung ausgewählt
+No identifiers found,Keine Kennungen gefunden
+No integrations configured,Keine Integrationen konfiguriert
+No labels available,Keine Labels verfügbar
+No notification email address selected for editing,Keine Benachrichtigungs-E-Mail-Adresse zur Bearbeitung ausgewählt
+No notification emails configured,Keine Benachrichtigungs-E-Mail-Adressen konfiguriert
+No Peppol addresses added. Click "Add Address" to add one.,Keine Peppol-Adressen hinzugefügt. Klicken Sie auf „Adresse hinzufügen“\, um eine hinzuzufügen.
+No Peppol IDs added yet.,Noch keine Peppol-IDs hinzugefügt.
+No preview available for this document.,Für dieses Dokument ist keine Vorschau verfügbar.
+No registered representatives could be found for this company in the CBE registry. You can still proceed with identity verification but your request will be manually reviewed.,Für dieses Unternehmen wurden im ZDU-Register keine eingetragenen Vertreter gefunden. Sie können mit der Identitätsprüfung fortfahren\, Ihre Anfrage wird jedoch manuell geprüft.
+No scheme found.,Kein Schema gefunden.
+No state data available,Keine Statusdaten verfügbar
+No task logs available,Keine Aufgabenprotokolle verfügbar
+None,Keine
+Not found,Nicht gefunden
+Not Found,Nicht gefunden
+Not sent over Peppol network,Nicht über das Peppol-Netzwerk gesendet
+Not set,Nicht festgelegt
+Not specified,Nicht angegeben
+Not the right person to complete this?,Nicht die richtige Person\, um dies abzuschließen?
+Note,Hinweis
+Notification email address added successfully,Benachrichtigungs-E-Mail-Adresse erfolgreich hinzugefügt
+Notification email address deleted successfully,Benachrichtigungs-E-Mail-Adresse erfolgreich gelöscht
+Notification email address updated successfully,Benachrichtigungs-E-Mail-Adresse erfolgreich aktualisiert
+Notifications,Benachrichtigungen
+Notify for,Benachrichtigen bei
+of Recommand on behalf of {0}.,von Recommand im Namen von {0}.
+One,Stück
+Only if Peppol fails,Nur wenn Peppol fehlschlägt
+Open,Offen
+Open external reference,Externe Referenz öffnen
+Open link,Link öffnen
+Optional description,Optionale Beschreibung
+Optional external identifier,Optionale externe Kennung
+Optional VAT number,Optionale USt-IdNr.
+Optionally attach supporting documents such as PDFs or images. Files are embedded in the Peppol document.,Fügen Sie optional unterstützende Dokumente wie PDF-Dateien oder Bilder hinzu. Die Dateien werden in das Peppol-Dokument eingebettet.
+Or choose a file to fill the XML textarea below,Oder wählen Sie eine Datei aus\, um das XML-Textfeld unten auszufüllen
+Orange,Orange
+outgoing,ausgehend
+Outgoing,Ausgehend
+Outgoing document,Ausgehendes Dokument
+Outgoing documents,Ausgehende Dokumente
+Outgoing invoices,Ausgehende Rechnungen
+Output type *,Ausgabetyp *
+Overage Rate,Mehrpreis
+Overview of all invoices and billing events,Übersicht über alle Rechnungen und Abrechnungsereignisse
+Paid,Bezahlt
+Payment Information,Zahlungsinformationen
+Payment Mandate,Zahlungsmandat
+Payment Reference,Zahlungsreferenz
+Payment Status,Zahlungsstatus
+Payment Status: {0},Zahlungsstatus: {0}
+PDF attachment,PDF-Anhang
+PDF filename,PDF-Dateiname
+PDF\, drawn up for {0},PDF\, erstellt für {0}
+Pending,Ausstehend
+Peppol address for invoice delivery. If not set\, we will try to derive it from your VAT number or deliver the invoice via email.,Peppol-Adresse für die Rechnungszustellung. Wenn keine festgelegt ist\, versuchen wir\, sie aus Ihrer Umsatzsteuer-Identifikationsnummer abzuleiten oder die Rechnung per E-Mail zuzustellen.
+Peppol address: {0},Peppol-Adresse: {0}
+Peppol addresses,Peppol-Adressen
+Peppol Addresses,Peppol-Adressen
+Peppol Conversation ID,Peppol-Konversations-ID
+Peppol identifiers are the addresses your company uses on the Peppol network. By default\, identifiers were created from your enterprise or VAT number. You can add additional identifiers here if needed.,Peppol-Kennungen sind die Adressen\, die Ihr Unternehmen im Peppol-Netzwerk verwendet. Standardmäßig wurden Kennungen aus Ihrer Unternehmens- oder Umsatzsteuer-Identifikationsnummer erstellt. Bei Bedarf können Sie hier weitere Kennungen hinzufügen.
+Peppol IDs,Peppol-IDs
+Peppol Message ID,Peppol-Nachrichten-ID
+per document,pro Dokument
+per month,pro Monat
+Period,Zeitraum
+Phone,Telefon
+Phone (Optional),Telefon (optional)
+Pick a plan,Tarif auswählen
+Playground created successfully,Testumgebung erfolgreich erstellt
+Playground Environment,Testumgebung
+Playground name,Name der Testumgebung
+Please enter a name for the playground,Geben Sie einen Namen für die Testumgebung ein
+Please enter a recipient Peppol ID or configure email delivery,Bitte geben Sie eine Peppol-ID des Empfängers ein oder konfigurieren Sie die Zustellung per E-Mail
+Please select a company,Bitte wählen Sie ein Unternehmen aus
+Please select at least one notification type,Bitte wählen Sie mindestens einen Benachrichtigungstyp aus
+Please upload an XML file,Bitte laden Sie eine XML-Datei hoch
+Please wait while we validate your payment mandate.,Bitte warten Sie\, während wir Ihr Zahlungsmandat validieren.
+Postal Code,Postleitzahl
+Postal Code *,Postleitzahl *
+Preparing signature...,Signatur wird vorbereitet...
+Preview and metadata for this transmitted Peppol document.,Vorschau und Metadaten für dieses übertragene Peppol-Dokument.
+Price *,Preis *
+Price per Document,Preis pro Dokument
+Pricing Model,Preismodell
+Process ID,Prozess-ID
+Process ID (optional),Prozess-ID (optional)
+Process ID is required,Prozess-ID ist erforderlich
+Product or service,Produkt oder Dienstleistung
+Production Environment,Produktionsumgebung
+Professional,Professional
+Professional 1000,Professional 1000
+Professional 2500,Professional 2500
+Professional 5000,Professional 5000
+Purple,Violett
+Quantity *,Menge *
+Raw XML,Roh-XML
+Raw XML Document,XML-Rohdokument
+Read,Gelesen
+Read {0},Gelesen am {0}
+Read At,Gelesen am
+Read Status,Lesestatus
+Read the mandate you are about to sign on behalf of {0}. It authorises us to send\, receive and register electronic invoices for the company.,Lesen Sie das Mandat\, das Sie im Namen von {0} unterzeichnen werden. Es ermächtigt uns\, elektronische Rechnungen für das Unternehmen zu senden\, zu empfangen und zu registrieren.
+Reason for credit note,Grund für die Gutschrift
+Reason why the credit note is exempt from VAT,Grund für die Umsatzsteuerbefreiung der Gutschrift
+Reason why the invoice is exempt from VAT,Grund für die Umsatzsteuerbefreiung der Rechnung
+Receive documents only,Nur Dokumente empfangen
+Receive real-time notifications for incoming documents,Echtzeitbenachrichtigungen über eingehende Dokumente erhalten
+Received Peppol Signal Message,Empfangene Peppol-Signalnachricht
+Receiver,Empfänger
+Receiver ID,Empfänger-ID
+Recent integration task execution logs,Protokolle der letzten Integrationsaufgaben
+Recipient Peppol ID,Peppol-ID des Empfängers
+Recommand Logo,Recommand-Logo
+Refund or adjustment document,Erstattungs- oder Anpassungsdokument
+Register as recipient,Als Empfänger registrieren
+Register your company in the Peppol network so suppliers can send you documents.,Registrieren Sie Ihr Unternehmen im Peppol-Netzwerk\, damit Lieferanten Ihnen Dokumente senden können.
+Reject,Ablehnen
+Rejecting...,Wird abgelehnt...
+Related documents,Zugehörige Dokumente
+Remove,Entfernen
+Preview of the billing document and any attachments.,Vorschau des Abrechnungsdokuments und vorhandener Anhänge.
+Representative Details,Vertreterangaben
+Request Body,Anfragetext
+Request failed,Anfrage fehlgeschlagen
+Reset Integration State,Integrationsstatus zurücksetzen
+Reset State,Status zurücksetzen
+Restart identity verification,Identitätsprüfung neu starten
+Restart Identity Verification,Identitätsprüfung neu starten
+Restarting...,Wird neu gestartet...
+Resume Subscription,Abonnement fortsetzen
+Return to Subscription,Zurück zum Abonnement
+Save Changes,Änderungen speichern
+Saving will require re-verification,Nach dem Speichern ist eine erneute Verifizierung erforderlich
+Scheduled,Geplant
+Scheduled subscription change,Geplante Abonnementänderung
+Scheme,Schema
+Scheme is required,Schema ist erforderlich
+Search customers...,Kunden suchen...
+Search documents...,Dokumente suchen...
+Search scheme...,Schema suchen...
+Search suppliers...,Lieferanten suchen...
+Select {0} color,Farbe {0} auswählen
+Select a company,Unternehmen auswählen
+Select a country,Land auswählen
+Select a customer...,Kunden auswählen...
+Select a preset...,Voreinstellung auswählen...
+Select all rows,Alle Zeilen auswählen
+Select an integration to connect to this company.,Wählen Sie eine Integration aus\, die mit diesem Unternehmen verbunden werden soll.
+Select country,Land auswählen
+Select document type,Dokumenttyp auswählen
+Select Plan,Tarif auswählen
+Select row,Zeile auswählen
+Select scheme...,Schema auswählen...
+Select your name from the list of registered representatives.,Wählen Sie Ihren Namen aus der Liste der eingetragenen Vertreter aus.
+Self billing credit note,Self-Billing-Gutschrift
+Self Billing Credit Note,Self-Billing-Gutschrift
+Self billing invoice,Self-Billing-Rechnung
+Self Billing Invoice,Self-Billing-Rechnung
+Seller details,Verkäuferdetails
+Seller Information (Auto-populated),Verkäuferinformationen (automatisch ausgefüllt)
+Seller Information *,Verkäuferinformationen *
+Send and receive documents,Dokumente senden und empfangen
+Send document,Dokument senden
+Send Document,Dokument senden
+Send documents only,Nur Dokumente senden
+Send invoices and credit notes through the Peppol network.,Rechnungen und Gutschriften über das Peppol-Netzwerk senden.
+Send via Email,Per E-Mail senden
+Sender,Absender
+Sender ID,Absender-ID
+Sending & receiving,Senden und Empfangen
+Sending Company *,Sendendes Unternehmen *
+Sending...,Wird gesendet...
+Sent and received,Gesendet und empfangen
+Sent and received documents,Gesendete und empfangene Dokumente
+Sent via email to:,Per E-Mail gesendet an:
+Services outside scope of tax,Dienstleistungen außerhalb des Steueranwendungsbereichs
+Set Up Billing Profile,Abrechnungsprofil einrichten
+Set Up Payment Method,Zahlungsmethode einrichten
+Set up your billing profile to manage subscriptions.,Richten Sie Ihr Abrechnungsprofil ein\, um Abonnements zu verwalten.
+Set up your first company,Erstes Unternehmen einrichten
+Setup Payment Method,Zahlungsmethode einrichten
+SI-UBL 2.0 Credit Note,SI-UBL-2.0-Gutschrift
+SI-UBL 2.0 Invoice,SI-UBL-2.0-Rechnung
+Sign the mandate,Mandat unterzeichnen
+Sign the mandate that lets us act for {0} on the Peppol network\, then confirm your identity.,Unterzeichnen Sie das Mandat\, das uns berechtigt\, für {0} im Peppol-Netzwerk zu handeln\, und bestätigen Sie anschließend Ihre Identität.
+Sign with identity verification,Mit Identitätsprüfung unterzeichnen
+Signed by {0}\, for {1},Unterzeichnet von {0} für {1}
+Simulate Verification Result,Verifizierungsergebnis simulieren
+Skip Billing,Abrechnung überspringen
+Skip billing setup by creating a playground to test your Peppol API integrations without billing requirements\, or switch to another team.,Überspringen Sie die Abrechnungseinrichtung\, indem Sie eine Testumgebung zum Testen Ihrer Peppol-API-Integrationen ohne Abrechnungsanforderungen erstellen\, oder wechseln Sie zu einem anderen Team.
+Skip for now,Vorerst überspringen
+Skip Setup with Playground,Einrichtung mit Testumgebung überspringen
+Skip Subscription - Create Playground,Abonnement überspringen – Testumgebung erstellen
+Skip subscription setup by creating a playground to test your Peppol API integrations without billing requirements\, or switch to another team.,Überspringen Sie die Abonnementeinrichtung\, indem Sie eine Testumgebung zum Testen Ihrer Peppol-API-Integrationen ohne Abrechnungsanforderungen erstellen\, oder wechseln Sie zu einem anderen Team.
+Skip the current setup by switching to another team or creating a playground to test your Peppol API integrations without billing requirements.,Überspringen Sie die aktuelle Einrichtung\, indem Sie zu einem anderen Team wechseln oder eine Testumgebung zum Testen Ihrer Peppol-API-Integrationen ohne Abrechnungsanforderungen erstellen.
+Some fields have been pre-filled from your billing profile.,Einige Felder wurden anhand Ihres Abrechnungsprofils vorausgefüllt.
+Standard billing document,Standardabrechnungsdokument
+Standard rate,Normalsatz
+Start Date,Startdatum
+Start datetime (inclusive) *,Startzeitpunkt (inklusiv) *
+Start datetime is required,Startzeitpunkt ist erforderlich
+Start Verification,Verifizierung starten
+Starter,Starter
+Status,Status
+Status unavailable,Status nicht verfügbar
+Step {0} of {1},Schritt {0} von {1}
+Streamline your document processing workflow,Arbeitsablauf für die Dokumentverarbeitung optimieren
+Street Address,Straße und Hausnummer
+Street Address 2,Adresszusatz
+Subscription,Abonnement
+Subscription cancelled successfully,Abonnement erfolgreich gekündigt
+Subscription updated successfully,Abonnement erfolgreich aktualisiert
+Success,Erfolgreich
+Suite 100,Suite 100
+Supplier created successfully,Lieferant erfolgreich erstellt
+Supplier deleted successfully,Lieferant erfolgreich gelöscht
+Supplier updated successfully,Lieferant erfolgreich aktualisiert
+Suppliers,Lieferanten
+Supporting data,Stammdaten
+Switch Team or Create Playground,Team wechseln oder Testumgebung erstellen
+Switch to a production team to manage your subscription.,Wechseln Sie zu einem Produktionsteam\, um Ihr Abonnement zu verwalten.
+Switch to existing team,Zu bestehendem Team wechseln
+Switched team successfully,Team erfolgreich gewechselt
+Task,Aufgabe
+Task Logs,Aufgabenprotokolle
+Task Retry,Aufgabe wiederholen
+Tax for production\, services and importation in Ceuta and Melilla,Steuer auf Produktion\, Dienstleistungen und Einfuhren in Ceuta und Melilla
+Team Settings,Teameinstellungen
+Technical details & raw data,Technische Details und Rohdaten
+terms and conditions,Allgemeinen Geschäftsbedingungen
+Thank you for your business,Vielen Dank für Ihren Auftrag
+The identity verification for {0} was not successful.,Die Identitätsprüfung für {0} war nicht erfolgreich.
+The integration will be notified every day to synchronize documents or perform other tasks.,Die Integration wird täglich benachrichtigt\, um Dokumente zu synchronisieren oder andere Aufgaben auszuführen.
+The integration will be notified every few hours to synchronize documents or perform other tasks.,Die Integration wird alle paar Stunden benachrichtigt\, um Dokumente zu synchronisieren oder andere Aufgaben auszuführen.
+The integration will be notified every few minutes to synchronize documents or perform other tasks.,Die Integration wird alle paar Minuten benachrichtigt\, um Dokumente zu synchronisieren oder andere Aufgaben auszuführen.
+The request was forwarded successfully. You can close this page.,Die Anfrage wurde erfolgreich weitergeleitet. Sie können diese Seite schließen.
+The token is used to authenticate the integration with the external service.,Das Token wird verwendet\, um die Integration beim externen Dienst zu authentifizieren.
+The VAT or enterprise number changed. Saving will revoke open verification sessions and any current verification status\, and the company will need to be verified again.,Die Umsatzsteuer-Identifikations- oder Unternehmensnummer wurde geändert. Beim Speichern werden offene Verifizierungssitzungen und der aktuelle Verifizierungsstatus widerrufen; das Unternehmen muss anschließend erneut verifiziert werden.
+This attachment type cannot be previewed inline\, but you can download it.,Dieser Anhangstyp kann nicht direkt angezeigt werden\, Sie können ihn jedoch herunterladen.
+This company needs to be verified before it can be used.,Dieses Unternehmen muss verifiziert werden\, bevor es verwendet werden kann.
+This company needs to be verified. Without verification\, it will soon be deactivated.,Dieses Unternehmen muss verifiziert werden. Ohne Verifizierung wird es bald deaktiviert.
+This document could not be fully parsed. Only technical metadata and raw XML are available.,Dieses Dokument konnte nicht vollständig geparst werden. Es sind nur technische Metadaten und das Roh-XML verfügbar.
+This document could not be fully parsed. Only technical metadata is available.,Dieses Dokument konnte nicht vollständig geparst werden. Es sind nur technische Metadaten verfügbar.
+This document has validation errors that need attention.,Dieses Dokument weist Validierungsfehler auf\, die behoben werden müssen.
+This is a Peppol Test Network playground environment,Dies ist eine mit dem Peppol-Testnetzwerk verbundene Testumgebung
+This is a playground environment,Dies ist eine Testumgebung
+This is a playground environment. Playground usage is entirely free of charge.,Dies ist eine Testumgebung. Ihre Nutzung ist vollständig kostenlos.
+This is a playground team\, so identity verification is simulated. Choose whether the verification for {0} should be accepted or rejected.,Dies ist ein Testteam\, daher wird die Identitätsprüfung simuliert. Wählen Sie aus\, ob die Verifizierung für {0} angenommen oder abgelehnt werden soll.
+This is a playground team. You can use it to test the Recommand API without affecting production data or communicating over the Peppol network.,Dies ist ein Testteam. Sie können damit die Recommand API testen\, ohne Produktionsdaten zu beeinflussen oder über das Peppol-Netzwerk zu kommunizieren.
+This is a production team. You can use it to send and receive Peppol documents.,Dies ist ein Produktionsteam. Sie können damit Peppol-Dokumente senden und empfangen.
+This is how your customer will see the generated billing document if you include it.,So wird Ihr Kunde das erstellte Abrechnungsdokument sehen\, wenn Sie es einschließen.
+This may take some time. You can safely close this page and check back later.,Dies kann einige Zeit dauern. Sie können diese Seite schließen und später erneut aufrufen.
+This month,Dieser Monat
+This playground is connected to the Peppol test network.,Diese Testumgebung ist mit dem Peppol-Testnetzwerk verbunden.
+This playground is not connected to the Peppol test network.,Diese Testumgebung ist nicht mit dem Peppol-Testnetzwerk verbunden.
+This verification for {0} has already reached a final state.,Diese Verifizierung für {0} hat bereits einen endgültigen Status erreicht.
+To send or receive documents on behalf of {0}\, you must verify your identity to confirm you are authorized to act for this company.,Um im Namen von {0} Dokumente zu senden oder zu empfangen\, müssen Sie Ihre Identität verifizieren und bestätigen\, dass Sie berechtigt sind\, für dieses Unternehmen zu handeln.
+Token,Token
+Total,Gesamt
+Total Excl. VAT,Gesamt ohne USt.
+Total Gross:,Bruttosumme:
+Total Incl. VAT,Gesamt inkl. USt.
+Total VAT:,USt. gesamt:
+Transferred (VAT)\, In Italy,Übertragene Umsatzsteuer in Italien
+True,Wahr
+Try again,Erneut versuchen
+Try out Peppol\, no credit card needed,Peppol kostenlos und ohne Kreditkarte ausprobieren
+Type,Typ
+Unit,Einheit
+Unknown,Unbekannt
+Unlimited usage - pay per document transmitted (€{0} each),Unbegrenzte Nutzung – Bezahlung pro übertragenem Dokument ({0} € je Dokument)
+Unnamed attachment,Unbenannter Anhang
+Unread,Ungelesen
+Unsupported file type. Allowed types: CSV\, PDF\, PNG\, JPG\, XLSX\, ODS.,Nicht unterstützter Dateityp. Zulässige Typen: CSV\, PDF\, PNG\, JPG\, XLSX\, ODS.
+Update,Aktualisieren
+Update Payment Method,Zahlungsmethode aktualisieren
+Update the customer details below.,Aktualisieren Sie unten die Kundendaten.
+Update the supplier details below.,Aktualisieren Sie unten die Lieferantendaten.
+Update your billing information,Abrechnungsinformationen für Rechnungen aktualisieren
+Updated: {0},Aktualisiert: {0}
+Upgrade or change your current plan,Aktuellen Tarif upgraden oder wechseln
+Upload file,Datei hochladen
+Upload or paste a raw UBL XML document that complies with Peppol standards.,Laden Sie ein Peppol-konformes UBL-XML-Dokument hoch oder fügen Sie es ein.
+Upload or paste your UBL-formatted XML document here. The document should be compliant with the Peppol BIS 3.0 standard.,Laden Sie Ihr UBL-formatiertes XML-Dokument hier hoch oder fügen Sie es ein. Das Dokument sollte dem Peppol-BIS-3.0-Standard entsprechen.
+Upload XML file,XML-Datei hochladen
+Use Peppol Test Network,Peppol-Testnetzwerk verwenden
+Use Recommand to send Peppol documents to your customers.,Verwenden Sie Recommand\, um Peppol-Dokumente an Ihre Kunden zu senden.
+Validating payment mandate...,Zahlungsmandat wird validiert...
+Validating Your Payment,Ihre Zahlung wird validiert
+Validation,Validierung
+Value,Wert
+VAT,USt.
+VAT %,USt. %
+VAT Category,USt.-Kategorie
+VAT exempt for EEA intra-community supply,Umsatzsteuerbefreit bei innergemeinschaftlicher Lieferung im EWR
+VAT Exemption Reason *,Grund für die Umsatzsteuerbefreiung *
+VAT Number,USt-IdNr.
+VAT Number (Optional),USt-IdNr. (optional)
+Vat Reverse Charge,Umkehrung der Steuerschuldnerschaft
+VAT: {0},USt.: {0}
+VAT: €{0} | Total: €{1},USt.: {0} € | Gesamt: {1} €
+Verification,Verifizierung
+Verification Already Finalized,Verifizierung bereits abgeschlossen
+Verification Already in Progress,Verifizierung läuft bereits
+Verification Could Not Be Completed,Verifizierung konnte nicht abgeschlossen werden
+Verification data could not be loaded.,Verifizierungsdaten konnten nicht geladen werden.
+Verification in Progress,Verifizierung läuft
+Verification link sent,Verifizierungslink gesendet
+Verification Rejected,Verifizierung abgelehnt
+Verification status could not be loaded.,Verifizierungsstatus konnte nicht geladen werden.
+Verification Successful,Verifizierung erfolgreich
+Verification unavailable,Verifizierung nicht verfügbar
+Verification Under Review,Verifizierung wird geprüft
+Verified,Verifiziert
+Verify Company,Unternehmen verifizieren
+Verify your identity as a representative of {0} to activate this company on the Peppol network.,Verifizieren Sie Ihre Identität als Vertreter von {0}\, um dieses Unternehmen im Peppol-Netzwerk zu aktivieren.
+Verifying...,Wird verifiziert...
+View and manage integration state,Integrationsstatus anzeigen und verwalten
+View and manage your customers (supporting data).,Kunden (Stammdaten) anzeigen und verwalten.
+View and manage your suppliers (supporting data).,Lieferanten (Stammdaten) anzeigen und verwalten.
+View and manage your transmitted Peppol documents.,Übertragene Peppol-Dokumente anzeigen und verwalten.
+View Available Plans,Verfügbare Tarife anzeigen
+View Verification Status,Verifizierungsstatus anzeigen
+Volume-based,Volumenbasiert
+We could not complete the verification flow for {0}.,Der Verifizierungsablauf für {0} konnte nicht abgeschlossen werden.
+We could not prepare your mandate. Please try again.,Ihr Mandat konnte nicht vorbereitet werden. Bitte versuchen Sie es erneut.
+We offer a variety of plans\, pick one that suits your needs.,Wir bieten verschiedene Tarife an. Wählen Sie den passenden für Ihren Bedarf.
+Webhook URL,Webhook-URL
+Webhooks and rules,Webhooks und Regeln
+What do you want to use Recommand for with this company?,Wofür möchten Sie Recommand mit diesem Unternehmen verwenden?
+When checked\, you are able to send and receive documents over the Peppol Test Network\, allowing communication with external Peppol participants. Do not enable this setting if you are not sure what you are doing. This setting cannot be changed after playground creation.,Wenn diese Option aktiviert ist\, können Sie Dokumente über das Peppol-Testnetzwerk senden und empfangen und so mit externen Peppol-Teilnehmern kommunizieren. Aktivieren Sie diese Einstellung nur\, wenn Sie mit ihrer Funktionsweise vertraut sind. Nach der Erstellung der Testumgebung kann sie nicht mehr geändert werden.
+When to send email,Wann E-Mails gesendet werden sollen
+With integrations\, you can:,Mit Integrationen können Sie:
+XML,XML
+XML and any document attachments are always included. You can also attach a generated document preview (PDF) and a small JSON document with key document details.,Die XML-Datei und alle Dokumentanhänge sind immer enthalten. Sie können außerdem eine erstellte Dokumentvorschau (PDF) und ein kleines JSON-Dokument mit den wichtigsten Dokumentdetails anhängen.
+XML copied to clipboard,XML in die Zwischenablage kopiert
+XML Document *,XML-Dokument *
+XML downloaded,XML heruntergeladen
+XML file is too large (max 5MB),XML-Datei ist zu groß (max. 5 MB)
+Yellow,Gelb
+Yes\, Cancel Subscription,Ja\, Abonnement kündigen
+You can use HTML tags for formatting. The document will be attached as XML\, plus any embedded attachments (optionally including a generated PDF).,Sie können HTML-Tags zur Formatierung verwenden. Das Dokument wird als XML-Datei zusammen mit allen eingebetteten Anhängen angehängt (optional einschließlich eines erstellten PDFs).
+You must be in a team to complete this step,Sie müssen Mitglied eines Teams sein\, um diesen Schritt abzuschließen
+You sign this mandate with the identity check that follows.,Sie unterzeichnen dieses Mandat mit der anschließenden Identitätsprüfung.
+You will be redirected to our verification partner to complete the identity check.,Sie werden zu unserem Verifizierungspartner weitergeleitet\, um die Identitätsprüfung abzuschließen.
+You will be redirected to our verification partner. Your verified identity is the proof of signature that is recorded on the mandate.,Sie werden zu unserem Verifizierungspartner weitergeleitet. Ihre verifizierte Identität dient als Signaturnachweis und wird im Mandat festgehalten.
+You will lose access to your current plan features at the end of the current month.,Am Ende des laufenden Monats verlieren Sie den Zugriff auf die Funktionen Ihres aktuellen Tarifs.
+You will read and sign the mandate for this company before your identity is checked.,Sie lesen und unterzeichnen das Mandat für dieses Unternehmen\, bevor Ihre Identität geprüft wird.
+Your billing information,Ihre Abrechnungsdaten
+Your email,Ihre E-Mail-Adresse
+Your identity could not be verified. Please contact,Ihre Identität konnte nicht verifiziert werden. Bitte wenden Sie sich an
+Your identity verification for {0} is being processed. This page will update automatically.,Ihre Identitätsprüfung für {0} wird verarbeitet. Diese Seite wird automatisch aktualisiert.
+Your identity verification for {0} is being reviewed manually. This page will update automatically once the review is complete.,Ihre Identitätsprüfung für {0} wird manuell geprüft. Diese Seite wird nach Abschluss der Prüfung automatisch aktualisiert.
+Your name,Ihr Name
+Your payment method is set up and ready for billing.,Ihre Zahlungsmethode ist eingerichtet und für die Abrechnung bereit.
+Your signature,Ihre Unterschrift
+Zero rated goods,Waren mit Nullsteuersatz

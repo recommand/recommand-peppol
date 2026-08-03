@@ -1,0 +1,911 @@
+{0} documents,{0} documenten
+{0} documents deleted,{0} documenten verwijderd
+{0} documents marked as read,{0} documenten gemarkeerd als gelezen
+{0} documents over limit,{0} documenten boven de limiet
+{0} documents remaining this month,{0} documenten resterend deze maand
+{0} has been successfully verified and is now active on the Peppol network.,{0} is succesvol geverifieerd en is nu actief op het Peppol-netwerk.
+{0} Plan,Abonnement {0}
+{0} selected,{0} geselecteerd
+{0} total,{0} totaal
+A billing profile is required to get started.,Een facturatieprofiel is vereist om aan de slag te gaan.
+A document has been received for your company. If enabled\, the integration will be notified and can process the document.,Er is een document voor je bedrijf ontvangen. Indien ingeschakeld\, krijgt de integratie een melding en kan deze het document verwerken.
+A document label has been assigned to the document. If enabled\, the integration will be notified and can process the document.,Er is een label aan het document toegewezen. Indien ingeschakeld\, krijgt de integratie een melding en kan deze het document verwerken.
+A document label has been unassigned from the document. If enabled\, the integration will be notified and can process the document.,Er is een label van het document verwijderd. Indien ingeschakeld\, krijgt de integratie een melding en kan deze het document verwerken.
+A playground is used to test the Recommand API without affecting production data or communicating over the Peppol network. {0} You can switch to a production environment by clicking the team switcher in the top left.,Een testomgeving wordt gebruikt om de Recommand-API te testen zonder productiegegevens te beïnvloeden of via het Peppol-netwerk te communiceren. {0} Je kunt naar een productieomgeving overschakelen via de teamwisselaar linksboven.
+A verification session has already been started for {0}. If the previous link expired or was closed\, you can request a new one below.,Er is al een verificatiesessie gestart voor {0}. Als de vorige link is verlopen of is gesloten\, kun je hieronder een nieuwe aanvragen.
+Accept,Accepteren
+Accepting...,Accepteren...
+Active,Actief
+Active subscription with full access,Actief abonnement met volledige toegang
+Add,Toevoegen
+Add Address,Adres toevoegen
+Add all companies for which you want to send or receive Peppol documents.,Voeg alle bedrijven toe waarvoor je Peppol-documenten wilt verzenden of ontvangen.
+Add label,Label toevoegen
+Add playground,Testomgeving toevoegen
+Address,Adres
+Address *,Adres *
+Advanced,Geavanceerd
+All documents deleted successfully,Alle documenten succesvol verwijderd
+Amount (excl. VAT),Bedrag (excl. btw)
+An notification has been received from the external service. If enabled\, the integration will be notified and can process the notification.,Er is een melding van de externe dienst ontvangen. Indien ingeschakeld\, krijgt de integratie een melding en kan deze de melding verwerken.
+An unexpected error occurred. Please try again.,Er is een onverwachte fout opgetreden. Probeer het opnieuw.
+Are you sure you want to delete {0} selected documents? This action cannot be undone.,Weet je zeker dat je {0} geselecteerde documenten wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+Are you sure you want to delete all documents? This action cannot be undone. All documents in this playground will be permanently removed.,Weet je zeker dat je alle documenten wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt. Alle documenten in deze testomgeving worden permanent verwijderd.
+Are you sure you want to delete customer "{0}"?,Weet je zeker dat je klant "{0}" wilt verwijderen?
+Are you sure you want to delete this company? This action cannot be undone.,Weet je zeker dat je dit bedrijf wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+Are you sure you want to delete this document?,Weet je zeker dat je dit document wilt verwijderen?
+Are you sure you want to delete this integration? This action cannot be undone.,Weet je zeker dat je deze integratie wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+Are you sure you want to delete this supplier? This action cannot be undone.,Weet je zeker dat je deze leverancier wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+Are you sure you want to reset the integration state? This will clear all stored state data.,Weet je zeker dat je de integratiestatus wilt resetten? Alle opgeslagen statusgegevens worden gewist.
+Assign label,Label toewijzen
+Assign Labels,Labels toewijzen
+Attachment,Bijlage
+Attachment {0},Bijlage {0}
+Attachments,Bijlagen
+Authentication,Authenticatie
+Authorized,Geautoriseerd
+Automatically send invoices made in Harvest to your customers via Peppol.,Verzend facturen die in Harvest zijn gemaakt automatisch via Peppol naar je klanten.
+Automatically sync documents with your accounting software,Synchroniseer automatisch documenten met je boekhoudsoftware
+Available integrations:,Beschikbare integraties:
+Awaiting verification result,Wachtend op verificatieresultaat
+Back to Companies,Terug naar bedrijven
+Back to documents,Terug naar documenten
+Back to your details,Terug naar je gegevens
+Billing,Facturatie
+Billing Date,Facturatiedatum
+Billing Email,E-mailadres voor facturatie
+Billing History,Facturatiegeschiedenis
+Billing Peppol Address,Peppol-adres voor facturatie
+Billing Profile,Facturatieprofiel
+Brussels,Brussel
+Canary Islands general indirect tax,Algemene indirecte belasting van de Canarische Eilanden
+Cancel,Annuleren
+Cancel Subscription,Abonnement annuleren
+Cancel Subscription?,Abonnement annuleren?
+Canceled,Geannuleerd
+Capabilities,Mogelijkheden
+Checking status every few seconds...,Status controleren om de paar seconden...
+Choose a plan below to get started with Peppol document transmission,Kies hieronder een plan om aan de slag te gaan met de documentoverdracht via Peppol
+Choose the simulated verification outcome for {0} in this playground environment.,Kies het gesimuleerde verificatieresultaat voor {0} in deze testomgeving.
+Choose the type of document you want to send,Kies het type document dat je wilt verzenden
+City,Stad
+City *,Stad *
+Color,Kleur
+Companies,Bedrijven
+Companies are the legal entities you send or receive Peppol documents for.,Bedrijven zijn de juridische entiteiten waarvoor je Peppol-documenten verzendt of ontvangt.
+Company,Bedrijf
+Company created successfully,Bedrijf succesvol aangemaakt
+Company deleted successfully,Bedrijf succesvol verwijderd
+Company ID,Bedrijfs-ID
+Company ID copied to clipboard,Bedrijfs-ID gekopieerd naar klembord
+Company Name,Bedrijfsnaam
+Company not found,Bedrijf niet gevonden
+Company updated successfully,Bedrijf succesvol bijgewerkt
+Company Verification,Bedrijfsverificatie
+Company Verification Required,Bedrijfsverificatie vereist
+Complete payment setup to activate your subscription.,Voltooi de betaalconfiguratie om je abonnement te activeren.
+Complete the form below to create your document.,Vul het onderstaande formulier in om je document te maken.
+Configuration,Configuratie
+Configure authentication settings,Authenticatieconfiguratie instellen
+Connect external services to automate document processing and workflows. Integrations are available on Starter\, Professional\, or Enterprise plans.,Verbind externe diensten om documentverwerking en workflows te automatiseren. Integraties zijn beschikbaar op Starter-\, Professional- of Enterprise-abonnementen.
+Context,Context
+Continue to Identity Verification,Ga door naar identiteitsverificatie
+Continue to the Mandate,Ga verder naar het Mandaat
+Copied!,Gekopieerd!
+Copy JSON,JSON kopiëren
+Copy verification URL,Verificatie-URL kopiëren
+Copy XML,XML kopiëren
+Country,Land
+Country (C1),Land (C1)
+Country *,Land *
+Create a billing profile,Een facturatieprofiel aanmaken
+Create a credit note for refunds\, adjustments\, or corrections to previous invoices.,Maak een creditnota aan voor terugbetalingen\, aanpassingen of correcties op eerdere facturen.
+Create a new customer with the details below.,Maak een nieuwe klant aan met de onderstaande gegevens.
+Create a new playground to test your Peppol API integrations.,Maak een nieuwe testomgeving aan om je Peppol-API-integraties te testen.
+Create a new supplier with the details below.,Maak een nieuwe leverancier aan met de onderstaande details.
+Create a self billing credit note for adjustments or corrections in a self billing flow.,Maak een self-billingcreditnota aan voor aanpassingen of correcties in een self-billingproces.
+Create a self billing invoice where the buyer issues the invoice on behalf of the seller.,Maak een self-billingfactuur aan waarbij de koper de factuur namens de verkoper uitgeeft.
+Create Company,Bedrijf aanmaken
+Create Customer,Klant aanmaken
+Create Label,Label aanmaken
+Create New Company,Nieuw bedrijf aanmaken
+Create New Customer,Nieuwe klant aanmaken
+Create New Label,Nieuw label aanmaken
+Create New Supplier,Nieuwe leverancier aanmaken
+Create playground,Testomgeving aanmaken
+Create Supplier,Leverancier aanmaken
+Create webhooks and automations that react to Peppol events.,Maak webhooks en automatiseringen aan die reageren op Peppol-evenementen.
+Created {0},Aangemaakt op {0}
+Created At,Aangemaakt op
+Credit Note,Creditnota
+Custom UBL document,Aangepast UBL-document
+Customer created successfully,Klant succesvol aangemaakt
+Customer deleted successfully,Klant succesvol verwijderd
+Customer updated successfully,Klant succesvol bijgewerkt
+Customers,Klanten
+Daily Sync,Dagelijkse synchronisatie
+Delete,Verwijderen
+Delete All,Alles verwijderen
+Delete All Documents,Alle documenten verwijderen
+Delete Company,Bedrijf verwijderen
+Delete document,Document verwijderen
+Delete Integration,Integratie verwijderen
+Delete Selected Documents,Geselecteerde documenten verwijderen
+Deleting...,Verwijderen...
+Developer,Ontwikkelaar
+Did not complete the identity check?,Heb je de identiteitscontrole niet voltooid?
+Direction,Richting
+DocType ID,DocType ID
+Document deleted successfully,Document succesvol verwijderd
+Document Details,Documentgegevens
+Document downloaded successfully,Document succesvol gedownload
+Document ID,Document-ID
+Document ID copied to clipboard,Document-ID gekopieerd naar klembord
+Document Label Assigned,Documentlabel toegewezen
+Document Label Unassigned,Documentlabel verwijderd
+Document labels,Documentlabels
+Document marked as read,Document gemarkeerd als gelezen
+Document marked as unread,Document gemarkeerd als ongelezen
+Document not found,Document niet gevonden
+Document Number,Documentnummer
+Document preview,Documentvoorbeeld
+Document Received,Document ontvangen
+Document Type,Documenttype
+Document Usage,Gebruik van documenten
+Document Validation Issues,Problemen met documentvalidatie
+Documents,Documenten
+Documents exported successfully,Documenten succesvol geëxporteerd
+Documents with the referenced envelope ID.,Documenten met de genoemde envelop-ID.
+Download,Downloaden
+Download attachment,Bijlage downloaden
+Download document package,Documentpakket downloaden
+Download invoice (UBL/PDF),Factuur downloaden (UBL/PDF)
+Download package,Pakket downloaden
+Download XML,XML downloaden
+Download ZIP,ZIP downloaden
+e.g. 0208:1012081766,bijv. 0208:1012081766
+Edit,Bewerken
+Edit Billing Profile,Facturatieprofiel bewerken
+Edit Company,Bedrijf bewerken
+Edit company details for {0},Bedrijfsinformatie bewerken voor {0}
+Edit Customer,Klant bewerken
+Edit Label,Label bewerken
+Edit Supplier,Leverancier bewerken
+Email,E-mail
+EN 16931 CII Credit Note D22B,EN 16931 CII-creditnota D22B
+EN 16931 CII Invoice + Credit Note D22B,EN 16931 CII-factuur + creditnota D22B
+EN 16931 CII Invoice D22B,EN 16931 CII-factuur D22B
+Enable or disable integration capabilities,Integratiefunctionaliteiten inschakelen of uitschakelen
+End Date,Einddatum
+Enter the name of the person authorised to represent this company.,Voer de naam in van de persoon die is gemachtigd om dit bedrijf te vertegenwoordigen.
+Enterprise,Enterprise
+Enterprise Number,Ondernemingsnummer
+Envelope ID,Envelop-ID
+Event,Gebeurtenis
+Exempt from Tax,Vrijgesteld van belasting
+Expired,Verlopen
+Export,Exporteren
+External ID,Externe ID
+External link,Externe link
+External Service Notification,Melding van externe dienst
+Failed,Mislukt
+Failed to assign label,Label toewijzen mislukt
+Failed to cancel subscription,Abonnement annuleren mislukt
+Failed to copy URL. Please try again.,Het kopiëren van de URL is mislukt. Probeer het opnieuw.
+Failed to create playground,Testomgeving aanmaken mislukt
+Failed to create verification session: {0},Verificatiesessie aanmaken mislukt: {0}
+Failed to delete all documents,Alle documenten verwijderen mislukt
+Failed to delete company: {0},Bedrijf verwijderen mislukt: {0}
+Failed to delete customer,Klant verwijderen mislukt
+Failed to delete document,Document verwijderen mislukt
+Failed to delete documents,Documenten verwijderen mislukt
+Failed to delete integration: {0},Integratie verwijderen mislukt: {0}
+Failed to delete supplier,Leverancier verwijderen mislukt
+Failed to download document,Document downloaden mislukt
+Failed to export documents,Documenten exporteren mislukt
+Failed to load billing events,Facturatiegebeurtenissen laden mislukt
+Failed to load companies,Bedrijven laden mislukt
+Failed to load company,Bedrijf laden mislukt
+Failed to load current usage,Huidig gebruik laden mislukt
+Failed to load customers,Klanten laden mislukt
+Failed to load document,Document laden mislukt
+Failed to load documents,Documenten laden mislukt
+Failed to load integration,Integratie laden mislukt
+Failed to load labels,Labels laden mislukt
+Failed to load rule builder options,Opties voor de regelbouwer laden mislukt
+Failed to load subscription,Abonnement laden mislukt
+Failed to load suppliers,Leveranciers laden mislukt
+Failed to load task logs,Taaklogboeken laden mislukt
+Failed to load verification data. Please try again.,Verificatiegegevens laden mislukt. Probeer het opnieuw.
+Failed to load verification status. Please try again.,Verificatiestatus laden mislukt. Probeer het opnieuw.
+Failed to mark documents as read,Documenten als gelezen markeren mislukt
+Failed to remove label,Label verwijderen mislukt
+Failed to reset integration state: {0},Integratiestatus resetten mislukt: {0}
+Failed to save customer,Klant opslaan mislukt
+Failed to save supplier,Leverancier opslaan mislukt
+Failed to unassign label,Label verwijderen mislukt
+Failed to update company. ({0}),Bedrijf bijwerken mislukt. ({0})
+Failed to update document read status,Leesstatus van document bijwerken mislukt
+Failed to update integration: {0},Integratie bijwerken mislukt: {0}
+Fill in the company\, recipient\, and required invoice fields to see a preview.,Vul de velden voor het bedrijf\, de ontvanger en de vereiste factuurgegevens in om een voorbeeld te bekijken.
+Fill in the invoice details including buyer information\, line items\, and payment terms.,Vul de factuurgegevens in\, waaronder kopergegevens\, factuurregels en betalingsvoorwaarden.
+First name,Voornaam
+Flat UBL ZIP,Platte UBL-ZIP
+for assistance.,voor hulp.
+For growing businesses with higher volumes,Voor groeiende bedrijven met grotere volumes
+For small businesses sending every month,Voor kleine bedrijven die elke maand documenten verzenden
+Forward,Doorsturen
+Forward to,Doorsturen naar
+Forward to someone else,Doorsturen naar iemand anders
+France CII Credit Note CIUS,Franse CII-creditnota CIUS
+France CII Credit Note Extended,Franse uitgebreide CII-creditnota
+France CII Invoice + Credit Note CIUS,Franse CII-factuur + creditnota CIUS
+France CII Invoice + Credit Note CIUS (Non-Regulated),Franse CII-factuur + creditnota CIUS (niet-gereguleerd)
+France CII Invoice + Credit Note Extended,Franse uitgebreide CII-factuur + creditnota
+France CII Invoice + Credit Note Extended (Non-Regulated),Franse uitgebreide CII-factuur + creditnota (niet-gereguleerd)
+France CII Invoice CIUS,Franse CII-factuur CIUS
+France CII Invoice Extended,Franse uitgebreide CII-factuur
+France Factur-X Credit Note,Franse Factur-X-creditnota
+France Factur-X Invoice,Franse Factur-X-factuur
+France Factur-X Invoice + Credit Note,Franse Factur-X-factuur + creditnota
+France Factur-X Invoice + Credit Note (Non-Regulated),Franse Factur-X-factuur + creditnota (niet-gereguleerd)
+France Invoicing CDAR,Franse facturatie-CDAR
+France Invoicing CDAR (Non-Regulated),Franse facturatie-CDAR (niet-gereguleerd)
+France Peppol BIS Billing UBL Credit Note,Franse Peppol BIS Billing UBL-creditnota
+France Peppol BIS Billing UBL Credit Note (Non-Regulated),Franse Peppol BIS Billing UBL-creditnota (niet-gereguleerd)
+France Peppol BIS Billing UBL Invoice,Franse Peppol BIS Billing UBL-factuur
+France Peppol BIS Billing UBL Invoice (Non-Regulated),Franse Peppol BIS Billing UBL-factuur (niet-gereguleerd)
+France UBL Credit Note CIUS,Franse UBL-creditnota CIUS
+France UBL Credit Note CIUS (Non-Regulated),Franse UBL-creditnota CIUS (niet-gereguleerd)
+France UBL Credit Note Extended,Franse uitgebreide UBL-creditnota
+France UBL Credit Note Extended (Non-Regulated),Franse uitgebreide UBL-creditnota (niet-gereguleerd)
+France UBL Invoice CIUS,Franse UBL-factuur CIUS
+France UBL Invoice CIUS (Non-Regulated),Franse UBL-factuur CIUS (niet-gereguleerd)
+France UBL Invoice Extended,Franse uitgebreide UBL-factuur
+France UBL Invoice Extended (Non-Regulated),Franse uitgebreide UBL-factuur (niet-gereguleerd)
+Free,Gratis
+Free export item\, VAT not charged,Belastingvrije uitvoer\, geen btw berekend
+French B2C Payment Report,Frans B2C-betalingsrapport
+French B2C Sales Report,Frans B2C-verkooprapport
+French Invoicing CDAR,Franse facturatie-CDAR
+Frequent Sync,Frequente synchronisatie
+Generated document preview,Voorbeeld van gegenereerd document
+Go to Companies,Naar bedrijven
+Harvest,Harvest
+Hourly Sync,Synchronisatie om het uur
+I accept the,Ik accepteer de
+I confirm that I am authorised to act on behalf of {0} on the Peppol network.,Ik bevestig dat ik bevoegd ben om namens {0} te handelen op het Peppol-netwerk.
+I\, {0}\, have read the mandate and sign it electronically on behalf of {1}.,Ik\, {0}\, heb het mandaat gelezen en het elektronisch ondertekend namens {1}.
+ID,ID
+Identity verification completed successfully. You can close this page.,Identiteitsverificatie is succesvol voltooid. Je kunt deze pagina sluiten.
+Identity verification may have succeeded\, but we could not activate this company on the Peppol network. Please contact support@recommand.eu for assistance.,Identiteitsverificatie is mogelijk geslaagd\, maar we konden dit bedrijf niet activeren op het Peppol-netwerk. Neem contact op met support@recommand.eu voor hulp.
+If you want to test the Recommand API without affecting production data or communicating over the Peppol network\, you can create a playground team by clicking the team switcher in the top left.,Als je de Recommand-API wilt testen zonder productiegegevens te beïnvloeden of via het Peppol-netwerk te communiceren\, kun je via de teamwisselaar linksboven een testteam maken.
+Image attachment,Afbeeldingsbijlage
+Included Documents,Inbegrepen documenten
+incoming,inkomend
+Incoming,Inkomend
+Incoming document,Inkomend document
+Inspect document metadata.,Controleer documentmetadata.
+Inspect metadata or the original XML payload.,Metadata of de oorspronkelijke XML-inhoud bekijken.
+Inspect metadata or the parsed JSON structure.,Metadata of de verwerkte JSON-structuur bekijken.
+Inspect metadata\, parsed JSON structure\, or the original XML payload.,Metadata\, de verwerkte JSON-structuur of de oorspronkelijke XML-inhoud bekijken.
+Integration configuration is required. Please configure the integration first.,Integratieconfiguratie is vereist. Configureer de integratie eerst.
+Integration deleted successfully,Integratie succesvol verwijderd
+Integration does not belong to this company,Integratie behoort niet tot dit bedrijf
+Integration not found,Integratie niet gevonden
+Integration Setup,Integratie instellen
+Integration State,Integratiestatus
+Integration state reset successfully,Integratiestatus succesvol gereset
+Integration Teardown,Integratie ontkoppelen
+Integration updated successfully,Integratie succesvol bijgewerkt
+Integrations,Integraties
+Invoice,Factuur
+Invoice #,Factuurnr.
+Invoice Response,Factuurantwoord
+JSON,JSON
+JSON copied to clipboard,JSON gekopieerd naar klembord
+Keep Subscription,Abonnement behouden
+Key,Sleutel
+Label,Label
+Label added to {0} documents,Label toegevoegd aan {0} documenten
+Label created successfully,Label succesvol aangemaakt
+Label deleted successfully,Label succesvol verwijderd
+Label ID copied to clipboard,Label-ID gekopieerd naar klembord
+Label not found,Label niet gevonden
+Label updated successfully,Label succesvol bijgewerkt
+Labels,Labels
+Last name,Achternaam
+Limited document details,Beperkte documentgegevens
+Loading company details...,Bedrijfsgegevens laden...
+Loading document details...,Documentgegevens laden...
+Loading integration details...,Integratiegegevens laden...
+Loading preview...,Voorbeeld laden...
+Loading verification status...,Verificatiestatus laden...
+Loading verification...,Verificatie laden...
+Loading...,Laden...
+Main Street 123,Hoofdstraat 123
+Make changes to the company information below,Breng hieronder wijzigingen aan in de bedrijfsgegevens
+Make configuration changes to the integration,De configuratie van de integratie wijzigen
+Manage labels for organizing and categorizing your data.,Beheer labels voor het organiseren en categoriseren van je gegevens.
+Manage your companies\, send and receive Peppol documents\, and monitor your subscription all in one place.,Beheer je bedrijven\, verzend en ontvang Peppol-documenten en controleer je abonnement op één plek.
+Manage your subscription plan and billing information,Je abonnement en facturatiegegevens beheren
+Mandate for electronic invoicing,Mandaat voor elektronische facturatie
+Mandate Status: Not yet validated,Mandaatstatus: nog niet gevalideerd
+Mandate Status: Validated,Mandaatstatus: gevalideerd
+Manual review in progress,Handmatige beoordeling in uitvoering
+Mark as read,Markeer als gelezen
+Mark as unread,Markeer als ongelezen
+Message,Bericht
+Message Level Response,Antwoord op berichtniveau
+Metadata,Metadata
+Monthly Price,Maandprijs
+N/A,N.v.t.
+Name,Naam
+Name *,Naam *
+Name is required,Naam is verplicht
+Nested ZIP,Geneste ZIP
+No Active Subscription,Geen actief abonnement
+No active team selected,Geen actief team geselecteerd
+No attachments found on this document.,Geen bijlagen gevonden op dit document.
+No available labels,Geen beschikbare labels
+No billing events found,Geen facturatiegebeurtenissen gevonden
+No billing profile set up yet.,Nog geen facturatieprofiel ingesteld.
+No embedded content or external reference available for this attachment.,Geen ingebouwde inhoud of externe referentie beschikbaar voor deze bijlage.
+No labels available,Geen beschikbare labels
+No Peppol addresses added. Click "Add Address" to add one.,Geen Peppol-adressen toegevoegd. Klik op "Adres toevoegen" om er een toe te voegen.
+No Peppol IDs added yet.,Nog geen Peppol-ID's toegevoegd.
+No preview available for this document.,Geen voorbeeld beschikbaar voor dit document.
+No registered representatives could be found for this company in the CBE registry. You can still proceed with identity verification but your request will be manually reviewed.,Er konden geen geregistreerde vertegenwoordigers worden gevonden voor dit bedrijf in het CBE-register. Je kunt nog steeds doorgaan met identiteitsverificatie\, maar je verzoek zal handmatig worden beoordeeld.
+No state data available,Geen statusgegevens beschikbaar
+No task logs available,Geen takenlogboeken beschikbaar
+None,Geen
+Not found,Niet gevonden
+Not Found,Niet gevonden
+Not set,Niet ingesteld
+Not the right person to complete this?,Niet de juiste persoon om dit af te maken?
+of Recommand on behalf of {0}.,van Recommand namens {0}.
+Open,Open
+Open external reference,Externe referentie openen
+Open link,Link openen
+Optional external identifier,Optionele externe identificator
+Optional VAT number,Optioneel btw-nummer
+outgoing,uitgaand
+Outgoing,Uitgaand
+Outgoing document,Uitgaand document
+Overage Rate,Tarief voor meerverbruik
+Overview of all invoices and billing events,Overzicht van alle facturen en facturatiegebeurtenissen
+Paid,Betaald
+Payment Mandate,Betaalmandaat
+Payment Status,Betaalstatus
+Payment Status: {0},Betaalstatus: {0}
+PDF attachment,PDF-bijlage
+PDF\, drawn up for {0},PDF\, opgesteld voor {0}
+Pending,In afwachting
+Peppol Addresses,Peppol-adressen
+Peppol Conversation ID,Peppol-gespreks-ID
+Peppol IDs,Peppol-ID's
+Peppol Message ID,Peppol-bericht-ID
+per document,per document
+per month,per maand
+Period,Periode
+Phone,Telefoon
+Pick a plan,Kies een plan
+Playground created successfully,Testomgeving succesvol aangemaakt
+Playground Environment,Testomgeving
+Playground name,Naam van de testomgeving
+Please enter a name for the playground,Voer een naam voor de testomgeving in
+Please wait while we validate your payment mandate.,Wacht terwijl we je betaalmandaat valideren.
+Postal Code *,Postcode *
+Preparing signature...,Handtekening voorbereiden...
+Preview and metadata for this transmitted Peppol document.,Voorbeeld en metadata voor dit verzonden Peppol-document.
+Price per Document,Prijs per document
+Pricing Model,Prijsmodel
+Process ID,Proces-ID
+Production Environment,Productieomgeving
+Professional 1000,Professional 1000
+Professional 2500,Professional 2500
+Professional 5000,Professional 5000
+Raw XML,Onbewerkte XML
+Read,Gelezen
+Read {0},Gelezen op {0}
+Read At,Gelezen op
+Read Status,Leesstatus
+Read the mandate you are about to sign on behalf of {0}. It authorises us to send\, receive and register electronic invoices for the company.,Lees het mandaat dat je op het punt staat te ondertekenen namens {0}. Het machtigt ons om elektronische facturen voor het bedrijf te verzenden\, te ontvangen en te registreren.
+Receive real-time notifications for incoming documents,Ontvang realtime meldingen voor inkomende documenten
+Received Peppol Signal Message,Peppol-signaalbericht ontvangen
+Receiver,Ontvanger
+Receiver ID,Ontvanger-ID
+Recent integration task execution logs,Logs van recente uitvoering van integratietaken
+Recommand Logo,Recommand-logo
+Refund or adjustment document,Terugbetalings- of aanpassingsdocument
+Reject,Afwijzen
+Rejecting...,Afwijzen...
+Related documents,Gerelateerde documenten
+Remove,Verwijderen
+Preview of the billing document and any attachments.,Voorbeeld van het facturatiedocument en eventuele bijlagen.
+Representative Details,Gegevens van vertegenwoordiger
+Request failed,Verzoek mislukt
+Reset Integration State,Integratiestatus resetten
+Reset State,Status resetten
+Restart identity verification,Identiteitsverificatie opnieuw starten
+Restart Identity Verification,Identiteitsverificatie opnieuw starten
+Restarting...,Opnieuw starten...
+Return to Subscription,Terugkeren naar abonnement
+Save Changes,Wijzigingen opslaan
+Scheduled,Gepland
+Scheduled subscription change,Geplande abonnementswijziging
+Search customers...,Zoek klanten...
+Search documents...,Documenten zoeken...
+Search suppliers...,Zoek leveranciers...
+Select all rows,Selecteer alle rijen
+Select country,Selecteer land
+Select document type,Selecteer documenttype
+Select row,Rij selecteren
+Select your name from the list of registered representatives.,Selecteer je naam uit de lijst van geregistreerde vertegenwoordigers.
+Self billing credit note,Self-billingcreditnota
+Self Billing Credit Note,Self-billingcreditnota
+Self billing invoice,Self-billingfactuur
+Self Billing Invoice,Self-billingfactuur
+Send document,Document verzenden
+Send invoices and credit notes through the Peppol network.,Verzend facturen en creditnota's via het Peppol-netwerk.
+Sender,Afzender
+Sender ID,Afzender-ID
+Sent and received,Verzonden en ontvangen
+Sent and received documents,Verzonden en ontvangen documenten
+Services outside scope of tax,Diensten buiten het toepassingsgebied van de belasting
+Set Up Billing Profile,Facturatieprofiel instellen
+Set Up Payment Method,Betaalmethode instellen
+Set up your billing profile to manage subscriptions.,Stel je facturatieprofiel in om abonnementen te beheren.
+Set up your first company,Stel je eerste bedrijf in
+SI-UBL 2.0 Credit Note,SI-UBL 2.0-creditnota
+SI-UBL 2.0 Invoice,SI-UBL 2.0-factuur
+Sign the mandate,Onderteken het mandaat
+Sign the mandate that lets us act for {0} on the Peppol network\, then confirm your identity.,Onderteken het mandaat dat ons in staat stelt te handelen voor {0} op het Peppol-netwerk\, bevestig vervolgens je identiteit.
+Sign with identity verification,Ondertekenen met identiteitsverificatie
+Signed by {0}\, for {1},Getekend door {0}\, voor {1}
+Simulate Verification Result,Verificatieresultaat simuleren
+Standard billing document,Standaard factuurdocument
+Standard rate,Standaardtarief
+Start Date,Startdatum
+Starter,Starter
+Status,Status
+Status unavailable,Status niet beschikbaar
+Streamline your document processing workflow,Vereenvoudig je workflow voor het verwerken van documenten
+Subscription,Abonnement
+Subscription cancelled successfully,Abonnement succesvol geannuleerd
+Success,Succes
+Supplier created successfully,Leverancier succesvol aangemaakt
+Supplier deleted successfully,Leverancier succesvol verwijderd
+Supplier updated successfully,Leverancier succesvol bijgewerkt
+Suppliers,Leveranciers
+Supporting data,Ondersteunende gegevens
+Switch to a production team to manage your subscription.,Schakel over naar een productieteam om je abonnement te beheren.
+Task,Taak
+Task Logs,Taaklogboeken
+Task Retry,Taak opnieuw proberen
+Tax for production\, services and importation in Ceuta and Melilla,Belasting op productie\, diensten en invoer in Ceuta en Melilla
+Team Settings,Teaminstellingen
+Technical details & raw data,Technische details en ruwe gegevens
+terms and conditions,algemene voorwaarden
+The identity verification for {0} was not successful.,De identiteitsverificatie voor {0} was niet succesvol.
+The integration will be notified every day to synchronize documents or perform other tasks.,De integratie krijgt elke dag een melding om documenten te synchroniseren of andere taken uit te voeren.
+The integration will be notified every few hours to synchronize documents or perform other tasks.,De integratie krijgt om de paar uur een melding om documenten te synchroniseren of andere taken uit te voeren.
+The integration will be notified every few minutes to synchronize documents or perform other tasks.,De integratie krijgt om de paar minuten een melding om documenten te synchroniseren of andere taken uit te voeren.
+The request was forwarded successfully. You can close this page.,De aanvraag is met succes doorgestuurd. Je kunt deze pagina sluiten.
+This attachment type cannot be previewed inline\, but you can download it.,Dit type bijlage kan niet rechtstreeks worden bekeken\, maar je kunt het downloaden.
+This company needs to be verified before it can be used.,Dit bedrijf moet worden geverifieerd voordat het kan worden gebruikt.
+This company needs to be verified. Without verification\, it will soon be deactivated.,Dit bedrijf moet worden geverifieerd. Zonder verificatie wordt het binnenkort gedeactiveerd.
+This document could not be fully parsed. Only technical metadata and raw XML are available.,Dit document kon niet volledig worden geanalyseerd. Alleen technische metadata en ruwe XML zijn beschikbaar.
+This document could not be fully parsed. Only technical metadata is available.,Dit document kon niet volledig worden geanalyseerd. Alleen technische metadata is beschikbaar.
+This document has validation errors that need attention.,Dit document heeft validatiefouten die aandacht nodig hebben.
+This is a Peppol Test Network playground environment,Dit is een testomgeving op het Peppol-testnetwerk
+This is a playground environment,Dit is een testomgeving
+This is a playground environment. Playground usage is entirely free of charge.,Dit is een testomgeving. Het gebruik ervan is volledig gratis.
+This is a playground team\, so identity verification is simulated. Choose whether the verification for {0} should be accepted or rejected.,Dit is een testteam\, dus de identiteitsverificatie wordt gesimuleerd. Kies of de verificatie voor {0} moet worden geaccepteerd of afgewezen.
+This is a playground team. You can use it to test the Recommand API without affecting production data or communicating over the Peppol network.,Dit is een testteam. Je kunt het gebruiken om de Recommand-API te testen zonder productiegegevens te beïnvloeden of via het Peppol-netwerk te communiceren.
+This is a production team. You can use it to send and receive Peppol documents.,Dit is een productieteam. Je kunt het gebruiken om Peppol-documenten te verzenden en te ontvangen.
+This may take some time. You can safely close this page and check back later.,Dit kan enige tijd duren. Je kunt deze pagina veilig sluiten en later terugkomen.
+This playground is connected to the Peppol test network.,Deze testomgeving is verbonden met het Peppol-testnetwerk.
+This playground is not connected to the Peppol test network.,Deze testomgeving is niet verbonden met het Peppol-testnetwerk.
+This verification for {0} has already reached a final state.,Deze verificatie voor {0} heeft al een definitieve status bereikt.
+Total,Totaal
+Total Excl. VAT,Totaal excl. btw
+Total Incl. VAT,Totaal incl. btw
+Transferred (VAT)\, In Italy,Overgedragen btw in Italië
+Try out Peppol\, no credit card needed,Probeer Peppol zonder creditcard
+Type,Type
+Unknown,Onbekend
+Unlimited usage - pay per document transmitted (€{0} each),Onbeperkt gebruik – betaal per verzonden document (€{0} per stuk)
+Unnamed attachment,Naamloze bijlage
+Unread,Ongelezen
+Update Payment Method,Betalingsmethode bijwerken
+Update the customer details below.,Werk de onderstaande klantgegevens bij.
+Update the supplier details below.,Werk de onderstaande leveranciersgegevens bij.
+Update your billing information,Werk je facturatiegegevens voor facturen bij
+Upload or paste a raw UBL XML document that complies with Peppol standards.,Upload of plak een onbewerkt UBL XML-document dat aan de Peppol-standaarden voldoet.
+Use Peppol Test Network,Gebruik het Peppol-testnetwerk
+Validating Your Payment,Je betaling valideren
+Validation,Validatie
+Value,Waarde
+VAT,Btw
+VAT exempt for EEA intra-community supply,Vrijgesteld van btw voor intracommunautaire levering binnen de EER
+VAT Number,Btw-nummer
+Vat Reverse Charge,Btw verlegd
+Verification,Verificatie
+Verification Already Finalized,Verificatie is al voltooid
+Verification Already in Progress,Verificatie is al in uitvoering
+Verification Could Not Be Completed,Verificatie kon niet worden voltooid
+Verification data could not be loaded.,Verificatiedata konden niet worden geladen.
+Verification in Progress,Verificatie in uitvoering
+Verification link sent,Verificatie-link verzonden
+Verification Rejected,Verificatie geweigerd
+Verification status could not be loaded.,Verificatiestatus kon niet worden geladen.
+Verification Successful,Verificatie succesvol
+Verification unavailable,Verificatie niet beschikbaar
+Verification Under Review,Verificatie onder beoordeling
+Verified,Geverifieerd
+Verify Company,Bedrijf verifiëren
+Verify your identity as a representative of {0} to activate this company on the Peppol network.,Verifieer je identiteit als vertegenwoordiger van {0} om dit bedrijf te activeren op het Peppol-netwerk.
+Verifying...,Verifiëren...
+View and manage integration state,Bekijk en beheer de integratiestatus
+View and manage your customers (supporting data).,Bekijk en beheer je klanten (ondersteunende gegevens).
+View and manage your suppliers (supporting data).,Bekijk en beheer je leveranciers (ondersteunende gegevens).
+View and manage your transmitted Peppol documents.,Bekijk en beheer je verzonden Peppol-documenten.
+View Available Plans,Beschikbare abonnementen bekijken
+View Verification Status,Bekijk verificatiestatus
+Volume-based,Op volume gebaseerd
+We could not complete the verification flow for {0}.,We konden de verificatieflow voor {0} niet voltooien.
+We could not prepare your mandate. Please try again.,We konden je mandaat niet voorbereiden. Probeer het opnieuw.
+We offer a variety of plans\, pick one that suits your needs.,We bieden verschillende abonnementen. Kies het abonnement dat bij je behoeften past.
+Webhooks and rules,Webhooks en regels
+When checked\, you are able to send and receive documents over the Peppol Test Network\, allowing communication with external Peppol participants. Do not enable this setting if you are not sure what you are doing. This setting cannot be changed after playground creation.,Als dit is ingeschakeld\, kun je documenten via het Peppol-testnetwerk verzenden en ontvangen en met externe Peppol-deelnemers communiceren. Schakel dit niet in als je niet zeker weet wat je doet. Deze instelling kan na het maken van de testomgeving niet meer worden gewijzigd.
+With integrations\, you can:,Met integraties kun je:
+XML,XML
+XML copied to clipboard,XML gekopieerd naar klembord
+XML downloaded,XML gedownload
+Yes\, Cancel Subscription,Ja\, abonnement annuleren
+You sign this mandate with the identity check that follows.,Je tekent dit mandaat met de daaropvolgende identiteitscontrole.
+You will be redirected to our verification partner to complete the identity check.,Je wordt doorgestuurd naar onze verificatiepartner om de identiteitscontrole te voltooien.
+You will be redirected to our verification partner. Your verified identity is the proof of signature that is recorded on the mandate.,Je wordt doorgestuurd naar onze verificatiepartner. Je geverifieerde identiteit is het handtekeningsbewijs dat op het mandaat wordt vastgelegd.
+You will lose access to your current plan features at the end of the current month.,Je verliest toegang tot de functies van je huidige plan aan het einde van de huidige maand.
+You will read and sign the mandate for this company before your identity is checked.,Je leest en tekent het mandaat voor dit bedrijf voordat je identiteit wordt gecontroleerd.
+Your billing information,Je facturatiegegevens
+Your email,Je e-mailadres
+Your identity could not be verified. Please contact,Je identiteit kon niet worden geverifieerd. Neem contact op met
+Your identity verification for {0} is being processed. This page will update automatically.,Je identiteitsverificatie voor {0} wordt verwerkt. Deze pagina wordt automatisch bijgewerkt.
+Your identity verification for {0} is being reviewed manually. This page will update automatically once the review is complete.,Je identiteitsverificatie voor {0} wordt handmatig beoordeeld. Deze pagina wordt automatisch bijgewerkt zodra de beoordeling is voltooid.
+Your name,Je naam
+Your payment method is set up and ready for billing.,Je betaalmethode is ingesteld en klaar voor facturatie.
+Your signature,Je handtekening
+Zero rated goods,Goederen met nultarief
+(Required),(Verplicht)
+/month excl. VAT,/maand excl. btw
+API Preview,API-voorbeeld
+Add Document Type,Documenttype toevoegen
+Add Email,E-mailadres toevoegen
+Add Identifier,Identificatie toevoegen
+Add Integration,Integratie toevoegen
+Add Invoice Reference,Factuurreferentie toevoegen
+Add Line,Regel toevoegen
+Add Payment Method,Betaalmethode toevoegen
+Add Recipient,Ontvanger toevoegen
+Add an email address to receive notifications,Voeg een e-mailadres toe om meldingen te ontvangen
+Add an integration to get started,Voeg een integratie toe om aan de slag te gaan
+Add your first document type to get started,Voeg je eerste documenttype toe om aan de slag te gaan
+Add your first identifier to get started,Voeg je eerste identificatie toe om aan de slag te gaan
+Additional Notes,Aanvullende opmerkingen
+All companies,Alle bedrijven
+Always (in addition to Peppol),Altijd (naast Peppol)
+An identifier assigned by the buyer for internal routing purposes.,Een identificatie die de koper voor interne routering heeft toegewezen.
+An unexpected error occurred,Er is een onverwachte fout opgetreden
+Assign labels,Labels toewijzen
+At least one direction (incoming or outgoing) must be selected,Selecteer minstens één richting (inkomend of uitgaand)
+At least one direction must be selected,Selecteer minstens één richting
+Available Plans,Beschikbare abonnementen
+Back,Terug
+Billing Email (Optional),E-mailadres voor facturatie (optioneel)
+Billing Peppol Address (Optional),Peppol-adres voor facturatie (optioneel)
+Blue,Blauw
+Buyer Information (Auto-populated),Gegevens van de koper (automatisch ingevuld)
+Buyer Information *,Gegevens van de koper *
+Buyer Reference,Kopersreferentie
+Buyer details,Gegevens van de koper
+Cancel Edit,Bewerken annuleren
+Choose file,Bestand kiezen
+Choose the perfect plan for your needs,Kies het abonnement dat perfect bij je behoeften past
+Clear,Wissen
+Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France),Veelgebruikte schema's: 0208 (België)\, 0106 (Nederland)\, 0225 (Frankrijk)
+Companies in {0} are functional\, but some country-specific features or requirements may not be covered yet.,Bedrijven in {0} werken\, maar sommige landspecifieke functies of vereisten worden mogelijk nog niet ondersteund.
+Company (Optional),Bedrijf (optioneel)
+Company Document Types,Documenttypen van het bedrijf
+Company Identifiers,Bedrijfsidentificaties
+Company information,Bedrijfsgegevens
+Company is not verified,Bedrijf is niet geverifieerd
+Company is verified,Bedrijf is geverifieerd
+Configure email addresses to receive notifications when documents are sent or received.,Stel e-mailadressen in om meldingen te ontvangen wanneer documenten worden verzonden of ontvangen.
+Connect external services to automate document processing and workflows.,Koppel externe diensten om documentverwerking en workflows te automatiseren.
+Continue,Doorgaan
+Country & VAT,Land en btw
+Create,Aanmaken
+Create Playground,Testomgeving aanmaken
+Create a playground to test integrations without billing requirements\, or switch to an existing team.,Maak een testomgeving aan om integraties zonder facturatievereisten te testen\, of schakel over naar een bestaand team.
+Create new playground,Nieuwe testomgeving aanmaken
+Creating your company...,Je bedrijf wordt aangemaakt...
+Creating...,Aanmaken...
+Credit Note Lines *,Creditnotaregels *
+Credit Note Number *,Creditnotanummer *
+Credit item,Gecrediteerd artikel
+Credited Invoices,Gecrediteerde facturen
+Current,Huidig
+Current Plan,Huidig abonnement
+Custom Email Content (Optional),Aangepaste e-mailinhoud (optioneel)
+Customer,Klant
+Date range must not exceed 1 month (31 days),Het datumbereik mag niet langer zijn dan 1 maand (31 dagen)
+Day,Dag
+Default: Dear {buyer name}\, you can find your invoice attached.,Standaard: Beste {buyer name}\, je vindt je factuur in de bijlage.
+Default: Invoice {number} or Credit Note {number},Standaard: Factuur {number} of creditnota {number}
+Description,Beschrijving
+Document Type ID,Documenttype-ID
+Document Type ID (optional),Documenttype-ID (optioneel)
+Document Type ID is required,Documenttype-ID is verplicht
+Document direction,Documentrichting
+Document sent successfully!,Document is verzonden!
+Document type added successfully,Documenttype is toegevoegd
+Document type deleted successfully,Documenttype is verwijderd
+Document type updated successfully,Documenttype is bijgewerkt
+Document types define what types of documents your company can receive over the Peppol network. This does not limit the types of documents you can send.,Documenttypen bepalen welke soorten documenten je bedrijf via het Peppol-netwerk kan ontvangen. Dit beperkt niet welke soorten documenten je kunt verzenden.
+Documents per month,Documenten per maand
+Done,Gereed
+Drag & drop an XML file,Sleep een XML-bestand hierheen
+Due Date,Vervaldatum
+E.g. 0208:[Belgian Enterprise Number],Bijv. 0208:[Belgisch ondernemingsnummer]
+Email (Optional),E-mailadres (optioneel)
+Email Address,E-mailadres
+Email Body (HTML),E-mailtekst (HTML)
+Email Recipients,E-mailontvangers
+Email Subject,E-mailonderwerp
+Email address to receive invoices. If not set\, invoices will be sent to all team members.,E-mailadres waarop facturen worden ontvangen. Als dit niet is ingesteld\, worden facturen naar alle teamleden verzonden.
+Email is required,E-mailadres is verplicht
+Email-only delivery is only supported for (self-billing) invoices and credit notes,Levering uitsluitend via e-mail wordt alleen ondersteund voor self-billingfacturen en -creditnota's
+End datetime (exclusive) *,Einddatum en -tijd (exclusief) *
+End datetime is required,Einddatum en -tijd zijn verplicht
+End datetime must be after start datetime,Einddatum en -tijd moeten na de begindatum en -tijd liggen
+Endpoint,Endpoint
+Enter the recipient's Peppol ID. Format: [scheme]:[identifier],Voer de Peppol-ID van de ontvanger in. Notatie: [schema]:[identificatie]
+Enterprise Number (Optional),Ondernemingsnummer (optioneel)
+Enterprise number scheme 0106 or 0190 required,Schema 0106 of 0190 voor het ondernemingsnummer is verplicht
+Errors:,Fouten:
+Example Company,Voorbeeldbedrijf
+Export Documents,Documenten exporteren
+Export all sent/received documents within a date range (max 1 month) as a ZIP archive.,Exporteer alle verzonden en ontvangen documenten binnen een datumbereik (maximaal 1 maand) als ZIP-archief.
+Exporting...,Bezig met exporteren...
+External ID (Optional),Externe ID (optioneel)
+Failed to add document type: {0},Documenttype toevoegen mislukt: {0}
+Failed to add identifier: {0},Identificatie toevoegen mislukt: {0}
+Failed to add integration: {0},Integratie toevoegen mislukt: {0}
+Failed to add notification email address: {0},E-mailadres voor meldingen toevoegen mislukt: {0}
+Failed to create company,Bedrijf aanmaken mislukt
+Failed to delete document type: {0},Documenttype verwijderen mislukt: {0}
+Failed to delete identifier: {0},Identificatie verwijderen mislukt: {0}
+Failed to delete notification email address: {0},E-mailadres voor meldingen verwijderen mislukt: {0}
+Failed to export documents. Please try again.,Documenten exporteren mislukt. Probeer het opnieuw.
+Failed to load company document types,Documenttypen van het bedrijf laden mislukt
+Failed to load company identifiers: {0},Bedrijfsidentificaties laden mislukt: {0}
+Failed to load integrations: {0},Integraties laden mislukt: {0}
+Failed to load notification email addresses: {0},E-mailadressen voor meldingen laden mislukt: {0}
+Failed to read file,Bestand lezen mislukt
+Failed to send document,Document verzenden mislukt
+Failed to update document type: {0},Documenttype bijwerken mislukt: {0}
+Failed to update identifier: {0},Identificatie bijwerken mislukt: {0}
+Failed to update notification email address: {0},E-mailadres voor meldingen bijwerken mislukt: {0}
+Failed to update subscription,Abonnement bijwerken mislukt
+False,Nee
+Fill in the required fields to see a preview.,Vul de verplichte velden in om een voorbeeld te bekijken.
+Flat UBLs (all XMLs in root),Platte UBL's (alle XML-bestanden in de hoofdmap)
+For Belgian businesses\, the VAT number will be used to infer the enterprise number.,Voor Belgische bedrijven wordt het ondernemingsnummer afgeleid uit het btw-nummer.
+For Dutch businesses\, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).,Voor Nederlandse bedrijven heeft het btw-nummer de notatie NL + 9 cijfers + B + 2 cijfers (bijv. NL123456789B01).
+For Dutch sellers\, the scheme identifier is required to be able to send invoices and credit notes.,Voor Nederlandse verkopers is de schema-identificatie verplicht om facturen en creditnota's te kunnen verzenden.
+Full Peppol participation: send documents and receive them from your network.,Volledige deelname aan Peppol: verzend documenten en ontvang ze vanuit je netwerk.
+Generates a PDF of the document and embeds it as an attachment.,Genereert een pdf van het document en voegt deze als bijlage toe.
+Green,Groen
+Hour,Uur
+IBAN *,IBAN *
+Identifier,Identificatie
+Identifier added successfully,Identificatie is toegevoegd
+Identifier deleted successfully,Identificatie is verwijderd
+Identifier is required,Identificatie is verplicht
+Identifier updated successfully,Identificatie is bijgewerkt
+Identifiers are used to identify your company in the Peppol network.,Identificaties worden gebruikt om je bedrijf op het Peppol-netwerk te identificeren.
+If enabled\, the company will be registered as a recipient in our SMP (the Peppol address book). This will allow you to send and receive documents. If disabled\, you will only be able to send documents via Recommand.,Als dit is ingeschakeld\, wordt het bedrijf als ontvanger geregistreerd in onze SMP (het Peppol-adresboek). Zo kun je documenten verzenden en ontvangen. Als dit is uitgeschakeld\, kun je via Recommand alleen documenten verzenden.
+If no Peppol recipient is provided\, email will be the primary delivery method regardless of this setting.,Als geen Peppol-ontvanger is opgegeven\, is e-mail ongeacht deze instelling de primaire bezorgmethode.
+Include generated PDF,Gegenereerde pdf toevoegen
+Include incoming documents,Inkomende documenten toevoegen
+Include outgoing documents,Uitgaande documenten toevoegen
+Incoming documents,Inkomende documenten
+Incoming invoices,Inkomende facturen
+Integration added successfully,Integratie is toegevoegd
+Invoice ID *,Factuur-ID *
+Invoice Lines *,Factuurregels *
+Invoice Number *,Factuurnummer *
+Invoice number or reference,Factuurnummer of referentie
+Issue Date,Factuurdatum
+Item Name *,Artikelnaam *
+JSON document,JSON-document
+JavaScript Fetch,JavaScript Fetch
+Kilogram,Kilogram
+Label Name,Labelnaam
+Last month,Vorige maand
+Leave blank to auto-detect from the document type,Laat leeg om automatisch af te leiden uit het documenttype
+Leave blank to auto-detect from your XML (if possible),Laat leeg om indien mogelijk automatisch af te leiden uit je XML
+Leave empty to send via email only.,Laat leeg om alleen via e-mail te verzenden.
+Line Total:,Regeltotaal:
+Liter,Liter
+Live preview of the API request that will be sent,Livevoorbeeld van het API-verzoek dat wordt verzonden
+Loaded: {0},Geladen: {0}
+Loading companies...,Bedrijven laden...
+Manage email notifications for documents,E-mailmeldingen voor documenten beheren
+Manage integrations for this company,Integraties voor dit bedrijf beheren
+Manage your company document types,Documenttypen van je bedrijf beheren
+Manage your company identifiers,Bedrijfsidentificaties beheren
+Megawatt hour (MWh),Megawattuur (MWh)
+Meter,Meter
+Month,Maand
+Most popular,Populairst
+Need more than {0} documents per month? Contact us for a custom plan.,Meer dan {0} documenten per maand nodig? Neem contact met ons op voor een abonnement op maat.
+Nested structure (document packages),Geneste structuur (documentpakketten)
+Net Total:,Nettototaal:
+Net: €{0},Netto: €{0}
+New companies cannot be created in {0}\, and existing companies cannot switch to it. We are working on supporting more countries in the future. Would you like to see support for {1}? Let us know via support@recommand.eu.,In {0} kunnen geen nieuwe bedrijven worden aangemaakt en bestaande bedrijven kunnen er niet naartoe overschakelen. We werken aan ondersteuning voor meer landen. Wil je ondersteuning voor {1}? Laat het ons weten via support@recommand.eu.
+Next,Volgende
+No attachments added yet.,Er zijn nog geen bijlagen toegevoegd.
+No companies available,Geen bedrijven beschikbaar
+No configurable capabilities available for this integration.,Er zijn geen instelbare mogelijkheden beschikbaar voor deze integratie.
+No configurable fields available for this integration.,Er zijn geen instelbare velden beschikbaar voor deze integratie.
+No customers found.,Geen klanten gevonden.
+No detailed error information available.,Geen gedetailleerde foutinformatie beschikbaar.
+No document type selected for editing,Geen documenttype geselecteerd om te bewerken
+No document types found,Geen documenttypen gevonden
+No identifier selected for editing,Geen identificatie geselecteerd om te bewerken
+No identifiers found,Geen identificaties gevonden
+No integrations configured,Geen integraties ingesteld
+No notification email address selected for editing,Geen e-mailadres voor meldingen geselecteerd om te bewerken
+No notification emails configured,Geen e-mailadressen voor meldingen ingesteld
+No scheme found.,Geen schema gevonden.
+Not sent over Peppol network,Niet via het Peppol-netwerk verzonden
+Not specified,Niet opgegeven
+Note,Opmerking
+Notification email address added successfully,E-mailadres voor meldingen is toegevoegd
+Notification email address deleted successfully,E-mailadres voor meldingen is verwijderd
+Notification email address updated successfully,E-mailadres voor meldingen is bijgewerkt
+Notifications,Meldingen
+Notify for,Meldingen ontvangen voor
+One,Stuk
+Only if Peppol fails,Alleen als Peppol mislukt
+Optional description,Optionele beschrijving
+Optionally attach supporting documents such as PDFs or images. Files are embedded in the Peppol document.,Voeg desgewenst ondersteunende documenten toe\, zoals pdf's of afbeeldingen. Bestanden worden in het Peppol-document ingesloten.
+Or choose a file to fill the XML textarea below,Of kies een bestand om het XML-tekstvak hieronder in te vullen
+Orange,Oranje
+Outgoing documents,Uitgaande documenten
+Outgoing invoices,Uitgaande facturen
+Output type *,Uitvoertype *
+PDF filename,Bestandsnaam van de pdf
+Payment Information,Betaalgegevens
+Payment Reference,Betaalreferentie
+Peppol address for invoice delivery. If not set\, we will try to derive it from your VAT number or deliver the invoice via email.,Peppol-adres voor de bezorging van facturen. Als dit niet is ingesteld\, proberen we het af te leiden uit je btw-nummer of bezorgen we de factuur via e-mail.
+Peppol address: {0},Peppol-adres: {0}
+Peppol addresses,Peppol-adressen
+Peppol identifiers are the addresses your company uses on the Peppol network. By default\, identifiers were created from your enterprise or VAT number. You can add additional identifiers here if needed.,Peppol-identificaties zijn de adressen die je bedrijf op het Peppol-netwerk gebruikt. Standaard zijn identificaties aangemaakt op basis van je ondernemings- of btw-nummer. Je kunt hier indien nodig extra identificaties toevoegen.
+Phone (Optional),Telefoonnummer (optioneel)
+Please enter a recipient Peppol ID or configure email delivery,Voer een Peppol-ID van de ontvanger in of stel bezorging via e-mail in
+Please select a company,Selecteer een bedrijf
+Please select at least one notification type,Selecteer minstens één meldingstype
+Please upload an XML file,Upload een XML-bestand
+Postal Code,Postcode
+Price *,Prijs *
+Process ID (optional),Proces-ID (optioneel)
+Process ID is required,Proces-ID is verplicht
+Product or service,Product of dienst
+Professional,Professional
+Purple,Paars
+Quantity *,Aantal *
+Raw XML Document,Ruw XML-document
+Reason for credit note,Reden voor de creditnota
+Reason why the credit note is exempt from VAT,Reden waarom de creditnota is vrijgesteld van btw
+Reason why the invoice is exempt from VAT,Reden waarom de factuur is vrijgesteld van btw
+Receive documents only,Alleen documenten ontvangen
+Recipient Peppol ID,Peppol-ID van de ontvanger
+Register as recipient,Als ontvanger registreren
+Register your company in the Peppol network so suppliers can send you documents.,Registreer je bedrijf op het Peppol-netwerk zodat leveranciers je documenten kunnen verzenden.
+Request Body,Request Body
+Resume Subscription,Abonnement hervatten
+Saving will require re-verification,Na opslaan is herverificatie vereist
+Scheme,Schema
+Scheme is required,Schema is verplicht
+Search scheme...,Schema zoeken...
+Select Plan,Abonnement kiezen
+Select a company,Selecteer een bedrijf
+Select a country,Selecteer een land
+Select a customer...,Selecteer een klant...
+Select a preset...,Selecteer een voorinstelling...
+Select an integration to connect to this company.,Selecteer een integratie om aan dit bedrijf te koppelen.
+Select scheme...,Selecteer een schema...
+Select {0} color,Kleur {0} selecteren
+Seller Information (Auto-populated),Gegevens van de verkoper (automatisch ingevuld)
+Seller Information *,Gegevens van de verkoper *
+Seller details,Gegevens van de verkoper
+Send Document,Document verzenden
+Send and receive documents,Documenten verzenden en ontvangen
+Send documents only,Alleen documenten verzenden
+Send via Email,Via e-mail verzenden
+Sending & receiving,Verzenden en ontvangen
+Sending Company *,Verzendend bedrijf *
+Sending...,Verzenden...
+Sent via email to:,Via e-mail verzonden naar:
+Setup Payment Method,Betaalmethode instellen
+Skip Billing,Facturatie overslaan
+Skip Setup with Playground,Configuratie overslaan met een testomgeving
+Skip Subscription - Create Playground,Abonnement overslaan - testomgeving aanmaken
+Skip billing setup by creating a playground to test your Peppol API integrations without billing requirements\, or switch to another team.,Sla de facturatieconfiguratie over door een testomgeving aan te maken waarin je je Peppol-API-integraties zonder facturatievereisten kunt testen\, of schakel over naar een ander team.
+Skip for now,Voorlopig overslaan
+Skip subscription setup by creating a playground to test your Peppol API integrations without billing requirements\, or switch to another team.,Sla de abonnementsconfiguratie over door een testomgeving aan te maken waarin je je Peppol-API-integraties zonder facturatievereisten kunt testen\, of schakel over naar een ander team.
+Skip the current setup by switching to another team or creating a playground to test your Peppol API integrations without billing requirements.,Sla de huidige configuratie over door naar een ander team over te schakelen of een testomgeving aan te maken waarin je je Peppol-API-integraties zonder facturatievereisten kunt testen.
+Some fields have been pre-filled from your billing profile.,Sommige velden zijn vooraf ingevuld vanuit je facturatieprofiel.
+Start Verification,Verificatie starten
+Start datetime (inclusive) *,Begindatum en -tijd (inclusief) *
+Start datetime is required,Begindatum en -tijd zijn verplicht
+Step {0} of {1},Stap {0} van {1}
+Street Address,Straat en huisnummer
+Street Address 2,Adresregel 2
+Subscription updated successfully,Abonnement is bijgewerkt
+Suite 100,Bus 100
+Switch Team or Create Playground,Van team wisselen of een testomgeving aanmaken
+Switch to existing team,Naar een bestaand team overschakelen
+Switched team successfully,Naar het team overgeschakeld
+Thank you for your business,Bedankt voor je vertrouwen
+The VAT or enterprise number changed. Saving will revoke open verification sessions and any current verification status\, and the company will need to be verified again.,Het btw- of ondernemingsnummer is gewijzigd. Bij opslaan worden open verificatiesessies en de huidige verificatiestatus ingetrokken en moet het bedrijf opnieuw worden geverifieerd.
+The token is used to authenticate the integration with the external service.,Het token wordt gebruikt om de integratie bij de externe dienst te verifiëren.
+This is how your customer will see the generated billing document if you include it.,Zo ziet je klant het gegenereerde facturatiedocument als je dit toevoegt.
+This month,Deze maand
+To send or receive documents on behalf of {0}\, you must verify your identity to confirm you are authorized to act for this company.,Om namens {0} documenten te verzenden of ontvangen\, moet je je identiteit verifiëren en bevestigen dat je bevoegd bent om voor dit bedrijf op te treden.
+Token,Token
+Total Gross:,Brutototaal:
+Total VAT:,Totaal btw:
+True,Ja
+Try again,Opnieuw proberen
+Unit,Eenheid
+Unsupported file type. Allowed types: CSV\, PDF\, PNG\, JPG\, XLSX\, ODS.,Niet-ondersteund bestandstype. Toegestane typen: CSV\, PDF\, PNG\, JPG\, XLSX\, ODS.
+Update,Bijwerken
+Updated: {0},Bijgewerkt: {0}
+Upgrade or change your current plan,Upgrade of wijzig je huidige abonnement
+Upload XML file,XML-bestand uploaden
+Upload file,Bestand uploaden
+Upload or paste your UBL-formatted XML document here. The document should be compliant with the Peppol BIS 3.0 standard.,Upload of plak hier je XML-document in UBL-formaat. Het document moet voldoen aan de Peppol BIS 3.0-standaard.
+Use Recommand to send Peppol documents to your customers.,Gebruik Recommand om Peppol-documenten naar je klanten te verzenden.
+VAT %,Btw %
+VAT Category,Btw-categorie
+VAT Exemption Reason *,Reden voor btw-vrijstelling *
+VAT Number (Optional),Btw-nummer (optioneel)
+VAT: {0},Btw: {0}
+VAT: €{0} | Total: €{1},Btw: €{0} | Totaal: €{1}
+Validating payment mandate...,Betalingsmandaat valideren...
+Webhook URL,Webhook-URL
+What do you want to use Recommand for with this company?,Waarvoor wil je Recommand bij dit bedrijf gebruiken?
+When to send email,Wanneer e-mail verzenden
+XML Document *,XML-document *
+XML and any document attachments are always included. You can also attach a generated document preview (PDF) and a small JSON document with key document details.,De XML en eventuele documentbijlagen worden altijd toegevoegd. Je kunt ook een gegenereerd documentvoorbeeld (pdf) en een klein JSON-document met de belangrijkste documentgegevens toevoegen.
+XML file is too large (max 5MB),XML-bestand is te groot (maximaal 5 MB)
+Yellow,Geel
+You can use HTML tags for formatting. The document will be attached as XML\, plus any embedded attachments (optionally including a generated PDF).,Je kunt HTML-tags gebruiken voor de opmaak. Het document wordt als XML bijgevoegd\, samen met eventuele ingesloten bijlagen (optioneel inclusief een gegenereerde pdf).
+You must be in a team to complete this step,Je moet deel uitmaken van een team om deze stap te voltooien
+cURL Command,cURL-opdracht
+documents included,documenten inbegrepen
+e.g.\, 0208 (Belgium),bijv. 0208 (België)
+e.g.\, 1012081766,bijv. 1012081766
+e.g.\, urn:fdc:peppol.eu:2017:poacc:billing:01:1.0,bijv. urn:fdc:peppol.eu:2017:poacc:billing:01:1.0
+e.g.\, urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1,bijv. urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1
+{0} copied to clipboard,{0} naar het klembord gekopieerd
+{0} is currently not supported,{0} wordt momenteel niet ondersteund
+{0} is partially supported,{0} wordt gedeeltelijk ondersteund
+€{0} per extra document,€{0} per extra document
+✓ Sent over Peppol network,✓ Verzonden via het Peppol-netwerk
+✓ Sent to {0},✓ Verzonden naar {0}

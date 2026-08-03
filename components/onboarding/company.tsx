@@ -7,11 +7,13 @@ import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
 import type { GetTeamExtension } from "@peppol/api/teams/get-team-extension";
 import type { Company, CompanyFormData } from "@peppol/types/company";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const companiesClient = rc<Companies>("peppol");
 const teamsClient = rc<GetTeamExtension>("v1");
 
 export default function CompanyOnboarding({ onComplete }: { onComplete: () => Promise<void> }) {
+    const { t } = useTranslation();
     const activeTeam = useActiveTeam();
     const isPlayground = useIsPlayground();
     const [initialData, setInitialData] = useState<Partial<CompanyFormData> | undefined>(undefined);
@@ -75,7 +77,7 @@ export default function CompanyOnboarding({ onComplete }: { onComplete: () => Pr
         <div className="w-full max-w-lg space-y-4">
             {hasBillingPrefill && (
                 <p className="text-xs text-muted-foreground bg-muted/50 px-3 py-2 rounded-md text-center">
-                    Some fields have been pre-filled from your billing profile.
+                    {t`Some fields have been pre-filled from your billing profile.`}
                 </p>
             )}
             <CreateCompanyWizard

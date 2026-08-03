@@ -16,6 +16,7 @@ import {
 } from "@core/components/ui/tabs";
 import type { SendDocument } from "@peppol/utils/parsing/send-document";
 import { SyntaxHighlighter } from "./syntax-highlighter";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface ApiPreviewProps {
   formData: Partial<SendDocument>;
@@ -23,6 +24,7 @@ interface ApiPreviewProps {
 }
 
 export function ApiPreview({ formData, companyId }: ApiPreviewProps) {
+  const { t } = useTranslation();
   const endpoint = companyId
     ? `/api/v1/${companyId}/send`
     : "/api/v1/{companyId}/send";
@@ -48,7 +50,7 @@ console.log(data);`;
 
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${type} copied to clipboard`);
+    toast.success(t`${type} copied to clipboard`);
   };
 
   return (
@@ -56,17 +58,17 @@ console.log(data);`;
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Terminal className="h-5 w-5" />
-          API Preview
+          {t`API Preview`}
         </CardTitle>
         <CardDescription>
-          Live preview of the API request that will be sent
+          {t`Live preview of the API request that will be sent`}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Endpoint</span>
+              <span className="text-sm font-medium">{t`Endpoint`}</span>
               <Button
                 size="sm"
                 variant="ghost"
@@ -89,7 +91,7 @@ console.log(data);`;
 
             <TabsContent value="json" className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Request Body</span>
+                <span className="text-sm font-medium">{t`Request Body`}</span>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -109,7 +111,7 @@ console.log(data);`;
 
             <TabsContent value="curl" className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">cURL Command</span>
+                <span className="text-sm font-medium">{t`cURL Command`}</span>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -129,7 +131,7 @@ console.log(data);`;
 
             <TabsContent value="javascript" className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">JavaScript Fetch</span>
+                <span className="text-sm font-medium">{t`JavaScript Fetch`}</span>
                 <Button
                   size="sm"
                   variant="ghost"

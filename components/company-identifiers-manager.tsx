@@ -10,6 +10,7 @@ import { rc } from "@recommand/lib/client";
 import type { CompanyIdentifiers } from "@peppol/api/companies/identifiers";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import { stringifyActionFailure } from "@recommand/lib/utils";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<CompanyIdentifiers>("peppol");
 
@@ -24,6 +25,7 @@ type IdentifierFormData = {
 };
 
 export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifiersManagerProps) {
+    const { t, language } = useTranslation();
     const [identifiers, setIdentifiers] = useState<CompanyIdentifier[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
@@ -56,7 +58,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
             })));
         } catch (error) {
             console.error("Error fetching identifiers:", error);
-            toast.error("Failed to load company identifiers: " + error);
+            toast.error(t`Failed to load company identifiers: ${error}`);
         } finally {
             setIsLoading(false);
         }
@@ -64,11 +66,11 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
 
     const handleAdd = async () => {
         if (!formData.scheme.trim()) {
-            toast.error("Scheme is required");
+            toast.error(t`Scheme is required`);
             return;
         }
         if (!formData.identifier.trim()) {
-            toast.error("Identifier is required");
+            toast.error(t`Identifier is required`);
             return;
         }
 
@@ -84,11 +86,11 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                 throw new Error(stringifyActionFailure(json.errors));
             }
 
-            toast.success("Identifier added successfully");
+            toast.success(t`Identifier added successfully`);
             setFormData({ scheme: "", identifier: "" });
             setIsAdding(false);
         } catch (error) {
-            toast.error("Failed to add identifier: " + error);
+            toast.error(t`Failed to add identifier: ${error}`);
         } finally {
             setIsSubmitting(false);
             fetchIdentifiers();
@@ -97,15 +99,15 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
 
     const handleEdit = async () => {
         if (!editingId) {
-            toast.error("No identifier selected for editing");
+            toast.error(t`No identifier selected for editing`);
             return;
         }
         if (!editFormData.scheme.trim()) {
-            toast.error("Scheme is required");
+            toast.error(t`Scheme is required`);
             return;
         }
         if (!editFormData.identifier.trim()) {
-            toast.error("Identifier is required");
+            toast.error(t`Identifier is required`);
             return;
         }
 
@@ -121,11 +123,11 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                 throw new Error(stringifyActionFailure(json.errors));
             }
 
-            toast.success("Identifier updated successfully");
+            toast.success(t`Identifier updated successfully`);
             setEditingId(null);
             setEditFormData({ scheme: "", identifier: "" });
         } catch (error) {
-            toast.error("Failed to update identifier: " + error);
+            toast.error(t`Failed to update identifier: ${error}`);
         } finally {
             setIsSubmitting(false);
             fetchIdentifiers();
@@ -143,9 +145,9 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                 throw new Error(stringifyActionFailure(json.errors));
             }
 
-            toast.success("Identifier deleted successfully");
+            toast.success(t`Identifier deleted successfully`);
         } catch (error) {
-            toast.error("Failed to delete identifier: " + error);
+            toast.error(t`Failed to delete identifier: ${error}`);
         } finally {
             fetchIdentifiers();
         }
@@ -173,12 +175,12 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Company Identifiers</CardTitle>
-                    <CardDescription>Manage your company identifiers</CardDescription>
+                    <CardTitle>{t`Company Identifiers`}</CardTitle>
+                    <CardDescription>{t`Manage your company identifiers`}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center justify-center h-32">
-                        <div className="text-center text-muted-foreground">Loading...</div>
+                        <div className="text-center text-muted-foreground">{t`Loading...`}</div>
                     </div>
                 </CardContent>
             </Card>
@@ -190,15 +192,15 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
             <CardHeader>
                 <div className="flex items-center justify-between gap-4">
                     <div>
-                        <CardTitle>Company Identifiers</CardTitle>
+                        <CardTitle>{t`Company Identifiers`}</CardTitle>
                         <CardDescription className="text-balance">
-                            Identifiers are used to identify your company in the Peppol network.
+                            {t`Identifiers are used to identify your company in the Peppol network.`}
                         </CardDescription>
                     </div>
                     {!isAdding && (
                         <Button onClick={() => setIsAdding(true)} size="sm">
                             <Plus className="h-4 w-4" />
-                            Add Identifier
+                            {t`Add Identifier`}
                         </Button>
                     )}
                 </div>
@@ -209,19 +211,19 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                     <div className="p-4 border rounded-lg bg-muted/50">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="add-scheme">Scheme</Label>
+                                <Label htmlFor="add-scheme">{t`Scheme`}</Label>
                                 <Input
                                     id="add-scheme"
-                                    placeholder="e.g., 0208 (Belgium)"
+                                    placeholder={t`e.g., 0208 (Belgium)`}
                                     value={formData.scheme}
                                     onChange={(e) => setFormData({ ...formData, scheme: e.target.value })}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="add-identifier">Identifier</Label>
+                                <Label htmlFor="add-identifier">{t`Identifier`}</Label>
                                 <Input
                                     id="add-identifier"
-                                    placeholder="e.g., 1012081766"
+                                    placeholder={t`e.g., 1012081766`}
                                     value={formData.identifier}
                                     onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
                                 />
@@ -229,16 +231,16 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                         </div>
 
                         <p className="text-xs text-muted-foreground mt-2">
-                            Common schemes: 0208 (Belgium), 0106 (Netherlands), 0225 (France)
+                            {t`Common schemes: 0208 (Belgium), 0106 (Netherlands), 0225 (France)`}
                         </p>
                         <div className="flex gap-2 mt-4 justify-end">
                             <AsyncButton onClick={handleAdd} size="sm" disabled={isSubmitting}>
                                 <Check className="h-4 w-4" />
-                                Add
+                                {t`Add`}
                             </AsyncButton>
                             <Button onClick={cancelAdd} variant="outline" size="sm" disabled={isSubmitting}>
                                 <X className="h-4 w-4" />
-                                Cancel
+                                {t`Cancel`}
                             </Button>
                         </div>
                     </div>
@@ -248,8 +250,8 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                 <div className="space-y-2">
                     {identifiers.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                            <p>No identifiers found</p>
-                            <p className="text-sm">Add your first identifier to get started</p>
+                            <p>{t`No identifiers found`}</p>
+                            <p className="text-sm">{t`Add your first identifier to get started`}</p>
                         </div>
                     ) : (
                         identifiers.map((identifier) => (
@@ -259,7 +261,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                                     <div className="flex-1 space-y-4">
                                         <div className="grid grid-cols-2 gap-2">
                                             <div className="space-y-1">
-                                                <Label htmlFor={`edit-scheme-${identifier.id}`} className="text-xs">Scheme</Label>
+                                                <Label htmlFor={`edit-scheme-${identifier.id}`} className="text-xs">{t`Scheme`}</Label>
                                                 <Input
                                                     id={`edit-scheme-${identifier.id}`}
                                                     value={editFormData.scheme}
@@ -268,7 +270,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                                                 />
                                             </div>
                                             <div className="space-y-1">
-                                                <Label htmlFor={`edit-identifier-${identifier.id}`} className="text-xs">Identifier</Label>
+                                                <Label htmlFor={`edit-identifier-${identifier.id}`} className="text-xs">{t`Identifier`}</Label>
                                                 <Input
                                                     id={`edit-identifier-${identifier.id}`}
                                                     value={editFormData.identifier}
@@ -280,11 +282,11 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                                         <div className="flex gap-2 justify-end">
                                             <AsyncButton onClick={handleEdit} size="sm" variant="default" disabled={isSubmitting}>
                                                 <Check className="h-4 w-4" />
-                                                Save Changes
+                                                {t`Save Changes`}
                                             </AsyncButton>
                                             <Button onClick={cancelEdit} size="sm" variant="outline" disabled={isSubmitting}>
                                                 <X className="h-4 w-4" />
-                                                Cancel Edit
+                                                {t`Cancel Edit`}
                                             </Button>
                                         </div>
                                     </div>
@@ -293,7 +295,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                                     <div className="flex-1">
                                         <div className="font-medium">{identifier.scheme}:{identifier.identifier}</div>
                                         <div className="text-xs text-muted-foreground">
-                                            Updated: {new Date(identifier.updatedAt).toLocaleDateString()}
+                                            {t`Updated: ${new Date(identifier.updatedAt).toLocaleDateString(language)}`}
                                         </div>
                                     </div>
                                 )}

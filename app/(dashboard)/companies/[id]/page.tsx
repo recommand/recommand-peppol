@@ -25,12 +25,14 @@ import type { Subscription as SubscriptionType } from "@peppol/data/subscription
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { StatusMessage } from "@recommand/components/status-feedback";
 import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
 const subscriptionClient = rc<Subscription>("v1");
 const teamsClient = rc<GetTeamExtension>("v1");
 
 export default function CompanyDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [company, setCompany] = useState<Company | null>(null);
@@ -103,7 +105,7 @@ export default function CompanyDetailPage() {
       setIsVerified(companyData.isVerified);
     } catch (error) {
       console.error("Error fetching company:", error);
-      toast.error("Failed to load company");
+      toast.error(t`Failed to load company`);
       navigate("/companies");
     } finally {
       setIsLoading(false);
@@ -200,10 +202,10 @@ export default function CompanyDetailPage() {
       setCompany(companyData);
       setFormData(companyData);
       setIsVerified(companyData.isVerified);
-      toast.success("Company updated successfully");
+      toast.success(t`Company updated successfully`);
     } catch (error) {
       console.error(error);
-      toast.error("Failed to update company. (" + (error instanceof Error ? error.message : String(error)) + ")");
+      toast.error(t`Failed to update company. (${error instanceof Error ? error.message : String(error)})`);
     }
   };
 
@@ -224,10 +226,10 @@ export default function CompanyDetailPage() {
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Company deleted successfully");
+      toast.success(t`Company deleted successfully`);
       navigate("/companies");
     } catch (error) {
-      toast.error("Failed to delete company: " + error);
+      toast.error(t`Failed to delete company: ${error}`);
     } finally {
       setIsDeleting(false);
     }
@@ -252,7 +254,7 @@ export default function CompanyDetailPage() {
 
       window.location.href = json.verificationUrl;
     } catch (error) {
-      toast.error("Failed to create verification session: " + error);
+      toast.error(t`Failed to create verification session: ${error}`);
     } finally {
       setIsVerifying(false);
     }
@@ -263,15 +265,15 @@ export default function CompanyDetailPage() {
       <PageTemplate
         breadcrumbs={[
           { label: "Peppol", href: "/" },
-          { label: "Companies", href: "/companies" },
-          { label: "Loading..." },
+          { label: t`Companies`, href: "/companies" },
+          { label: t`Loading...` },
         ]}
-        description="Loading company details..."
+        description={t`Loading company details...`}
       >
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin" />
-            <div className="text-lg">Loading company details...</div>
+            <div className="text-lg">{t`Loading company details...`}</div>
           </div>
         </div>
       </PageTemplate>
@@ -283,16 +285,16 @@ export default function CompanyDetailPage() {
       <PageTemplate
         breadcrumbs={[
           { label: "Peppol", href: "/" },
-          { label: "Companies", href: "/companies" },
-          { label: "Not Found" },
+          { label: t`Companies`, href: "/companies" },
+          { label: t`Not Found` },
         ]}
-        description="Company not found"
+        description={t`Company not found`}
       >
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <div className="text-lg mb-4">Company not found</div>
+            <div className="text-lg mb-4">{t`Company not found`}</div>
             <Button onClick={() => navigate("/companies")}>
-              Back to Companies
+              {t`Back to Companies`}
             </Button>
           </div>
         </div>
@@ -304,23 +306,23 @@ export default function CompanyDetailPage() {
     <PageTemplate
       breadcrumbs={[
         { label: "Peppol", href: "/" },
-        { label: "Companies", href: "/companies" },
+        { label: t`Companies`, href: "/companies" },
         { label: company.name },
       ]}
-      description={`Edit company details for ${company.name}`}
+      description={t`Edit company details for ${company.name}`}
       buttons={[
         <ConfirmDialog
           key="delete-button"
-          title="Delete Company"
-          description="Are you sure you want to delete this company? This action cannot be undone."
-          confirmButtonText="Delete"
+          title={t`Delete Company`}
+          description={t`Are you sure you want to delete this company? This action cannot be undone.`}
+          confirmButtonText={t`Delete`}
           onConfirm={handleDeleteCompany}
           isLoading={isDeleting}
           variant="destructive"
           trigger={
             <Button variant="destructive">
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete Company
+              {t`Delete Company`}
             </Button>
           }
         />,
@@ -330,8 +332,8 @@ export default function CompanyDetailPage() {
         <StatusMessage
           tone="warning"
           icon={ShieldCheck}
-          title="Company Verification Required"
-          description={verificationRequirements === "strict" ? "This company needs to be verified before it can be used." : "This company needs to be verified. Without verification, it will soon be deactivated."}
+          title={t`Company Verification Required`}
+          description={verificationRequirements === "strict" ? t`This company needs to be verified before it can be used.` : t`This company needs to be verified. Without verification, it will soon be deactivated.`}
           className="mb-6"
         >
           <div className="pt-1">
@@ -342,12 +344,12 @@ export default function CompanyDetailPage() {
               {isVerifying ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Verifying...
+                  {t`Verifying...`}
                 </>
               ) : (
                 <>
                   <ShieldCheck className="h-4 w-4 mr-2" />
-                  Verify Company
+                  {t`Verify Company`}
                 </>
               )}
             </Button>
@@ -359,9 +361,9 @@ export default function CompanyDetailPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Edit Company</CardTitle>
+              <CardTitle>{t`Edit Company`}</CardTitle>
               <CardDescription>
-                Make changes to the company information below
+                {t`Make changes to the company information below`}
               </CardDescription>
             </div>
           </CardHeader>
@@ -405,9 +407,9 @@ export default function CompanyDetailPage() {
                       <Plug className="h-4 w-4 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <CardTitle>Integrations</CardTitle>
+                      <CardTitle>{t`Integrations`}</CardTitle>
                       <CardDescription>
-                        Connect external services to automate document processing and workflows. Integrations are available on Starter, Professional, or Enterprise plans.
+                        {t`Connect external services to automate document processing and workflows. Integrations are available on Starter, Professional, or Enterprise plans.`}
                       </CardDescription>
                     </div>
                   </div>
@@ -416,30 +418,30 @@ export default function CompanyDetailPage() {
                   <div className="space-y-4">
                     {BUILT_IN_INTEGRATIONS.length > 0 && (
                       <div className="text-sm">
-                        <p className="mb-2 font-medium">Available integrations:</p>
+                        <p className="mb-2 font-medium">{t`Available integrations:`}</p>
                         <ul className="space-y-1">
                           {BUILT_IN_INTEGRATIONS.map((integration) => (
                             <li key={integration.url} className="flex items-center gap-2 text-muted-foreground">
                               <Plug className="h-3 w-3" />
-                              <span>{integration.name}</span>
+                              <span>{t(integration.name)}</span>
                             </li>
                           ))}
                         </ul>
                       </div>
                     )}
                     <div className="text-sm text-muted-foreground">
-                      <p className="mb-2">With integrations, you can:</p>
+                      <p className="mb-2">{t`With integrations, you can:`}</p>
                       <ul className="list-disc list-inside space-y-1 ml-2">
-                        <li>Automatically sync documents with your accounting software</li>
-                        <li>Receive real-time notifications for incoming documents</li>
-                        <li>Streamline your document processing workflow</li>
+                        <li>{t`Automatically sync documents with your accounting software`}</li>
+                        <li>{t`Receive real-time notifications for incoming documents`}</li>
+                        <li>{t`Streamline your document processing workflow`}</li>
                       </ul>
                     </div>
                     <Button
                       onClick={() => navigate("/billing/subscription")}
                       className="w-full"
                     >
-                      View Available Plans
+                      {t`View Available Plans`}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>

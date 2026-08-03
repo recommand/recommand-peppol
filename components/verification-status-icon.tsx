@@ -1,11 +1,13 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@core/components/ui/tooltip";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface VerificationStatusIconProps {
   isVerified: boolean;
 }
 
 export function VerificationStatusIcon({ isVerified }: VerificationStatusIconProps) {
+  const { t } = useTranslation();
   if (isVerified) {
     return (
       <Tooltip>
@@ -13,7 +15,7 @@ export function VerificationStatusIcon({ isVerified }: VerificationStatusIconPro
           <CheckCircle2 className="h-4 w-4" />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Company is verified</p>
+          <p>{t`Company is verified`}</p>
         </TooltipContent>
       </Tooltip>
     );
@@ -25,9 +27,8 @@ export function VerificationStatusIcon({ isVerified }: VerificationStatusIconPro
         <XCircle className="h-4 w-4 text-destructive" />
       </TooltipTrigger>
       <TooltipContent>
-        <p>Company is not verified</p>
+        <p>{t`Company is not verified`}</p>
       </TooltipContent>
     </Tooltip>
   );
 }
-

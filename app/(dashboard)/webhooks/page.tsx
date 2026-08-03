@@ -5,6 +5,7 @@ import { useActiveTeam } from "@core/hooks/user";
 import { toast } from "@core/components/ui/sonner";
 import { rc } from "@recommand/lib/client";
 import { useEffect, useState } from "react";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const companiesClient = rc<Companies>("v1");
 const labelsClient = rc<Labels>("v1");
@@ -23,6 +24,7 @@ export default function Page() {
   const activeTeam = useActiveTeam();
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [labels, setLabels] = useState<LabelOption[]>([]);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +78,7 @@ export default function Page() {
       } catch (error) {
         console.error(error);
         if (!cancelled) {
-          toast.error("Failed to load rule builder options");
+          toast.error(t`Failed to load rule builder options`);
           setCompanies([]);
           setLabels([]);
         }
@@ -92,9 +94,9 @@ export default function Page() {
 
   return (
     <RulesManagementPage
-      title="Webhooks and rules"
-      description="Create webhooks and automations that react to Peppol events."
-      breadcrumbs={[{ label: "Peppol" }, { label: "Webhooks and rules" }]}
+      title={t`Webhooks and rules`}
+      description={t`Create webhooks and automations that react to Peppol events.`}
+      breadcrumbs={[{ label: "Peppol" }, { label: t`Webhooks and rules` }]}
       conditionOptions={{
         company: companies.map((company) => ({
           value: company.id,

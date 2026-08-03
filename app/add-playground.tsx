@@ -10,9 +10,10 @@ import { toast } from "@core/components/ui/sonner";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { useUserStore } from "@core/lib/user-store";
 import { createPlayground } from "@peppol/lib/client/playgrounds";
+import { useTranslation } from "@core/hooks/use-translation";
 
 export default function AddPlayground() {
-
+    const { t } = useTranslation();
     const { registerMenuItem } = useMenuItemActions();
     const [isOpen, setIsOpen] = useState(false);
     const [newPlaygroundName, setNewPlaygroundName] = useState("");
@@ -25,7 +26,7 @@ export default function AddPlayground() {
         if (isCreating) return;
 
         if (!newPlaygroundName.trim()) {
-            toast.error("Please enter a name for the playground");
+            toast.error(t`Please enter a name for the playground`);
             return;
         }
 
@@ -45,9 +46,9 @@ export default function AddPlayground() {
             setIsOpen(false);
             setNewPlaygroundName("");
             setUseTestNetwork(false);
-            toast.success("Playground created successfully");
+            toast.success(t`Playground created successfully`);
         }catch(error){
-            toast.error("Failed to create playground");
+            toast.error(t`Failed to create playground`);
             console.error(error);
         } finally {
             setIsCreating(false);
@@ -57,24 +58,24 @@ export default function AddPlayground() {
     useEffect(() => {
         registerMenuItem({
             id: "team.add-playground",
-            title: "Add playground",
+            title: t`Add playground`,
             icon: ToyBrick,
             onClick: () => {
                 setIsOpen(true);
             },
         });
-    }, []);
+    }, [registerMenuItem, t]);
     return <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Add playground</DialogTitle>
+                <DialogTitle>{t`Add playground`}</DialogTitle>
                 <DialogDescription>
-                    Create a new playground to test your Peppol API integrations.
+                    {t`Create a new playground to test your Peppol API integrations.`}
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                    <Label>Playground name</Label>
+                    <Label>{t`Playground name`}</Label>
                     <Input 
                         value={newPlaygroundName}
                         onChange={(e) => setNewPlaygroundName(e.target.value)}
@@ -93,19 +94,17 @@ export default function AddPlayground() {
                     />
                     <div className="grid gap-1.5">
                         <Label htmlFor="use-test-network" className="cursor-pointer">
-                            Use Peppol Test Network
+                            {t`Use Peppol Test Network`}
                         </Label>
                         <p className="text-sm text-muted-foreground">
-                            When checked, you are able to send and receive documents over the Peppol Test Network, allowing communication with external Peppol participants.
-                            Do not enable this setting if you are not sure what you are doing.
-                            This setting cannot be changed after playground creation.
+                            {t`When checked, you are able to send and receive documents over the Peppol Test Network, allowing communication with external Peppol participants. Do not enable this setting if you are not sure what you are doing. This setting cannot be changed after playground creation.`}
                         </p>
                     </div>
                 </div>
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreatePlayground} disabled={isCreating || !newPlaygroundName.trim()}>Create playground</Button>
+                <Button variant="outline" onClick={() => setIsOpen(false)}>{t`Cancel`}</Button>
+                <Button onClick={handleCreatePlayground} disabled={isCreating || !newPlaygroundName.trim()}>{t`Create playground`}</Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>;

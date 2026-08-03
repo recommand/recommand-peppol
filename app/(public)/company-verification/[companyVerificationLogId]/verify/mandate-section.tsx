@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@core
 import { StatusMessage } from "@recommand/components/status-feedback";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { AlertCircle, ArrowLeft, Download, FileText, Loader2, PenLine, ShieldCheck } from "lucide-react";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("v1");
 
@@ -31,12 +32,13 @@ export function MandateSection({
     onBack,
     onSign,
 }: MandateSectionProps) {
+    const { t, language } = useTranslation();
     const [downloadError, setDownloadError] = useState<string | null>(null);
     const [hasAgreed, setHasAgreed] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
 
     const fullName = `${firstName} ${lastName}`.trim();
-    const signatureDate = new Date().toLocaleDateString(undefined, {
+    const signatureDate = new Date().toLocaleDateString(language, {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -55,7 +57,7 @@ export function MandateSection({
                 setDownloadError(
                     json?.errors
                         ? stringifyActionFailure(json.errors as Parameters<typeof stringifyActionFailure>[0])
-                        : "We could not prepare your mandate. Please try again.",
+                        : t`We could not prepare your mandate. Please try again.`,
                 );
                 return;
             }
@@ -67,7 +69,7 @@ export function MandateSection({
             link.click();
             URL.revokeObjectURL(url);
         } catch {
-            setDownloadError("We could not prepare your mandate. Please try again.");
+            setDownloadError(t`We could not prepare your mandate. Please try again.`);
         } finally {
             setIsDownloading(false);
         }
@@ -77,20 +79,18 @@ export function MandateSection({
         <>
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">Mandate for electronic invoicing</CardTitle>
+                    <CardTitle className="text-base">{t`Mandate for electronic invoicing`}</CardTitle>
                     <CardDescription>
-                        Read the mandate you are about to sign on behalf of{" "}
-                        <span className="font-medium text-foreground">{companyName}</span>. It authorises us to
-                        send, receive and register electronic invoices for the company.
+                        {t`Read the mandate you are about to sign on behalf of ${companyName}. It authorises us to send, receive and register electronic invoices for the company.`}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4">
                         <FileText className="h-8 w-8 shrink-0 text-muted-foreground" />
                         <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">Mandate for electronic invoicing</p>
+                            <p className="text-sm font-medium truncate">{t`Mandate for electronic invoicing`}</p>
                             <p className="text-xs text-muted-foreground">
-                                PDF, drawn up for {fullName}
+                                {t`PDF, drawn up for ${fullName}`}
                             </p>
                         </div>
                         <Button
@@ -103,7 +103,7 @@ export function MandateSection({
                             ) : (
                                 <Download className="h-4 w-4" />
                             )}
-                            Download
+                            {t`Download`}
                         </Button>
                     </div>
 
@@ -117,10 +117,10 @@ export function MandateSection({
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
                         <PenLine className="h-4 w-4 text-primary" />
-                        Your signature
+                        {t`Your signature`}
                     </CardTitle>
                     <CardDescription>
-                        You sign this mandate with the identity check that follows.
+                        {t`You sign this mandate with the identity check that follows.`}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -130,7 +130,7 @@ export function MandateSection({
                         </p>
                         <div className="mt-2 border-t border-foreground/30 pt-2 flex items-baseline justify-between gap-3">
                             <span className="text-xs text-muted-foreground">
-                                Signed by {fullName}, for {companyName}
+                                {t`Signed by ${fullName}, for ${companyName}`}
                             </span>
                             <span className="text-xs text-muted-foreground whitespace-nowrap">{signatureDate}</span>
                         </div>
@@ -143,9 +143,7 @@ export function MandateSection({
                             className="mt-0.5"
                         />
                         <span className="text-sm leading-snug text-muted-foreground">
-                            I, <span className="font-medium text-foreground">{fullName}</span>, have read the
-                            mandate and sign it electronically on behalf of{" "}
-                            <span className="font-medium text-foreground">{companyName}</span>.
+                            {t`I, ${fullName}, have read the mandate and sign it electronically on behalf of ${companyName}.`}
                         </span>
                     </label>
                 </CardContent>
@@ -163,25 +161,24 @@ export function MandateSection({
                     {isSigning ? (
                         <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Preparing signature...
+                            {t`Preparing signature...`}
                         </>
                     ) : (
                         <>
                             <ShieldCheck className="h-4 w-4" />
-                            Sign with identity verification
+                            {t`Sign with identity verification`}
                         </>
                     )}
                 </Button>
 
                 <Button variant="ghost" className="w-full" onClick={onBack} disabled={isSigning}>
                     <ArrowLeft className="h-4 w-4" />
-                    Back to your details
+                    {t`Back to your details`}
                 </Button>
             </div>
 
             <p className="text-xs text-center text-muted-foreground">
-                You will be redirected to our verification partner. Your verified identity is the proof of
-                signature that is recorded on the mandate.
+                {t`You will be redirected to our verification partner. Your verified identity is the proof of signature that is recorded on the mandate.`}
             </p>
         </>
     );

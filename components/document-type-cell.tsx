@@ -7,6 +7,8 @@ import {
 } from "@core/components/ui/popover";
 import type { ValidationResponse } from "@peppol/types/validation";
 import { ValidationDetails } from "./validation-details";
+import { useTranslation } from "@core/hooks/use-translation";
+import { getDocumentTypeLabel } from "@peppol/lib/client/document-type-labels";
 
 interface DocumentTypeCellProps {
   type: string;
@@ -14,12 +16,13 @@ interface DocumentTypeCellProps {
 }
 
 export function DocumentTypeCell({ type, validation }: DocumentTypeCellProps) {
+  const { t } = useTranslation();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const hasValidationWarning = validation && validation.result !== "valid";
 
   return (
     <div className="flex items-center gap-2">
-      <span className="capitalize">{type}</span>
+      <span>{getDocumentTypeLabel(t, type)}</span>
       {hasValidationWarning && (
         <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <PopoverTrigger asChild>
@@ -38,7 +41,7 @@ export function DocumentTypeCell({ type, validation }: DocumentTypeCellProps) {
             onMouseLeave={() => setIsPopoverOpen(false)}
           >
             <div className="p-3">
-              <div className="text-sm font-medium">Document Validation Issues</div>
+              <div className="text-sm font-medium">{t`Document Validation Issues`}</div>
               <ValidationDetails validation={validation} />
             </div>
           </PopoverContent>
@@ -47,4 +50,3 @@ export function DocumentTypeCell({ type, validation }: DocumentTypeCellProps) {
     </div>
   );
 }
-

@@ -8,6 +8,7 @@ import { Button } from "@core/components/ui/button";
 import { Card, CardContent } from "@core/components/ui/card";
 import { StatusHero, StatusMessage } from "@recommand/components/status-feedback";
 import { Loader2, AlertCircle, ShieldCheck, XCircle, RefreshCw, Clock } from "lucide-react";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("v1");
 
@@ -26,15 +27,17 @@ type StatusData = {
 
 function DashboardLink() {
     const user = useUser();
+    const { t } = useTranslation();
     if (!user) return null;
     return (
         <Button variant="outline" className="w-full" asChild>
-            <Link to="/companies">Go to Companies</Link>
+            <Link to="/companies">{t`Go to Companies`}</Link>
         </Button>
     );
 }
 
 export default function Page() {
+    const { t } = useTranslation();
     const { companyVerificationLogId } = useParams<{ companyVerificationLogId: string }>();
     const navigate = useNavigate();
 
@@ -82,10 +85,10 @@ export default function Page() {
                 intervalRef.current = null;
             }
         } catch {
-            setLoadError("Failed to load verification status. Please try again.");
+            setLoadError(t`Failed to load verification status. Please try again.`);
             setIsLoading(false);
         }
-    }, [companyVerificationLogId, navigate]);
+    }, [companyVerificationLogId, navigate, t]);
 
     const handleRestart = useCallback(async () => {
         if (!companyVerificationLogId) return;
@@ -104,11 +107,11 @@ export default function Page() {
                 window.location.href = json.verificationUrl as string;
             }
         } catch {
-            setRestartError("An unexpected error occurred. Please try again.");
+            setRestartError(t`An unexpected error occurred. Please try again.`);
         } finally {
             setIsRestarting(false);
         }
-    }, [companyVerificationLogId]);
+    }, [companyVerificationLogId, t]);
 
     useEffect(() => {
         if (!companyVerificationLogId) return;
@@ -130,7 +133,7 @@ export default function Page() {
             <div className="min-h-svh flex items-center justify-center bg-muted/30">
                 <div className="text-center space-y-4">
                     <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Loading verification status...</p>
+                    <p className="text-sm text-muted-foreground">{t`Loading verification status...`}</p>
                 </div>
             </div>
         );
@@ -143,8 +146,8 @@ export default function Page() {
                     <StatusHero
                         tone="error"
                         icon={AlertCircle}
-                        title="Status unavailable"
-                        description={loadError || "Verification status could not be loaded."}
+                        title={t`Status unavailable`}
+                        description={loadError || t`Verification status could not be loaded.`}
                     />
                 </div>
             </div>
@@ -159,8 +162,8 @@ export default function Page() {
                         tone="info"
                         icon={Loader2}
                         iconClassName="animate-spin"
-                        title="Verification in Progress"
-                        description={<>Your identity verification for <span className="font-medium text-foreground">{statusData.companyName}</span> is being processed. This page will update automatically.</>}
+                        title={t`Verification in Progress`}
+                        description={t`Your identity verification for ${statusData.companyName} is being processed. This page will update automatically.`}
                     />
 
                     <Card>
@@ -168,8 +171,8 @@ export default function Page() {
                             <div className="flex items-center gap-3">
                                 <Loader2 className="h-5 w-5 animate-spin text-muted-foreground shrink-0" />
                                 <div>
-                                    <p className="text-sm font-medium">Awaiting verification result</p>
-                                    <p className="text-xs text-muted-foreground">Checking status every few seconds...</p>
+                                    <p className="text-sm font-medium">{t`Awaiting verification result`}</p>
+                                    <p className="text-xs text-muted-foreground">{t`Checking status every few seconds...`}</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -180,7 +183,7 @@ export default function Page() {
                     )}
 
                     <div className="text-center space-y-2">
-                        <p className="text-xs text-muted-foreground">Did not complete the identity check?</p>
+                        <p className="text-xs text-muted-foreground">{t`Did not complete the identity check?`}</p>
                         <Button
                             variant="outline"
                             size="sm"
@@ -190,12 +193,12 @@ export default function Page() {
                             {isRestarting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Restarting...
+                                    {t`Restarting...`}
                                 </>
                             ) : (
                                 <>
                                     <RefreshCw className="h-4 w-4" />
-                                    Restart identity verification
+                                    {t`Restart identity verification`}
                                 </>
                             )}
                         </Button>
@@ -214,8 +217,8 @@ export default function Page() {
                     <StatusHero
                         tone="info"
                         icon={Clock}
-                        title="Verification Under Review"
-                        description={<>Your identity verification for <span className="font-medium text-foreground">{statusData.companyName}</span> is being reviewed manually. This page will update automatically once the review is complete.</>}
+                        title={t`Verification Under Review`}
+                        description={t`Your identity verification for ${statusData.companyName} is being reviewed manually. This page will update automatically once the review is complete.`}
                     />
 
                     <Card>
@@ -223,8 +226,8 @@ export default function Page() {
                             <div className="flex items-center gap-3">
                                 <Clock className="h-5 w-5 text-muted-foreground shrink-0" />
                                 <div>
-                                    <p className="text-sm font-medium">Manual review in progress</p>
-                                    <p className="text-xs text-muted-foreground">This may take some time. You can safely close this page and check back later.</p>
+                                    <p className="text-sm font-medium">{t`Manual review in progress`}</p>
+                                    <p className="text-xs text-muted-foreground">{t`This may take some time. You can safely close this page and check back later.`}</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -243,14 +246,14 @@ export default function Page() {
                     <StatusHero
                         tone="success"
                         icon={ShieldCheck}
-                        title="Verification Successful"
-                        description={<><span className="font-medium text-foreground">{statusData.companyName}</span> has been successfully verified and is now active on the Peppol network.</>}
+                        title={t`Verification Successful`}
+                        description={t`${statusData.companyName} has been successfully verified and is now active on the Peppol network.`}
                     />
 
                     <StatusMessage
                         tone="success"
                         icon={ShieldCheck}
-                        description="Identity verification completed successfully. You can close this page."
+                        description={t`Identity verification completed successfully. You can close this page.`}
                     />
 
                     <DashboardLink />
@@ -266,13 +269,13 @@ export default function Page() {
                     <StatusHero
                         tone="error"
                         icon={AlertCircle}
-                        title="Verification Could Not Be Completed"
-                        description={<>We could not complete the verification flow for <span className="font-medium text-foreground">{statusData.companyName}</span>.</>}
+                        title={t`Verification Could Not Be Completed`}
+                        description={t`We could not complete the verification flow for ${statusData.companyName}.`}
                     />
 
                     <StatusMessage tone="error" icon={AlertCircle}>
                         <div className="text-sm text-pretty text-muted-foreground">
-                            {statusData.errorMessage || "Identity verification may have succeeded, but we could not activate this company on the Peppol network. Please contact support@recommand.eu for assistance."}
+                            {statusData.errorMessage || t`Identity verification may have succeeded, but we could not activate this company on the Peppol network. Please contact support@recommand.eu for assistance.`}
                         </div>
                     </StatusMessage>
 
@@ -288,15 +291,15 @@ export default function Page() {
                 <StatusHero
                     tone="error"
                     icon={XCircle}
-                    title="Verification Rejected"
-                    description={<>The identity verification for <span className="font-medium text-foreground">{statusData.companyName}</span> was not successful.</>}
+                    title={t`Verification Rejected`}
+                    description={t`The identity verification for ${statusData.companyName} was not successful.`}
                 />
 
                 <StatusMessage tone="error" icon={XCircle}>
                     <div className="text-sm text-pretty text-muted-foreground">
                         {statusData.errorMessage || (
                             <>
-                                Your identity could not be verified. Please contact <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${statusData.companyId}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a> for assistance.
+                                {t`Your identity could not be verified. Please contact`} <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${statusData.companyId}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a> {t`for assistance.`}
                             </>
                         )}
                     </div>

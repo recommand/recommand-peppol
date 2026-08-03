@@ -2,6 +2,7 @@ import { Checkbox } from "@core/components/ui/checkbox";
 import { Label } from "@core/components/ui/label";
 import type { Integration, IntegrationManifest, IntegrationEvent } from "@peppol/types/integration";
 import { getConfigurableIntegrationEventDescription } from "@peppol/utils/integrations";
+import { useTranslation } from "@core/hooks/use-translation";
 
 export default function CapabilitiesConfiguration({
     integration,
@@ -10,6 +11,7 @@ export default function CapabilitiesConfiguration({
     integration: Integration;
     onChange: (integration: Integration) => void;
 }) {
+    const { t } = useTranslation();
     const manifest = integration.manifest as IntegrationManifest;
     const capabilities = manifest.capabilities || [];
     const currentCapabilities = integration.configuration?.capabilities || [];
@@ -50,7 +52,7 @@ export default function CapabilitiesConfiguration({
     if (capabilities.length === 0) {
         return (
             <div className="text-sm text-muted-foreground">
-                No configurable capabilities available for this integration.
+                {t`No configurable capabilities available for this integration.`}
             </div>
         );
     }
@@ -78,13 +80,13 @@ export default function CapabilitiesConfiguration({
                                 htmlFor={capability.event}
                                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                             >
-                                {eventDescription?.title || capability.event}
+                                {eventDescription?.title ? t(eventDescription.title) : capability.event}
                                 {isRequired && (
-                                    <span className="ml-2 text-xs text-muted-foreground">(Required)</span>
+                                    <span className="ml-2 text-xs text-muted-foreground">{t`(Required)`}</span>
                                 )}
                             </Label>
                             <p className="text-xs text-pretty text-muted-foreground">
-                                {eventDescription?.description || capability.description}
+                                {t(eventDescription?.description || capability.description)}
                             </p>
                         </div>
                     </div>
@@ -93,4 +95,3 @@ export default function CapabilitiesConfiguration({
         </div>
     );
 }
-

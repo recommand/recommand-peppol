@@ -12,6 +12,7 @@ import type { CompanyDocumentTypes } from "@peppol/api/companies/document-types"
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { DOCUMENT_TYPE_PRESETS } from "@peppol/utils/document-types";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<CompanyDocumentTypes>("peppol");
 
@@ -26,6 +27,7 @@ type DocumentTypeFormData = {
 };
 
 export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocumentTypesManagerProps) {
+    const { t, language } = useTranslation();
     const [documentTypes, setDocumentTypes] = useState<CompanyDocumentType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
@@ -58,7 +60,7 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
             })));
         } catch (error) {
             console.error("Error fetching document types:", error);
-            toast.error("Failed to load company document types");
+            toast.error(t`Failed to load company document types`);
         } finally {
             setIsLoading(false);
         }
@@ -66,11 +68,11 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
 
     const handleAdd = async () => {
         if (!formData.docTypeId.trim()) {
-            toast.error("Document Type ID is required");
+            toast.error(t`Document Type ID is required`);
             return;
         }
         if (!formData.processId.trim()) {
-            toast.error("Process ID is required");
+            toast.error(t`Process ID is required`);
             return;
         }
 
@@ -86,11 +88,11 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                 throw new Error(stringifyActionFailure(json.errors));
             }
 
-            toast.success("Document type added successfully");
+            toast.success(t`Document type added successfully`);
             setFormData({ docTypeId: "", processId: "" });
             setIsAdding(false);
         } catch (error) {
-            toast.error("Failed to add document type: " + error);
+            toast.error(t`Failed to add document type: ${error}`);
         } finally {
             setIsSubmitting(false);
             fetchDocumentTypes();
@@ -99,15 +101,15 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
 
     const handleEdit = async () => {
         if (!editingId) {
-            toast.error("No document type selected for editing");
+            toast.error(t`No document type selected for editing`);
             return;
         }
         if (!editFormData.docTypeId.trim()) {
-            toast.error("Document Type ID is required");
+            toast.error(t`Document Type ID is required`);
             return;
         }
         if (!editFormData.processId.trim()) {
-            toast.error("Process ID is required");
+            toast.error(t`Process ID is required`);
             return;
         }
 
@@ -123,11 +125,11 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                 throw new Error(stringifyActionFailure(json.errors));
             }
 
-            toast.success("Document type updated successfully");
+            toast.success(t`Document type updated successfully`);
             setEditingId(null);
             setEditFormData({ docTypeId: "", processId: "" });
         } catch (error) {
-            toast.error("Failed to update document type: " + error);
+            toast.error(t`Failed to update document type: ${error}`);
         } finally {
             setIsSubmitting(false);
             fetchDocumentTypes();
@@ -145,9 +147,9 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                 throw new Error(stringifyActionFailure(json.errors));
             }
 
-            toast.success("Document type deleted successfully");
+            toast.success(t`Document type deleted successfully`);
         } catch (error) {
-            toast.error("Failed to delete document type: " + error);
+            toast.error(t`Failed to delete document type: ${error}`);
         } finally {
             fetchDocumentTypes();
         }
@@ -175,12 +177,12 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Company Document Types</CardTitle>
-                    <CardDescription>Manage your company document types</CardDescription>
+                    <CardTitle>{t`Company Document Types`}</CardTitle>
+                    <CardDescription>{t`Manage your company document types`}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center justify-center h-32">
-                        <div className="text-center text-muted-foreground">Loading...</div>
+                        <div className="text-center text-muted-foreground">{t`Loading...`}</div>
                     </div>
                 </CardContent>
             </Card>
@@ -192,16 +194,15 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
             <CardHeader>
                 <div className="flex items-center justify-between gap-4">
                     <div>
-                        <CardTitle>Company Document Types</CardTitle>
+                        <CardTitle>{t`Company Document Types`}</CardTitle>
                         <CardDescription className="text-balance">
-                            Document types define what types of documents your company can receive over the Peppol network.
-                            This does not limit the types of documents you can send.
+                            {t`Document types define what types of documents your company can receive over the Peppol network. This does not limit the types of documents you can send.`}
                         </CardDescription>
                     </div>
                     {!isAdding && (
                         <Button onClick={() => setIsAdding(true)} size="sm">
                             <Plus className="h-4 w-4" />
-                            Add Document Type
+                            {t`Add Document Type`}
                         </Button>
                     )}
                 </div>
@@ -212,10 +213,10 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                     <div className="p-4 border rounded-lg bg-muted/50">
                         <div className="space-y-2">
                             <div className="space-y-2">
-                                <Label htmlFor="add-docTypeId">Document Type ID</Label>
+                                <Label htmlFor="add-docTypeId">{t`Document Type ID`}</Label>
                                 <Textarea
                                     id="add-docTypeId"
-                                    placeholder="e.g., urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1"
+                                    placeholder={t`e.g., urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1`}
                                     value={formData.docTypeId}
                                     onChange={(e) => setFormData({ ...formData, docTypeId: e.target.value })}
                                     className="min-h-[60px] break-all"
@@ -223,10 +224,10 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="add-processId">Process ID</Label>
+                                <Label htmlFor="add-processId">{t`Process ID`}</Label>
                                 <Textarea
                                     id="add-processId"
-                                    placeholder="e.g., urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"
+                                    placeholder={t`e.g., urn:fdc:peppol.eu:2017:poacc:billing:01:1.0`}
                                     value={formData.processId}
                                     onChange={(e) => setFormData({ ...formData, processId: e.target.value })}
                                     className="min-h-[60px] break-all"
@@ -247,12 +248,12 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                                     }
                                 }}>
                                     <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Select a preset..." />
+                                        <SelectValue placeholder={t`Select a preset...`} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {DOCUMENT_TYPE_PRESETS.map((preset) => (
                                             <SelectItem key={preset.title} value={preset.title}>
-                                                {preset.title}
+                                                {t(preset.title)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -261,11 +262,11 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                             <div className="flex gap-2 justify-end">
                                 <AsyncButton onClick={handleAdd} size="sm" disabled={isSubmitting}>
                                     <Check className="h-4 w-4" />
-                                    Add
+                                    {t`Add`}
                                 </AsyncButton>
                                 <Button onClick={cancelAdd} variant="outline" size="sm" disabled={isSubmitting}>
                                     <X className="h-4 w-4" />
-                                    Cancel
+                                    {t`Cancel`}
                                 </Button>
                             </div>
                         </div>
@@ -276,8 +277,8 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                 <div className="space-y-2">
                     {documentTypes.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                            <p>No document types found</p>
-                            <p className="text-sm">Add your first document type to get started</p>
+                            <p>{t`No document types found`}</p>
+                            <p className="text-sm">{t`Add your first document type to get started`}</p>
                         </div>
                     ) : (
                         documentTypes.map((documentType) => {
@@ -289,7 +290,7 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                                         <div className="flex-1 space-y-4">
                                             <div className="space-y-2">
                                                 <div className="space-y-1">
-                                                    <Label htmlFor={`edit-docTypeId-${documentType.id}`} className="text-xs">Document Type ID</Label>
+                                                    <Label htmlFor={`edit-docTypeId-${documentType.id}`} className="text-xs">{t`Document Type ID`}</Label>
                                                     <Textarea
                                                         id={`edit-docTypeId-${documentType.id}`}
                                                         value={editFormData.docTypeId}
@@ -299,7 +300,7 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                                                     />
                                                 </div>
                                                 <div className="space-y-1">
-                                                    <Label htmlFor={`edit-processId-${documentType.id}`} className="text-xs">Process ID</Label>
+                                                    <Label htmlFor={`edit-processId-${documentType.id}`} className="text-xs">{t`Process ID`}</Label>
                                                     <Textarea
                                                         id={`edit-processId-${documentType.id}`}
                                                         value={editFormData.processId}
@@ -312,11 +313,11 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                                             <div className="flex gap-2 justify-end">
                                                 <AsyncButton onClick={handleEdit} size="sm" variant="default" disabled={isSubmitting}>
                                                     <Check className="h-4 w-4" />
-                                                    Save Changes
+                                                    {t`Save Changes`}
                                                 </AsyncButton>
                                                 <Button onClick={cancelEdit} size="sm" variant="outline" disabled={isSubmitting}>
                                                     <X className="h-4 w-4" />
-                                                    Cancel Edit
+                                                    {t`Cancel Edit`}
                                                 </Button>
                                             </div>
                                         </div>
@@ -324,10 +325,10 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                                         // Display
                                         <div className="flex-1">
                                             <div className="font-medium text-sm break-all">
-                                                {matchingPreset?.title || documentType.docTypeId}
+                                                {matchingPreset ? t(matchingPreset.title) : documentType.docTypeId}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
-                                                Updated: {new Date(documentType.updatedAt).toLocaleDateString()}
+                                                {t`Updated: ${new Date(documentType.updatedAt).toLocaleDateString(language)}`}
                                             </div>
                                         </div>
                                     )}

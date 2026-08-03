@@ -3,6 +3,8 @@ import { Label } from "@core/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@core/components/ui/select";
 import type { Party } from "@peppol/utils/parsing/invoice/schemas";
 import { COUNTRIES } from "@peppol/utils/countries";
+import { useTranslation } from "@core/hooks/use-translation";
+import { createRegionNames, regionDisplayName, sortByRegionDisplayName } from "@core/lib/regions";
 
 interface PartyFormProps {
   party: Partial<Party>;
@@ -12,6 +14,9 @@ interface PartyFormProps {
 }
 
 export function PartyForm({ party, onChange, required = false, disabled = false }: PartyFormProps) {
+  const { t, language } = useTranslation();
+  const regionNames = createRegionNames(language);
+  const countryOptions = sortByRegionDisplayName(COUNTRIES, regionNames);
   const handleChange = (field: keyof Party, value: string) => {
     onChange({ ...party, [field]: value });
   };
@@ -21,7 +26,7 @@ export function PartyForm({ party, onChange, required = false, disabled = false 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="vatNumber">
-            VAT Number {required && "*"}
+            {t`VAT Number`}{required && " *"}
           </Label>
           <Input
             id="vatNumber"
@@ -34,13 +39,13 @@ export function PartyForm({ party, onChange, required = false, disabled = false 
         </div>
         <div>
           <Label htmlFor="name">
-            Company Name {required && "*"}
+            {t`Company Name`}{required && " *"}
           </Label>
           <Input
             id="name"
             value={party.name || ""}
             onChange={(e) => handleChange("name", e.target.value)}
-            placeholder="Example Company"
+            placeholder={t`Example Company`}
             required={required}
             disabled={disabled}
           />
@@ -50,24 +55,24 @@ export function PartyForm({ party, onChange, required = false, disabled = false 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="street">
-            Street Address {required && "*"}
+            {t`Street Address`}{required && " *"}
           </Label>
           <Input
             id="street"
             value={party.street || ""}
             onChange={(e) => handleChange("street", e.target.value)}
-            placeholder="Main Street 123"
+            placeholder={t`Main Street 123`}
             required={required}
             disabled={disabled}
           />
         </div>
         <div>
-          <Label htmlFor="street2">Street Address 2</Label>
+          <Label htmlFor="street2">{t`Street Address 2`}</Label>
           <Input
             id="street2"
             value={party.street2 || ""}
             onChange={(e) => handleChange("street2", e.target.value)}
-            placeholder="Suite 100"
+            placeholder={t`Suite 100`}
             disabled={disabled}
           />
         </div>
@@ -76,20 +81,20 @@ export function PartyForm({ party, onChange, required = false, disabled = false 
       <div className="grid grid-cols-3 gap-4">
         <div>
           <Label htmlFor="city">
-            City {required && "*"}
+            {t`City`}{required && " *"}
           </Label>
           <Input
             id="city"
             value={party.city || ""}
             onChange={(e) => handleChange("city", e.target.value)}
-            placeholder="Brussels"
+            placeholder={t`Brussels`}
             required={required}
             disabled={disabled}
           />
         </div>
         <div>
           <Label htmlFor="postalZone">
-            Postal Code {required && "*"}
+            {t`Postal Code`}{required && " *"}
           </Label>
           <Input
             id="postalZone"
@@ -102,7 +107,7 @@ export function PartyForm({ party, onChange, required = false, disabled = false 
         </div>
         <div>
           <Label htmlFor="country">
-            Country {required && "*"}
+            {t`Country`}{required && " *"}
           </Label>
           <Select
             value={party.country || ""}
@@ -110,12 +115,12 @@ export function PartyForm({ party, onChange, required = false, disabled = false 
             disabled={disabled}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select country" />
+              <SelectValue placeholder={t`Select country`} />
             </SelectTrigger>
             <SelectContent>
-              {COUNTRIES.map((country) => (
+              {countryOptions.map((country) => (
                 <SelectItem key={country.code} value={country.code}>
-                  {country.flag} {country.name}
+                  {country.flag} {regionDisplayName(regionNames, country.code, country.name)}
                 </SelectItem>
               ))}
             </SelectContent>

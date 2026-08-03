@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@core
 import { Button } from "@core/components/ui/button";
 import type { BillingProfile } from "@peppol/api/billing-profile";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const billingProfileClient = rc<BillingProfile>('v1');
 
@@ -15,6 +16,7 @@ export default function Page() {
   const [billingProfile, setBillingProfile] = useState<any>(null);
   const activeTeam = useActiveTeam();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const fetchBillingProfile = async () => {
     if (!activeTeam?.id) return;
@@ -50,10 +52,10 @@ export default function Page() {
   if (isLoading) {
     return <PageTemplate
       breadcrumbs={[
-        { label: "Team Settings" },
-        { label: "Billing" },
-        { label: "Subscription" },
-        { label: "Validation" },
+        { label: t`Team Settings` },
+        { label: t`Billing` },
+        { label: t`Subscription` },
+        { label: t`Validation` },
       ]}
     >
       <div className="flex items-center justify-center py-8">
@@ -62,20 +64,31 @@ export default function Page() {
     </PageTemplate>;
   }
 
+  const paymentStatusLabels: Record<string, string> = {
+    none: t`None`,
+    open: t`Open`,
+    pending: t`Pending`,
+    authorized: t`Authorized`,
+    paid: t`Paid`,
+    canceled: t`Canceled`,
+    expired: t`Expired`,
+    failed: t`Failed`,
+  };
+
   return <PageTemplate
     breadcrumbs={[
-      { label: "Team Settings" },
-      { label: "Billing" },
-      { label: "Subscription" },
-      { label: "Validation" },
+      { label: t`Team Settings` },
+      { label: t`Billing` },
+      { label: t`Subscription` },
+      { label: t`Validation` },
     ]}
   >
     <div className="max-w-2xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>Validating Your Payment</CardTitle>
+          <CardTitle>{t`Validating Your Payment`}</CardTitle>
           <CardDescription>
-            Please wait while we validate your payment mandate.
+            {t`Please wait while we validate your payment mandate.`}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -90,7 +103,7 @@ export default function Page() {
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 )}
                 <p className="text-muted-foreground">
-                  Payment Status: {billingProfile.firstPaymentStatus.charAt(0).toUpperCase() + billingProfile.firstPaymentStatus.slice(1)}
+                  {t`Payment Status: ${paymentStatusLabels[billingProfile.firstPaymentStatus] ?? billingProfile.firstPaymentStatus}`}
                 </p>
               </div>
 
@@ -103,14 +116,16 @@ export default function Page() {
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 )}
                 <p className="text-muted-foreground">
-                  Mandate Status: {billingProfile.isMandateValidated ? 'Validated' : 'Not yet validated'}
+                  {billingProfile.isMandateValidated
+                    ? t`Mandate Status: Validated`
+                    : t`Mandate Status: Not yet validated`}
                 </p>
               </div>
 
               {(billingProfile.firstPaymentStatus === 'failed' || billingProfile.firstPaymentStatus === 'canceled' || billingProfile.firstPaymentStatus === 'expired') && (
                 <div className="pt-4">
                   <Button onClick={() => navigate('/billing/subscription')}>
-                    Return to Subscription
+                    {t`Return to Subscription`}
                   </Button>
                 </div>
               )}
@@ -120,4 +135,4 @@ export default function Page() {
       </Card>
     </div>
   </PageTemplate>;
-} 
+}

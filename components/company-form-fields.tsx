@@ -9,6 +9,8 @@ import { ISO_ICD_SCHEME_IDENTIFIERS } from "@peppol/utils/iso-icd-scheme-identif
 import type { CompanyFormData } from "@peppol/types/company";
 import { zodValidCountryCodes } from "@peppol/db/schema";
 import { z } from "zod";
+import { useTranslation } from "@core/hooks/use-translation";
+import { createRegionNames, regionDisplayName, sortByRegionDisplayName } from "@core/lib/regions";
 
 type CountryCode = z.infer<typeof zodValidCountryCodes>;
 
@@ -62,30 +64,37 @@ export function CompanyIdentityFields({
     onChange,
     showEnterpriseNumberForBelgianCompanies = false,
     showDutchEnterpriseNumberSchemeAlert = false,
-    vatNumberLabel = "VAT Number (Optional)",
+    vatNumberLabel,
 }: CompanyIdentityFieldsProps) {
+    const { t, language } = useTranslation();
+    const regionNames = createRegionNames(language);
+    const resolvedVatNumberLabel = vatNumberLabel ?? t`VAT Number (Optional)`;
     const country = value.country ?? "";
     const vatNumber = value.vatNumber ?? "";
     const enterpriseNumber = value.enterpriseNumber ?? "";
     const enterpriseNumberScheme = value.enterpriseNumberScheme ?? "";
     const countryInfo = COUNTRIES.find((entry) => entry.code === country);
-    const countryOptions = COUNTRIES.filter((entry) => entry.supportLevel !== "unsupported" || entry.code === country);
+    const countryName = countryInfo ? regionDisplayName(regionNames, countryInfo.code, countryInfo.name) : "";
+    const countryOptions = sortByRegionDisplayName(
+        COUNTRIES.filter((entry) => entry.supportLevel !== "unsupported" || entry.code === country),
+        regionNames,
+    );
 
     return (
         <>
             <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
+                <Label htmlFor="country">{t`Country`}</Label>
                 <Select
                     value={country}
                     onValueChange={(nextCountry) => onChange(getCompanyCountryDefaults(nextCountry as CountryCode))}
                 >
                     <SelectTrigger>
-                        <SelectValue placeholder="Select a country" />
+                        <SelectValue placeholder={t`Select a country`} />
                     </SelectTrigger>
                     <SelectContent>
                         {countryOptions.map((countryOption) => (
                             <SelectItem key={countryOption.code} value={countryOption.code}>
-                                {countryOption.flag} {countryOption.name}
+                                {countryOption.flag} {regionDisplayName(regionNames, countryOption.code, countryOption.name)}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -94,42 +103,42 @@ export function CompanyIdentityFields({
                     <StatusMessage
                         tone="warning"
                         icon={AlertTriangle}
-                        title={`${countryInfo.name} is partially supported`}
-                        description={`Companies in ${countryInfo.name} are functional, but some country-specific features or requirements may not be covered yet.`}
+                        title={t`${countryName} is partially supported`}
+                        description={t`Companies in ${countryName} are functional, but some country-specific features or requirements may not be covered yet.`}
                     />
                 )}
                 {countryInfo?.supportLevel === "unsupported" && (
                     <StatusMessage
                         tone="warning"
                         icon={AlertTriangle}
-                        title={`${countryInfo.name} is currently not supported`}
-                        description={`New companies cannot be created in ${countryInfo.name}, and existing companies cannot switch to it. We are working on supporting more countries in the future. Would you like to see support for ${countryInfo.name}? Let us know via support@recommand.eu.`}
+                        title={t`${countryName} is currently not supported`}
+                        description={t`New companies cannot be created in ${countryName}, and existing companies cannot switch to it. We are working on supporting more countries in the future. Would you like to see support for ${countryName}? Let us know via support@recommand.eu.`}
                     />
                 )}
             </div>
             <div className="space-y-2">
-                <Label htmlFor="vatNumber">{vatNumberLabel}</Label>
+                <Label htmlFor="vatNumber">{resolvedVatNumberLabel}</Label>
                 <Input
                     id="vatNumber"
                     value={vatNumber}
                     onChange={(event) => onChange({ vatNumber: event.target.value || null })}
                     placeholder={country === "BE" ? "BE0123456789" : ""}
                 />
-                {country === "BE" && <p className="text-xs text-pretty text-muted-foreground">For Belgian businesses, the VAT number will be used to infer the enterprise number.</p>}
-                {country === "NL" && <p className="text-xs text-pretty text-muted-foreground">For Dutch businesses, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).</p>}
+                {country === "BE" && <p className="text-xs text-pretty text-muted-foreground">{t`For Belgian businesses, the VAT number will be used to infer the enterprise number.`}</p>}
+                {country === "NL" && <p className="text-xs text-pretty text-muted-foreground">{t`For Dutch businesses, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).`}</p>}
             </div>
             {(country !== "BE" || showEnterpriseNumberForBelgianCompanies) && (
                 <div className="space-y-2">
-                    <Label htmlFor="enterpriseNumber">Enterprise Number (Optional)</Label>
+                    <Label htmlFor="enterpriseNumber">{t`Enterprise Number (Optional)`}</Label>
                     <div className="flex gap-2">
                         <div className="w-48">
                             <Combobox
                                 value={enterpriseNumberScheme}
                                 onValueChange={(nextScheme) => onChange({ enterpriseNumberScheme: nextScheme || null })}
                                 options={enterpriseNumberSchemeOptions}
-                                placeholder="Select scheme..."
-                                searchPlaceholder="Search scheme..."
-                                emptyText="No scheme found."
+                                placeholder={t`Select scheme...`}
+                                searchPlaceholder={t`Search scheme...`}
+                                emptyText={t`No scheme found.`}
                                 className="w-full"
                             />
                         </div>
@@ -144,8 +153,8 @@ export function CompanyIdentityFields({
                         <StatusMessage
                             tone="warning"
                             icon={AlertTriangle}
-                            title="Enterprise number scheme 0106 or 0190 required"
-                            description="For Dutch sellers, the scheme identifier is required to be able to send invoices and credit notes."
+                            title={t`Enterprise number scheme 0106 or 0190 required`}
+                            description={t`For Dutch sellers, the scheme identifier is required to be able to send invoices and credit notes.`}
                         />
                     )}
                 </div>
@@ -155,10 +164,11 @@ export function CompanyIdentityFields({
 }
 
 export function CompanyDetailsFields({ value, onChange }: CompanyDetailsFieldsProps) {
+    const { t } = useTranslation();
     return (
         <>
             <div className="space-y-2">
-                <Label htmlFor="name">Company Name</Label>
+                <Label htmlFor="name">{t`Company Name`}</Label>
                 <Input
                     id="name"
                     value={value.name ?? ""}
@@ -167,7 +177,7 @@ export function CompanyDetailsFields({ value, onChange }: CompanyDetailsFieldsPr
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address">{t`Address`}</Label>
                 <Input
                     id="address"
                     value={value.address ?? ""}
@@ -177,7 +187,7 @@ export function CompanyDetailsFields({ value, onChange }: CompanyDetailsFieldsPr
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="postalCode">Postal Code</Label>
+                    <Label htmlFor="postalCode">{t`Postal Code`}</Label>
                     <Input
                         id="postalCode"
                         value={value.postalCode ?? ""}
@@ -186,7 +196,7 @@ export function CompanyDetailsFields({ value, onChange }: CompanyDetailsFieldsPr
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
+                    <Label htmlFor="city">{t`City`}</Label>
                     <Input
                         id="city"
                         value={value.city ?? ""}
@@ -197,7 +207,7 @@ export function CompanyDetailsFields({ value, onChange }: CompanyDetailsFieldsPr
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="email">Email (Optional)</Label>
+                    <Label htmlFor="email">{t`Email (Optional)`}</Label>
                     <Input
                         id="email"
                         type="email"
@@ -206,7 +216,7 @@ export function CompanyDetailsFields({ value, onChange }: CompanyDetailsFieldsPr
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="phone">Phone (Optional)</Label>
+                    <Label htmlFor="phone">{t`Phone (Optional)`}</Label>
                     <Input
                         id="phone"
                         type="tel"

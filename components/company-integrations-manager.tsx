@@ -11,6 +11,7 @@ import { BUILT_IN_INTEGRATIONS, getBuiltInIntegration, type BuiltInIntegration }
 import { useNavigate } from "react-router-dom";
 import type { Integration } from "@peppol/types/integration";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Integrations>("peppol");
 
@@ -20,6 +21,7 @@ type CompanyIntegrationsManagerProps = {
 };
 
 export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegrationsManagerProps) {
+  const { t } = useTranslation();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -48,7 +50,7 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
       setIntegrations(json.integrations || []);
     } catch (error) {
       console.error("Error fetching integrations:", error);
-      toast.error("Failed to load integrations: " + error);
+      toast.error(t`Failed to load integrations: ${error}`);
     } finally {
       setIsLoading(false);
     }
@@ -70,13 +72,13 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Integration added successfully");
+      toast.success(t`Integration added successfully`);
       setIsDialogOpen(false);
       const integration = json.integration as Integration;
       navigate(`/companies/${companyId}/integrations/${integration.id}`);
     } catch (error) {
       console.error("Error creating integration:", error);
-      toast.error("Failed to add integration: " + error);
+      toast.error(t`Failed to add integration: ${error}`);
     } finally {
       setIsCreating(false);
     }
@@ -94,10 +96,10 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Integration deleted successfully");
+      toast.success(t`Integration deleted successfully`);
       fetchIntegrations();
     } catch (error) {
-      toast.error("Failed to delete integration: " + error);
+      toast.error(t`Failed to delete integration: ${error}`);
     } finally {
       setDeletingIntegrationId(null);
     }
@@ -107,12 +109,12 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Integrations</CardTitle>
-          <CardDescription>Manage integrations for this company</CardDescription>
+          <CardTitle>{t`Integrations`}</CardTitle>
+          <CardDescription>{t`Manage integrations for this company`}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-32">
-            <div className="text-center text-muted-foreground">Loading...</div>
+            <div className="text-center text-muted-foreground">{t`Loading...`}</div>
           </div>
         </CardContent>
       </Card>
@@ -125,14 +127,14 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
-              <CardTitle>Integrations</CardTitle>
+              <CardTitle>{t`Integrations`}</CardTitle>
               <CardDescription className="text-balance">
-                Connect external services to automate document processing and workflows.
+                {t`Connect external services to automate document processing and workflows.`}
               </CardDescription>
             </div>
             <Button onClick={() => setIsDialogOpen(true)} size="sm">
               <Plus className="h-4 w-4" />
-              Add Integration
+              {t`Add Integration`}
             </Button>
           </div>
         </CardHeader>
@@ -141,8 +143,8 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
             {integrations.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Plug className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No integrations configured</p>
-                <p className="text-sm">Add an integration to get started</p>
+                <p>{t`No integrations configured`}</p>
+                <p className="text-sm">{t`Add an integration to get started`}</p>
               </div>
             ) : (
               integrations.map((integration) => (
@@ -151,18 +153,18 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
                     className="flex-1 cursor-pointer"
                     onClick={() => navigate(`/companies/${companyId}/integrations/${integration.id}`)}
                   >
-                    <div className="font-medium">{integration.manifest.name}</div>
+                    <div className="font-medium">{t(integration.manifest.name)}</div>
                     {integration.manifest.description && (
                       <div className="text-xs text-muted-foreground mt-1">
-                        {getBuiltInIntegration(integration.manifest.url)?.description || integration.manifest.description}
+                        {t(getBuiltInIntegration(integration.manifest.url)?.description || integration.manifest.description)}
                       </div>
                     )}
                   </div>
                   <div className="flex gap-2">
                     <ConfirmDialog
-                      title="Delete Integration"
-                      description="Are you sure you want to delete this integration? This action cannot be undone."
-                      confirmButtonText="Delete"
+                      title={t`Delete Integration`}
+                      description={t`Are you sure you want to delete this integration? This action cannot be undone.`}
+                      confirmButtonText={t`Delete`}
                       onConfirm={async () => {
                         await handleDelete(integration.id);
                       }}
@@ -189,9 +191,9 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Integration</DialogTitle>
+            <DialogTitle>{t`Add Integration`}</DialogTitle>
             <DialogDescription>
-              Select an integration to connect to this company.
+              {t`Select an integration to connect to this company.`}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 mt-4">
@@ -202,10 +204,10 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
                 disabled={isCreating}
                 className="w-full text-left p-4 border rounded-lg hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="font-medium">{integration.name}</div>
+                <div className="font-medium">{t(integration.name)}</div>
                 {integration.description && (
                   <div className="text-sm text-muted-foreground mt-1">
-                    {integration.description}
+                    {t(integration.description)}
                   </div>
                 )}
               </button>
@@ -216,4 +218,3 @@ export function CompanyIntegrationsManager({ teamId, companyId }: CompanyIntegra
     </>
   );
 }
-

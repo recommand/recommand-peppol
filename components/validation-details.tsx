@@ -1,15 +1,17 @@
 import type { ValidationResponse } from "@peppol/types/validation";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface ValidationDetailsProps {
   validation: ValidationResponse;
 }
 
 export function ValidationDetails({ validation }: ValidationDetailsProps) {
+  const { t } = useTranslation();
   return (
     <>
       {validation.errors && validation.errors.length > 0 && (
         <>
-          <div className="text-sm font-medium mb-2">Errors:</div>
+          <div className="text-sm font-medium mb-2">{t`Errors:`}</div>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {validation.errors.map((error, index) => (
               <div key={index} className="text-xs border-l-2 border-destructive pl-2 break-words">
@@ -33,10 +35,9 @@ export function ValidationDetails({ validation }: ValidationDetailsProps) {
       )}
       {(!validation.errors || validation.errors.length === 0) && (
         <div className="text-xs text-muted-foreground">
-          No detailed error information available.
+          {t`No detailed error information available.`}
         </div>
       )}
     </>
   );
 }
-
