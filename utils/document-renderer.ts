@@ -20,7 +20,7 @@ import { FRANCE_B2C_REPORT_TEMPLATE } from "@peppol/templates/france-b2c-report"
 import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
 import { Decimal } from "decimal.js";
 
-type ParsedBillingDocument =
+export type ParsedBillingDocument =
   | import("@peppol/utils/parsing/invoice/schemas").Invoice
   | import("@peppol/utils/parsing/creditnote/schemas").CreditNote
   | import("@peppol/utils/parsing/self-billing-invoice/schemas").SelfBillingInvoice
@@ -274,14 +274,25 @@ function getDocumentTypeLabel(type: PublicTransmittedDocument["type"]): string {
   }
 }
 
-function buildTemplateData(document: PublicTransmittedDocument): BillingTemplateData {
-  const parsed = document.parsed as ParsedBillingDocument;
+/**
+ * Everything a layout needs beyond the parsed document itself. Every builder below
+ * takes one of these rather than a stored row, so callers that hold a parsed
+ * document (the type repository) can render without inventing a row.
+ */
+type DocumentRenderContext = {
+  documentId: string;
+  type: PublicTransmittedDocument["type"];
+};
 
+function buildTemplateData(
+  parsed: ParsedBillingDocument,
+  context: DocumentRenderContext,
+): BillingTemplateData {
   const isInvoice =
-    document.type === "invoice" || document.type === "selfBillingInvoice";
+    context.type === "invoice" || context.type === "selfBillingInvoice";
   const isCreditNote =
-    document.type === "creditNote" ||
-    document.type === "selfBillingCreditNote";
+    context.type === "creditNote" ||
+    context.type === "selfBillingCreditNote";
 
   const documentNumber =
     (isInvoice && (parsed as any)?.invoiceNumber) ||
@@ -432,9 +443,9 @@ function buildTemplateData(document: PublicTransmittedDocument): BillingTemplate
     : null;
 
   return {
-    documentId: document.id,
-    documentType: document.type,
-    documentTypeLabel: getDocumentTypeLabel(document.type),
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: getDocumentTypeLabel(context.type),
     documentNumber,
     issueDate,
     dueDate,
@@ -451,14 +462,9 @@ function buildTemplateData(document: PublicTransmittedDocument): BillingTemplate
 }
 
 function buildMessageLevelResponseTemplateData(
-  document: PublicTransmittedDocument,
+  parsed: MessageLevelResponse,
+  context: DocumentRenderContext,
 ): MessageLevelResponseTemplateData {
-  const parsed = document.parsed as MessageLevelResponse;
-
-  if (!parsed) {
-    throw new Error("Message Level Response document missing parsed data");
-  }
-
   const getResponseCodeLabel = (code: string): string => {
     switch (code) {
       case "AB":
@@ -473,9 +479,9 @@ function buildMessageLevelResponseTemplateData(
   };
 
   return {
-    documentId: document.id,
-    documentType: document.type,
-    documentTypeLabel: getDocumentTypeLabel(document.type),
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: getDocumentTypeLabel(context.type),
     responseId: parsed.id,
     issueDate: parsed.issueDate,
     responseCode: parsed.responseCode,
@@ -488,14 +494,9 @@ function buildMessageLevelResponseTemplateData(
 }
 
 function buildFranceCdarTemplateData(
-  document: PublicTransmittedDocument,
+  parsed: FranceCdar,
+  context: DocumentRenderContext,
 ): FranceCdarTemplateData {
-  const parsed = document.parsed as FranceCdar;
-
-  if (!parsed) {
-    throw new Error("French Invoicing CDAR document missing parsed data");
-  }
-
   const isNegative = parsed.statusCode === "210"
     || parsed.statusCode === "213"
     || parsed.statusCode === "501";
@@ -510,9 +511,9 @@ function buildFranceCdarTemplateData(
   const isInfo = !isNegative && !isWarning && !isPositive;
 
   return {
-    documentId: document.id,
-    documentType: document.type,
-    documentTypeLabel: getDocumentTypeLabel(document.type),
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: getDocumentTypeLabel(context.type),
     responseId: parsed.id,
     issueDate: parsed.issueDate,
     businessProcess: parsed.businessProcess,
@@ -551,21 +552,16 @@ function buildFranceCdarTemplateData(
 }
 
 export function buildFranceB2CReportTemplateData(
-  document: PublicTransmittedDocument,
+  parsed: FrenchB2CReport,
+  context: DocumentRenderContext,
 ): FranceB2CReportTemplateData {
-  const parsed = document.parsed as FrenchB2CReport;
-
-  if (!parsed) {
-    throw new Error("French B2C report document missing parsed data");
-  }
-
   const isSales = parsed.type === "sales";
   const currency = isSales ? parsed.currency : "EUR";
 
   return {
-    documentId: document.id,
-    documentType: document.type,
-    documentTypeLabel: getDocumentTypeLabel(document.type),
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: getDocumentTypeLabel(context.type),
     reference: parsed.reference,
     reportTypeLabel: isSales ? "Daily sales" : "Daily payments received",
     dateLabel: isSales ? "Sales date" : "Payment date",
@@ -602,89 +598,154 @@ export function isRenderableDocumentType(type: DocumentType): boolean {
   return type !== "unknown";
 }
 
-export async function renderDocumentHtml(
+/**
+ * Renders a billing document straight from its parsed form, for callers that
+ * hold a document rather than a stored row (the type repository). The
+ * transmitted-document entry points below wrap this.
+ */
+export async function renderBillingDocument<F extends "html" | "pdf">(
+  parsed: ParsedBillingDocument,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    BILLING_DOCUMENT_TEMPLATE,
+    buildTemplateData(parsed, context),
+    options,
+  );
+}
+
+/**
+ * Renders a Message Level Response from its parsed form. The counterpart of
+ * renderBillingDocument for the MLR layout.
+ */
+export async function renderMessageLevelResponse<F extends "html" | "pdf">(
+  parsed: MessageLevelResponse,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    MESSAGE_LEVEL_RESPONSE_TEMPLATE,
+    buildMessageLevelResponseTemplateData(parsed, context),
+    options,
+  );
+}
+
+/** Renders a French Invoicing CDAR from its parsed form. */
+export async function renderFranceCdar<F extends "html" | "pdf">(
+  parsed: FranceCdar,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    FRANCE_CDAR_TEMPLATE,
+    buildFranceCdarTemplateData(parsed, context),
+    options,
+  );
+}
+
+/**
+ * Renders a French B2C sales or payment report from its parsed form. The report
+ * type comes from the document itself; `context.type` only picks the heading.
+ */
+export async function renderFranceB2CReport<F extends "html" | "pdf">(
+  parsed: FrenchB2CReport,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    FRANCE_B2C_REPORT_TEMPLATE,
+    buildFranceB2CReportTemplateData(parsed, context),
+    options,
+  );
+}
+
+/**
+ * The one place the format option is turned into renderTailwindTemplate's flags,
+ * so every layout treats `pdfa` and the preview flag identically.
+ */
+async function renderTemplate<F extends "html" | "pdf">(
+  template: string,
+  data: object,
+  options: { format: F; pdfa?: boolean },
+): Promise<F extends "pdf" ? Buffer : string> {
+  const isPdf = options.format === "pdf";
+  const rendered = await renderTailwindTemplate(template, data, {
+    preview: !isPdf,
+    pdfa: isPdf ? options.pdfa : undefined,
+  });
+  return (isPdf ? rendered : rendered.toString()) as F extends "pdf"
+    ? Buffer
+    : string;
+}
+
+/**
+ * Renders a stored row by unwrapping it into the parsed-form renderer its type
+ * belongs to. The layout selection lives here only; every layout is reachable
+ * without a row through the exported functions above.
+ */
+async function renderStoredDocument<F extends "html" | "pdf">(
   document: PublicTransmittedDocument,
-): Promise<string> {
+  options: { format: F; pdfa?: boolean },
+): Promise<F extends "pdf" ? Buffer : string> {
   if (!isRenderableDocumentType(document.type)) {
     throw new Error(`Document type ${document.type} cannot be rendered`);
   }
+
+  const context: DocumentRenderContext = {
+    documentId: document.id,
+    type: document.type,
+  };
+
+  /** A stored row can be missing its parsed column; a parsed document cannot. */
+  const requireParsed = <T>(label: string): T => {
+    if (!document.parsed) {
+      throw new Error(`${label} document missing parsed data`);
+    }
+    return document.parsed as T;
+  };
+
   if (document.type === "messageLevelResponse") {
-    const data = buildMessageLevelResponseTemplateData(document);
-    const html = await renderTailwindTemplate(
-      MESSAGE_LEVEL_RESPONSE_TEMPLATE,
-      data,
-      { preview: true },
+    return renderMessageLevelResponse(
+      requireParsed<MessageLevelResponse>("Message Level Response"),
+      options,
+      context,
     );
-    return html.toString();
   }
   if (document.type === "frenchInvoicingCdar") {
-    const data = buildFranceCdarTemplateData(document);
-    const html = await renderTailwindTemplate(
-      FRANCE_CDAR_TEMPLATE,
-      data,
-      { preview: true },
+    return renderFranceCdar(
+      requireParsed<FranceCdar>("French Invoicing CDAR"),
+      options,
+      context,
     );
-    return html.toString();
   }
   if (isReportingDocumentType(document.type)) {
-    const data = buildFranceB2CReportTemplateData(document);
-    const html = await renderTailwindTemplate(
-      FRANCE_B2C_REPORT_TEMPLATE,
-      data,
-      { preview: true },
+    return renderFranceB2CReport(
+      requireParsed<FrenchB2CReport>("French B2C report"),
+      options,
+      context,
     );
-    return html.toString();
   }
 
-  const data = buildTemplateData(document);
-  const html = await renderTailwindTemplate(
-    BILLING_DOCUMENT_TEMPLATE,
-    data,
-    { preview: true },
+  return renderBillingDocument(
+    document.parsed as ParsedBillingDocument,
+    options,
+    context,
   );
-  return html.toString();
+}
+
+export async function renderDocumentHtml(
+  document: PublicTransmittedDocument,
+): Promise<string> {
+  return renderStoredDocument(document, { format: "html" });
 }
 
 export async function renderDocumentPdf(
   document: PublicTransmittedDocument,
   options: { pdfa?: boolean } = {},
 ): Promise<Buffer> {
-  if (!isRenderableDocumentType(document.type)) {
-    throw new Error(`Document type ${document.type} cannot be rendered`);
-  }
-  if (document.type === "messageLevelResponse") {
-    const data = buildMessageLevelResponseTemplateData(document);
-    const pdf = await renderTailwindTemplate(
-      MESSAGE_LEVEL_RESPONSE_TEMPLATE,
-      data,
-      { preview: false, pdfa: options.pdfa },
-    );
-    return pdf as Buffer;
-  }
-  if (document.type === "frenchInvoicingCdar") {
-    const data = buildFranceCdarTemplateData(document);
-    const pdf = await renderTailwindTemplate(
-      FRANCE_CDAR_TEMPLATE,
-      data,
-      { preview: false, pdfa: options.pdfa },
-    );
-    return pdf as Buffer;
-  }
-  if (isReportingDocumentType(document.type)) {
-    const data = buildFranceB2CReportTemplateData(document);
-    const pdf = await renderTailwindTemplate(
-      FRANCE_B2C_REPORT_TEMPLATE,
-      data,
-      { preview: false, pdfa: options.pdfa },
-    );
-    return pdf as Buffer;
-  }
-
-  const data = buildTemplateData(document);
-  const pdf = await renderTailwindTemplate(
-    BILLING_DOCUMENT_TEMPLATE,
-    data,
-    { preview: false, pdfa: options.pdfa },
-  );
-  return pdf as Buffer;
+  return renderStoredDocument(document, {
+    format: "pdf",
+    pdfa: options.pdfa,
+  });
 }

@@ -6,6 +6,7 @@ import {
   MESSAGE_LEVEL_RESPONSE_DOCUMENT_TYPE_INFO,
   type SupportedDocumentType,
 } from "../document-types";
+import { getCiiTypeCode } from "./cii-d22b/type-code";
 import { getDocumentXmlHandlersByDocTypeId } from "./document-handlers";
 import { getTextContent } from "./xml-helpers";
 
@@ -36,13 +37,7 @@ function getSupportedDocTypeId(candidate: string): string | null {
 }
 
 function getCiiDocumentType(xml: string): SupportedDocumentType {
-    const parser = new XMLParser({
-        ignoreAttributes: false,
-        attributeNamePrefix: "@_",
-        removeNSPrefix: true,
-    });
-    const parsed = parser.parse(xml);
-    const typeCode = getTextContent(parsed.CrossIndustryInvoice?.ExchangedDocument?.TypeCode);
+    const typeCode = getCiiTypeCode(xml);
     if (typeCode === "381") {
         return "creditNote";
     }

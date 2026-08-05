@@ -71,7 +71,7 @@ const frenchB2CPaymentVatSchema = z
     description: "Daily received payment total in EUR for one VAT rate.",
   });
 
-const frenchB2CSalesReportSchema = z
+export const frenchB2CSalesReportSchema = z
   .object({
     ...frenchB2CReportBaseShape,
     type: z.literal("sales").openapi({
@@ -115,7 +115,7 @@ const frenchB2CSalesReportSchema = z
       "The normal daily report for sales to private individuals. It records the sale date, category, transaction count, amounts excluding VAT, and VAT totals. Submit it regardless of whether customers paid immediately or will pay later. This does not send invoices to consumers. The current integration supports taxable goods and taxable services only.",
   });
 
-const frenchB2CPaymentsReportSchema = z
+export const frenchB2CPaymentsReportSchema = z
   .object({
     ...frenchB2CReportBaseShape,
     type: z.literal("payments").openapi({

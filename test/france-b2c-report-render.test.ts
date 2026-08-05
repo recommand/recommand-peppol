@@ -2,8 +2,10 @@ import { describe, expect, it } from "bun:test";
 import {
   buildFranceB2CReportTemplateData,
   isRenderableDocumentType,
+  renderDocumentHtml,
 } from "../utils/document-renderer";
 import type { PublicTransmittedDocument } from "../data/transmitted-documents";
+import type { FrenchB2CReport } from "../utils/parsing/b2c-reporting/france";
 import { extractDocumentDetails } from "../data/email/document-details";
 import type { ParsedDocument } from "../utils/document-filename";
 import { FRANCE_B2C_REPORT_TEMPLATE } from "../templates/france-b2c-report";
@@ -20,6 +22,17 @@ function documentFor(report: unknown): PublicTransmittedDocument {
     type: getFrenchB2CReportDocumentTypeInfo(parsed.type).type,
     parsed,
   } as unknown as PublicTransmittedDocument;
+}
+
+/**
+ * The builder takes a parsed report plus its render context, so a stored row has
+ * to be unwrapped the way the renderer's own dispatcher does.
+ */
+function templateDataFor(document: PublicTransmittedDocument) {
+  return buildFranceB2CReportTemplateData(document.parsed as FrenchB2CReport, {
+    documentId: document.id,
+    type: document.type,
+  });
 }
 
 const salesDocument = documentFor({
@@ -58,7 +71,7 @@ describe("French B2C report rendering", () => {
   });
 
   it("lays out a sales report with its totals and VAT breakdown", () => {
-    const data = buildFranceB2CReportTemplateData(salesDocument);
+    const data = templateDataFor(salesDocument);
 
     expect(data).toMatchObject({
       reference: "SALES-2026-07-01-GOODS",
@@ -95,7 +108,7 @@ describe("French B2C report rendering", () => {
   });
 
   it("lays out a payment report as received amounts in EUR", () => {
-    const data = buildFranceB2CReportTemplateData(paymentsDocument);
+    const data = templateDataFor(paymentsDocument);
 
     expect(data).toMatchObject({
       reference: "PAYMENTS-2026-07-01",
@@ -118,7 +131,7 @@ describe("French B2C report rendering", () => {
   });
 
   it("marks a cancellation so the preview cannot be mistaken for a filing", () => {
-    const data = buildFranceB2CReportTemplateData(
+    const data = templateDataFor(
       documentFor({
         reference: "SALES-2026-07-01-CANCEL",
         action: "cancel",
@@ -142,12 +155,12 @@ describe("French B2C report rendering", () => {
 
   it("only uses placeholders the template data provides", () => {
     // The template is an untyped string, so a typo would silently render a blank.
-    const data = buildFranceB2CReportTemplateData(salesDocument);
+    const data = templateDataFor(salesDocument);
     const available = new Set([
       ...Object.keys(data),
       ...Object.keys(data.salesVatBreakdown[0] ?? {}),
       ...Object.keys(
-        buildFranceB2CReportTemplateData(paymentsDocument)
+        templateDataFor(paymentsDocument)
           .paymentVatBreakdown[0] ?? {}
       ),
     ]);
@@ -181,13 +194,15 @@ describe("French B2C report rendering", () => {
     expect(details.documentNumber).toBe("SALES-2026-07-01-GOODS");
   });
 
-  it("refuses to render a report row with no parsed data", () => {
-    expect(() =>
-      buildFranceB2CReportTemplateData({
+  it("refuses to render a report row with no parsed data", async () => {
+    // The guard belongs to the row entry point: a parsed report cannot be null,
+    // so only a stored row can reach the renderer without one.
+    await expect(
+      renderDocumentHtml({
         id: "doc_report",
-        type: "frenchB2CReport",
+        type: "frenchB2CSalesReport",
         parsed: null,
       } as unknown as PublicTransmittedDocument)
-    ).toThrow("French B2C report document missing parsed data");
+    ).rejects.toThrow("French B2C report document missing parsed data");
   });
 });
