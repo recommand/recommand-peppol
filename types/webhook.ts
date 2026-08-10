@@ -3,6 +3,7 @@ export type Webhook = {
   teamId: string;
   companyId: string | null;
   url: string;
+  secret: string | null;
   createdAt: string;
   updatedAt: string | null;
 };
@@ -10,9 +11,11 @@ export type Webhook = {
 export type WebhookFormData = {
   url: string;
   companyId?: string | null;
+  secret?: string | null;
 };
 
 export const defaultWebhookFormData: WebhookFormData = {
   url: "",
   companyId: undefined,
+  secret: undefined,
 }; 
