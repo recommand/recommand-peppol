@@ -28,6 +28,12 @@ const createWebhookRouteDescription = describeRoute({
 const createWebhookJsonBodySchema = z.object({
     url: z.string().url(),
     companyId: z.string().nullish(),
+    secret: z.preprocess(
+        (value) => value === "" ? undefined : value,
+        z.string().min(1).nullish()
+    ).openapi({
+        description: "Optional secret used to send X-Signature: sha256=<hex>, computed with HMAC-SHA256 over the raw request body.",
+    }),
 });
 
 const createWebhookParamSchemaWithTeamId = z.object({
@@ -67,6 +73,7 @@ async function _createWebhookImplementation(c: CreateWebhookContext) {
             after: {
                 url: webhook.url,
                 companyId: webhook.companyId,
+                signingEnabled: webhook.secret !== null,
             },
         });
         return c.json(actionSuccess({ webhook }));

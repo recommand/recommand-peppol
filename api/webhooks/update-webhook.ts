@@ -35,6 +35,12 @@ const updateWebhookParamSchema = z.object({
 const updateWebhookJsonBodySchema = z.object({
     url: z.string().url(),
     companyId: z.string().nullish(),
+    secret: z.preprocess(
+        (value) => value === "" ? undefined : value,
+        z.string().min(1).nullable().optional()
+    ).openapi({
+        description: "New secret for the HMAC-SHA256 X-Signature header. Omit to preserve it or use null to disable signing.",
+    }),
 });
 
 const updateWebhookParamSchemaWithTeamId = updateWebhookParamSchema.extend({
@@ -79,6 +85,7 @@ async function _updateWebhookImplementation(c: UpdateWebhookContext) {
             after: {
                 url: webhook.url,
                 companyId: webhook.companyId,
+                signingEnabled: webhook.secret !== null,
             },
         });
         return c.json(actionSuccess({ webhook }));

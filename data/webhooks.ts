@@ -18,6 +18,7 @@ export type Webhook = {
   teamId: string;
   companyId: string | null;
   url: string;
+  secret: string | null;
   createdAt: Date;
   updatedAt: Date | null;
 };
@@ -27,6 +28,7 @@ export type InsertWebhook = {
   teamId: string;
   companyId?: string | null;
   url: string;
+  secret?: string | null;
 };
 
 function isWebhookRule(rule: Awaited<ReturnType<typeof getRule>>) {
@@ -81,6 +83,7 @@ function toWebhook(rule: Exclude<Awaited<ReturnType<typeof getRule>>, null>): We
     teamId: rule.teamId,
     companyId: getWebhookCompanyId(rule.condition),
     url: action.config.url,
+    secret: action.config.secret ?? null,
     createdAt: rule.createdAt,
     updatedAt: rule.updatedAt,
   };
@@ -153,6 +156,7 @@ export async function createWebhook(webhook: InsertWebhook): Promise<Webhook> {
         version: 1,
         config: {
           url: webhook.url,
+          ...(webhook.secret ? { secret: webhook.secret } : {}),
         },
       },
     ],
@@ -164,6 +168,19 @@ export async function createWebhook(webhook: InsertWebhook): Promise<Webhook> {
 export async function updateWebhook(
   webhook: InsertWebhook & { id: string }
 ): Promise<Webhook | undefined> {
+  const existingRule = await getRule(webhook.teamId, webhook.id);
+  if (!existingRule || !isWebhookRule(existingRule)) {
+    return undefined;
+  }
+
+  const existingAction = existingRule.actions[0] as Extract<
+    VersionedAction,
+    { type: "webhook" }
+  >;
+  const secret =
+    webhook.secret === undefined
+      ? existingAction.config.secret
+      : webhook.secret ?? undefined;
   const rule = await updateRule(webhook.teamId, webhook.id, {
     name: `Webhook: ${webhook.url}`,
     eventType: "*",
@@ -174,6 +191,7 @@ export async function updateWebhook(
         version: 1,
         config: {
           url: webhook.url,
+          ...(secret ? { secret } : {}),
         },
       },
     ],
