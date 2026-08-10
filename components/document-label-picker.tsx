@@ -10,7 +10,7 @@ import type { Label } from "@peppol/types/label";
 
 interface DocumentLabelPickerProps {
   labels: Label[];
-  assignedLabels: Label[];
+  assignedLabels: Array<Pick<Label, "id">>;
   trigger: ReactNode;
   onAssign: (label: Label) => Promise<void> | void;
   onUnassign?: (label: Label) => Promise<void> | void;
