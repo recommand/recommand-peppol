@@ -64,7 +64,7 @@ const ERROR = {
   recipientOrEmail:
     "Either recipient (for Peppol) or email.to (for email delivery) must be provided.",
   pdfMessageLevelResponse:
-    "PDF generation is not supported for message level responses.",
+    "PDF generation is not supported for messageLevelResponse.",
   pdfXml: "PDF generation is not supported for raw XML documents.",
   peppolFailed: `Failed to send document over Peppol network. ${SIMULATED_PEPPOL_FAILURE}`,
   peppolAndEmailFailed: `Failed to send document over Peppol network and email. ${SIMULATED_PEPPOL_FAILURE} `,
@@ -73,7 +73,7 @@ const ERROR = {
   processIdNotDetected:
     "Failed to detect process id. Please provide the processId manually.",
   validationFailed:
-    "Document validation failed. Please ensure your document complies with EN16931 and PEPPOL BIS 3.0 requirements.",
+    "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
   invalidInvoice:
     "Invalid invoice data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
   invalidCreditNote:
@@ -1161,12 +1161,12 @@ e2eDescribe("send document: doctypeId and processId on non-XML documents", () =>
         recipient: RECIPIENT,
         documentType: "invoice",
         document: invoiceDocument(),
-        doctypeId: DOC_TYPE_ID.messageLevelResponse,
+        doctypeId: DOC_TYPE_ID.ciiInvoice,
       });
       expect(response.status).toBe(200);
 
       const stored = await getDocument(response.body.id);
-      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.invoice);
+      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.ciiInvoice);
       expect(stored.body.document.processId).toBe(PROCESS_ID.billing);
     },
     TIMEOUT

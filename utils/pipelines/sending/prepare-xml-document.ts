@@ -11,7 +11,7 @@ export function prepareXmlDocument(input: SendingInput): PreparedDocument {
   const xml = input.document as string;
   const detectedFormat = detectDocumentFormat(xml);
   const format = input.doctypeId
-    ? getDocumentFormatByDocTypeId(input.doctypeId) ?? detectedFormat
+    ? getDocumentFormatByDocTypeId(input.doctypeId)
     : detectedFormat;
   if (!input.doctypeId && !format) {
     throw new SendingFailure(
