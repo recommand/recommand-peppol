@@ -1,3 +1,4 @@
+import { resolveCountrySpecificProcessId } from "@peppol/utils/parsing/country-specific/process";
 import { parseXmlForDetection } from "./xml-detection";
 import type { AnyDocumentFormat } from "./types";
 import { peppolUblBis3InvoiceFormat } from "./peppol-ubl-bis3-invoice";
@@ -47,6 +48,16 @@ export function getDocumentFormatByDocTypeId(
 /** The document type key is what an outgoing transmission names, so sending looks up by it. */
 export function getDocumentFormatsByDocumentTypeKey(documentTypeKey: string): AnyDocumentFormat[] {
   return documentFormats.filter((format) => format.supportedDocumentTypes.some((type) => type.key === documentTypeKey));
+}
+
+export function resolveFormatProcessId(
+  format: AnyDocumentFormat,
+  document: unknown
+): string {
+  return (
+    format.resolveProcessId?.(document) ??
+    resolveCountrySpecificProcessId(format.supportedProcessIds[0], document)
+  );
 }
 
 export function detectDocumentFormat(

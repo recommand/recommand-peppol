@@ -18,6 +18,10 @@ export const franceCdarFormat: DocumentFormat<
     "urn:peppol:france:billing:regulated",
     "urn:peppol:france:billing:non-regulated",
   ],
+  resolveProcessId: (document) =>
+    document.businessProcess === "REGULATED"
+      ? "urn:peppol:france:billing:regulated"
+      : "urn:peppol:france:billing:non-regulated",
 
   encode: (document) =>
     franceCdarToXML({

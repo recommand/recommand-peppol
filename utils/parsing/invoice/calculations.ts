@@ -1,9 +1,23 @@
 import { Decimal } from "decimal.js";
-import type { Invoice, DocumentLine, VatCategory, Totals } from "./schemas";
+import type { z } from "zod";
+import type {
+  Invoice,
+  DocumentLine,
+  VatCategory,
+  Totals,
+  sendVatTotalsSchema,
+} from "./schemas";
 import type { CreditNote } from "../creditnote/schemas";
 import type { SelfBillingInvoice } from "../self-billing-invoice/schemas";
 import type { SelfBillingCreditNote } from "../self-billing-creditnote/schemas";
 import { UserFacingError } from "@peppol/utils/util";
+
+type VatCalculationDocument = Pick<
+  Invoice,
+  "lines" | "discounts" | "surcharges"
+> & {
+  vat?: z.output<typeof sendVatTotalsSchema> | null;
+};
 
 // Vat is always rounded to 2 decimal places per invoice line, discount or surcharge, otherwise we can't guarantee the totals will be correct.
 
@@ -125,7 +139,7 @@ export function extractTotals(totals: Totals): Totals & { paidAmount: string, pa
   
 }
 
-export function calculateVat({document, isDocumentValidationEnforced}: {document: Invoice | CreditNote, isDocumentValidationEnforced: boolean}) {
+export function calculateVat({document, isDocumentValidationEnforced}: {document: VatCalculationDocument, isDocumentValidationEnforced: boolean}) {
 
   const getKey = (category: VatCategory, percentage: string) => `${category}-${percentage}`;
 
@@ -204,6 +218,20 @@ export function calculateVat({document, isDocumentValidationEnforced}: {document
   return { totalVatAmount, subtotals };
 } 
 
+export function resolveVatTotals({
+  document,
+  isDocumentValidationEnforced,
+}: {
+  document: VatCalculationDocument;
+  isDocumentValidationEnforced: boolean;
+}) {
+  return document.vat &&
+    "subtotals" in document.vat &&
+    "totalVatAmount" in document.vat
+    ? document.vat
+    : calculateVat({ document, isDocumentValidationEnforced });
+}
+
 // Calculates the totals at every level of a document: the net amount per line,
 // the VAT subtotals/total, and the extracted document-level monetary totals.
 export function calculateDocumentTotals({
@@ -214,10 +242,7 @@ export function calculateDocumentTotals({
   isDocumentValidationEnforced: boolean;
 }) {
   const totals = calculateTotals(document);
-  const vat =
-    document.vat && "subtotals" in document.vat && "totalVatAmount" in document.vat
-      ? document.vat
-      : calculateVat({ document, isDocumentValidationEnforced });
+  const vat = resolveVatTotals({ document, isDocumentValidationEnforced });
   const lines = document.lines.map((line) => ({
     ...line,
     netAmount: line.netAmount || calculateLineAmount(line),

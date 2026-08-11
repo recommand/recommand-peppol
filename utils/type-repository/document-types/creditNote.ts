@@ -4,6 +4,7 @@ import {
   creditNoteSchema,
   sendCreditNoteSchema,
 } from "@peppol/utils/parsing/creditnote/schemas";
+import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
 import type { DocumentType } from "./types";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
@@ -20,7 +21,7 @@ export const creditNoteDocumentType: DocumentType<
 
   preprocessFromSendAPI: (data, { company }) => {
     const creditNote = sendCreditNoteSchema.parse(data.document);
-    return {
+    const preprocessed = {
       ...creditNote,
       issueDate:
         creditNote.issueDate ?? formatISO(new Date(), { representation: "date" }),
@@ -36,6 +37,13 @@ export const creditNoteDocumentType: DocumentType<
         email: company.email || null,
         phone: company.phone || null,
       },
+    };
+    return {
+      ...preprocessed,
+      vat: resolveVatTotals({
+        document: preprocessed,
+        isDocumentValidationEnforced: true,
+      }),
     };
   },
 

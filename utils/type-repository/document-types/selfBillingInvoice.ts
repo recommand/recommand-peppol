@@ -4,6 +4,7 @@ import {
   selfBillingInvoiceSchema,
   sendSelfBillingInvoiceSchema,
 } from "@peppol/utils/parsing/self-billing-invoice/schemas";
+import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
 import type { DocumentType } from "./types";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
@@ -22,7 +23,7 @@ export const selfBillingInvoiceDocumentType: DocumentType<
     const invoice = sendSelfBillingInvoiceSchema.parse(data.document);
     const issueDate =
       invoice.issueDate ?? formatISO(new Date(), { representation: "date" });
-    return {
+    const preprocessed = {
       ...invoice,
       issueDate,
       dueDate:
@@ -42,6 +43,13 @@ export const selfBillingInvoiceDocumentType: DocumentType<
         email: company.email || null,
         phone: company.phone || null,
       },
+    };
+    return {
+      ...preprocessed,
+      vat: resolveVatTotals({
+        document: preprocessed,
+        isDocumentValidationEnforced: true,
+      }),
     };
   },
 

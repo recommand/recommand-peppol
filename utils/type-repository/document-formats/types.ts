@@ -44,6 +44,9 @@ export type DocumentFormat<DocumentTypes extends readonly AnyDocumentType[]> = {
   docTypeId: string;
   supportedDocumentTypes: DocumentTypes;
   supportedProcessIds: string[];
+  resolveProcessId?: (
+    document: ParsedDocumentOf<DocumentTypes[number]>
+  ) => string;
 
   encode: (
     document: ParsedDocumentOf<DocumentTypes[number]>,

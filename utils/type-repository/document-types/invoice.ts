@@ -4,6 +4,7 @@ import {
   invoiceSchema,
   sendInvoiceSchema,
 } from "@peppol/utils/parsing/invoice/schemas";
+import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
 import type { DocumentType } from "./types";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
@@ -22,7 +23,7 @@ export const invoiceDocumentType: DocumentType<
     const invoice = sendInvoiceSchema.parse(data.document);
     const issueDate =
       invoice.issueDate ?? formatISO(new Date(), { representation: "date" });
-    return {
+    const preprocessed = {
       ...invoice,
       issueDate,
       dueDate:
@@ -40,6 +41,13 @@ export const invoiceDocumentType: DocumentType<
         email: company.email || null,
         phone: company.phone || null,
       },
+    };
+    return {
+      ...preprocessed,
+      vat: resolveVatTotals({
+        document: preprocessed,
+        isDocumentValidationEnforced: true,
+      }),
     };
   },
 
