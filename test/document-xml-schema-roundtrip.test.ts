@@ -13,7 +13,7 @@ import {
   FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
   FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
 } from "../utils/document-types";
-import { resolveOutgoingDocumentXmlHandler } from "../utils/outgoing-document-payload";
+import { getDocumentFormatByDocTypeId } from "../utils/type-repository/document-formats";
 import { creditNoteSchema, type CreditNote } from "../utils/parsing/creditnote/schemas";
 import { invoiceSchema, type Invoice } from "../utils/parsing/invoice/schemas";
 import {
@@ -245,22 +245,42 @@ function handlersForType(type: SchemaDocumentType): DocumentXmlHandler[] {
     type === "invoice"
       ? FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId
       : FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId;
-  const facturXResolution = resolveOutgoingDocumentXmlHandler(
-    facturXDocTypeId,
-    type
-  );
-  if (!facturXResolution.ok) {
-    throw new Error(facturXResolution.message);
+  const facturXFormat = getDocumentFormatByDocTypeId(facturXDocTypeId);
+  if (!facturXFormat) {
+    throw new Error("Factur-X format is not registered.");
   }
 
   return [
     ...handlers,
     {
-      ...facturXResolution.resolution.handler,
       title:
         type === "invoice"
           ? "France Factur-X CII Invoice"
           : "France Factur-X CII Credit Note",
+      type,
+      docTypeId: facturXFormat.docTypeId,
+      processId: facturXFormat.supportedProcessIds[0],
+      matchesDocTypeId: (docTypeId) => docTypeId === facturXFormat.docTypeId,
+      toXml: ({
+        document,
+        senderAddress,
+        recipientAddress,
+        isDocumentValidationEnforced,
+      }) =>
+        facturXFormat.encode(
+          document,
+          facturXFormat.supportedProcessIds[0],
+          {
+            senderAddress,
+            recipientAddress,
+            isDocumentValidationEnforced,
+          },
+        ),
+      fromXml: (xml) =>
+        facturXFormat.decode(
+          xml,
+          facturXFormat.supportedProcessIds[0],
+        ) as ParsedDocument,
     },
   ];
 }

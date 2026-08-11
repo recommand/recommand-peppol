@@ -11,7 +11,7 @@ import {
   CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
   FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
 } from "@peppol/utils/document-types";
-import { resolveOutgoingDocumentXmlHandler } from "@peppol/utils/outgoing-document-payload";
+import { getDocumentFormatByDocTypeId } from "@peppol/utils/type-repository/document-formats";
 
 function asFrenchRegulatedInvoice(invoice: Invoice): Invoice {
   // EN16931 category O requires seller and buyer VAT identifiers to be omitted.
@@ -146,32 +146,30 @@ async function checkInvoiceXML({
     isDocumentValidationEnforced,
   });
   const frenchInvoice = asFrenchRegulatedInvoice(invoice);
-  const facturXResolution = resolveOutgoingDocumentXmlHandler(
+  const facturXFormat = getDocumentFormatByDocTypeId(
     FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-    "invoice"
   );
-  if (!facturXResolution.ok) {
-    throw new Error(facturXResolution.message);
-  }
-  const frenchCiiResolution = resolveOutgoingDocumentXmlHandler(
+  const frenchCiiFormat = getDocumentFormatByDocTypeId(
     CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-    "invoice"
   );
-  if (!frenchCiiResolution.ok) {
-    throw new Error(frenchCiiResolution.message);
+  if (!facturXFormat || !frenchCiiFormat) {
+    throw new Error("French invoice format is not registered.");
   }
-  const frenchCiiXml = frenchCiiResolution.resolution.handler.toXml({
-    document: frenchInvoice,
+  const context = {
     senderAddress: "0225:303265045",
     recipientAddress,
     isDocumentValidationEnforced,
-  });
-  const facturXXml = facturXResolution.resolution.handler.toXml({
-    document: frenchInvoice,
-    senderAddress: "0225:303265045",
-    recipientAddress,
-    isDocumentValidationEnforced,
-  });
+  };
+  const frenchCiiXml = frenchCiiFormat.encode(
+    frenchInvoice,
+    frenchCiiFormat.supportedProcessIds[0],
+    context,
+  );
+  const facturXXml = facturXFormat.encode(
+    frenchInvoice,
+    facturXFormat.supportedProcessIds[0],
+    context,
+  );
   checkUBLInvoiceXML(ublXml, invoice);
   checkCIIInvoiceXML(ciiXml, invoice);
   checkCIIInvoiceXML(frenchCiiXml, frenchInvoice);

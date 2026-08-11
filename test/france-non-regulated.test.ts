@@ -21,7 +21,10 @@ import {
 } from "../utils/parsing/country-specific/france";
 import { resolveDocumentXmlHandler } from "../utils/parsing/document-handlers";
 import { resolveCountrySpecificProcessId } from "../utils/parsing/country-specific/process";
-import { resolveOutgoingProcessId } from "../utils/outgoing-document-payload";
+import {
+  getDocumentFormatByDocTypeId,
+  resolveFormatProcessId,
+} from "../utils/type-repository/document-formats";
 
 const frenchCountrySpecific = {
   country: "FR" as const,
@@ -138,34 +141,30 @@ describe("France non-regulated process", () => {
   });
 
   it("moves an outgoing document onto the process its country selects", () => {
+    const ublFormat = getDocumentFormatByDocTypeId(
+      UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.docTypeId,
+    );
+    const facturXFormat = getDocumentFormatByDocTypeId(
+      FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+    );
+    if (!ublFormat || !facturXFormat) {
+      throw new Error("French invoice format is not registered.");
+    }
     const resolveFor = (countrySpecific: unknown) =>
-      resolveOutgoingProcessId({
-        doctypeId: UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.docTypeId,
-        type: "invoice",
-        probableType: "unknown",
-        payloadProcessId: null,
-        document: { countrySpecific },
-      });
+      resolveFormatProcessId(ublFormat, { countrySpecific });
 
     expect(resolveFor(frenchCountrySpecific)).toBe(FRANCE_REGULATED_PROCESS_ID);
     expect(
       resolveFor({ ...frenchCountrySpecific, businessProcess: "NON_REGULATED" })
     ).toBe(FRANCE_NON_REGULATED_PROCESS_ID);
 
-    // A process id decided while building the payload (Factur-X, CDAR) is moved too.
     expect(
-      resolveOutgoingProcessId({
-        doctypeId: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-        type: "invoice",
-        probableType: "unknown",
-        payloadProcessId: FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId,
-        document: {
-          countrySpecific: {
-            ...frenchCountrySpecific,
-            businessProcess: "NON_REGULATED",
-          },
+      resolveFormatProcessId(facturXFormat, {
+        countrySpecific: {
+          ...frenchCountrySpecific,
+          businessProcess: "NON_REGULATED",
         },
-      })
+      }),
     ).toBe(FRANCE_NON_REGULATED_PROCESS_ID);
   });
 

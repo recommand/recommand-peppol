@@ -9,7 +9,7 @@ import {
   UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
 } from "../utils/document-types";
 import { resolveDocumentXmlHandler } from "../utils/parsing/document-handlers";
-import { resolveOutgoingDocumentXmlHandler } from "../utils/outgoing-document-payload";
+import { getDocumentFormatByDocTypeId } from "../utils/type-repository/document-formats";
 import type { Invoice } from "../utils/parsing/invoice/schemas";
 
 const invoice: Invoice = {
@@ -129,18 +129,20 @@ describe("CII D22B profiles", () => {
   });
 
   it("uses the French regulation with the Factur-X EN 16931 guideline", () => {
-    const resolved = resolveOutgoingDocumentXmlHandler(
+    const format = getDocumentFormatByDocTypeId(
       FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-      "invoice"
     );
-    if (!resolved.ok) throw new Error(resolved.message);
+    if (!format) throw new Error("Factur-X format is not registered.");
 
-    const xml = resolved.resolution.handler.toXml({
-      document: invoice,
-      senderAddress: "0225:303265045",
-      recipientAddress: "0225:341815675",
-      isDocumentValidationEnforced: true,
-    });
+    const xml = format.encode(
+      invoice,
+      format.supportedProcessIds[0],
+      {
+        senderAddress: "0225:303265045",
+        recipientAddress: "0225:341815675",
+        isDocumentValidationEnforced: true,
+      },
+    );
 
     expect(xml).toContain("<ram:ID>S1</ram:ID>");
     expect(xml).toContain("<ram:ID>urn:cen.eu:en16931:2017</ram:ID>");
