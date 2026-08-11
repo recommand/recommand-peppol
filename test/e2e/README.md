@@ -77,8 +77,8 @@ creates incoming documents on every successful send.
 
 ## What it costs
 
-A full run is 610 tests in roughly two minutes against a local server. It sends
-about 220 emails through Postmark and stores about 350 documents in the
+A full run is 615 tests in roughly two minutes against a local server. It sends
+about 220 emails through Postmark and stores about 355 documents in the
 playground. Emails go to Postmark's blackhole address by default, which accepts
 and discards them, but they still count towards your Postmark volume. The suite
 also calls the external validation service once per document and the PDF
@@ -105,11 +105,16 @@ For every successful send the suite also fetches the stored document and
 asserts its direction, normalised receiver, doctype id, process id, type,
 delivery flags, email recipients and generated PDF attachment.
 
-The stored document is parsed back from the XML that was transmitted, so a
-separate group asserts what the API worked out for itself: totals calculated
-from the lines, VAT subtotalled per rate, the line amounts, and the default PDF
-filename. One test round trips a whole invoice, so the fields that were sent
-have to survive being written to XML and read back.
+The stored document is parsed back from the XML that was transmitted, so two
+separate groups assert the arithmetic. The first covers what the API works out
+for itself, since no fixture sends totals: totals calculated from the lines,
+VAT subtotalled per rate, the line amounts, and the default PDF filename. One
+test round trips a whole invoice, so the fields that were sent have to survive
+being written to XML and read back.
+
+The second covers totals and VAT that *were* provided. They are used as given,
+including a prepayment, and a document whose totals or VAT contradict its lines
+is rejected by validation rather than quietly corrected.
 
 Delivery itself is only asserted as far as the API reports it: `sentOverEmail`,
 `emailRecipients` and the stored flags. Nothing checks Postmark, so a mail that
@@ -119,5 +124,5 @@ Outside the matrix it covers authentication failures, the `/sendDocument` and
 `/api/v1` route aliases, request schema violations, documents that do not match
 their declared `documentType`, undetectable and invalid XML, unrecognised
 doctype identifiers with and without a `processId`, the empty `email.to` edge
-cases, the calculated totals described above, and the server side defaults for
-seller, buyer, dates and message level response ids.
+cases, the totals described above, and the server side defaults for seller,
+buyer, dates and message level response ids.

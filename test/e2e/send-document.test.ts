@@ -972,6 +972,169 @@ e2eDescribe("send document: calculated totals", () => {
   );
 });
 
+// The other side of the same contract: what the API does with totals and VAT
+// that were supplied. They are taken at face value, so a document whose totals
+// contradict its lines is rejected by validation rather than quietly corrected.
+e2eDescribe("send document: provided totals", () => {
+  const VAT = {
+    totalVatAmount: "21.00",
+    subtotals: [
+      {
+        category: "S",
+        percentage: "21.00",
+        taxableAmount: "100.00",
+        vatAmount: "21.00",
+      },
+    ],
+  };
+
+  test(
+    "totals and VAT that are provided are used as given",
+    async () => {
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: invoiceDocument({
+          totals: {
+            linesAmount: "100.00",
+            taxExclusiveAmount: "100.00",
+            taxInclusiveAmount: "121.00",
+            payableAmount: "121.00",
+          },
+          vat: VAT,
+        }),
+      });
+      expect(response.status).toBe(200);
+
+      const stored = await getDocument(response.body.id);
+      const parsed = stored.body.document.parsed;
+
+      expect(parsed.totals).toEqual({
+        linesAmount: "100.00",
+        discountAmount: null,
+        surchargeAmount: null,
+        taxExclusiveAmount: "100.00",
+        taxInclusiveAmount: "121.00",
+        payableAmount: "121.00",
+        paidAmount: "0.00",
+      });
+      expect(parsed.vat).toEqual({
+        totalVatAmount: "21.00",
+        subtotals: [
+          { ...VAT.subtotals[0], exemptionReason: null, exemptionReasonCode: null },
+        ],
+      });
+    },
+    TIMEOUT
+  );
+
+  test(
+    "a prepayment is subtracted when the payable amount is given with it",
+    async () => {
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: invoiceDocument({
+          totals: {
+            taxExclusiveAmount: "100.00",
+            taxInclusiveAmount: "121.00",
+            payableAmount: "100.00",
+            paidAmount: "21.00",
+          },
+        }),
+      });
+      expect(response.status).toBe(200);
+
+      const stored = await getDocument(response.body.id);
+      expect(stored.body.document.parsed.totals).toMatchObject({
+        taxInclusiveAmount: "121.00",
+        paidAmount: "21.00",
+        payableAmount: "100.00",
+      });
+    },
+    TIMEOUT
+  );
+
+  test(
+    "a prepayment on its own leaves the payable amount at the full total",
+    async () => {
+      // Current behaviour, and it looks wrong: paying 21.00 of a 121.00
+      // invoice still asks the recipient for 121.00. The difference is
+      // absorbed into a 21.00 PayableRoundingAmount, which is what keeps the
+      // document passing BR-CO-16. Provide payableAmount as well to get a
+      // sensible document, as the test above does.
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: invoiceDocument({
+          totals: {
+            taxExclusiveAmount: "100.00",
+            taxInclusiveAmount: "121.00",
+            paidAmount: "21.00",
+          },
+        }),
+      });
+      expect(response.status).toBe(200);
+
+      const stored = await getDocument(response.body.id);
+      expect(stored.body.document.parsed.totals).toMatchObject({
+        paidAmount: "21.00",
+        payableAmount: "121.00",
+      });
+      expect(stored.body.document.xml).toContain(
+        '<cbc:PayableRoundingAmount currencyID="EUR">21.00</cbc:PayableRoundingAmount>'
+      );
+    },
+    TIMEOUT
+  );
+
+  test(
+    "totals that contradict the lines are rejected",
+    async () => {
+      // The lines add up to 100.00, so the document fails validation instead
+      // of having its totals recalculated.
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: invoiceDocument({
+          totals: {
+            taxExclusiveAmount: "999.00",
+            taxInclusiveAmount: "1208.79",
+          },
+        }),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors.root).toEqual([ERROR.validationFailed]);
+      // BR-CO-13: total without VAT = sum of the line net amounts.
+      expect(JSON.stringify(response.body.errors)).toContain("BR-CO-13");
+    },
+    TIMEOUT
+  );
+
+  test(
+    "VAT that contradicts the lines is rejected",
+    async () => {
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: invoiceDocument({
+          vat: {
+            totalVatAmount: "10.00",
+            subtotals: [{ ...VAT.subtotals[0], vatAmount: "10.00" }],
+          },
+        }),
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors.root).toEqual([ERROR.validationFailed]);
+      // BR-S-09: standard rated VAT = taxable amount x rate.
+      expect(JSON.stringify(response.body.errors)).toContain("BR-S-09");
+    },
+    TIMEOUT
+  );
+});
+
 e2eDescribe("send document: doctypeId and processId on non-XML documents", () => {
   test(
     "processId overrides the detected process",
