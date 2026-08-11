@@ -31,7 +31,7 @@ export const documentTypeSchema = z
 
 export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
 
-export const sendDocumentSchema = z.object({
+const sendDocumentBaseSchema = z.object({
   recipient: z.string().nullable().openapi({
     description:
       "The Peppol address of the recipient. If null, the document will be sent via email only (requires `email.to`).",
@@ -43,7 +43,8 @@ export const sendDocumentSchema = z.object({
         .enum(["always", "on_peppol_failure"])
         .default("on_peppol_failure")
         .openapi({
-          description: "When to send the email. If the provided Peppol recipient is null, email becomes the primary delivery method and emails are always sent.",
+          description:
+            "When to send the email. If the provided Peppol recipient is null, email becomes the primary delivery method and emails are always sent.",
         }),
       to: z.array(z.string()).openapi({
         description: "The email addresses to send the document to.",
@@ -90,19 +91,6 @@ export const sendDocumentSchema = z.object({
       description:
         "Optionally generate a PDF of the document and include it as an embedded attachment (also included in email attachments when email sending is enabled). Not supported for message level responses or raw XML documents.",
     }),
-  documentType: documentTypeSchema,
-  document: z.union([
-    sendInvoiceSchema,
-    sendCreditNoteSchema,
-    sendSelfBillingInvoiceSchema,
-    sendSelfBillingCreditNoteSchema,
-    sendMessageLevelResponseSchema,
-    z.string().openapi({
-      ref: "XML",
-      title: "XML",
-      description: "XML document as a string",
-    }),
-  ]),
   doctypeId: z.string().optional().openapi({
     description:
       'The document type identifier. Not required, only used when documentType is "xml". For supported document types, the doctypeId can be detected automatically from your XML document, if that\'s not the case you can provide it manually.',
@@ -111,9 +99,109 @@ export const sendDocumentSchema = z.object({
   }),
   processId: z.string().optional().openapi({
     description:
-      'The process identifier. Not required, only used when documentType is "xml". For supported document types, the processId can be detected automatically from your XML document, if that\'s not the case you can provide it manually.',
+      'The process identifier. For supported document types the processId can be detected automatically; provide it manually when documentType is "xml" or to override the default.',
     example: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
   }),
 });
 
+export const sendInvoiceRequestSchema = sendDocumentBaseSchema
+  .extend({
+    documentType: z.literal(DocumentType.INVOICE),
+    document: sendInvoiceSchema,
+  })
+  .openapi({
+    ref: "SendInvoiceRequest",
+    title: "Send Invoice",
+    description: "Request to send an invoice via Peppol and/or email.",
+  });
+
+export const sendCreditNoteRequestSchema = sendDocumentBaseSchema
+  .extend({
+    documentType: z.literal(DocumentType.CREDIT_NOTE),
+    document: sendCreditNoteSchema,
+  })
+  .openapi({
+    ref: "SendCreditNoteRequest",
+    title: "Send Credit Note",
+    description: "Request to send a credit note via Peppol and/or email.",
+  });
+
+export const sendSelfBillingInvoiceRequestSchema = sendDocumentBaseSchema
+  .extend({
+    documentType: z.literal(DocumentType.SELF_BILLING_INVOICE),
+    document: sendSelfBillingInvoiceSchema,
+  })
+  .openapi({
+    ref: "SendSelfBillingInvoiceRequest",
+    title: "Send Self-Billing Invoice",
+    description:
+      "Request to send a self-billing invoice via Peppol and/or email.",
+  });
+
+export const sendSelfBillingCreditNoteRequestSchema = sendDocumentBaseSchema
+  .extend({
+    documentType: z.literal(DocumentType.SELF_BILLING_CREDIT_NOTE),
+    document: sendSelfBillingCreditNoteSchema,
+  })
+  .openapi({
+    ref: "SendSelfBillingCreditNoteRequest",
+    title: "Send Self-Billing Credit Note",
+    description:
+      "Request to send a self-billing credit note via Peppol and/or email.",
+  });
+
+export const sendMessageLevelResponseRequestSchema = sendDocumentBaseSchema
+  .extend({
+    documentType: z.literal(DocumentType.MESSAGE_LEVEL_RESPONSE),
+    document: sendMessageLevelResponseSchema,
+  })
+  .openapi({
+    ref: "SendMessageLevelResponseRequest",
+    title: "Send Message Level Response",
+    description: "Request to send a message level response via Peppol.",
+  });
+
+export const sendXmlRequestSchema = sendDocumentBaseSchema
+  .extend({
+    documentType: z.literal(DocumentType.XML),
+    document: z.string().openapi({
+      title: "XML",
+      description: "Raw UBL XML document as a string.",
+    }),
+  })
+  .openapi({
+    ref: "SendXmlRequest",
+    title: "Send Raw XML",
+    description:
+      "Request to send a pre-built UBL XML document via Peppol and/or email.",
+  });
+
+export const sendDocumentSchema = z
+  .discriminatedUnion("documentType", [
+    sendInvoiceRequestSchema,
+    sendCreditNoteRequestSchema,
+    sendSelfBillingInvoiceRequestSchema,
+    sendSelfBillingCreditNoteRequestSchema,
+    sendMessageLevelResponseRequestSchema,
+    sendXmlRequestSchema,
+  ])
+  .openapi({
+    ref: "SendDocumentRequest",
+    title: "Send Document Request",
+    description:
+      "Request body for sending a document. The concrete shape is selected by the `documentType` discriminator.",
+  });
+
 export type SendDocument = z.infer<typeof sendDocumentSchema>;
+export type SendInvoiceRequest = z.infer<typeof sendInvoiceRequestSchema>;
+export type SendCreditNoteRequest = z.infer<typeof sendCreditNoteRequestSchema>;
+export type SendSelfBillingInvoiceRequest = z.infer<
+  typeof sendSelfBillingInvoiceRequestSchema
+>;
+export type SendSelfBillingCreditNoteRequest = z.infer<
+  typeof sendSelfBillingCreditNoteRequestSchema
+>;
+export type SendMessageLevelResponseRequest = z.infer<
+  typeof sendMessageLevelResponseRequestSchema
+>;
+export type SendXmlRequest = z.infer<typeof sendXmlRequestSchema>;
