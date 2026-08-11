@@ -10,8 +10,15 @@ function getProjectRoot(): string {
     let currentDir = import.meta.dir;
     while (currentDir !== path.dirname(currentDir)) {
       const packageJsonPath = path.join(currentDir, "package.json");
+      // A .env file is the usual marker of the root, but it is absent when the
+      // environment is injected by a secret manager, so also accept the
+      // directory that holds the framework package.
       const envPath = path.join(currentDir, ".env");
-      if (existsSync(packageJsonPath) && existsSync(envPath)) {
+      const frameworkPath = path.join(currentDir, "packages", "framework");
+      if (
+        existsSync(packageJsonPath) &&
+        (existsSync(envPath) || existsSync(frameworkPath))
+      ) {
         return currentDir;
       }
       currentDir = path.dirname(currentDir);
@@ -43,9 +50,20 @@ function getProjectRoot(): string {
     }
   }
 
-async function waitForServer(host: string, maxAttempts = 30): Promise<void> {
+/**
+ * Whether the server is ready to be tested against. Defaults to "something
+ * answers on the host", but a suite can pass a check of its own, for example
+ * one that fetches the record its tests need.
+ */
+export type ReadinessCheck = (host: string) => Promise<boolean>;
+
+async function waitForServer(
+  host: string,
+  isReady: ReadinessCheck,
+  maxAttempts = 30
+): Promise<void> {
     for (let i = 0; i < maxAttempts; i++) {
-      if (await checkServerRunning(host)) {
+      if (await isReady(host)) {
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -208,30 +226,31 @@ async function waitForServer(host: string, maxAttempts = 30): Promise<void> {
     }
   }
   
-  export async function ensureServerRunning(host?: string): Promise<void> {
+  export async function ensureServerRunning(
+    host?: string,
+    isReady: ReadinessCheck = checkServerRunning
+  ): Promise<void> {
     const testHost = host || process.env.ETE_UNIT_TEST_HOST;
-  
+
     if (!testHost) {
       return;
     }
-  
-    if (serverReady) {
-      const isRunning = await checkServerRunning(testHost);
-      if (isRunning) {
-        return;
-      }
-      serverReady = false;
+
+    if (serverReady && (await isReady(testHost))) {
+      return;
     }
-  
-    const isRunning = await checkServerRunning(testHost);
-  
-    if (!isRunning) {
+    serverReady = false;
+
+    if (!(await checkServerRunning(testHost))) {
       console.log(`Starting dev server for tests...`);
       await startDevServer();
-      await waitForServer(testHost);
-      console.log(`Dev server is ready at ${testHost}`);
     }
-  
+
+    // Waited for in both cases: a server that is already listening may still be
+    // booting, and its routes are not usable until it finishes.
+    await waitForServer(testHost, isReady);
+    console.log(`Dev server is ready at ${testHost}`);
+
     serverReady = true;
   }
   
