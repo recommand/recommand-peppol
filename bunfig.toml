@@ -1,0 +1,4 @@
+# See the note in the repository root bunfig.toml. This one applies when tests
+# are run from inside the package.
+[test]
+preload = ["./test/setup.ts"]

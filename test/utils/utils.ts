@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import { validateXmlDocument } from "../../data/validation/client";
 import type { DocumentType } from "@peppol/utils/document-types";
+import { SKIP_E2E } from "./skip-e2e";
 
 export async function validateXml(xml: string, testName: string): Promise<void> {
   const validation = await validateXmlDocument(xml);
@@ -19,6 +20,10 @@ export async function sendDocumentViaAPI(
   documentType: DocumentType,
   recipientAddress: string = "0208:0598726857"
 ): Promise<void> {
+  if (SKIP_E2E) {
+    return;
+  }
+
   const host = process.env.ETE_UNIT_TEST_HOST;
   const companyId = process.env.ETE_UNIT_TEST_COMPANY_ID;
   const jwt = process.env.ETE_UNIT_TEST_JWT;
