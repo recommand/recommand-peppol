@@ -6,8 +6,7 @@ import {
 } from "../utils/document-renderer";
 import type { PublicTransmittedDocument } from "../data/transmitted-documents";
 import type { FrenchB2CReport } from "../utils/parsing/b2c-reporting/france";
-import { extractDocumentDetails } from "../data/email/document-details";
-import type { ParsedDocument } from "../utils/document-filename";
+import { getDocumentType } from "../utils/type-repository/document-types";
 import { FRANCE_B2C_REPORT_TEMPLATE } from "../templates/france-b2c-report";
 import { REPORTING_DOCUMENT_TYPES } from "../utils/document-types";
 import {
@@ -32,6 +31,8 @@ function templateDataFor(document: PublicTransmittedDocument) {
   return buildFranceB2CReportTemplateData(document.parsed as FrenchB2CReport, {
     documentId: document.id,
     type: document.type,
+    documentTypeTitle:
+      getDocumentType(document.type)?.translatableTitle ?? "Document",
   });
 }
 
@@ -181,10 +182,8 @@ describe("French B2C report rendering", () => {
   });
 
   it("names no sender or seller for a report, only the filing authority", () => {
-    const details = extractDocumentDetails(
-      salesDocument.parsed as ParsedDocument,
-      salesDocument.type
-    );
+    const details = getDocumentType(salesDocument.type)!.email!
+      .extractDocumentDetails(salesDocument.parsed);
 
     // A report is filed, not exchanged, so there is no counterparty to name.
     expect(details.senderName).toBeUndefined();

@@ -17,22 +17,28 @@ export function creditNoteToUBL(
     senderAddress,
     recipientAddress,
     isDocumentValidationEnforced,
+    profile,
   }: {
     creditNote: CreditNote;
     senderAddress: string;
     recipientAddress: string;
     isDocumentValidationEnforced: boolean;
+    profile?: {
+      customizationId: string;
+      processId: string;
+    };
   }): string {
   const ublCreditNote = prebuildCreditNoteUBL({
     creditNote,
     supplierAddress: senderAddress,
     customerAddress: recipientAddress,
     isDocumentValidationEnforced,
+    profile,
   });
   return builder.build(ublCreditNote);
 }
 
-export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddress, isDocumentValidationEnforced}: {creditNote: CreditNote, supplierAddress: string, customerAddress: string, isDocumentValidationEnforced: boolean}) {
+export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddress, isDocumentValidationEnforced, profile}: {creditNote: CreditNote, supplierAddress: string, customerAddress: string, isDocumentValidationEnforced: boolean, profile?: { customizationId: string, processId: string }}) {
   const { vat, lines, extractedTotals } = calculateDocumentTotals({
     document: creditNote,
     isDocumentValidationEnforced,
@@ -50,8 +56,8 @@ export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddr
       "@_xmlns:ext":
         "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
       "@_xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-      "cbc:CustomizationID": getCustomizationId(CREDIT_NOTE_DOCUMENT_TYPE_INFO),
-      "cbc:ProfileID": CREDIT_NOTE_DOCUMENT_TYPE_INFO.processId,
+      "cbc:CustomizationID": profile?.customizationId ?? getCustomizationId(CREDIT_NOTE_DOCUMENT_TYPE_INFO),
+      "cbc:ProfileID": profile?.processId ?? CREDIT_NOTE_DOCUMENT_TYPE_INFO.processId,
       "cbc:ID": creditNote.creditNoteNumber,
       "cbc:IssueDate": creditNote.issueDate,
       "cbc:CreditNoteTypeCode": "381",

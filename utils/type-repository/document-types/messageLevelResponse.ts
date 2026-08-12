@@ -35,6 +35,7 @@ export const messageLevelResponseDocumentType: DocumentType<
     renderMessageLevelResponse(document, options, {
       documentId: context.documentId,
       type: "messageLevelResponse",
+      documentTypeTitle: messageLevelResponseDocumentType.translatableTitle,
     }),
 
   generateFilename: () => "document",

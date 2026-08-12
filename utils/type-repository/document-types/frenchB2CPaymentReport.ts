@@ -1,7 +1,7 @@
 import { renderFranceB2CReport } from "@peppol/utils/document-renderer";
-import { FRENCH_TAX_ADMINISTRATION_NAME } from "@peppol/utils/document-types";
 import { frenchB2CPaymentsReportSchema } from "@peppol/utils/parsing/b2c-reporting/france";
 import type { DocumentType } from "./types";
+import { FRENCH_TAX_ADMINISTRATION_NAME } from "./constants";
 import { normalize } from "./normalize";
 
 export const frenchB2CPaymentReportDocumentType: DocumentType<
@@ -21,6 +21,7 @@ export const frenchB2CPaymentReportDocumentType: DocumentType<
     renderFranceB2CReport(document, options, {
       documentId: context.documentId,
       type: "frenchB2CPaymentReport",
+      documentTypeTitle: frenchB2CPaymentReportDocumentType.translatableTitle,
     }),
 
   generateFilename: (document) =>

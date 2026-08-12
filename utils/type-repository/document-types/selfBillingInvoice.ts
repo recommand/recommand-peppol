@@ -57,6 +57,7 @@ export const selfBillingInvoiceDocumentType: DocumentType<
     renderBillingDocument(document, options, {
       documentId: context.documentId,
       type: "selfBillingInvoice",
+      documentTypeTitle: selfBillingInvoiceDocumentType.translatableTitle,
     }),
 
   generateFilename: (document) =>

@@ -5,52 +5,10 @@ import {
   getDocumentFilename,
   type ParsedDocument,
 } from "@peppol/utils/document-filename";
+import { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
+import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 
-export function getDocumentTypeLabel(type: DocumentType): string {
-  switch (type) {
-    case "invoice":
-      return "Invoice";
-    case "creditNote":
-      return "Credit Note";
-    case "selfBillingInvoice":
-      return "Self Billing Invoice";
-    case "selfBillingCreditNote":
-      return "Self Billing Credit Note";
-    case "messageLevelResponse":
-      return "Message Level Response";
-    case "frenchInvoicingCdar":
-      return "French Invoicing CDAR";
-    case "frenchB2CSalesReport":
-      return "French B2C Sales Report";
-    case "frenchB2CPaymentReport":
-      return "French B2C Payment Report";
-    default:
-      return "Document";
-  }
-}
-
-export function extractDocumentAttachments(
-  parsedDocument: ParsedDocument | null
-): Attachment[] {
-  const attachments: Attachment[] = [];
-  if (
-    parsedDocument &&
-    "attachments" in parsedDocument &&
-    parsedDocument.attachments
-  ) {
-    for (const attachment of parsedDocument.attachments) {
-      if (attachment.embeddedDocument) {
-        attachments.push({
-          Content: attachment.embeddedDocument,
-          ContentID: null,
-          ContentType: attachment.mimeCode,
-          Name: attachment.filename,
-        });
-      }
-    }
-  }
-  return attachments;
-}
+export { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
 
 export async function sendDocumentEmail(options: {
   type: DocumentType;
@@ -62,36 +20,37 @@ export async function sendDocumentEmail(options: {
   isPlayground?: boolean;
 }) {
   let senderName = "";
+  const documentType = getDocumentType(options.type);
+  const documentTypeTitle = documentType?.translatableTitle ?? "Document";
   const filename = getDocumentFilename(options.type, options.parsedDocument);
   let subject = options.subject;
   let htmlBody = options.htmlBody;
 
   if (!subject) {
-    const documentTypeLabel = getDocumentTypeLabel(options.type);
     if (options.parsedDocument && "invoiceNumber" in options.parsedDocument) {
-      subject = `${documentTypeLabel} ${options.parsedDocument.invoiceNumber}`;
+      subject = `${documentTypeTitle} ${options.parsedDocument.invoiceNumber}`;
       senderName = options.parsedDocument.seller.name;
     } else if (
       options.parsedDocument &&
       "creditNoteNumber" in options.parsedDocument
     ) {
-      subject = `${documentTypeLabel} ${options.parsedDocument.creditNoteNumber}`;
+      subject = `${documentTypeTitle} ${options.parsedDocument.creditNoteNumber}`;
       senderName = options.parsedDocument.seller.name;
     } else {
-      subject = documentTypeLabel;
+      subject = documentTypeTitle;
     }
   }
 
   if (!htmlBody) {
-    const documentTypeLabel = getDocumentTypeLabel(options.type).toLowerCase();
+    const documentTypeTitleLowercase = documentTypeTitle.toLowerCase();
     if (
       options.parsedDocument &&
       "buyer" in options.parsedDocument &&
       options.parsedDocument.buyer?.name
     ) {
-      htmlBody = `Dear ${options.parsedDocument.buyer.name}, you can find your ${documentTypeLabel} attached.`;
+      htmlBody = `Dear ${options.parsedDocument.buyer.name}, you can find your ${documentTypeTitleLowercase} attached.`;
     } else {
-      htmlBody = `Dear, you can find your ${documentTypeLabel} attached.`;
+      htmlBody = `Dear, you can find your ${documentTypeTitleLowercase} attached.`;
     }
   }
 

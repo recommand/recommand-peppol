@@ -193,9 +193,6 @@ export const FRANCE_B2C_PAYMENT_REPORT_DOCUMENT_TYPE_INFO: ReportingDocumentType
     processId: "urn:recommand:reporting:france:b2c"
 };
 
-// Shown as the counterparty of a French B2C report, which is filed rather than sent.
-export const FRENCH_TAX_ADMINISTRATION_NAME = "French tax administration";
-
 export function isReportingDocumentType(type: string): type is ReportingDocumentType {
     return (REPORTING_DOCUMENT_TYPES as readonly string[]).includes(type);
 }

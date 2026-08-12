@@ -8,7 +8,7 @@ import { db } from "@recommand/db";
 import { transmittedDocuments } from "@peppol/db/schema";
 import { UserFacingError } from "@peppol/utils/util";
 import { fetchArratech, getArratechConfig } from "@peppol/data/at/client";
-import { receiveDocument } from "@peppol/data/receive-document";
+import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
 import { extractStandardBusinessDocumentPayload } from "@peppol/utils/sbdh";
 
 const server = new Server();
@@ -153,7 +153,7 @@ server.post(
         body = documentPayload.xml;
       }
 
-      await receiveDocument({
+      await receivingPipeline({
         senderId: payload.senderId,
         receiverId: payload.receiverId,
         docTypeId: payload.docTypeId,

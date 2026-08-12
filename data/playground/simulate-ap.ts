@@ -1,6 +1,6 @@
 import { UserFacingError } from "@peppol/utils/util";
+import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
 import { getCompanyByPeppolId } from "../companies";
-import { receiveDocument } from "../receive-document";
 
 export async function simulateSendAs4(options: {
   senderId: string;
@@ -34,7 +34,7 @@ export async function simulateSendAs4(options: {
     return
   }
 
-  await receiveDocument({
+  await receivingPipeline({
     senderId: options.senderId,
     receiverId: options.receiverId,
     docTypeId: options.docTypeId,

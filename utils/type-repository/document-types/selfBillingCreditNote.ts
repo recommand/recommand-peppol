@@ -56,6 +56,7 @@ export const selfBillingCreditNoteDocumentType: DocumentType<
     renderBillingDocument(document, options, {
       documentId: context.documentId,
       type: "selfBillingCreditNote",
+      documentTypeTitle: selfBillingCreditNoteDocumentType.translatableTitle,
     }),
 
   generateFilename: (document) =>

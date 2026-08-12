@@ -7,7 +7,7 @@ import {
 import type { transferEvents, transmittedDocuments } from "@peppol/db/schema";
 import type { ParsedDocument } from "@peppol/utils/document-filename";
 import type { SupportedDocumentType } from "@peppol/utils/document-types";
-import { getTransmittedDocumentSearchFields } from "@peppol/utils/transmitted-document-search";
+import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type { ValidationResponse } from "@peppol/types/validation";
 
 /**
@@ -83,6 +83,28 @@ export function buildOutgoingDocumentRow(options: {
 }): typeof transmittedDocuments.$inferInsert {
   const { id, teamId, company, document, storage } = options;
   const facts = deliveryFacts(options.delivery);
+  const documentType = getDocumentType(document.type);
+  const counterparties = documentType && document.parsed
+    ? documentType.extractCounterparties(document.parsed)
+    : { senderName: null, receiverName: null };
+  const documentNumber = documentType && document.parsed
+    ? documentType.extractDocumentNumber(document.parsed)
+    : null;
+  const documentSearchableText = documentType && document.parsed
+    ? documentType.extractSearchableText(document.parsed)
+    : "";
+  const searchText = [
+    id,
+    document.senderId,
+    document.receiverId,
+    document.docTypeId,
+    document.processId,
+    document.countryC1,
+    documentSearchableText,
+  ]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" ");
 
   return {
     id,
@@ -111,16 +133,9 @@ export function buildOutgoingDocumentRow(options: {
     type: document.type,
     parsed: document.parsed,
     validation: document.validation,
-    ...getTransmittedDocumentSearchFields({
-      id,
-      senderId: document.senderId,
-      receiverId: document.receiverId,
-      docTypeId: document.docTypeId,
-      processId: document.processId,
-      countryC1: document.countryC1,
-      type: document.type,
-      parsedDocument: document.parsed,
-    }),
+    ...counterparties,
+    documentNumber,
+    searchText,
 
     peppolMessageId: facts.peppolMessageId,
     peppolConversationId: facts.peppolConversationId,

@@ -12,10 +12,7 @@ import type {
 } from "@peppol/utils/parsing/france-cdar/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
-import {
-  isReportingDocumentType,
-  type DocumentType,
-} from "@peppol/utils/document-types";
+import type { DocumentType } from "@peppol/utils/document-types";
 import { FRANCE_B2C_REPORT_TEMPLATE } from "@peppol/templates/france-b2c-report";
 import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
 import { Decimal } from "decimal.js";
@@ -251,29 +248,6 @@ function forcePositiveAmountSign(value: string): string {
   return `+${trimmedValue}`;
 }
 
-function getDocumentTypeLabel(type: PublicTransmittedDocument["type"]): string {
-  switch (type) {
-    case "invoice":
-      return "Invoice";
-    case "creditNote":
-      return "Credit note";
-    case "selfBillingInvoice":
-      return "Self-billing invoice";
-    case "selfBillingCreditNote":
-      return "Self-billing credit note";
-    case "messageLevelResponse":
-      return "Message Level Response";
-    case "frenchInvoicingCdar":
-      return "French Invoicing CDAR";
-    case "frenchB2CSalesReport":
-      return "French B2C sales report";
-    case "frenchB2CPaymentReport":
-      return "French B2C payment report";
-    default:
-      return "Document";
-  }
-}
-
 /**
  * Everything a layout needs beyond the parsed document itself. Every builder below
  * takes one of these rather than a stored row, so callers that hold a parsed
@@ -282,6 +256,7 @@ function getDocumentTypeLabel(type: PublicTransmittedDocument["type"]): string {
 type DocumentRenderContext = {
   documentId: string;
   type: PublicTransmittedDocument["type"];
+  documentTypeTitle: string;
 };
 
 function buildTemplateData(
@@ -445,7 +420,7 @@ function buildTemplateData(
   return {
     documentId: context.documentId,
     documentType: context.type,
-    documentTypeLabel: getDocumentTypeLabel(context.type),
+    documentTypeLabel: context.documentTypeTitle,
     documentNumber,
     issueDate,
     dueDate,
@@ -481,7 +456,7 @@ function buildMessageLevelResponseTemplateData(
   return {
     documentId: context.documentId,
     documentType: context.type,
-    documentTypeLabel: getDocumentTypeLabel(context.type),
+    documentTypeLabel: context.documentTypeTitle,
     responseId: parsed.id,
     issueDate: parsed.issueDate,
     responseCode: parsed.responseCode,
@@ -513,7 +488,7 @@ function buildFranceCdarTemplateData(
   return {
     documentId: context.documentId,
     documentType: context.type,
-    documentTypeLabel: getDocumentTypeLabel(context.type),
+    documentTypeLabel: context.documentTypeTitle,
     responseId: parsed.id,
     issueDate: parsed.issueDate,
     businessProcess: parsed.businessProcess,
@@ -561,7 +536,7 @@ export function buildFranceB2CReportTemplateData(
   return {
     documentId: context.documentId,
     documentType: context.type,
-    documentTypeLabel: getDocumentTypeLabel(context.type),
+    documentTypeLabel: context.documentTypeTitle,
     reference: parsed.reference,
     reportTypeLabel: isSales ? "Daily sales" : "Daily payments received",
     dateLabel: isSales ? "Sales date" : "Payment date",
@@ -688,50 +663,22 @@ async function renderStoredDocument<F extends "html" | "pdf">(
   document: PublicTransmittedDocument,
   options: { format: F; pdfa?: boolean },
 ): Promise<F extends "pdf" ? Buffer : string> {
-  if (!isRenderableDocumentType(document.type)) {
+  const { getDocumentType } = await import(
+    "@peppol/utils/type-repository/document-types"
+  );
+  const documentType = getDocumentType(document.type);
+  if (!documentType) {
     throw new Error(`Document type ${document.type} cannot be rendered`);
   }
-
-  const context: DocumentRenderContext = {
+  if (!document.parsed && documentType.class !== "billing") {
+    const label = documentType.class === "reporting"
+      ? "French B2C report"
+      : documentType.translatableTitle;
+    throw new Error(`${label} document missing parsed data`);
+  }
+  return documentType.render(document.parsed as never, options, {
     documentId: document.id,
-    type: document.type,
-  };
-
-  /** A stored row can be missing its parsed column; a parsed document cannot. */
-  const requireParsed = <T>(label: string): T => {
-    if (!document.parsed) {
-      throw new Error(`${label} document missing parsed data`);
-    }
-    return document.parsed as T;
-  };
-
-  if (document.type === "messageLevelResponse") {
-    return renderMessageLevelResponse(
-      requireParsed<MessageLevelResponse>("Message Level Response"),
-      options,
-      context,
-    );
-  }
-  if (document.type === "frenchInvoicingCdar") {
-    return renderFranceCdar(
-      requireParsed<FranceCdar>("French Invoicing CDAR"),
-      options,
-      context,
-    );
-  }
-  if (isReportingDocumentType(document.type)) {
-    return renderFranceB2CReport(
-      requireParsed<FrenchB2CReport>("French B2C report"),
-      options,
-      context,
-    );
-  }
-
-  return renderBillingDocument(
-    document.parsed as ParsedBillingDocument,
-    options,
-    context,
-  );
+  });
 }
 
 export async function renderDocumentHtml(

@@ -1,10 +1,29 @@
 import type { z } from "zod";
 import type { sendDocumentSchema } from "../../parsing/send-document";
 import type { Company } from "@peppol/data/companies";
-import type { DocumentDetails } from "@peppol/data/email/document-details";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
 
 export type DocumentTypeClass = "billing" | "transactionMessaging" | "reporting";
+
+export type DocumentTypeKey =
+  | "invoice"
+  | "creditNote"
+  | "selfBillingInvoice"
+  | "selfBillingCreditNote"
+  | "messageLevelResponse"
+  | "frenchInvoicingCdar"
+  | "frenchB2CSalesReport"
+  | "frenchB2CPaymentReport";
+
+export type StoredDocumentType = DocumentTypeKey | "invoiceResponse" | "unknown";
+
+export type DocumentDetails = {
+  documentNumber?: string;
+  amount?: string;
+  currency?: string;
+  senderName?: string;
+  receiverName?: string;
+};
 
 export type SendPreprocessContext = {
   company: Company;

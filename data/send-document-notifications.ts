@@ -6,18 +6,18 @@ import {
 import DocumentIncomingNotification from "@peppol/emails/document-incoming-notification";
 import DocumentOutgoingNotification from "@peppol/emails/document-outgoing-notification";
 import { Attachment } from "postmark";
-import { getDocumentTypeLabel } from "@peppol/data/email/send-email";
-import { type ParsedDocument } from "@peppol/utils/document-filename";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
-import type { DocumentType } from "@peppol/utils/document-types";
+import { getDocumentType } from "@peppol/utils/type-repository/document-types";
+import type {
+  AnyDocumentType,
+  ParsedDocumentOf,
+  StoredDocumentType,
+} from "@peppol/utils/type-repository/document-types/types";
 import {
   buildIncomingDocumentNotificationAttachmentParts,
   buildOutgoingDocumentNotificationAttachmentParts,
 } from "@peppol/data/email/document-notification-props";
-import {
-  extractDocumentDetails,
-  UNNAMED_PARTY,
-} from "@peppol/data/email/document-details";
+import { UNNAMED_PARTY } from "@peppol/utils/type-repository/document-types/constants";
 
 function getDocumentUrl(transmittedDocumentId: string) {
   const baseUrl = (process.env.BASE_URL ?? "https://app.recommand.eu").replace(/\/$/, "");
@@ -27,8 +27,8 @@ function getDocumentUrl(transmittedDocumentId: string) {
 export async function sendIncomingDocumentNotifications(options: {
   companyId: string;
   companyName: string;
-  type: DocumentType;
-  parsedDocument: ParsedDocument | null;
+  type: StoredDocumentType;
+  parsedDocument: ParsedDocumentOf<AnyDocumentType> | null;
   xmlDocument: string;
   transmittedDocumentId: string;
   isPlayground?: boolean;
@@ -41,10 +41,15 @@ export async function sendIncomingDocumentNotifications(options: {
       return;
     }
 
+    const documentType = getDocumentType(options.type);
+    if (documentType?.email?.areEmailNotificationsSupported === false) {
+      return;
+    }
     const { documentNumber, amount, currency, senderName, receiverName } =
-      extractDocumentDetails(options.parsedDocument, options.type);
-
-    const documentTypeLabel = getDocumentTypeLabel(options.type);
+      documentType?.email && options.parsedDocument
+        ? documentType.email.extractDocumentDetails(options.parsedDocument)
+        : {};
+    const documentTypeLabel = documentType?.translatableTitle ?? "Document";
     let subject = documentNumber
       ? `New ${documentTypeLabel} Received: ${documentNumber}`
       : `New ${documentTypeLabel} Received - ${options.companyName}`;
@@ -136,8 +141,8 @@ export async function sendIncomingDocumentNotifications(options: {
 export async function sendOutgoingDocumentNotifications(options: {
   companyId: string;
   companyName: string;
-  type: DocumentType;
-  parsedDocument: ParsedDocument | null;
+  type: StoredDocumentType;
+  parsedDocument: ParsedDocumentOf<AnyDocumentType> | null;
   xmlDocument: string | null;
   transmittedDocumentId: string;
   isPlayground?: boolean;
@@ -150,10 +155,15 @@ export async function sendOutgoingDocumentNotifications(options: {
       return;
     }
 
+    const documentType = getDocumentType(options.type);
+    if (documentType?.email?.areEmailNotificationsSupported === false) {
+      return;
+    }
     const { documentNumber, amount, currency, receiverName } =
-      extractDocumentDetails(options.parsedDocument, options.type);
-
-    const documentTypeLabel = getDocumentTypeLabel(options.type);
+      documentType?.email && options.parsedDocument
+        ? documentType.email.extractDocumentDetails(options.parsedDocument)
+        : {};
+    const documentTypeLabel = documentType?.translatableTitle ?? "Document";
     let subject = documentNumber
       ? `${documentTypeLabel} Sent Successfully: ${documentNumber}`
       : `${documentTypeLabel} Sent Successfully - ${options.companyName}`;

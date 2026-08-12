@@ -69,6 +69,7 @@ export const frenchInvoicingCdarDocumentType: DocumentType<
     renderFranceCdar(document, options, {
       documentId: context.documentId,
       type: "frenchInvoicingCdar",
+      documentTypeTitle: frenchInvoicingCdarDocumentType.translatableTitle,
     }),
 
   generateFilename: (document) =>

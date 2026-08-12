@@ -16,22 +16,28 @@ export function invoiceToUBL({
   senderAddress,
   recipientAddress,
   isDocumentValidationEnforced,
+  profile,
 }: {
   invoice: Invoice;
   senderAddress: string;
   recipientAddress: string;
   isDocumentValidationEnforced: boolean;
+  profile?: {
+    customizationId: string;
+    processId: string;
+  };
 }): string {
   const ublInvoice = prebuildInvoiceUBL({
     invoice,
     supplierAddress: senderAddress,
     customerAddress: recipientAddress,
     isDocumentValidationEnforced,
+    profile,
   });
   return builder.build(ublInvoice);
 }
 
-export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, isDocumentValidationEnforced }: { invoice: Invoice, supplierAddress: string, customerAddress: string, isDocumentValidationEnforced: boolean }) {
+export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, isDocumentValidationEnforced, profile }: { invoice: Invoice, supplierAddress: string, customerAddress: string, isDocumentValidationEnforced: boolean, profile?: { customizationId: string, processId: string } }) {
   const { vat, lines, extractedTotals } = calculateDocumentTotals({
     document: invoice,
     isDocumentValidationEnforced,
@@ -49,8 +55,8 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
       "@_xmlns:ext":
         "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
       "@_xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-      "cbc:CustomizationID": getCustomizationId(INVOICE_DOCUMENT_TYPE_INFO),
-      "cbc:ProfileID": INVOICE_DOCUMENT_TYPE_INFO.processId,
+      "cbc:CustomizationID": profile?.customizationId ?? getCustomizationId(INVOICE_DOCUMENT_TYPE_INFO),
+      "cbc:ProfileID": profile?.processId ?? INVOICE_DOCUMENT_TYPE_INFO.processId,
       "cbc:ID": invoice.invoiceNumber,
       "cbc:IssueDate": invoice.issueDate,
       "cbc:DueDate": invoice.dueDate,

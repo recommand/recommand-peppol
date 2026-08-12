@@ -55,6 +55,7 @@ export const invoiceDocumentType: DocumentType<
     renderBillingDocument(document, options, {
       documentId: context.documentId,
       type: "invoice",
+      documentTypeTitle: invoiceDocumentType.translatableTitle,
     }),
 
   generateFilename: (document) => `invoice-${document.invoiceNumber}`,

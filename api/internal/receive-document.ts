@@ -3,7 +3,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { z } from "zod";
 import { requireInternalToken } from "@peppol/utils/auth-middleware";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
-import { receiveDocument } from "@peppol/data/receive-document";
+import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
 import { UserFacingError } from "@peppol/utils/util";
 import { describeRoute } from "hono-openapi";
 
@@ -45,7 +45,7 @@ server.post(
         : new Blob([Buffer.from(jsonBody.body, "base64")], {
           type: jsonBody.contentType,
         });
-      await receiveDocument({...jsonBody, body, useTestNetwork});
+      await receivingPipeline({...jsonBody, body, useTestNetwork});
     } catch (error) {
       console.error("Error receiving document:", error);
       if (error instanceof UserFacingError) {
