@@ -10,10 +10,10 @@
  * See e2e/README.md for configuration.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 // Process management only. The API contract below is asserted purely over
 // HTTP, without importing anything from the package under test.
-import { ensureServerRunning, stopDevServer } from "../utils/dev-server";
+import { ensureServerRunning } from "../utils/dev-server";
 import { SKIP_E2E } from "../utils/skip-e2e";
 import {
   BARE_RECIPIENT,
@@ -346,11 +346,18 @@ let company: any;
 
 // Generous timeouts: the hook may have to boot the dev server, and hooks are
 // subject to the (5 second) test timeout unless one is given explicitly.
+//
+// Nothing here stops the server. Bun runs the preloaded `test/setup.ts` hooks
+// once around the whole run, while these hooks run around this file only, and
+// the order Bun picks up test files is filesystem order. Stopping the server
+// here would kill it halfway through a run that still has files left which
+// talk to the API.
 beforeAll(async () => {
   if (SKIP_E2E) return;
   requireConfig();
-  // Starts a dev server if nothing is listening yet, like the unit test setup,
-  // and waits until the company these tests send from can be looked up.
+  // Waits until the company these tests send from can be looked up. The server
+  // itself was already started by the preloaded setup; this is idempotent and
+  // starts one only if that did not happen.
   await ensureServerRunning(HOST, apiIsAnswering);
   await assertPlaygroundTeam();
 
@@ -359,12 +366,6 @@ beforeAll(async () => {
   expect(response.body.company?.id).toBe(COMPANY_ID);
   company = response.body.company;
 }, 180_000);
-
-afterAll(async () => {
-  if (SKIP_E2E) return;
-  // Only stops the server if this run was the one that started it.
-  await stopDevServer();
-}, 30_000);
 
 e2eDescribe("send document: every parameter combination", () => {
   for (const variant of DOCUMENT_VARIANTS) {

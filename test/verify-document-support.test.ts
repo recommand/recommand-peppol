@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterAll, afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 import {
   DOCUMENT_SCHEME,
   PARTICIPANT_SCHEME,
@@ -78,6 +78,15 @@ function mockServiceMetadataFetch(requestedUrls: string[]): void {
 
 afterEach(() => {
   fetchMock.mockReset();
+});
+
+// `mockReset` only clears the implementation: it leaves a stub in place of the
+// global that returns undefined, for the rest of the process. Bun runs every
+// test file in one process, so without this the files that come after this one
+// — the end-to-end suite among them, which then cannot reach the server at all
+// — are left with a `fetch` that answers nothing.
+afterAll(() => {
+  fetchMock.mockRestore();
 });
 
 describe("verifyDocumentSupport", () => {

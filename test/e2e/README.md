@@ -24,11 +24,17 @@ the same whether or not `ETE_UNIT_TEST_*` happen to be set.
 
 ## Running
 
-If nothing is listening at `ETE_UNIT_TEST_HOST`, a dev server is started and
-stopped again when the run finishes. A server that was already running is
-reused and left running. This works for any `bun test` invocation, because
-`bunfig.toml` preloads `test/setup.ts`, and the suite waits for readiness
-itself as well.
+If nothing is listening at `ETE_UNIT_TEST_HOST` (`http://localhost:3000` when
+it is unset), a dev server is started and stopped again when the run finishes.
+A server that was already running is reused and left running. This works for
+any `bun test` invocation, because `bunfig.toml` preloads `test/setup.ts`, and
+the suite waits for readiness itself as well.
+
+The preloaded setup owns the server: Bun runs its hooks once around the whole
+run, so the server stays up for every file. Nothing in this folder may stop it,
+because these hooks run around this file only and Bun picks up test files in
+filesystem order — stopping it here would kill it under the files that come
+after.
 
 ```bash
 # from the repository root

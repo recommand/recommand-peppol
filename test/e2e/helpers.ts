@@ -8,9 +8,10 @@
  * spelled out here and in the test file.
  */
 
-export const HOST = (
-  process.env.ETE_UNIT_TEST_HOST ?? "http://localhost:3000"
-).replace(/\/+$/, "");
+import { getTestHost } from "../utils/dev-server";
+
+/** The same host the dev server helper starts and waits for. */
+export const HOST = getTestHost();
 export const COMPANY_ID = process.env.ETE_UNIT_TEST_COMPANY_ID ?? "";
 export const TOKEN = process.env.ETE_UNIT_TEST_JWT ?? "";
 
