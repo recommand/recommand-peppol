@@ -6,7 +6,7 @@ import {
 } from "@peppol/data/offload/storage";
 import type { transferEvents, transmittedDocuments } from "@peppol/db/schema";
 import type { ParsedDocument } from "@peppol/utils/document-filename";
-import type { SupportedDocumentType } from "@peppol/utils/document-types";
+import type { ParsedOrUnknownDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type { ValidationResponse } from "@peppol/types/validation";
 
@@ -33,7 +33,7 @@ export type OutgoingDocumentPayload = {
   docTypeId: string;
   processId: string;
   countryC1: string;
-  type: SupportedDocumentType;
+  type: ParsedOrUnknownDocumentType;
   parsed: ParsedDocument | null;
   xml: string | null;
   validation?: ValidationResponse;

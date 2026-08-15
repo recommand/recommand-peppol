@@ -1,19 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import { z } from "zod";
 import {
-  DOCUMENT_XML_HANDLERS,
-  type DocumentXmlHandler,
-} from "../utils/parsing/document-handlers";
+  documentFormats,
+} from "../utils/type-repository/document-formats";
+import type { AnyDocumentFormat } from "../utils/type-repository/document-formats/types";
 import type {
-  ReportingDocumentType,
-  SupportedDocumentType,
-} from "../utils/document-types";
+  ParsedOrUnknownDocumentType,
+  ReportingDocumentTypeKey,
+} from "../utils/type-repository/document-types/types";
 import type { ParsedDocument } from "../utils/document-filename";
-import {
-  FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-  FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-} from "../utils/document-types";
-import { getDocumentFormatByDocTypeId } from "../utils/type-repository/document-formats";
 import { creditNoteSchema, type CreditNote } from "../utils/parsing/creditnote/schemas";
 import { invoiceSchema, type Invoice } from "../utils/parsing/invoice/schemas";
 import {
@@ -45,14 +40,14 @@ const schemasByType = {
   // Reporting types are filed as data and have no XML representation, so they are
   // deliberately outside this roundtrip.
 } satisfies Record<
-  Exclude<SupportedDocumentType, "unknown" | ReportingDocumentType>,
+  Exclude<ParsedOrUnknownDocumentType, "unknown" | ReportingDocumentTypeKey>,
   z.ZodTypeAny
 >;
 
 type SchemaDocumentType = keyof typeof schemasByType;
 type BillingDocument = Invoice | CreditNote | SelfBillingInvoice | SelfBillingCreditNote;
 
-function hasSchemaFor(type: SupportedDocumentType): type is SchemaDocumentType {
+function hasSchemaFor(type: ParsedOrUnknownDocumentType): type is SchemaDocumentType {
   return type in schemasByType;
 }
 
@@ -183,7 +178,7 @@ function normalizeBillingDocument<T extends BillingDocument>(document: T): T {
   return { ...withLines, vat, totals };
 }
 
-function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
+function generatedDocumentFor(type: ParsedOrUnknownDocumentType): ParsedDocument {
   if (!hasSchemaFor(type)) throw new Error(`No schema sample is available for ${type}`);
 
   const schema = schemasByType[type];
@@ -205,8 +200,8 @@ function generatedDocumentFor(type: SupportedDocumentType): ParsedDocument {
   return schema.parse(normalizeBillingDocument(generated as BillingDocument)) as ParsedDocument;
 }
 
-function documentForHandler(
-  handler: DocumentXmlHandler,
+function documentForFormat(
+  format: AnyDocumentFormat,
   document: ParsedDocument
 ): ParsedDocument {
   if (!("lines" in document)) return document;
@@ -214,7 +209,7 @@ function documentForHandler(
     countrySpecific: _countrySpecific,
     ...sharedDocument
   } = document;
-  if (!handler.title.includes("France")) return sharedDocument as ParsedDocument;
+  if (!format.translatableTitle.includes("France")) return sharedDocument as ParsedDocument;
   return {
     ...sharedDocument,
     countrySpecific: {
@@ -235,54 +230,10 @@ function withoutCountrySpecific(document: ParsedDocument): ParsedDocument {
   return sharedDocument as ParsedDocument;
 }
 
-function handlersForType(type: SchemaDocumentType): DocumentXmlHandler[] {
-  const handlers = DOCUMENT_XML_HANDLERS.filter((handler) => handler.type === type);
-  if (type !== "invoice" && type !== "creditNote") {
-    return handlers;
-  }
-
-  const facturXDocTypeId =
-    type === "invoice"
-      ? FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId
-      : FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId;
-  const facturXFormat = getDocumentFormatByDocTypeId(facturXDocTypeId);
-  if (!facturXFormat) {
-    throw new Error("Factur-X format is not registered.");
-  }
-
-  return [
-    ...handlers,
-    {
-      title:
-        type === "invoice"
-          ? "France Factur-X CII Invoice"
-          : "France Factur-X CII Credit Note",
-      type,
-      docTypeId: facturXFormat.docTypeId,
-      processId: facturXFormat.supportedProcessIds[0],
-      matchesDocTypeId: (docTypeId) => docTypeId === facturXFormat.docTypeId,
-      toXml: ({
-        document,
-        senderAddress,
-        recipientAddress,
-        isDocumentValidationEnforced,
-      }) =>
-        facturXFormat.encode(
-          document,
-          facturXFormat.supportedProcessIds[0],
-          {
-            senderAddress,
-            recipientAddress,
-            isDocumentValidationEnforced,
-          },
-        ),
-      fromXml: (xml) =>
-        facturXFormat.decode(
-          xml,
-          facturXFormat.supportedProcessIds[0],
-        ) as ParsedDocument,
-    },
-  ];
+function formatsForType(type: SchemaDocumentType): AnyDocumentFormat[] {
+  return documentFormats.filter((format) =>
+    format.supportedDocumentTypes.some((documentType) => documentType.key === type)
+  );
 }
 
 // Types that must round-trip through both their UBL and CII (D22B) handlers.
@@ -291,61 +242,62 @@ const minimumHandlerCount: Partial<Record<SchemaDocumentType, number>> = {
   creditNote: 4,
 };
 
-function roundTripHandler(handler: DocumentXmlHandler, document: ParsedDocument) {
-  const parsed = handler.fromXml(
-    handler.toXml({
-      document,
+function roundTripFormat(format: AnyDocumentFormat, document: ParsedDocument) {
+  const processId = format.supportedProcessIds[0];
+  const parsed = format.decode(
+    format.encode(document, processId, {
       senderAddress,
       recipientAddress,
       isDocumentValidationEnforced: false,
-    })
+    }),
+    processId,
   );
-  const reparsed = handler.fromXml(
-    handler.toXml({
-      document: parsed,
+  const reparsed = format.decode(
+    format.encode(parsed, processId, {
       senderAddress,
       recipientAddress,
       isDocumentValidationEnforced: false,
-    })
+    }),
+    processId,
   );
 
   return { parsed, reparsed };
 }
 
-describe("document XML handlers schema-driven round-trip", () => {
+describe("document formats schema-driven round-trip", () => {
   for (const type of Object.keys(schemasByType) as SchemaDocumentType[]) {
-    const handlers = handlersForType(type);
+    const formats = formatsForType(type);
 
     describe(type, () => {
-      it(`registers at least ${minimumHandlerCount[type] ?? 1} handler(s)`, () => {
-        expect(handlers.length, `${type} handlers`).toBeGreaterThanOrEqual(
+      it(`registers at least ${minimumHandlerCount[type] ?? 1} format(s)`, () => {
+        expect(formats.length, `${type} formats`).toBeGreaterThanOrEqual(
           minimumHandlerCount[type] ?? 1
         );
       });
 
-      for (const handler of handlers) {
-        it(`round-trips via ${handler.title}`, () => {
-          const document = documentForHandler(handler, generatedDocumentFor(type));
-          const { parsed, reparsed } = roundTripHandler(handler, document);
+      for (const format of formats) {
+        it(`round-trips via ${format.translatableTitle}`, () => {
+          const document = documentForFormat(format, generatedDocumentFor(type));
+          const { parsed, reparsed } = roundTripFormat(format, document);
 
-          expect(parsed, handler.title).toEqual(document);
-          expect(reparsed, handler.title).toEqual(parsed);
+          expect(parsed, format.translatableTitle).toEqual(document);
+          expect(reparsed, format.translatableTitle).toEqual(parsed);
         });
       }
 
-      if (handlers.length > 1) {
-        it("handlers produce equivalent parsed documents", () => {
+      if (formats.length > 1) {
+        it("formats produce equivalent parsed documents", () => {
           const document = generatedDocumentFor(type);
-          const parsedDocuments = handlers.map(
-            (handler) =>
+          const parsedDocuments = formats.map(
+            (format) =>
               withoutCountrySpecific(
-                roundTripHandler(handler, documentForHandler(handler, document)).parsed
+                roundTripFormat(format, documentForFormat(format, document)).parsed
               )
           );
 
           const [firstDocument, ...otherDocuments] = parsedDocuments;
           for (const parsedDocument of otherDocuments) {
-            expect(parsedDocument, `${type} handlers`).toEqual(firstDocument);
+            expect(parsedDocument, `${type} formats`).toEqual(firstDocument);
           }
         });
       }

@@ -6,6 +6,7 @@ import type { DocumentFormat } from "./types";
 
 const customizationId =
   "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0";
+const processId = "urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0";
 
 export const peppolUblSelfbillingCreditnoteFormat: DocumentFormat<
   [typeof selfBillingCreditNoteDocumentType]
@@ -15,14 +16,18 @@ export const peppolUblSelfbillingCreditnoteFormat: DocumentFormat<
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0::2.1",
   supportedDocumentTypes: [selfBillingCreditNoteDocumentType],
-  supportedProcessIds: ["urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0"],
+  supportedProcessIds: [processId],
+  smpRegistration: [
+    { processId, translatableTitle: "Self Billing Credit Note" },
+  ],
 
-  encode: (document, _processId, context) =>
+  encode: (document, processId, context) =>
     selfBillingCreditNoteToUBL({
       selfBillingCreditNote: document,
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
+      profile: { customizationId, processId },
     }),
 
   decode: (raw) =>

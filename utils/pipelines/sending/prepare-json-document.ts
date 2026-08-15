@@ -62,9 +62,16 @@ export async function prepareJsonDocument(options: {
   senderAddress: string;
   recipientAddress: string | null;
   documentId: string;
+  wrapContainer?: boolean;
 }): Promise<PreparedDocument> {
-  const { input, company, senderAddress, recipientAddress, documentId } =
-    options;
+  const {
+    input,
+    company,
+    senderAddress,
+    recipientAddress,
+    documentId,
+    wrapContainer = true,
+  } = options;
   const documentType = getDocumentType(input.documentType);
   if (!documentType) {
     throw new SendingFailure("Invalid document type provided.", 400);
@@ -133,7 +140,7 @@ export async function prepareJsonDocument(options: {
 
   let body: BodyInit = xml;
   let originalPayload: PreparedDocument["originalPayload"] = null;
-  if (format.container) {
+  if (format.container && wrapContainer) {
     const container = await format.container.wrap({
       xmlDocument: xml,
       document: parsed,

@@ -1,21 +1,23 @@
 import type { CreditNote } from "../schemas";
-import { CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
 import { billingDocumentToCII } from "../../cii-d22b/to-xml";
+import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 export function creditNoteToCII({
   creditNote,
   senderAddress,
   recipientAddress,
   isDocumentValidationEnforced,
+  profile,
 }: {
   creditNote: CreditNote;
   senderAddress: string;
   recipientAddress: string;
   isDocumentValidationEnforced: boolean;
+  profile: XmlProfile;
 }): string {
   return billingDocumentToCII({
     document: creditNote,
-    documentTypeInfo: CII_EN16931_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+    profile,
     documentNumber: creditNote.creditNoteNumber,
     typeCode: "381",
     supplierAddress: senderAddress,

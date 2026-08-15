@@ -2,11 +2,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zCurrencies } from "@peppol/utils/currencies";
 import { decimalSchema } from "@peppol/utils/parsing/invoice/schemas";
-import {
-  FRANCE_B2C_PAYMENT_REPORT_DOCUMENT_TYPE_INFO,
-  FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO,
-  type ReportingDocumentTypeInfo,
-} from "@peppol/utils/document-types";
+import type { ReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/types";
 
 const salesCurrencySchema = zCurrencies.default("EUR").openapi({
   example: "EUR",
@@ -152,14 +148,32 @@ export const frenchB2CReportSchema = z
 
 export type FrenchB2CReport = z.infer<typeof frenchB2CReportSchema>;
 
+type FrenchB2CReportDocumentProfile = {
+  type: ReportingDocumentTypeKey;
+  docTypeId: string;
+  processId: string;
+};
+
+const salesReportProfile: FrenchB2CReportDocumentProfile = {
+  type: "frenchB2CSalesReport",
+  docTypeId: "urn:recommand:reporting:france:b2c:sales:1.0",
+  processId: "urn:recommand:reporting:france:b2c",
+};
+
+const paymentReportProfile: FrenchB2CReportDocumentProfile = {
+  type: "frenchB2CPaymentReport",
+  docTypeId: "urn:recommand:reporting:france:b2c:payments:1.0",
+  processId: "urn:recommand:reporting:france:b2c",
+};
+
 /**
  * The document type a report is filed as. Sales and payment reports are distinct
  * filings, so each is recorded under its own document type.
  */
-export function getFrenchB2CReportDocumentTypeInfo(
+export function getFrenchB2CReportDocumentProfile(
   reportType: FrenchB2CReport["type"]
-): ReportingDocumentTypeInfo {
+): FrenchB2CReportDocumentProfile {
   return reportType === "sales"
-    ? FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO
-    : FRANCE_B2C_PAYMENT_REPORT_DOCUMENT_TYPE_INFO;
+    ? salesReportProfile
+    : paymentReportProfile;
 }

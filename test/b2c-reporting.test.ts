@@ -5,14 +5,12 @@ import {
 } from "../data/at/b2c-reporting";
 import {
   frenchB2CReportSchema,
-  getFrenchB2CReportDocumentTypeInfo,
+  getFrenchB2CReportDocumentProfile,
 } from "../utils/parsing/b2c-reporting/france";
 import { sendDocumentSchema } from "../utils/parsing/send-document";
-import {
-  DOCUMENT_TYPE_PRESETS,
-  REPORTING_DOCUMENT_TYPES,
-} from "../utils/document-types";
-import { getDocumentXmlHandlersByDocTypeId } from "../utils/parsing/document-handlers";
+import { REPORTING_DOCUMENT_TYPE_KEYS } from "../utils/type-repository/document-types/keys";
+import { documentFormats } from "../utils/type-repository/document-formats";
+import { receivingCapabilities } from "../utils/type-repository/receiving-capabilities";
 
 const declarant = {
   siren: "123456789",
@@ -155,7 +153,7 @@ describe("French B2C reporting", () => {
   it("is not accepted by the send-document endpoint", () => {
     // Reports have their own endpoint; /send only takes documents that are
     // transmitted to a recipient.
-    for (const documentType of REPORTING_DOCUMENT_TYPES) {
+    for (const documentType of REPORTING_DOCUMENT_TYPE_KEYS) {
       expect(
         sendDocumentSchema.safeParse({
           recipient: null,
@@ -167,8 +165,8 @@ describe("French B2C reporting", () => {
   });
 
   it("files sales and payment reports as distinct document types", () => {
-    const sales = getFrenchB2CReportDocumentTypeInfo("sales");
-    const payments = getFrenchB2CReportDocumentTypeInfo("payments");
+    const sales = getFrenchB2CReportDocumentProfile("sales");
+    const payments = getFrenchB2CReportDocumentProfile("payments");
 
     expect(sales.type).toBe("frenchB2CSalesReport");
     expect(payments.type).toBe("frenchB2CPaymentReport");
@@ -178,17 +176,23 @@ describe("French B2C reporting", () => {
   it("keeps the report document types out of the Peppol sending vocabularies", () => {
     // A report has no XML representation and must never be advertised as an SMP
     // receiving capability, so it belongs to neither registry.
-    for (const reportingType of REPORTING_DOCUMENT_TYPES) {
+    for (const reportingType of REPORTING_DOCUMENT_TYPE_KEYS) {
       expect(
-        DOCUMENT_TYPE_PRESETS.some((preset) => preset.type === reportingType)
+        documentFormats.some((format) =>
+          format.supportedDocumentTypes.some(
+            (documentType) => documentType.key === reportingType,
+          ),
+        ),
       ).toBe(false);
     }
     for (const reportType of ["sales", "payments"] as const) {
       expect(
-        getDocumentXmlHandlersByDocTypeId(
-          getFrenchB2CReportDocumentTypeInfo(reportType).docTypeId
-        )
-      ).toHaveLength(0);
+        receivingCapabilities.some(
+          (capability) =>
+            capability.docTypeId ===
+            getFrenchB2CReportDocumentProfile(reportType).docTypeId,
+        ),
+      ).toBe(false);
     }
   });
 

@@ -1,6 +1,6 @@
 import { sendEmail } from "@core/lib/email";
 import { Attachment } from "postmark";
-import type { DocumentType } from "@peppol/utils/document-types";
+import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import {
   getDocumentFilename,
   type ParsedDocument,
@@ -11,7 +11,7 @@ import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 export { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
 
 export async function sendDocumentEmail(options: {
-  type: DocumentType;
+  type: StoredDocumentType;
   parsedDocument: ParsedDocument | null;
   xmlDocument: string | null;
   to: string;

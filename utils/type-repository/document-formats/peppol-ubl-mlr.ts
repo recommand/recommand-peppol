@@ -5,6 +5,7 @@ import { ublCustomizationId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
 
 const customizationId = "urn:fdc:peppol.eu:poacc:trns:mlr:3";
+const processId = "urn:fdc:peppol.eu:poacc:bis:mlr:3";
 
 export const peppolUblMlrFormat: DocumentFormat<
   [typeof messageLevelResponseDocumentType]
@@ -14,13 +15,17 @@ export const peppolUblMlrFormat: DocumentFormat<
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2::ApplicationResponse##urn:fdc:peppol.eu:poacc:trns:mlr:3::2.1",
   supportedDocumentTypes: [messageLevelResponseDocumentType],
-  supportedProcessIds: ["urn:fdc:peppol.eu:poacc:bis:mlr:3"],
+  supportedProcessIds: [processId],
+  smpRegistration: [
+    { processId, translatableTitle: "Message Level Response" },
+  ],
 
-  encode: (document, _processId, context) =>
+  encode: (document, processId, context) =>
     messageLevelResponseToXML({
       messageLevelResponse: document,
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
+      profile: { customizationId, processId },
     }),
 
   decode: (raw) =>

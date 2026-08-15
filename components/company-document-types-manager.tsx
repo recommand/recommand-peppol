@@ -10,8 +10,8 @@ import { Plus, Edit, Trash2, X, Check } from "lucide-react";
 import { rc } from "@recommand/lib/client";
 import type { CompanyDocumentTypes } from "@peppol/api/companies/document-types";
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
+import type { ReceivingCapability } from "@peppol/utils/type-repository/receiving-capabilities/types";
 import { stringifyActionFailure } from "@recommand/lib/utils";
-import { DOCUMENT_TYPE_PRESETS } from "@peppol/utils/document-types";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<CompanyDocumentTypes>("peppol");
@@ -29,6 +29,7 @@ type DocumentTypeFormData = {
 export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocumentTypesManagerProps) {
     const { t, language } = useTranslation();
     const [documentTypes, setDocumentTypes] = useState<CompanyDocumentType[]>([]);
+    const [receivingCapabilities, setReceivingCapabilities] = useState<readonly ReceivingCapability[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +59,7 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                 createdAt: new Date(dt.createdAt),
                 updatedAt: new Date(dt.updatedAt),
             })));
+            setReceivingCapabilities(json.receivingCapabilities || []);
         } catch (error) {
             console.error("Error fetching document types:", error);
             toast.error(t`Failed to load company document types`);
@@ -239,7 +241,7 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                         <div className="flex gap-2 mt-4 justify-between">
                             <div className="flex gap-2 justify-end">
                                 <Select onValueChange={(value) => {
-                                    const selectedPreset = DOCUMENT_TYPE_PRESETS.find(preset => preset.title === value);
+                                    const selectedPreset = receivingCapabilities.find(preset => preset.translatableTitle === value);
                                     if (selectedPreset) {
                                         setFormData({
                                             docTypeId: selectedPreset.docTypeId,
@@ -251,9 +253,9 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                                         <SelectValue placeholder={t`Select a preset...`} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {DOCUMENT_TYPE_PRESETS.map((preset) => (
-                                            <SelectItem key={preset.title} value={preset.title}>
-                                                {t(preset.title)}
+                                        {receivingCapabilities.map((preset) => (
+                                            <SelectItem key={`${preset.docTypeId}:${preset.processId}`} value={preset.translatableTitle}>
+                                                {t(preset.translatableTitle)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -282,7 +284,7 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                         </div>
                     ) : (
                         documentTypes.map((documentType) => {
-                            const matchingPreset = DOCUMENT_TYPE_PRESETS.find(preset => preset.docTypeId === documentType.docTypeId && preset.processId === documentType.processId);
+                            const matchingPreset = receivingCapabilities.find(preset => preset.docTypeId === documentType.docTypeId && preset.processId === documentType.processId);
                             return (
                                 <div key={documentType.id} className="flex items-center justify-between p-3 border rounded-lg gap-4">
                                     {editingId === documentType.id ? (
@@ -325,7 +327,7 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                                         // Display
                                         <div className="flex-1">
                                             <div className="font-medium text-sm break-all">
-                                                {matchingPreset ? t(matchingPreset.title) : documentType.docTypeId}
+                                                {matchingPreset ? t(matchingPreset.translatableTitle) : documentType.docTypeId}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
                                                 {t`Updated: ${new Date(documentType.updatedAt).toLocaleDateString(language)}`}

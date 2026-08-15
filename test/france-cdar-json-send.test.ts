@@ -1,9 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
-  FRANCE_CDAR_DOCUMENT_TYPE_INFO,
   FRANCE_NON_REGULATED_PROCESS_ID,
+  FRANCE_REGULATED_PROCESS_ID,
   getFranceCdarProcessId,
-} from "../utils/document-types";
+} from "../utils/type-repository/document-formats/france-process";
+import { franceCdarFormat } from "../utils/type-repository/document-formats/france-cdar";
+import { detectDocumentFormat } from "../utils/type-repository/document-formats";
 import { franceCdarToXML } from "../utils/parsing/france-cdar/to-xml";
 import { parseFranceCdarFromXML } from "../utils/parsing/france-cdar/from-xml";
 import {
@@ -16,7 +18,6 @@ import {
   getFranceCdarPhaseForStatus,
   sendFranceCdarSchema,
 } from "../utils/parsing/france-cdar/schemas";
-import { detectDoctypeId } from "../utils/parsing/parse-document";
 import { sendDocumentSchema } from "../utils/parsing/send-document";
 import { parsePeppolAddress } from "../utils/parsing/peppol-address";
 
@@ -557,15 +558,15 @@ describe("France CDAR JSON sending", () => {
       "urn:example:generic:cdar"
     );
 
-    expect(detectDoctypeId(frenchXml)).toBe(
-      FRANCE_CDAR_DOCUMENT_TYPE_INFO.docTypeId
+    expect(detectDocumentFormat(frenchXml)?.docTypeId).toBe(
+      franceCdarFormat.docTypeId
     );
-    expect(detectDoctypeId(genericXml)).toBeNull();
+    expect(detectDocumentFormat(genericXml)).toBeUndefined();
   });
 
   it("selects the Peppol process from the business-process classification", () => {
     expect(getFranceCdarProcessId("REGULATED")).toBe(
-      FRANCE_CDAR_DOCUMENT_TYPE_INFO.processId
+      FRANCE_REGULATED_PROCESS_ID
     );
     expect(getFranceCdarProcessId("NON_REGULATED")).toBe(
       FRANCE_NON_REGULATED_PROCESS_ID
@@ -576,6 +577,26 @@ describe("France CDAR JSON sending", () => {
     expect(getFranceCdarProcessId("B2CINT")).toBe(
       FRANCE_NON_REGULATED_PROCESS_ID
     );
+  });
+
+  it("rejects a transport process that conflicts with the CDAR", () => {
+    const document = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-001",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "23",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme:
+        parsePeppolAddress(request.recipient).schemeId,
+    });
+
+    expect(() =>
+      franceCdarFormat.encode(document, FRANCE_NON_REGULATED_PROCESS_ID, {
+        senderAddress: "0225:303265045",
+        recipientAddress: request.recipient,
+        isDocumentValidationEnforced: true,
+      }),
+    ).toThrow("does not match business process 'REGULATED'");
   });
 
   it("validates the individual status-code and reason-code vocabularies", () => {

@@ -1,26 +1,23 @@
-import {
-  CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-  type DocumentTypeInfo,
-} from "@peppol/utils/document-types";
 import { frenchRegulatedBillingDocumentToCII } from "../../cii-d22b/france-regulated/to-xml";
 import type { CreditNote } from "../schemas";
+import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 export function frenchRegulatedCreditNoteToCII({
   creditNote,
   senderAddress,
   recipientAddress,
   isDocumentValidationEnforced,
-  documentTypeInfo = CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
+  profile,
 }: {
   creditNote: CreditNote;
   senderAddress: string;
   recipientAddress: string;
   isDocumentValidationEnforced: boolean;
-  documentTypeInfo?: DocumentTypeInfo;
+  profile: XmlProfile;
 }): string {
   return frenchRegulatedBillingDocumentToCII({
     document: creditNote,
-    documentTypeInfo,
+    profile,
     documentNumber: creditNote.creditNoteNumber,
     typeCode: "381",
     supplierAddress: senderAddress,

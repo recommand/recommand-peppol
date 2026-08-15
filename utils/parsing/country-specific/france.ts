@@ -1,16 +1,12 @@
 import { z } from "zod";
 import "zod-openapi/extend";
 import {
-  FRANCE_NON_REGULATED_PROCESS_ID,
-  FRANCE_REGULATED_PROCESS_ID,
   getFranceBillingProcessId,
-} from "@peppol/utils/document-types";
+  isFranceBillingProcessId,
+} from "@peppol/utils/type-repository/document-formats/france-process";
 import type { CountrySpecificProcessResolver } from "./process";
 
-export function isFranceBillingProcessId(processId: string): boolean {
-  return processId === FRANCE_REGULATED_PROCESS_ID
-    || processId === FRANCE_NON_REGULATED_PROCESS_ID;
-}
+export { isFranceBillingProcessId } from "@peppol/utils/type-repository/document-formats/france-process";
 
 const frenchBusinessProcessDescription = `Determines which French Peppol process the document is sent over. Defaults to \`REGULATED\`.
 

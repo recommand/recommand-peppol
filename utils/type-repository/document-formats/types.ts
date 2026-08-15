@@ -44,6 +44,10 @@ export type DocumentFormat<DocumentTypes extends readonly AnyDocumentType[]> = {
   docTypeId: string;
   supportedDocumentTypes: DocumentTypes;
   supportedProcessIds: string[];
+  smpRegistration?: {
+    processId: string;
+    translatableTitle: string;
+  }[];
   resolveProcessId?: (
     document: ParsedDocumentOf<DocumentTypes[number]>
   ) => string;

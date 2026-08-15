@@ -57,6 +57,10 @@ const sampleXmlDocument = invoiceToCII({
   senderAddress: "0225:133512194",
   recipientAddress: "0225:133512194",
   isDocumentValidationEnforced: false,
+  profile: {
+    customizationId: "urn:cen.eu:en16931:2017",
+    processId: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+  },
 });
 
 const samplePdf = Buffer.from(

@@ -54,7 +54,7 @@ import type { ValidationResponse } from "@peppol/types/validation";
 import { CsvAttachmentTable } from "@peppol/components/csv-attachment-table";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
-import { isReportingDocumentType } from "@peppol/utils/document-types";
+import { isReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/keys";
 import { useTranslation } from "@core/hooks/use-translation";
 import { getDocumentTypeLabel } from "@peppol/lib/client/document-type-labels";
 
@@ -534,7 +534,7 @@ export default function TransmittedDocumentDetailPage() {
                 sentOverPeppol={doc.sentOverPeppol}
                 sentOverEmail={doc.sentOverEmail}
                 emailRecipients={doc.emailRecipients || undefined}
-                isReporting={isReportingDocumentType(doc.type)}
+                isReporting={isReportingDocumentTypeKey(doc.type)}
               />
               {doc.labels &&
                 doc.labels.map((label) => (

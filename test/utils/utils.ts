@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import { validateXmlDocument } from "../../data/validation/client";
-import type { DocumentType } from "@peppol/utils/document-types";
+import type { DocumentTypeKey } from "@peppol/utils/type-repository/document-types/types";
 import { SKIP_E2E } from "./skip-e2e";
 
 export async function validateXml(xml: string, testName: string): Promise<void> {
@@ -17,7 +17,7 @@ export async function validateXml(xml: string, testName: string): Promise<void> 
 
 export async function sendDocumentViaAPI(
   document: unknown,
-  documentType: DocumentType,
+  documentType: DocumentTypeKey,
   recipientAddress: string = "0208:0598726857"
 ): Promise<void> {
   if (SKIP_E2E) {
@@ -59,4 +59,3 @@ export async function sendDocumentViaAPI(
   expect(responseData.sentOverPeppol).toBe(true);
   expect(responseData.sentOverEmail).toBe(false);
 }
-

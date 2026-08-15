@@ -41,9 +41,9 @@ import { Link } from "react-router-dom";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { ExportDocumentsDialog } from "@peppol/components/export-documents-dialog";
 import {
-  isReportingDocumentType,
-  type SupportedDocumentType,
-} from "@peppol/utils/document-types";
+  isReportingDocumentTypeKey,
+  type ParsedOrUnknownDocumentType,
+} from "@peppol/utils/type-repository/document-types/keys";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
@@ -161,7 +161,7 @@ export default function Page() {
           labelId: filteredLabelIds.length > 0 ? filteredLabelIds : undefined,
           direction: ((filteredDirectionValues.length === 0 || filteredDirectionValues.length > 1) ? undefined : filteredDirectionValues[0]) as "incoming" | "outgoing", // When no or all options are selected, don't filter on direction
           search: globalFilter || undefined, // Add the global search term to the query
-          type: ((filteredTypeValues.length === 0 || filteredTypeValues.length > 1) ? undefined : filteredTypeValues[0]) as SupportedDocumentType, // When no or all options are selected, don't filter on type
+          type: ((filteredTypeValues.length === 0 || filteredTypeValues.length > 1) ? undefined : filteredTypeValues[0]) as ParsedOrUnknownDocumentType, // When no or all options are selected, don't filter on type
           isUnread: ((filteredIsUnreadValues.length === 0 || filteredIsUnreadValues.length > 1) ? undefined : filteredIsUnreadValues[0]) as "true" | "false" | undefined,
           excludeAttachments: true,
         },
@@ -866,7 +866,7 @@ export default function Page() {
         const sentOverPeppol = document.sentOverPeppol;
         const sentOverEmail = document.sentOverEmail;
         const emailRecipients = document.emailRecipients;
-        const isReporting = isReportingDocumentType(documentType);
+        const isReporting = isReportingDocumentTypeKey(documentType);
 
         // Check if document type is recognized and has parsed data
         const isRecognizedType = ["invoice", "creditNote", "selfBillingInvoice", "selfBillingCreditNote"].includes(documentType);

@@ -9,6 +9,7 @@ import { ciiGuidelineId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
 
 const guidelineId = "urn:cen.eu:en16931:2017";
+const processId = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 
 export const ciiD22bEn16931Format: DocumentFormat<
   [typeof invoiceDocumentType, typeof creditNoteDocumentType]
@@ -18,21 +19,29 @@ export const ciiD22bEn16931Format: DocumentFormat<
 
   docTypeId: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017::D22B",
   supportedDocumentTypes: [invoiceDocumentType, creditNoteDocumentType],
-  supportedProcessIds: ["urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"],
+  supportedProcessIds: [processId],
+  smpRegistration: [
+    {
+      processId,
+      translatableTitle: "EN 16931 CII Invoice + Credit Note D22B",
+    },
+  ],
 
-  encode: (document, _processId, context) =>
+  encode: (document, processId, context) =>
     "creditNoteNumber" in document
       ? creditNoteToCII({
           creditNote: document,
           senderAddress: context.senderAddress,
           recipientAddress: context.recipientAddress,
           isDocumentValidationEnforced: context.isDocumentValidationEnforced,
+          profile: { customizationId: guidelineId, processId },
         })
       : invoiceToCII({
           invoice: document,
           senderAddress: context.senderAddress,
           recipientAddress: context.recipientAddress,
           isDocumentValidationEnforced: context.isDocumentValidationEnforced,
+          profile: { customizationId: guidelineId, processId },
         }),
 
   decode: (raw) => {

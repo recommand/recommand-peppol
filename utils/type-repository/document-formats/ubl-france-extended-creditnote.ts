@@ -1,9 +1,9 @@
-import type { DocumentTypeInfo } from "@peppol/utils/document-types";
 import { frenchRegulatedCreditNoteToUBL } from "@peppol/utils/parsing/creditnote/ubl-france-regulated/to-xml";
 import { parseFrenchRegulatedCreditNoteFromUBL } from "@peppol/utils/parsing/creditnote/ubl-france-regulated/from-xml";
 import { creditNoteDocumentType } from "../document-types/creditNote";
 import { ublCustomizationId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
+import { assertFranceBillingProcessId } from "./france-process";
 
 const customizationId =
   "urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0";
@@ -12,13 +12,7 @@ const docTypeId =
   "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0::2.1";
 
 const regulatedProcessId = "urn:peppol:france:billing:regulated";
-
-const serializerDocumentTypeInfo: DocumentTypeInfo = {
-  type: "creditNote",
-  title: "France UBL Credit Note Extended",
-  docTypeId,
-  processId: regulatedProcessId,
-};
+const nonRegulatedProcessId = "urn:peppol:france:billing:non-regulated";
 
 export const ublFranceExtendedCreditnoteFormat: DocumentFormat<
   [typeof creditNoteDocumentType]
@@ -28,16 +22,32 @@ export const ublFranceExtendedCreditnoteFormat: DocumentFormat<
 
   docTypeId,
   supportedDocumentTypes: [creditNoteDocumentType],
-  supportedProcessIds: [regulatedProcessId, "urn:peppol:france:billing:non-regulated"],
+  supportedProcessIds: [regulatedProcessId, nonRegulatedProcessId],
+  smpRegistration: [
+    {
+      processId: regulatedProcessId,
+      translatableTitle: "France UBL Credit Note Extended",
+    },
+    {
+      processId: nonRegulatedProcessId,
+      translatableTitle:
+        "France UBL Credit Note Extended (Non-Regulated)",
+    },
+  ],
 
-  encode: (document, _processId, context) =>
-    frenchRegulatedCreditNoteToUBL({
+  encode: (document, processId, context) => {
+    assertFranceBillingProcessId(
+      processId,
+      document.countrySpecific?.businessProcess,
+    );
+    return frenchRegulatedCreditNoteToUBL({
       creditNote: document,
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-      documentTypeInfo: serializerDocumentTypeInfo,
-    }),
+      profile: { customizationId, processId },
+    });
+  },
 
   decode: (raw) =>
     parseFrenchRegulatedCreditNoteFromUBL(typeof raw === "string" ? raw : raw.toString("utf8")),

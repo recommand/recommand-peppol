@@ -6,6 +6,7 @@ import type { DocumentFormat } from "./types";
 
 const customizationId =
   "urn:cen.eu:en16931:2017#compliant#urn:fdc:nen.nl:nlcius:v1.0";
+const processId = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 
 export const siUblInvoiceFormat: DocumentFormat<
   [typeof invoiceDocumentType]
@@ -14,17 +15,17 @@ export const siUblInvoiceFormat: DocumentFormat<
   translatableTitle: "SI-UBL 2.0 Invoice",
   docTypeId: `urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##${customizationId}::2.1`,
   supportedDocumentTypes: [invoiceDocumentType],
-  supportedProcessIds: ["urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"],
+  supportedProcessIds: [processId],
+  smpRegistration: [
+    { processId, translatableTitle: "SI-UBL 2.0 Invoice" },
+  ],
   encode: (document, processId, context) =>
     invoiceToUBL({
       invoice: document,
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-      profile: {
-        customizationId,
-        processId,
-      },
+      profile: { customizationId, processId },
     }),
   decode: (raw) =>
     parseInvoiceFromXML(

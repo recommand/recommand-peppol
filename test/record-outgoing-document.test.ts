@@ -6,9 +6,11 @@ import {
   type OutgoingDocumentPayload,
 } from "../data/outgoing-document-row";
 import type { Company } from "../data/companies";
-import { FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO } from "../utils/document-types";
-import { INVOICE_DOCUMENT_TYPE_INFO } from "../utils/document-types";
-import { frenchB2CReportSchema } from "../utils/parsing/b2c-reporting/france";
+import {
+  frenchB2CReportSchema,
+  getFrenchB2CReportDocumentProfile,
+} from "../utils/parsing/b2c-reporting/france";
+import { peppolUblBis3InvoiceFormat } from "../utils/type-repository/document-formats/peppol-ubl-bis3-invoice";
 
 const company = {
   id: "cmp_1",
@@ -37,12 +39,13 @@ const report = frenchB2CReportSchema.parse({
     { percentage: "20.00", taxableAmount: "10000.00", taxAmount: "2000.00" },
   ],
 });
+const reportProfile = getFrenchB2CReportDocumentProfile("sales");
 
 const reportingDocument: OutgoingDocumentPayload = {
   senderId: "0009:123456789",
   receiverId: null,
-  docTypeId: FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO.docTypeId,
-  processId: FRANCE_B2C_SALES_REPORT_DOCUMENT_TYPE_INFO.processId,
+  docTypeId: reportProfile.docTypeId,
+  processId: reportProfile.processId,
   countryC1: "FR",
   type: "frenchB2CSalesReport",
   parsed: report,
@@ -52,8 +55,8 @@ const reportingDocument: OutgoingDocumentPayload = {
 const peppolDocument: OutgoingDocumentPayload = {
   senderId: "0009:123456789",
   receiverId: "0208:987654321",
-  docTypeId: INVOICE_DOCUMENT_TYPE_INFO.docTypeId,
-  processId: INVOICE_DOCUMENT_TYPE_INFO.processId,
+  docTypeId: peppolUblBis3InvoiceFormat.docTypeId,
+  processId: peppolUblBis3InvoiceFormat.supportedProcessIds[0],
   countryC1: "FR",
   type: "invoice",
   parsed: null,

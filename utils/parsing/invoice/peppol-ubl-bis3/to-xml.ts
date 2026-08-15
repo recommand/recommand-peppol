@@ -3,7 +3,7 @@ import type { Invoice } from "../schemas";
 import { calculateDocumentTotals } from "../calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
-import { getCustomizationId, INVOICE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
+import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -22,10 +22,7 @@ export function invoiceToUBL({
   senderAddress: string;
   recipientAddress: string;
   isDocumentValidationEnforced: boolean;
-  profile?: {
-    customizationId: string;
-    processId: string;
-  };
+  profile: XmlProfile;
 }): string {
   const ublInvoice = prebuildInvoiceUBL({
     invoice,
@@ -37,7 +34,19 @@ export function invoiceToUBL({
   return builder.build(ublInvoice);
 }
 
-export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, isDocumentValidationEnforced, profile }: { invoice: Invoice, supplierAddress: string, customerAddress: string, isDocumentValidationEnforced: boolean, profile?: { customizationId: string, processId: string } }) {
+export function prebuildInvoiceUBL({
+  invoice,
+  supplierAddress,
+  customerAddress,
+  isDocumentValidationEnforced,
+  profile,
+}: {
+  invoice: Invoice;
+  supplierAddress: string;
+  customerAddress: string;
+  isDocumentValidationEnforced: boolean;
+  profile: XmlProfile;
+}) {
   const { vat, lines, extractedTotals } = calculateDocumentTotals({
     document: invoice,
     isDocumentValidationEnforced,
@@ -55,8 +64,8 @@ export function prebuildInvoiceUBL({ invoice, supplierAddress, customerAddress, 
       "@_xmlns:ext":
         "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
       "@_xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-      "cbc:CustomizationID": profile?.customizationId ?? getCustomizationId(INVOICE_DOCUMENT_TYPE_INFO),
-      "cbc:ProfileID": profile?.processId ?? INVOICE_DOCUMENT_TYPE_INFO.processId,
+      "cbc:CustomizationID": profile.customizationId,
+      "cbc:ProfileID": profile.processId,
       "cbc:ID": invoice.invoiceNumber,
       "cbc:IssueDate": invoice.issueDate,
       "cbc:DueDate": invoice.dueDate,

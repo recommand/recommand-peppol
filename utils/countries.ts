@@ -1,20 +1,10 @@
 import {
-    INVOICE_DOCUMENT_TYPE_INFO,
-    CREDIT_NOTE_DOCUMENT_TYPE_INFO,
-    FRANCE_UBL_INVOICE_DOCUMENT_TYPE_INFO,
-    FRANCE_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
-    SI_UBL_INVOICE_DOCUMENT_TYPE_INFO,
-    SI_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
-    FRANCE_CDAR_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    type DocumentTypeInfo,
-} from "./document-types";
+    FRANCE_REGULATED_PROCESS_ID,
+} from "./type-repository/document-formats/france-process";
+import {
+    getReceivingCapability,
+} from "./type-repository/receiving-capabilities";
+import type { ReceivingCapability } from "./type-repository/receiving-capabilities/types";
 
 export type CountrySupportLevel = "supported" | "partial" | "unsupported";
 
@@ -25,25 +15,28 @@ export type CountryInfo = {
     supportLevel: CountrySupportLevel;
     defaultVatScheme?: string | null;
     defaultEnterpriseNumberScheme?: string | null;
-    defaultDocumentTypes: DocumentTypeInfo[];
+    defaultDocumentTypes: ReceivingCapability[];
 }
 
-const DEFAULT_DOCUMENT_TYPES: DocumentTypeInfo[] = [
-    INVOICE_DOCUMENT_TYPE_INFO,
-    CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+const PEPPOL_BILLING_PROCESS_ID =
+    "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
+
+const DEFAULT_DOCUMENT_TYPES: ReceivingCapability[] = [
+    getReceivingCapability("peppol-ubl-bis3-invoice", PEPPOL_BILLING_PROCESS_ID),
+    getReceivingCapability("peppol-ubl-bis3-creditnote", PEPPOL_BILLING_PROCESS_ID),
 ];
 
-const FRANCE_DEFAULT_DOCUMENT_TYPES: DocumentTypeInfo[] = [
-    FRANCE_UBL_INVOICE_DOCUMENT_TYPE_INFO,
-    FRANCE_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_CREDIT_NOTE_CIUS_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-    UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-    FRANCE_CDAR_DOCUMENT_TYPE_INFO,
+const FRANCE_DEFAULT_DOCUMENT_TYPES: ReceivingCapability[] = [
+    getReceivingCapability("peppol-ubl-bis3-invoice", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("peppol-ubl-bis3-creditnote", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("ubl-france-cius-invoice", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("ubl-france-cius-creditnote", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("ubl-france-extended-invoice", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("ubl-france-extended-creditnote", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("cii-d22b-france-cius", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("cii-d22b-france-extended", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("facturx-france", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("france-cdar", FRANCE_REGULATED_PROCESS_ID),
 ];
 
 export const COUNTRIES: CountryInfo[] = ([
@@ -195,8 +188,8 @@ export const COUNTRIES: CountryInfo[] = ([
         defaultEnterpriseNumberScheme: "0106",
         defaultDocumentTypes: [
             ...DEFAULT_DOCUMENT_TYPES,
-            SI_UBL_INVOICE_DOCUMENT_TYPE_INFO,
-            SI_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+            getReceivingCapability("si-ubl-invoice", PEPPOL_BILLING_PROCESS_ID),
+            getReceivingCapability("si-ubl-creditnote", PEPPOL_BILLING_PROCESS_ID),
         ],
     },
     {

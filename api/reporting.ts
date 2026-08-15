@@ -21,7 +21,7 @@ import {
 } from "@peppol/utils/auth-middleware";
 import {
   frenchB2CReportSchema,
-  getFrenchB2CReportDocumentTypeInfo,
+  getFrenchB2CReportDocumentProfile,
 } from "@peppol/utils/parsing/b2c-reporting/france";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -146,7 +146,7 @@ const _submitFrenchB2CReport = server.post(
     // The report is filed rather than transmitted, so it has no XML and no
     // recipient. The sending identifier still records which company filed it.
     const senderIdentifier = await getSendingCompanyIdentifier(company.id);
-    const documentTypeInfo = getFrenchB2CReportDocumentTypeInfo(report.type);
+    const documentTypeProfile = getFrenchB2CReportDocumentProfile(report.type);
     const transmittedDocument = await recordOutgoingDocument({
       c,
       id: "doc_" + ulid(),
@@ -157,10 +157,10 @@ const _submitFrenchB2CReport = server.post(
       document: {
         senderId: `${senderIdentifier.scheme}:${senderIdentifier.identifier}`,
         receiverId: null,
-        docTypeId: documentTypeInfo.docTypeId,
-        processId: documentTypeInfo.processId,
+        docTypeId: documentTypeProfile.docTypeId,
+        processId: documentTypeProfile.processId,
         countryC1: company.country,
-        type: documentTypeInfo.type,
+        type: documentTypeProfile.type,
         parsed: report,
         xml: null,
       },

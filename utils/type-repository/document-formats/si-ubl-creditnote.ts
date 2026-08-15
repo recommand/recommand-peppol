@@ -6,6 +6,7 @@ import type { DocumentFormat } from "./types";
 
 const customizationId =
   "urn:cen.eu:en16931:2017#compliant#urn:fdc:nen.nl:nlcius:v1.0";
+const processId = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 
 export const siUblCreditnoteFormat: DocumentFormat<
   [typeof creditNoteDocumentType]
@@ -14,17 +15,17 @@ export const siUblCreditnoteFormat: DocumentFormat<
   translatableTitle: "SI-UBL 2.0 Credit Note",
   docTypeId: `urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##${customizationId}::2.1`,
   supportedDocumentTypes: [creditNoteDocumentType],
-  supportedProcessIds: ["urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"],
+  supportedProcessIds: [processId],
+  smpRegistration: [
+    { processId, translatableTitle: "SI-UBL 2.0 Credit Note" },
+  ],
   encode: (document, processId, context) =>
     creditNoteToUBL({
       creditNote: document,
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-      profile: {
-        customizationId,
-        processId,
-      },
+      profile: { customizationId, processId },
     }),
   decode: (raw) =>
     parseCreditNoteFromXML(

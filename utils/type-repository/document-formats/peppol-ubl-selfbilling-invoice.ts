@@ -6,6 +6,7 @@ import type { DocumentFormat } from "./types";
 
 const customizationId =
   "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0";
+const processId = "urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0";
 
 export const peppolUblSelfbillingInvoiceFormat: DocumentFormat<
   [typeof selfBillingInvoiceDocumentType]
@@ -15,14 +16,18 @@ export const peppolUblSelfbillingInvoiceFormat: DocumentFormat<
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0::2.1",
   supportedDocumentTypes: [selfBillingInvoiceDocumentType],
-  supportedProcessIds: ["urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0"],
+  supportedProcessIds: [processId],
+  smpRegistration: [
+    { processId, translatableTitle: "Self Billing Invoice" },
+  ],
 
-  encode: (document, _processId, context) =>
+  encode: (document, processId, context) =>
     selfBillingInvoiceToUBL({
       selfBillingInvoice: document,
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
+      profile: { customizationId, processId },
     }),
 
   decode: (raw) =>

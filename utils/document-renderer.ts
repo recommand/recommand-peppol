@@ -12,7 +12,7 @@ import type {
 } from "@peppol/utils/parsing/france-cdar/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
-import type { DocumentType } from "@peppol/utils/document-types";
+import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import { FRANCE_B2C_REPORT_TEMPLATE } from "@peppol/templates/france-b2c-report";
 import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
 import { Decimal } from "decimal.js";
@@ -569,7 +569,7 @@ export function buildFranceB2CReportTemplateData(
  * Whether a document has a layout to render to HTML or PDF. Callers that render
  * opportunistically (notification attachments, exports) should check this first.
  */
-export function isRenderableDocumentType(type: DocumentType): boolean {
+export function isRenderableDocumentType(type: StoredDocumentType): boolean {
   return type !== "unknown";
 }
 

@@ -18,7 +18,7 @@ import {
   DocumentType,
   documentTypeSchema,
 } from "@peppol/utils/parsing/send-document";
-import type { SupportedDocumentType } from "@peppol/utils/document-types";
+import type { ParsedOrUnknownDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import {
   extractDocumentNumberForType,
   extractLastUsedIban,
@@ -49,7 +49,7 @@ const _getDocumentDefaults = server.get(
     try {
       const { documentType } = c.req.valid("query");
 
-      const supportedType: SupportedDocumentType | null = (() => {
+      const supportedType: ParsedOrUnknownDocumentType | null = (() => {
         if (documentType === DocumentType.INVOICE) return "invoice";
         if (documentType === DocumentType.CREDIT_NOTE) return "creditNote";
         if (documentType === DocumentType.SELF_BILLING_INVOICE)

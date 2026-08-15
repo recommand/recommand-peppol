@@ -1,17 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import {
-  CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-  DOCUMENT_TYPE_PRESETS,
-  FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-  FRANCE_NON_REGULATED_DOCUMENT_TYPE_PRESETS,
   FRANCE_NON_REGULATED_PROCESS_ID,
   FRANCE_REGULATED_PROCESS_ID,
-  getDocumentTypeInfo,
   getFranceBillingProcessId,
-  INVOICE_DOCUMENT_TYPE_INFO,
-  UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
-  UBL_FRANCE_INVOICE_CIUS_NON_REGULATED_DOCUMENT_TYPE_INFO,
-} from "../utils/document-types";
+} from "../utils/type-repository/document-formats/france-process";
 import { COUNTRIES } from "../utils/countries";
 import {
   frenchCountrySpecificSchema,
@@ -19,12 +11,23 @@ import {
   isFranceBillingProcessId,
   resolveFrenchProcessId,
 } from "../utils/parsing/country-specific/france";
-import { resolveDocumentXmlHandler } from "../utils/parsing/document-handlers";
 import { resolveCountrySpecificProcessId } from "../utils/parsing/country-specific/process";
 import {
+  getDocumentFormat,
   getDocumentFormatByDocTypeId,
+  getDocumentFormatsByDocumentTypeKey,
   resolveFormatProcessId,
 } from "../utils/type-repository/document-formats";
+import { receivingCapabilities } from "../utils/type-repository/receiving-capabilities";
+import { peppolUblBis3InvoiceFormat } from "../utils/type-repository/document-formats/peppol-ubl-bis3-invoice";
+import { ublFranceCiusInvoiceFormat } from "../utils/type-repository/document-formats/ubl-france-cius-invoice";
+import { facturxFranceFormat } from "../utils/type-repository/document-formats/facturx-france";
+
+const PEPPOL_BILLING_PROCESS_ID =
+  "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
+const franceNonRegulatedReceivingCapabilities = receivingCapabilities.filter(
+  (capability) => capability.processId === FRANCE_NON_REGULATED_PROCESS_ID,
+);
 
 const frenchCountrySpecific = {
   country: "FR" as const,
@@ -35,14 +38,23 @@ const frenchCountrySpecific = {
 };
 
 describe("France non-regulated process", () => {
+  it("keeps receiving capabilities aligned with registered formats", () => {
+    for (const capability of receivingCapabilities) {
+      if (capability.formatKey === "peppol-ubl-invoice-response") continue;
+      const format = getDocumentFormat(capability.formatKey);
+      expect(format, capability.formatKey).toBeDefined();
+      expect(format?.docTypeId).toBe(capability.docTypeId);
+      expect(format?.supportedProcessIds).toContain(capability.processId);
+    }
+  });
+
   it("mirrors every French document type onto the non-regulated process", () => {
-    for (const preset of FRANCE_NON_REGULATED_DOCUMENT_TYPE_PRESETS) {
+    for (const preset of franceNonRegulatedReceivingCapabilities) {
       expect(preset.processId).toBe(FRANCE_NON_REGULATED_PROCESS_ID);
 
-      const regulatedCounterpart = DOCUMENT_TYPE_PRESETS.find(
+      const regulatedCounterpart = receivingCapabilities.find(
         (candidate) =>
           candidate.docTypeId === preset.docTypeId &&
-          candidate.type === preset.type &&
           candidate.processId === FRANCE_REGULATED_PROCESS_ID
       );
       expect(regulatedCounterpart).toBeDefined();
@@ -50,21 +62,23 @@ describe("France non-regulated process", () => {
   });
 
   it("offers both processes as presets without disturbing type lookups", () => {
-    for (const preset of FRANCE_NON_REGULATED_DOCUMENT_TYPE_PRESETS) {
-      expect(DOCUMENT_TYPE_PRESETS).toContain(preset);
+    for (const preset of franceNonRegulatedReceivingCapabilities) {
+      expect(receivingCapabilities).toContain(preset);
     }
 
-    const titles = DOCUMENT_TYPE_PRESETS.map((preset) => preset.title);
+    const titles = receivingCapabilities.map((preset) => preset.translatableTitle);
     expect(new Set(titles).size).toBe(titles.length);
 
     // A preset is one SMP capability to register, so syntaxes that carry invoices and
     // credit notes under the same identifier are offered once under a combined title.
-    const capabilities = DOCUMENT_TYPE_PRESETS.map(
+    const capabilities = receivingCapabilities.map(
       (preset) => `${preset.docTypeId}|${preset.processId}`
     );
     expect(new Set(capabilities).size).toBe(capabilities.length);
 
-    expect(getDocumentTypeInfo("invoice")).toBe(INVOICE_DOCUMENT_TYPE_INFO);
+    expect(getDocumentFormatsByDocumentTypeKey("invoice")[0]).toBe(
+      peppolUblBis3InvoiceFormat,
+    );
   });
 
   it("keeps the non-regulated process opt-in for French participants", () => {
@@ -81,15 +95,13 @@ describe("France non-regulated process", () => {
     ).toBe(true);
   });
 
-  it("converts non-regulated documents with the regulated handlers", () => {
-    const resolved = resolveDocumentXmlHandler(
-      UBL_FRANCE_INVOICE_CIUS_NON_REGULATED_DOCUMENT_TYPE_INFO.docTypeId,
-      "invoice"
+  it("uses the same format for regulated and non-regulated capabilities", () => {
+    const nonRegulatedCapability = franceNonRegulatedReceivingCapabilities.find(
+      (capability) => capability.formatKey === ublFranceCiusInvoiceFormat.key,
     );
-    if (!resolved.ok) throw new Error(resolved.message);
-
-    expect(resolved.handler.docTypeId).toBe(
-      UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.docTypeId
+    expect(nonRegulatedCapability).toBeDefined();
+    expect(getDocumentFormatByDocTypeId(nonRegulatedCapability!.docTypeId)).toBe(
+      ublFranceCiusInvoiceFormat,
     );
   });
 
@@ -98,20 +110,20 @@ describe("France non-regulated process", () => {
     expect(getFranceBillingProcessId("NON_REGULATED")).toBe(
       FRANCE_NON_REGULATED_PROCESS_ID
     );
-    expect(isFranceBillingProcessId(INVOICE_DOCUMENT_TYPE_INFO.processId)).toBe(false);
+    expect(isFranceBillingProcessId(PEPPOL_BILLING_PROCESS_ID)).toBe(false);
 
     const nonRegulated = {
       countrySpecific: { ...frenchCountrySpecific, businessProcess: "NON_REGULATED" },
     };
     expect(
       resolveFrenchProcessId(
-        CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId,
+        FRANCE_REGULATED_PROCESS_ID,
         nonRegulated
       )
     ).toBe(FRANCE_NON_REGULATED_PROCESS_ID);
     expect(
       resolveFrenchProcessId(
-        FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId,
+        FRANCE_REGULATED_PROCESS_ID,
         nonRegulated
       )
     ).toBe(FRANCE_NON_REGULATED_PROCESS_ID);
@@ -125,13 +137,13 @@ describe("France non-regulated process", () => {
   it("claims no document it has no say over", () => {
     // Not a French billing process, even though the document declares one.
     expect(
-      resolveFrenchProcessId(INVOICE_DOCUMENT_TYPE_INFO.processId, {
+      resolveFrenchProcessId(PEPPOL_BILLING_PROCESS_ID, {
         countrySpecific: { ...frenchCountrySpecific, businessProcess: "NON_REGULATED" },
       })
     ).toBeUndefined();
     // French process, but the document leaves the choice open.
     expect(
-      resolveFrenchProcessId(CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.processId, {
+      resolveFrenchProcessId(FRANCE_REGULATED_PROCESS_ID, {
         countrySpecific: frenchCountrySpecific,
       })
     ).toBeUndefined();
@@ -142,10 +154,10 @@ describe("France non-regulated process", () => {
 
   it("moves an outgoing document onto the process its country selects", () => {
     const ublFormat = getDocumentFormatByDocTypeId(
-      UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.docTypeId,
+      ublFranceCiusInvoiceFormat.docTypeId,
     );
     const facturXFormat = getDocumentFormatByDocTypeId(
-      FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
+      facturxFranceFormat.docTypeId,
     );
     if (!ublFormat || !facturXFormat) {
       throw new Error("French invoice format is not registered.");
@@ -170,10 +182,10 @@ describe("France non-regulated process", () => {
 
   it("leaves documents of other countries on their own process", () => {
     expect(
-      resolveCountrySpecificProcessId(INVOICE_DOCUMENT_TYPE_INFO.processId, {
+      resolveCountrySpecificProcessId(PEPPOL_BILLING_PROCESS_ID, {
         countrySpecific: { country: "BE" },
       })
-    ).toBe(INVOICE_DOCUMENT_TYPE_INFO.processId);
+    ).toBe(PEPPOL_BILLING_PROCESS_ID);
     expect(
       resolveCountrySpecificProcessId(FRANCE_NON_REGULATED_PROCESS_ID, undefined)
     ).toBe(FRANCE_NON_REGULATED_PROCESS_ID);

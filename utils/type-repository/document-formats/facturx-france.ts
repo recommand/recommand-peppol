@@ -1,4 +1,3 @@
-import type { DocumentTypeInfo } from "@peppol/utils/document-types";
 import {
   extractFacturXDocument,
   generateFacturXDocument,
@@ -13,27 +12,14 @@ import { invoiceDocumentType } from "../document-types/invoice";
 import { creditNoteDocumentType } from "../document-types/creditNote";
 import { ciiDocumentType } from "./cii-document-type";
 import type { DocumentFormat } from "./types";
+import { assertFranceBillingProcessId } from "./france-process";
 
 const docTypeId =
   "urn:peppol:doctype:pdf+xml##urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:Factur-X:1.0::D22B";
 
 const regulatedProcessId = "urn:peppol:france:billing:regulated";
-
-// Factur-X puts the CII document inside a PDF/A-3 container, and the container is what
-// carries this doc type id. The XML itself declares plain EN 16931 rather than a
-// Factur-X guideline, so the identity handed to the serialisers overrides the guideline
-// id instead of deriving it from the doc type id above.
-function serializerDocumentTypeInfo(
-  type: "invoice" | "creditNote"
-): DocumentTypeInfo {
-  return {
-    type,
-    title: "France Factur-X Invoice + Credit Note",
-    docTypeId,
-    processId: regulatedProcessId,
-    ciiGuidelineIdOverride: "urn:cen.eu:en16931:2017",
-  };
-}
+const nonRegulatedProcessId = "urn:peppol:france:billing:non-regulated";
+const customizationId = "urn:cen.eu:en16931:2017";
 
 export const facturxFranceFormat: DocumentFormat<
   [typeof invoiceDocumentType, typeof creditNoteDocumentType]
@@ -43,24 +29,40 @@ export const facturxFranceFormat: DocumentFormat<
 
   docTypeId,
   supportedDocumentTypes: [invoiceDocumentType, creditNoteDocumentType],
-  supportedProcessIds: [regulatedProcessId, "urn:peppol:france:billing:non-regulated"],
+  supportedProcessIds: [regulatedProcessId, nonRegulatedProcessId],
+  smpRegistration: [
+    {
+      processId: regulatedProcessId,
+      translatableTitle: "France Factur-X Invoice + Credit Note",
+    },
+    {
+      processId: nonRegulatedProcessId,
+      translatableTitle:
+        "France Factur-X Invoice + Credit Note (Non-Regulated)",
+    },
+  ],
 
-  encode: (document, _processId, context) =>
-    "creditNoteNumber" in document
+  encode: (document, processId, context) => {
+    assertFranceBillingProcessId(
+      processId,
+      document.countrySpecific?.businessProcess,
+    );
+    return "creditNoteNumber" in document
       ? frenchRegulatedCreditNoteToCII({
           creditNote: document,
           senderAddress: context.senderAddress,
           recipientAddress: context.recipientAddress,
           isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-          documentTypeInfo: serializerDocumentTypeInfo("creditNote"),
+          profile: { customizationId, processId },
         })
       : frenchRegulatedInvoiceToCII({
           invoice: document,
           senderAddress: context.senderAddress,
           recipientAddress: context.recipientAddress,
           isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-          documentTypeInfo: serializerDocumentTypeInfo("invoice"),
-        }),
+          profile: { customizationId, processId },
+        });
+  },
 
   decode: (raw) => {
     const xml = typeof raw === "string" ? raw : raw.toString("utf8");

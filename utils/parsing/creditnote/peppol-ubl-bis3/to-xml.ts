@@ -3,7 +3,7 @@ import type { CreditNote } from "../schemas";
 import { calculateDocumentTotals } from "../../invoice/calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
-import { CREDIT_NOTE_DOCUMENT_TYPE_INFO, getCustomizationId } from "@peppol/utils/document-types";
+import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -23,10 +23,7 @@ export function creditNoteToUBL(
     senderAddress: string;
     recipientAddress: string;
     isDocumentValidationEnforced: boolean;
-    profile?: {
-      customizationId: string;
-      processId: string;
-    };
+    profile: XmlProfile;
   }): string {
   const ublCreditNote = prebuildCreditNoteUBL({
     creditNote,
@@ -38,7 +35,19 @@ export function creditNoteToUBL(
   return builder.build(ublCreditNote);
 }
 
-export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddress, isDocumentValidationEnforced, profile}: {creditNote: CreditNote, supplierAddress: string, customerAddress: string, isDocumentValidationEnforced: boolean, profile?: { customizationId: string, processId: string }}) {
+export function prebuildCreditNoteUBL({
+  creditNote,
+  supplierAddress,
+  customerAddress,
+  isDocumentValidationEnforced,
+  profile,
+}: {
+  creditNote: CreditNote;
+  supplierAddress: string;
+  customerAddress: string;
+  isDocumentValidationEnforced: boolean;
+  profile: XmlProfile;
+}) {
   const { vat, lines, extractedTotals } = calculateDocumentTotals({
     document: creditNote,
     isDocumentValidationEnforced,
@@ -56,8 +65,8 @@ export function prebuildCreditNoteUBL({creditNote, supplierAddress, customerAddr
       "@_xmlns:ext":
         "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2",
       "@_xmlns:xsd": "http://www.w3.org/2001/XMLSchema",
-      "cbc:CustomizationID": profile?.customizationId ?? getCustomizationId(CREDIT_NOTE_DOCUMENT_TYPE_INFO),
-      "cbc:ProfileID": profile?.processId ?? CREDIT_NOTE_DOCUMENT_TYPE_INFO.processId,
+      "cbc:CustomizationID": profile.customizationId,
+      "cbc:ProfileID": profile.processId,
       "cbc:ID": creditNote.creditNoteNumber,
       "cbc:IssueDate": creditNote.issueDate,
       "cbc:CreditNoteTypeCode": "381",

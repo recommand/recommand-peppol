@@ -4,7 +4,7 @@ import type { CreditNote } from "../creditnote/schemas";
 import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
-import { getCustomizationId, type DocumentTypeInfo } from "@peppol/utils/document-types";
+import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -362,7 +362,7 @@ function lineItem(document: BillingDocument, item: BillingDocument["lines"][numb
 
 export function billingDocumentToCII({
   document,
-  documentTypeInfo,
+  profile,
   documentNumber,
   typeCode,
   supplierAddress,
@@ -370,11 +370,11 @@ export function billingDocumentToCII({
   isDocumentValidationEnforced,
   dueDate,
   invoiceReferences,
-  businessProcessId = documentTypeInfo.processId,
+  businessProcessId = profile.processId,
   additionalNotes = [],
 }: {
   document: BillingDocument;
-  documentTypeInfo: DocumentTypeInfo;
+  profile: XmlProfile;
   documentNumber: string;
   typeCode: "380" | "381";
   supplierAddress: string;
@@ -409,7 +409,7 @@ export function billingDocumentToCII({
           "ram:ID": businessProcessId,
         },
         "ram:GuidelineSpecifiedDocumentContextParameter": {
-          "ram:ID": documentTypeInfo.ciiGuidelineIdOverride ?? getCustomizationId(documentTypeInfo),
+          "ram:ID": profile.customizationId,
         },
       },
       ExchangedDocument: {

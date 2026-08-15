@@ -3,9 +3,16 @@ import { parseCreditNoteFromXML } from "@peppol/utils/parsing/creditnote/peppol-
 import { creditNoteDocumentType } from "../document-types/creditNote";
 import { ublCustomizationId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
+import {
+  assertFranceBillingProcessId,
+  isFranceBillingProcessId,
+} from "./france-process";
 
 const customizationId =
   "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0";
+const processId = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
+const regulatedProcessId = "urn:peppol:france:billing:regulated";
+const nonRegulatedProcessId = "urn:peppol:france:billing:non-regulated";
 
 export const peppolUblBis3CreditnoteFormat: DocumentFormat<
   [typeof creditNoteDocumentType]
@@ -16,21 +23,38 @@ export const peppolUblBis3CreditnoteFormat: DocumentFormat<
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
   supportedDocumentTypes: [creditNoteDocumentType],
   supportedProcessIds: [
-    "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
-    "urn:peppol:france:billing:regulated",
-    "urn:peppol:france:billing:non-regulated",
+    processId,
+    regulatedProcessId,
+    nonRegulatedProcessId,
+  ],
+  smpRegistration: [
+    { processId, translatableTitle: "Credit Note" },
+    {
+      processId: regulatedProcessId,
+      translatableTitle: "France Peppol BIS Billing UBL Credit Note",
+    },
+    {
+      processId: nonRegulatedProcessId,
+      translatableTitle:
+        "France Peppol BIS Billing UBL Credit Note (Non-Regulated)",
+    },
   ],
 
-  // The process id does not reach the XML: cbc:ProfileID is fixed to the Peppol
-  // billing process by creditNoteToUBL, so a French BIS 3 credit note carries the Peppol
-  // process id today. Honouring the argument here would change what goes on the wire.
-  encode: (document, _processId, context) =>
-    creditNoteToUBL({
+  encode: (document, processId, context) => {
+    if (isFranceBillingProcessId(processId)) {
+      assertFranceBillingProcessId(
+        processId,
+        document.countrySpecific?.businessProcess,
+      );
+    }
+    return creditNoteToUBL({
       creditNote: document,
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-    }),
+      profile: { customizationId, processId },
+    });
+  },
 
   decode: (raw) => parseCreditNoteFromXML(typeof raw === "string" ? raw : raw.toString("utf8")),
 

@@ -3,8 +3,14 @@ import { parseFranceCdarFromXML } from "@peppol/utils/parsing/france-cdar/from-x
 import { frenchInvoicingCdarDocumentType } from "../document-types/frenchInvoicingCdar";
 import { ciiGuidelineId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
+import {
+  assertFranceCdarProcessId,
+  getFranceCdarProcessId,
+} from "./france-process";
 
 const guidelineId = "urn.cpro.gouv.fr:1p0:CDV:invoice";
+const regulatedProcessId = "urn:peppol:france:billing:regulated";
+const nonRegulatedProcessId = "urn:peppol:france:billing:non-regulated";
 
 export const franceCdarFormat: DocumentFormat<
   [typeof frenchInvoicingCdarDocumentType]
@@ -15,18 +21,28 @@ export const franceCdarFormat: DocumentFormat<
   docTypeId: "urn:un:unece:uncefact:data:standard:CrossDomainAcknowledgementAndResponse:100::CrossDomainAcknowledgementAndResponse##urn:peppol:france:billing:cdv:1.0::D22B",
   supportedDocumentTypes: [frenchInvoicingCdarDocumentType],
   supportedProcessIds: [
-    "urn:peppol:france:billing:regulated",
-    "urn:peppol:france:billing:non-regulated",
+    regulatedProcessId,
+    nonRegulatedProcessId,
+  ],
+  smpRegistration: [
+    {
+      processId: regulatedProcessId,
+      translatableTitle: "France Invoicing CDAR",
+    },
+    {
+      processId: nonRegulatedProcessId,
+      translatableTitle: "France Invoicing CDAR (Non-Regulated)",
+    },
   ],
   resolveProcessId: (document) =>
-    document.businessProcess === "REGULATED"
-      ? "urn:peppol:france:billing:regulated"
-      : "urn:peppol:france:billing:non-regulated",
+    getFranceCdarProcessId(document.businessProcess),
 
-  encode: (document) =>
-    franceCdarToXML({
+  encode: (document, processId) => {
+    assertFranceCdarProcessId(processId, document.businessProcess);
+    return franceCdarToXML({
       franceCdar: document,
-    }),
+    });
+  },
 
   decode: (raw) =>
     parseFranceCdarFromXML(typeof raw === "string" ? raw : raw.toString("utf8")),

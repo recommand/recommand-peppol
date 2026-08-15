@@ -2,20 +2,18 @@ import type { z } from "zod";
 import type { sendDocumentSchema } from "../../parsing/send-document";
 import type { Company } from "@peppol/data/companies";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
+import type { DocumentTypeKey } from "./keys";
+
+export type {
+  BillingDocumentTypeKey,
+  DocumentTypeKey,
+  ParsedOrUnknownDocumentType,
+  ReportingDocumentTypeKey,
+  StoredDocumentType,
+  TransactionMessagingDocumentTypeKey,
+} from "./keys";
 
 export type DocumentTypeClass = "billing" | "transactionMessaging" | "reporting";
-
-export type DocumentTypeKey =
-  | "invoice"
-  | "creditNote"
-  | "selfBillingInvoice"
-  | "selfBillingCreditNote"
-  | "messageLevelResponse"
-  | "frenchInvoicingCdar"
-  | "frenchB2CSalesReport"
-  | "frenchB2CPaymentReport";
-
-export type StoredDocumentType = DocumentTypeKey | "invoiceResponse" | "unknown";
 
 export type DocumentDetails = {
   documentNumber?: string;
@@ -57,7 +55,7 @@ export type RenderResult<F extends RenderFormat> = F extends "pdf"
 type ParsedDocument<Schema extends z.ZodSchema> = z.infer<Schema>;
 
 export type DocumentType<SendSchema extends z.ZodSchema, DocumentSchema extends z.ZodSchema> = {
-  key: string;
+  key: DocumentTypeKey;
   translatableTitle: string;
   class: DocumentTypeClass;
   sendSchema: SendSchema;

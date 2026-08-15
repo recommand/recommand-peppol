@@ -1,4 +1,4 @@
-import { isReportingDocumentType } from "@peppol/utils/document-types";
+import { isReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/keys";
 
 export function incrementDocumentNumber(input: string): string | null {
   const raw = typeof input === "string" ? input : "";
@@ -74,7 +74,7 @@ export function extractDocumentNumberForType(
     const n = anyParsed?.invoiceId;
     return typeof n === "string" && n.trim() ? n.trim() : null;
   }
-  if (isReportingDocumentType(type)) {
+  if (isReportingDocumentTypeKey(type)) {
     const n = anyParsed?.reference;
     return typeof n === "string" && n.trim() ? n.trim() : null;
   }

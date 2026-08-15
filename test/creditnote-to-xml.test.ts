@@ -6,11 +6,18 @@ import { parseCreditNoteFromXML } from "@peppol/utils/parsing/creditnote/peppol-
 import { parseCreditNoteFromCII } from "@peppol/utils/parsing/creditnote/cii-d22b/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
-import {
-    CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-    FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO,
-} from "@peppol/utils/document-types";
-import { getDocumentFormatByDocTypeId } from "@peppol/utils/type-repository/document-formats";
+import { ciiD22bFranceCiusFormat } from "@peppol/utils/type-repository/document-formats/cii-d22b-france-cius";
+import { facturxFranceFormat } from "@peppol/utils/type-repository/document-formats/facturx-france";
+
+const peppolBillingProfile = {
+    customizationId:
+        "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0",
+    processId: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+};
+const ciiProfile = {
+    customizationId: "urn:cen.eu:en16931:2017",
+    processId: peppolBillingProfile.processId,
+};
 
 function asFrenchRegulatedCreditNote(creditNote: CreditNote): CreditNote {
     // EN16931 category O requires seller and buyer VAT identifiers to be omitted.
@@ -125,23 +132,18 @@ async function checkCreditNoteXML({
         senderAddress,
         recipientAddress,
         isDocumentValidationEnforced,
+        profile: peppolBillingProfile,
     });
     const ciiXml = creditNoteToCII({
         creditNote,
         senderAddress,
         recipientAddress,
         isDocumentValidationEnforced,
+        profile: ciiProfile,
     });
     const frenchCreditNote = asFrenchRegulatedCreditNote(creditNote);
-    const facturXFormat = getDocumentFormatByDocTypeId(
-        FACTURX_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-    );
-    const frenchCiiFormat = getDocumentFormatByDocTypeId(
-        CII_FRANCE_CREDIT_NOTE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-    );
-    if (!facturXFormat || !frenchCiiFormat) {
-        throw new Error("French credit note format is not registered.");
-    }
+    const facturXFormat = facturxFranceFormat;
+    const frenchCiiFormat = ciiD22bFranceCiusFormat;
     const context = {
         senderAddress: "0225:303265045",
         recipientAddress,
@@ -183,6 +185,7 @@ async function checkCreditNoteXML({
             senderAddress: "0225:303265045",
             recipientAddress,
             isDocumentValidationEnforced,
+            profile: peppolBillingProfile,
         })
     );
     const expectedCii = withDefaultCiiDelivery(parsedUbl);

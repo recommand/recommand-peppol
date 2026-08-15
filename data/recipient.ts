@@ -3,7 +3,7 @@ import { PARTICIPANT_SCHEME, DOCUMENT_SCHEME, PROCESS_SCHEME } from "./phoss-smp
 import { XMLParser } from "fast-xml-parser";
 import { base32Encode } from "@peppol/utils/base32";
 import { resolveNaptr } from "@peppol/utils/naptr";
-import { getDocumentTypeInfo } from "@peppol/utils/document-types";
+import { resolveDocTypeId } from "@peppol/utils/type-repository/receiving-capabilities";
 import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
 import { parseCertificateExpiry } from "@peppol/utils/certificate";
 
@@ -221,10 +221,7 @@ export async function verifyDocumentSupport({recipientAddress, documentType, pro
   const smpUrl = await getSmpUrl({recipientAddress, useTestNetwork});
 
   // Map the document type to the Peppol document type code, if not possible, just use the document type as is
-  try {
-    const peppolDocumentTypeInfo = getDocumentTypeInfo(documentType);
-    documentType = peppolDocumentTypeInfo?.docTypeId;
-  } catch (error) {}
+  documentType = resolveDocTypeId(documentType);
 
   // Encode the document type for URL safety
   const encodedDocumentType = encodeURIComponent(documentType);

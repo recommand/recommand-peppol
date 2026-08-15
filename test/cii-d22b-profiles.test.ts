@@ -1,16 +1,15 @@
 import { describe, expect, it } from "bun:test";
-import {
-  CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-  CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-  CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-  FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-  UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO,
-  UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO,
-  UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO,
-} from "../utils/document-types";
-import { resolveDocumentXmlHandler } from "../utils/parsing/document-handlers";
-import { getDocumentFormatByDocTypeId } from "../utils/type-repository/document-formats";
 import type { Invoice } from "../utils/parsing/invoice/schemas";
+import { ciiD22bEn16931Format } from "../utils/type-repository/document-formats/cii-d22b-en16931";
+import { ciiD22bFranceCiusFormat } from "../utils/type-repository/document-formats/cii-d22b-france-cius";
+import { ciiD22bFranceExtendedFormat } from "../utils/type-repository/document-formats/cii-d22b-france-extended";
+import { facturxFranceFormat } from "../utils/type-repository/document-formats/facturx-france";
+import { peppolUblBis3InvoiceFormat } from "../utils/type-repository/document-formats/peppol-ubl-bis3-invoice";
+import { ublFranceCiusInvoiceFormat } from "../utils/type-repository/document-formats/ubl-france-cius-invoice";
+import { ublFranceExtendedCreditnoteFormat } from "../utils/type-repository/document-formats/ubl-france-extended-creditnote";
+import { ublFranceExtendedInvoiceFormat } from "../utils/type-repository/document-formats/ubl-france-extended-invoice";
+import type { AnyDocumentFormat } from "../utils/type-repository/document-formats/types";
+import { FRANCE_NON_REGULATED_PROCESS_ID } from "../utils/type-repository/document-formats/france-process";
 
 const invoice: Invoice = {
   invoiceNumber: "INV-FR-001",
@@ -59,11 +58,8 @@ const invoice: Invoice = {
   ],
 };
 
-function toXml(docTypeId: string): string {
-  const resolved = resolveDocumentXmlHandler(docTypeId, "invoice");
-  if (!resolved.ok) throw new Error(resolved.message);
-  return resolved.handler.toXml({
-    document: invoice,
+function toXml(format: AnyDocumentFormat): string {
+  return format.encode(invoice, format.supportedProcessIds[0], {
     senderAddress: "0225:303265045",
     recipientAddress: "0225:341815675",
     isDocumentValidationEnforced: true,
@@ -71,8 +67,66 @@ function toXml(docTypeId: string): string {
 }
 
 describe("CII D22B profiles", () => {
+  it("writes the selected process into formats whose XML profile carries it", () => {
+    const xml = peppolUblBis3InvoiceFormat.encode(
+      {
+        ...invoice,
+        countrySpecific: {
+          ...invoice.countrySpecific!,
+          businessProcess: "NON_REGULATED",
+        },
+      },
+      FRANCE_NON_REGULATED_PROCESS_ID,
+      {
+        senderAddress: "0225:303265045",
+        recipientAddress: "0225:341815675",
+        isDocumentValidationEnforced: true,
+      },
+    );
+
+    expect(xml).toContain(
+      `<cbc:ProfileID>${FRANCE_NON_REGULATED_PROCESS_ID}</cbc:ProfileID>`,
+    );
+  });
+
+  it("keeps the French billing mode in XML for a non-regulated transport", () => {
+    const nonRegulatedInvoice: Invoice = {
+      ...invoice,
+      countrySpecific: {
+        ...invoice.countrySpecific!,
+        businessProcess: "NON_REGULATED",
+      },
+    };
+    const xml = ublFranceCiusInvoiceFormat.encode(
+      nonRegulatedInvoice,
+      FRANCE_NON_REGULATED_PROCESS_ID,
+      {
+        senderAddress: "0225:303265045",
+        recipientAddress: "0225:341815675",
+        isDocumentValidationEnforced: true,
+      },
+    );
+
+    expect(xml).toContain("<cbc:ProfileID>S1</cbc:ProfileID>");
+    expect(xml).not.toContain(FRANCE_NON_REGULATED_PROCESS_ID);
+  });
+
+  it("rejects a transport process that conflicts with the French document", () => {
+    expect(() =>
+      ublFranceCiusInvoiceFormat.encode(
+        invoice,
+        FRANCE_NON_REGULATED_PROCESS_ID,
+        {
+          senderAddress: "0225:303265045",
+          recipientAddress: "0225:341815675",
+          isDocumentValidationEnforced: true,
+        },
+      ),
+    ).toThrow("does not match business process 'REGULATED'");
+  });
+
   it("keeps plain EN 16931 independent from French regulation", () => {
-    const xml = toXml(CII_EN16931_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId);
+    const xml = toXml(ciiD22bEn16931Format);
 
     expect(xml).toContain("<ram:ID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</ram:ID>");
     expect(xml).toContain("<ram:ID>urn:cen.eu:en16931:2017</ram:ID>");
@@ -81,7 +135,7 @@ describe("CII D22B profiles", () => {
   });
 
   it("applies the French regulated CII context through the shared serializer", () => {
-    const xml = toXml(CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId);
+    const xml = toXml(ciiD22bFranceCiusFormat);
 
     expect(xml).toContain("<ram:ID>S1</ram:ID>");
     expect(xml).toContain("urn:peppol:france:billing:cius:1.0");
@@ -95,48 +149,38 @@ describe("CII D22B profiles", () => {
     expect(xml).toContain("Pénalités de retard selon les conditions de paiement.");
     expect(xml).toContain("Aucun escompte accordé pour paiement anticipé.");
 
-    const resolved = resolveDocumentXmlHandler(
-      CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-      "invoice"
-    );
-    if (!resolved.ok) throw new Error(resolved.message);
-    const parsed = resolved.handler.fromXml(xml) as Invoice;
+    const parsed = ciiD22bFranceCiusFormat.decode(
+      xml,
+      ciiD22bFranceCiusFormat.supportedProcessIds[0],
+    ) as Invoice;
 
     expect(parsed.countrySpecific).toEqual(invoice.countrySpecific);
   });
 
   it("requires an AAB note even when no early-payment discount is offered", () => {
-    const resolved = resolveDocumentXmlHandler(
-      CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-      "invoice"
-    );
-    if (!resolved.ok) throw new Error(resolved.message);
-
     expect(() =>
-      resolved.handler.toXml({
-        document: {
+      ciiD22bFranceCiusFormat.encode(
+        {
           ...invoice,
           countrySpecific: {
             ...invoice.countrySpecific!,
             earlyPaymentDiscountNote: "",
           },
         },
-        senderAddress: "0225:303265045",
-        recipientAddress: "0225:341815675",
-        isDocumentValidationEnforced: true,
-      })
+        ciiD22bFranceCiusFormat.supportedProcessIds[0],
+        {
+          senderAddress: "0225:303265045",
+          recipientAddress: "0225:341815675",
+          isDocumentValidationEnforced: true,
+        },
+      )
     ).toThrow("structured French legal notes");
   });
 
   it("uses the French regulation with the Factur-X EN 16931 guideline", () => {
-    const format = getDocumentFormatByDocTypeId(
-      FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-    );
-    if (!format) throw new Error("Factur-X format is not registered.");
-
-    const xml = format.encode(
+    const xml = facturxFranceFormat.encode(
       invoice,
-      format.supportedProcessIds[0],
+      facturxFranceFormat.supportedProcessIds[0],
       {
         senderAddress: "0225:303265045",
         recipientAddress: "0225:341815675",
@@ -150,18 +194,7 @@ describe("CII D22B profiles", () => {
   });
 
   it("applies the same French country-specific data to UBL France CIUS", () => {
-    const resolved = resolveDocumentXmlHandler(
-      UBL_FRANCE_INVOICE_CIUS_DOCUMENT_TYPE_INFO.docTypeId,
-      "invoice"
-    );
-    if (!resolved.ok) throw new Error(resolved.message);
-
-    const xml = resolved.handler.toXml({
-      document: invoice,
-      senderAddress: "0225:303265045",
-      recipientAddress: "0225:341815675",
-      isDocumentValidationEnforced: true,
-    });
+    const xml = toXml(ublFranceCiusInvoiceFormat);
 
     expect(xml).toContain(
       "<cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0</cbc:CustomizationID>"
@@ -172,13 +205,16 @@ describe("CII D22B profiles", () => {
     expect(xml).toContain("<cbc:Note>#AAB#");
     expect(xml).not.toContain("subjectCode=");
 
-    const parsed = resolved.handler.fromXml(xml) as Invoice;
+    const parsed = ublFranceCiusInvoiceFormat.decode(
+      xml,
+      ublFranceCiusInvoiceFormat.supportedProcessIds[0],
+    ) as Invoice;
     expect(parsed.note).toBe(invoice.note);
     expect(parsed.countrySpecific).toEqual(invoice.countrySpecific);
   });
 
-  it("converts the French EXTENDED profiles with the CIUS handlers", () => {
-    const ublXml = toXml(UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId);
+  it("converts the French EXTENDED profiles with the CIUS serializers", () => {
+    const ublXml = toXml(ublFranceExtendedInvoiceFormat);
 
     expect(ublXml).toContain(
       "<cbc:CustomizationID>urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0</cbc:CustomizationID>"
@@ -186,7 +222,7 @@ describe("CII D22B profiles", () => {
     expect(ublXml).toContain("<cbc:ProfileID>S1</cbc:ProfileID>");
     expect(ublXml).toContain("<cbc:Note>#PMT#");
 
-    const ciiXml = toXml(CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId);
+    const ciiXml = toXml(ciiD22bFranceExtendedFormat);
 
     expect(ciiXml).toContain(
       "<ram:ID>urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0</ram:ID>"
@@ -194,25 +230,28 @@ describe("CII D22B profiles", () => {
     expect(ciiXml).toContain("<ram:ID>S1</ram:ID>");
     expect(ciiXml).toContain("<ram:SubjectCode>PMT</ram:SubjectCode>");
 
-    for (const [docTypeId, xml] of [
-      [UBL_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId, ublXml],
-      [CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId, ciiXml],
+    for (const [format, xml] of [
+      [ublFranceExtendedInvoiceFormat, ublXml],
+      [ciiD22bFranceExtendedFormat, ciiXml],
     ] as const) {
-      const resolved = resolveDocumentXmlHandler(docTypeId, "invoice");
-      if (!resolved.ok) throw new Error(resolved.message);
-      const parsed = resolved.handler.fromXml(xml) as Invoice;
+      const parsed = format.decode(
+        xml,
+        format.supportedProcessIds[0],
+      ) as Invoice;
       expect(parsed.countrySpecific).toEqual(invoice.countrySpecific);
     }
   });
 
-  it("resolves credit notes for both EXTENDED syntaxes", () => {
-    for (const docTypeId of [
-      UBL_FRANCE_CREDIT_NOTE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId,
-      CII_FRANCE_INVOICE_EXTENDED_DOCUMENT_TYPE_INFO.docTypeId,
+  it("supports credit notes for both EXTENDED syntaxes", () => {
+    for (const format of [
+      ublFranceExtendedCreditnoteFormat,
+      ciiD22bFranceExtendedFormat,
     ]) {
-      const resolved = resolveDocumentXmlHandler(docTypeId, "creditNote");
-      if (!resolved.ok) throw new Error(resolved.message);
-      expect(resolved.handler.docTypeId).toBe(docTypeId);
+      expect(
+        format.supportedDocumentTypes.some(
+          (documentType) => documentType.key === "creditNote",
+        ),
+      ).toBe(true);
     }
   });
 });

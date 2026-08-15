@@ -8,17 +8,17 @@ import type { PublicTransmittedDocument } from "../data/transmitted-documents";
 import type { FrenchB2CReport } from "../utils/parsing/b2c-reporting/france";
 import { getDocumentType } from "../utils/type-repository/document-types";
 import { FRANCE_B2C_REPORT_TEMPLATE } from "../templates/france-b2c-report";
-import { REPORTING_DOCUMENT_TYPES } from "../utils/document-types";
+import { REPORTING_DOCUMENT_TYPE_KEYS } from "../utils/type-repository/document-types/keys";
 import {
   frenchB2CReportSchema,
-  getFrenchB2CReportDocumentTypeInfo,
+  getFrenchB2CReportDocumentProfile,
 } from "../utils/parsing/b2c-reporting/france";
 
 function documentFor(report: unknown): PublicTransmittedDocument {
   const parsed = frenchB2CReportSchema.parse(report);
   return {
     id: "doc_report",
-    type: getFrenchB2CReportDocumentTypeInfo(parsed.type).type,
+    type: getFrenchB2CReportDocumentProfile(parsed.type).type,
     parsed,
   } as unknown as PublicTransmittedDocument;
 }
@@ -61,7 +61,7 @@ const paymentsDocument = documentFor({
 
 describe("French B2C report rendering", () => {
   it("renders both report types like any other document", () => {
-    for (const reportingType of REPORTING_DOCUMENT_TYPES) {
+    for (const reportingType of REPORTING_DOCUMENT_TYPE_KEYS) {
       expect(isRenderableDocumentType(reportingType)).toBe(true);
     }
   });

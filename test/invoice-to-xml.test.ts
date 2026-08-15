@@ -7,11 +7,18 @@ import { parseInvoiceFromCII } from "@peppol/utils/parsing/invoice/cii-d22b/from
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
 import Decimal from "decimal.js";
-import {
-  CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-  FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO,
-} from "@peppol/utils/document-types";
-import { getDocumentFormatByDocTypeId } from "@peppol/utils/type-repository/document-formats";
+import { ciiD22bFranceCiusFormat } from "@peppol/utils/type-repository/document-formats/cii-d22b-france-cius";
+import { facturxFranceFormat } from "@peppol/utils/type-repository/document-formats/facturx-france";
+
+const peppolBillingProfile = {
+  customizationId:
+    "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0",
+  processId: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+};
+const ciiProfile = {
+  customizationId: "urn:cen.eu:en16931:2017",
+  processId: peppolBillingProfile.processId,
+};
 
 function asFrenchRegulatedInvoice(invoice: Invoice): Invoice {
   // EN16931 category O requires seller and buyer VAT identifiers to be omitted.
@@ -138,23 +145,18 @@ async function checkInvoiceXML({
     senderAddress,
     recipientAddress,
     isDocumentValidationEnforced,
+    profile: peppolBillingProfile,
   });
   const ciiXml = invoiceToCII({
     invoice,
     senderAddress,
     recipientAddress,
     isDocumentValidationEnforced,
+    profile: ciiProfile,
   });
   const frenchInvoice = asFrenchRegulatedInvoice(invoice);
-  const facturXFormat = getDocumentFormatByDocTypeId(
-    FACTURX_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-  );
-  const frenchCiiFormat = getDocumentFormatByDocTypeId(
-    CII_FRANCE_INVOICE_D22B_DOCUMENT_TYPE_INFO.docTypeId,
-  );
-  if (!facturXFormat || !frenchCiiFormat) {
-    throw new Error("French invoice format is not registered.");
-  }
+  const facturXFormat = facturxFranceFormat;
+  const frenchCiiFormat = ciiD22bFranceCiusFormat;
   const context = {
     senderAddress: "0225:303265045",
     recipientAddress,
@@ -195,6 +197,7 @@ async function checkInvoiceXML({
       senderAddress: "0225:303265045",
       recipientAddress,
       isDocumentValidationEnforced,
+      profile: peppolBillingProfile,
     })
   );
   const expectedCii = withDefaultCiiDelivery(parsedUbl);
