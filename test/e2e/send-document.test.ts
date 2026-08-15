@@ -41,6 +41,7 @@ import {
   DOC_TYPE_ID,
   PROCESS_ID,
   creditNoteDocument,
+  frenchInvoiceDocument,
   invalidInvoiceXmlDocument,
   invoiceDocument,
   invoiceXmlDocument,
@@ -72,6 +73,7 @@ const ERROR = {
     "Document type could not be detected automatically from your XML document. Please provide the doctypeId manually.",
   processIdNotDetected:
     "Failed to detect process id. Please provide the processId manually.",
+  processIdNotSupported: "Process identifier is not supported for invoice.",
   validationFailed:
     "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
   invalidInvoice:
@@ -661,6 +663,25 @@ e2eDescribe("send document: raw XML", () => {
   );
 
   test(
+    "an explicit doctypeId decides how raw XML is stored",
+    async () => {
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "xml",
+        document: invoiceXmlDocument(),
+        doctypeId: DOC_TYPE_ID.selfBillingInvoice,
+      });
+      expect(response.status).toBe(200);
+
+      const stored = await getDocument(response.body.id);
+      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.selfBillingInvoice);
+      expect(stored.body.document.type).toBe("selfBillingInvoice");
+      expect(stored.body.document.processId).toBe(PROCESS_ID.selfBilling);
+    },
+    TIMEOUT
+  );
+
+  test(
     "rejects a document that fails Peppol validation",
     async () => {
       const response = await sendDocument({
@@ -1136,9 +1157,13 @@ e2eDescribe("send document: provided totals", () => {
   );
 });
 
-e2eDescribe("send document: doctypeId and processId on non-XML documents", () => {
+// Unlike raw XML, where both identifiers only describe the transmission, here
+// they decide what gets generated: the doctypeId picks the syntax the document
+// is written in and the processId becomes its profile identifier. A processId
+// the chosen doctypeId does not support is therefore refused outright.
+e2eDescribe("send document: doctypeId and processId on JSON documents", () => {
   test(
-    "processId overrides the detected process",
+    "rejects a processId the document type does not support",
     async () => {
       const response = await sendDocument({
         recipient: RECIPIENT,
@@ -1146,17 +1171,31 @@ e2eDescribe("send document: doctypeId and processId on non-XML documents", () =>
         document: invoiceDocument(),
         processId: CUSTOM_PROCESS_ID,
       });
+      expectFailure(response, 400, ERROR.processIdNotSupported);
+    },
+    TIMEOUT
+  );
+
+  test(
+    "accepts a processId the document type does support",
+    async () => {
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: invoiceDocument(),
+        processId: PROCESS_ID.billing,
+      });
       expect(response.status).toBe(200);
 
       const stored = await getDocument(response.body.id);
-      expect(stored.body.document.processId).toBe(CUSTOM_PROCESS_ID);
+      expect(stored.body.document.processId).toBe(PROCESS_ID.billing);
       expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.invoice);
     },
     TIMEOUT
   );
 
   test(
-    "doctypeId is ignored",
+    "an explicit doctypeId decides which syntax is generated",
     async () => {
       const response = await sendDocument({
         recipient: RECIPIENT,
@@ -1174,20 +1213,45 @@ e2eDescribe("send document: doctypeId and processId on non-XML documents", () =>
   );
 
   test(
-    "an explicit doctypeId decides how raw XML is stored",
+    "a processId is checked against the doctypeId that was given, not the default",
     async () => {
+      // The default UBL BIS 3 doctype for an invoice carries the French
+      // regulated process, and so do the two France CII doctypes — but the
+      // plain EN 16931 CII D22B one asked for here carries billing:01 alone,
+      // so the same processId is refused against it.
       const response = await sendDocument({
         recipient: RECIPIENT,
-        documentType: "xml",
-        document: invoiceXmlDocument(),
-        doctypeId: DOC_TYPE_ID.selfBillingInvoice,
+        documentType: "invoice",
+        document: invoiceDocument(),
+        doctypeId: DOC_TYPE_ID.ciiInvoice,
+        processId: PROCESS_ID.franceRegulated,
+      });
+      expectFailure(response, 400, ERROR.processIdNotSupported);
+    },
+    TIMEOUT
+  );
+
+  test(
+    "accepts the French regulated process on the French CII doctype",
+    async () => {
+      // The same processId the plain CII doctype refuses above: this one lists
+      // it, so the document is generated as a French CIUS CII invoice and
+      // travels over the regulated process.
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: frenchInvoiceDocument(),
+        doctypeId: DOC_TYPE_ID.franceCiusCiiInvoice,
+        processId: PROCESS_ID.franceRegulated,
       });
       expect(response.status).toBe(200);
 
       const stored = await getDocument(response.body.id);
-      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.selfBillingInvoice);
-      expect(stored.body.document.type).toBe("selfBillingInvoice");
-      expect(stored.body.document.processId).toBe(PROCESS_ID.selfBilling);
+      expect(stored.body.document.docTypeId).toBe(
+        DOC_TYPE_ID.franceCiusCiiInvoice
+      );
+      expect(stored.body.document.processId).toBe(PROCESS_ID.franceRegulated);
+      expect(stored.body.document.type).toBe("invoice");
     },
     TIMEOUT
   );

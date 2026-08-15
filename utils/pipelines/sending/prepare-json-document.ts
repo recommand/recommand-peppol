@@ -104,6 +104,17 @@ export async function prepareJsonDocument(options: {
   const processId = input.processId
     ? normalizeProcessId(input.processId)
     : resolveFormatProcessId(format, document);
+  // Unlike raw XML, where the process id only names the process the document
+  // travels over, here it is written into the document we generate as its
+  // profile identifier. An unsupported one therefore produces a document the
+  // network refuses, so say which field is at fault instead of letting it come
+  // back as a list of failed validation rules.
+  if (input.processId && !format.supportedProcessIds.includes(processId)) {
+    throw new SendingFailure(
+      `Process identifier is not supported for ${documentType.key}.`,
+      400,
+    );
+  }
   const encode = (value: any) =>
     format.encode(value, processId, {
       senderAddress,
