@@ -13,6 +13,7 @@ import { Server } from "@recommand/lib/api";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { z } from "zod";
+import { captureSendDocumentRecording } from "@peppol/data/send-document-recording";
 
 const server = new Server();
 
@@ -51,6 +52,7 @@ const sendDocument = server.post(
   requireValidSubscription(),
   requireCompanyVerificationForStrictTeams(),
   describeRoute({ hide: true }),
+  captureSendDocumentRecording,
   zodValidator("json", sendDocumentSchema),
   sendingPipeline,
 );
@@ -61,6 +63,7 @@ const sendDocumentMinimal = server.post(
   requireValidSubscription(),
   requireCompanyVerificationForStrictTeams(),
   routeDescription,
+  captureSendDocumentRecording,
   zodValidator("json", sendDocumentSchema),
   sendingPipeline,
 );

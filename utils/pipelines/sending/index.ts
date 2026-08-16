@@ -67,6 +67,8 @@ export async function sendingPipeline(c: SendingContext) {
             documentId,
           });
     const xmlDocument = recipientAddress === null ? null : prepared.xml;
+    c.set("sendDocumentRecordingXml", xmlDocument);
+
     const validation = xmlDocument
       ? await validateDocument(xmlDocument)
       : undefined;
