@@ -10,6 +10,7 @@ import labelsServer from "./api/labels";
 import sendDocumentServer from "./api/send-document";
 import documentDefaultsServer from "./api/document-defaults";
 import previewDocumentServer from "./api/preview-document";
+import generateXmlServer from "./api/generate-xml";
 import receiveDocumentServer from "./api/internal/receive-document";
 import diditWebhookServer from "./api/internal/didit-webhook";
 import arratechWebhookServer from "./api/internal/arratech-webhook";
@@ -193,6 +194,7 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, sendDocumentServer);
   server.route(prefix, documentDefaultsServer);
   server.route(prefix, previewDocumentServer);
+  server.route(prefix, generateXmlServer);
   server.route(prefix, companiesServer);
   server.route(prefix, transmittedDocumentsServer);
   server.route(prefix, recipientServer);
