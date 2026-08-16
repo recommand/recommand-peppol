@@ -77,6 +77,10 @@ import {
 } from "@peppol/utils/document-filename";
 import { getTransmittedDocumentSearchFields } from "@peppol/utils/transmitted-document-search";
 import { audit } from "@core/lib/audit";
+import {
+  captureSendDocumentRecording,
+  type SendDocumentRecordingContext,
+} from "@peppol/data/send-document-recording";
 
 const server = new Server();
 
@@ -110,7 +114,10 @@ const routeDescription = describeRoute({
 });
 
 type SendDocumentContext = Context<
-  AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext,
+  AuthenticatedUserContext &
+    AuthenticatedTeamContext &
+    CompanyAccessContext &
+    SendDocumentRecordingContext,
   string,
   {
     in: { json: z.input<typeof sendDocumentSchema> };
@@ -124,6 +131,7 @@ const _sendDocument = server.post(
   requireValidSubscription(),
   requireCompanyVerificationForStrictTeams(),
   describeRoute({ hide: true }),
+  captureSendDocumentRecording,
   zodValidator("json", sendDocumentSchema),
   _sendDocumentImplementation
 );
@@ -134,6 +142,7 @@ const _sendDocumentMinimal = server.post(
   requireValidSubscription(),
   requireCompanyVerificationForStrictTeams(),
   routeDescription,
+  captureSendDocumentRecording,
   zodValidator("json", sendDocumentSchema),
   _sendDocumentImplementation
 );
@@ -578,6 +587,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
     } else {
       return c.json(actionFailure("Invalid document type provided."), 400);
     }
+
+    c.set("sendDocumentRecordingXml", xmlDocument);
 
     let validation: ValidationResponse | undefined;
 
