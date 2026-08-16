@@ -76,16 +76,6 @@ const ERROR = {
   processIdNotSupported: "Process identifier is not supported for invoice.",
   validationFailed:
     "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
-  invalidInvoice:
-    "Invalid invoice data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
-  invalidCreditNote:
-    "Invalid credit note data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
-  invalidSelfBillingInvoice:
-    "Invalid self billing invoice data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
-  invalidSelfBillingCreditNote:
-    "Invalid self billing credit note data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
-  invalidMessageLevelResponse:
-    "Invalid message level response data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
   unauthorized: "Unauthorized",
   companyNotFound: "Company not found",
 } as const;
@@ -571,30 +561,38 @@ e2eDescribe("send document: request validation", () => {
 });
 
 e2eDescribe("send document: document does not match the document type", () => {
-  const cases: [string, unknown, string, string][] = [
-    ["invoice", creditNoteDocument(), "invoice", ERROR.invalidInvoice],
-    ["creditNote", invoiceDocument(), "creditNote", ERROR.invalidCreditNote],
+  // The request schema binds `document` to the schema of the `documentType` that
+  // was asked for, so a mismatched document never reaches the sending pipeline:
+  // the validator refuses it and names the fields the requested type is missing.
+  const cases: [string, unknown, string, string[]][] = [
+    ["invoice", creditNoteDocument(), "invoice", ["document.invoiceNumber"]],
+    [
+      "creditNote",
+      invoiceDocument(),
+      "creditNote",
+      ["document.creditNoteNumber"],
+    ],
     [
       "selfBillingInvoice",
       invoiceDocument({ seller: undefined }),
       "selfBillingInvoice",
-      ERROR.invalidSelfBillingInvoice,
+      ["document.seller"],
     ],
     [
       "selfBillingCreditNote",
       creditNoteDocument({ seller: undefined }),
       "selfBillingCreditNote",
-      ERROR.invalidSelfBillingCreditNote,
+      ["document.seller"],
     ],
     [
       "messageLevelResponse",
       invoiceDocument(),
       "messageLevelResponse",
-      ERROR.invalidMessageLevelResponse,
+      ["document.responseCode", "document.envelopeId"],
     ],
   ];
 
-  for (const [name, document, documentType, message] of cases) {
+  for (const [name, document, documentType, fields] of cases) {
     test(
       `${name} rejects a mismatched document`,
       async () => {
@@ -603,7 +601,19 @@ e2eDescribe("send document: document does not match the document type", () => {
           documentType,
           document,
         });
-        expectFailure(response, 400, message);
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBeUndefined();
+        expect(Array.isArray(response.body.invalidInputDetails)).toBe(true);
+        for (const field of fields) {
+          expect(response.body.errors[field]).toBeDefined();
+        }
+        // The document type itself was accepted: only the document is at fault.
+        expect(
+          Object.keys(response.body.errors).filter(
+            (field) => !field.startsWith("document.")
+          )
+        ).toEqual([]);
       },
       TIMEOUT
     );

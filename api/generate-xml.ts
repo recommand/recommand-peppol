@@ -15,8 +15,9 @@ import {
 import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
 import {
   DocumentType,
+  documentRequestSchema,
   documentTypeSchema,
-  sendDocumentSchema,
+  sendDocumentBaseShape,
 } from "@peppol/utils/parsing/send-document";
 import { SendingFailure } from "@peppol/utils/pipelines/sending/errors";
 import { prepareJsonDocument } from "@peppol/utils/pipelines/sending/prepare-json-document";
@@ -31,43 +32,30 @@ import { z } from "zod";
 const server = new Server();
 
 // Raw XML has nothing to generate, so it is dropped from the document types
-// this endpoint takes. Both halves are derived from the send schema rather than
+// this endpoint takes. The list is derived from the send schema rather than
 // spelled out again, so a newly supported document type is accepted here too.
-const generateXmlDocumentTypeSchema = documentTypeSchema
-  .exclude([DocumentType.XML])
-  .openapi({
-    description: "The type of document.",
-    example: DocumentType.INVOICE,
-  });
-
-// The raw XML variant is the only string in the union the send endpoint takes,
-// every other document type is an object.
-type JsonDocumentVariant = Exclude<
-  (typeof sendDocumentSchema.shape.document.options)[number],
-  z.ZodString
->;
-
-const jsonDocumentVariants = sendDocumentSchema.shape.document.options.filter(
-  (option): option is JsonDocumentVariant => !(option instanceof z.ZodString),
-) as [JsonDocumentVariant, JsonDocumentVariant, ...JsonDocumentVariant[]];
-
-const generateXmlDocumentSchema = z.union(jsonDocumentVariants);
-
-// A null recipient means email-only delivery on the send endpoint, which throws
-// the generated XML away instead of transmitting or storing it, so there is no
-// document to generate for one here.
-const generateXmlRecipientSchema = z.string().openapi({
-  description: "The Peppol address of the recipient the document is generated for.",
-  example: "0208:987654321",
-});
+const generateXmlDocumentTypes = documentTypeSchema.options.filter(
+  (type): type is Exclude<DocumentType, typeof DocumentType.XML> =>
+    type !== DocumentType.XML,
+);
 
 // Nothing is delivered here, so the delivery options of the send endpoint have
-// no meaning: the body is its document half.
-const generateXmlSchema = sendDocumentSchema.omit({ email: true }).extend({
-  recipient: generateXmlRecipientSchema,
-  documentType: generateXmlDocumentTypeSchema,
-  document: generateXmlDocumentSchema,
-});
+// no meaning, and a null recipient means email-only delivery there, which throws
+// the generated XML away instead of transmitting or storing it: there is no
+// document to generate for one here.
+const { email: _email, ...generateXmlBaseShape } = {
+  ...sendDocumentBaseShape,
+  recipient: z.string().openapi({
+    description:
+      "The Peppol address of the recipient the document is generated for.",
+    example: "0208:987654321",
+  }),
+};
+
+const generateXmlSchema = documentRequestSchema(
+  generateXmlBaseShape,
+  generateXmlDocumentTypes,
+);
 
 type GenerateXmlContext = Context<
   AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext,
