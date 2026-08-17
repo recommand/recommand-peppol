@@ -31,6 +31,7 @@ import {
   senderIdentityRejection,
   xmlMasks,
 } from "./normalise";
+import { createProgress } from "./progress";
 import {
   LIMIT,
   getRecordingSource,
@@ -43,6 +44,7 @@ const TIMEOUT = 120_000;
 requireConfig();
 
 const source = getRecordingSource();
+console.log(`Loading recording files into RAM from ${source.description}...`);
 const { recordings, unreadable } = await source.load();
 console.log(
   `Replaying ${recordings.length} recording(s) from ${source.description}` +
@@ -51,6 +53,32 @@ console.log(
       ? `, ${unreadable.length} of which could not be read`
       : ""),
 );
+
+const progress = createProgress(unreadable.length + 1 + recordings.length);
+
+/**
+ * Same as `test`, but drives the status line and parks it before a failure so
+ * bun's error is not overwritten. `--only-failures` hides the per-test pass
+ * lines this replaces.
+ */
+function replayTest(
+  name: string,
+  fn: () => void | Promise<void>,
+  timeout?: number,
+): void {
+  const wrapped = async () => {
+    progress.begin(name);
+    try {
+      await fn();
+      progress.pass();
+    } catch (error) {
+      progress.fail(name);
+      throw error;
+    }
+  };
+  if (timeout === undefined) test(name, wrapped);
+  else test(name, wrapped, timeout);
+}
 
 /**
  * What was asserted less strictly than the rest, counted and reported at the
@@ -102,11 +130,14 @@ function describeAnswer(status: number, body: any, limit = 1500): string {
 
 describe("send document recordings", () => {
   beforeAll(async () => {
+    progress.begin("waiting for API");
     await waitForApi();
+    progress.begin("checking playground team");
     await assertPlaygroundTeam();
   }, 180_000);
 
   afterAll(() => {
+    progress.finish();
     const notes = [
       xmlCompared.length > 0 &&
         `${xmlCompared.length} had the XML they transmitted compared in full`,
@@ -135,12 +166,12 @@ describe("send document recordings", () => {
   // module that throws: the other recordings are still worth replaying, and
   // the object is named so it can be looked at on its own.
   for (const { key, error } of unreadable) {
-    test(`${key} (could not be read)`, () => {
+    replayTest(`${key} (could not be read)`, () => {
       throw error;
     });
   }
 
-  test("there are recordings to replay", () => {
+  replayTest("there are recordings to replay", () => {
     if (recordings.length === 0) {
       throw new Error(
         `No recordings found in ${source.description}. Widen REGRESSION_RECORDING_PREFIX.`,
@@ -150,7 +181,7 @@ describe("send document recordings", () => {
 
   for (const loaded of recordings) {
     const { recording } = loaded;
-    test(
+    replayTest(
       label(loaded),
       async () => {
         const emails = new EmailMap(

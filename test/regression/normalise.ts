@@ -227,40 +227,74 @@ function maskElement(xml: string, localName: string): string {
   });
 }
 
-/** The elements that carry a Peppol address, in UBL and in CII. */
-const ENDPOINT_ELEMENTS = ["EndpointID", "URIID"];
-
-/** `<cbc:EndpointID schemeID="0208">0659689080</cbc:EndpointID>` → `0208:0659689080`. */
-function endpointAddress(element: string): string {
-  const scheme = element.match(/schemeID="([^"]*)"/)?.[1];
-  const identifier = element.replace(/<[^>]*>/g, "").trim();
-  return scheme ? `${scheme}:${identifier}` : identifier;
-}
+/**
+ * The elements that carry a party's Peppol address: `cbc:EndpointID` in UBL,
+ * `ram:URIUniversalCommunication` — whose only child is the `ram:URIID` that
+ * holds the address — in CII. The wrapper is masked rather than the `URIID`
+ * itself because CII also uses that name for a contact's email address and for
+ * an attachment's URL, neither of which the environment decides.
+ */
+const ADDRESS_ELEMENTS = ["EndpointID", "URIUniversalCommunication"];
 
 /**
- * Masks the Peppol address of the company doing the sending, scheme included.
+ * The party element that holds the *sending* company, per document type.
  *
- * The scheme has to go with it: a playground company is registered under a
- * different one than the production company that recorded the send — a
- * `0208:` enterprise number where the recording had a `9925:` VAT number — so
- * masking only the identifier leaves the attribute to fail on.
+ * The sender's address is the one the environment decides: it belongs to the
+ * production company that recorded the send, and the replay is done by a
+ * playground company registered under a different one — a `0208:` enterprise
+ * number where the recording had a `9925:` VAT number, so the `schemeID`
+ * attribute has to be masked along with the identifier.
  *
- * Which party holds the sender depends on the document: on an invoice it is
- * the supplier, on a self-billing invoice the customer, and other document
- * types put it elsewhere again. Rather than enumerate that, the one address
- * the *request* decided — the recipient — is left to be compared as it stands,
- * and every other address in the document is masked. A recipient that the
- * request wrote in some other form than the document does simply fails to
- * match, and its endpoint is masked too, which is the safe way round.
+ * Which party that is depends on the document. A self-billing invoice is
+ * written by the customer, so the sender is the customer there and the
+ * supplier on an ordinary one. Both syntaxes are listed because the same
+ * document is sent as UBL or as CII depending on the doctype id. A French CDAR
+ * has no entry to mask: it writes an electronic address for the recipient
+ * only.
+ *
+ * Naming the party rather than recognising the address by its value is what
+ * makes a send to one's own address work: there the sender and the recipient
+ * are the same address, and no rule phrased in terms of values can tell the
+ * two apart.
  */
-function maskSenderAddress(xml: string, recipient: string | null): string {
+const SENDER_PARTY_ELEMENTS: Record<string, string[]> = {
+  invoice: ["AccountingSupplierParty", "SellerTradeParty"],
+  creditNote: ["AccountingSupplierParty", "SellerTradeParty"],
+  selfBillingInvoice: ["AccountingCustomerParty", "BuyerTradeParty"],
+  selfBillingCreditNote: ["AccountingCustomerParty", "BuyerTradeParty"],
+  messageLevelResponse: ["SenderParty"],
+  frenchInvoicingCdar: [],
+};
+
+/**
+ * For a document type added since the list above was written: mask every party
+ * that could hold a sender. The recipient's address stops being compared for
+ * those, which is the safe direction to be wrong in, and adding the type above
+ * gets it back.
+ */
+const EVERY_SENDER_PARTY = [
+  ...new Set(Object.values(SENDER_PARTY_ELEMENTS).flat()),
+];
+
+function senderParties(documentType: unknown): string[] {
+  if (typeof documentType !== "string") return EVERY_SENDER_PARTY;
+  return SENDER_PARTY_ELEMENTS[documentType] ?? EVERY_SENDER_PARTY;
+}
+
+/** Masks the address elements inside the party that holds the sender. */
+function maskSenderAddress(xml: string, parties: string[]): string {
   let masked = xml;
-  for (const name of ENDPOINT_ELEMENTS) {
-    masked = masked.replace(elementPattern(name), (match, tag) =>
-      recipient !== null && endpointAddress(match) === recipient
-        ? match
-        : `<${tag}>[masked ${name}]</${tag}>`,
-    );
+  for (const party of parties) {
+    masked = masked.replace(elementPattern(party), (party_) => {
+      let within = party_;
+      for (const name of ADDRESS_ELEMENTS) {
+        within = within.replace(
+          elementPattern(name),
+          (_match, tag) => `<${tag}>[masked ${name}]</${tag}>`,
+        );
+      }
+      return within;
+    });
   }
   return masked;
 }
@@ -287,10 +321,8 @@ const ENVIRONMENT_ELEMENTS = {
 export type XmlMasks = {
   /** Element names whose content is replaced wherever they appear. */
   names: string[];
-  /** Whether the sending company's own Peppol address is masked. */
-  senderAddress: boolean;
-  /** The address the request asked for: the one that stays compared. */
-  recipient: string | null;
+  /** The party elements whose Peppol address belongs to the sender. */
+  senderParties: string[];
 };
 
 /**
@@ -304,7 +336,7 @@ export type XmlMasks = {
  */
 export function xmlMasks(request: any): XmlMasks {
   if (request?.documentType === "xml") {
-    return { names: [], senderAddress: false, recipient: null };
+    return { names: [], senderParties: [] };
   }
 
   const document = request?.document ?? {};
@@ -314,12 +346,7 @@ export function xmlMasks(request: any): XmlMasks {
       names.push(...ENVIRONMENT_ELEMENTS[field]);
     }
   }
-  return {
-    names,
-    senderAddress: true,
-    recipient:
-      typeof request?.recipient === "string" ? request.recipient.trim() : null,
-  };
+  return { names, senderParties: senderParties(request?.documentType) };
 }
 
 export function normaliseXml(
@@ -328,9 +355,7 @@ export function normaliseXml(
 ): string | null {
   if (xml === null) return null;
   let normalised = xml.replace(/\r\n/g, "\n").trim();
-  if (masks.senderAddress) {
-    normalised = maskSenderAddress(normalised, masks.recipient);
-  }
+  normalised = maskSenderAddress(normalised, masks.senderParties);
   for (const name of masks.names) {
     normalised = maskElement(normalised, name);
   }

@@ -82,12 +82,24 @@ bun run test:regression
 bun run test:regression
 
 # one recording, by its key — or any part of one
-bun test --timeout 120000 ./test/regression/ -t "team_01H…/c_01H…/2026/08/16/sdr_01K….json"
+bun test --timeout 120000 --only-failures ./test/regression/ -t "team_01H…/c_01H…/2026/08/16/sdr_01K….json"
 
 # every recording of one day, or of one company
-bun test --timeout 120000 ./test/regression/ -t "2026/08/16"
-bun test --timeout 120000 ./test/regression/ -t "c_01H…"
+bun test --timeout 120000 --only-failures ./test/regression/ -t "2026/08/16"
+bun test --timeout 120000 --only-failures ./test/regression/ -t "c_01H…"
 ```
+
+Passing tests do not print. The suite writes one status line instead — how many
+have run, a bar, how many have failed, how long is left — and only a failure
+breaks it, in full, followed by bun's summary at the end:
+
+```
+  347/1000  [=======>            ]  2 fail  8m left  …/2026/08/16/sdr_01K….json (invoice → 200)
+```
+
+The `test:regression` script passes `--only-failures` so bun does not print a
+line per pass; add the same flag when you invoke `bun test` by hand, or the
+status line is overwritten by those passes.
 
 Each test is named after the object it replays — its whole key in the bucket,
 followed by the document type and the status that was recorded:
@@ -182,17 +194,29 @@ Masked in the XML (see `normalise.ts`):
 
 | Element | Why | When |
 | --- | --- | --- |
-| `EndpointID`, `URIID` | The sender's Peppol address is the replay company's, under a different scheme (`0208:` where production had `9925:`), so the `schemeID` attribute is masked with it | every address except the recipient the request asked for |
+| `EndpointID`, `URIUniversalCommunication` | The sender's Peppol address is the replay company's, under a different scheme (`0208:` where production had `9925:`), so the `schemeID` attribute is masked with it | only inside the party that holds the sender |
 | `EmbeddedDocumentBinaryObject`, `BinaryObject` | A generated PDF carries its creation date, so it is not byte reproducible | always |
 | `AccountingSupplierParty`, `SellerTradeParty` | Defaulted from the sending company | only when the request omits `seller` |
 | `AccountingCustomerParty`, `BuyerTradeParty` | Defaulted from the sending company | only when the request omits `buyer` |
 | `IssueDate`, `IssueDateTime` | Defaulted to the day of the send | only when the request omits `issueDate` |
 | `DueDate`, `PaymentDueDate` | Defaulted to a month after the issue date | only when the request omits `dueDate` |
 
-Which party carries the sender's address depends on the document — the
-supplier on an invoice, the customer on a self-billing invoice — so instead of
-enumerating that, the address the request named as the `recipient` is the one
-left compared, and every other address in the document is masked.
+Which party carries the sender's address depends on the document: the supplier
+on an invoice, the customer on a self-billing invoice (which the customer
+writes), the `SenderParty` on a message level response, and nowhere at all on a
+French CDAR, which writes an electronic address for the recipient only.
+`SENDER_PARTY_ELEMENTS` in `normalise.ts` lists them per document type, and the
+address is masked inside that party alone — the recipient's stays compared.
+
+Naming the party rather than recognising the sender's address by its value is
+what makes a **send to one's own address** work. Those exist in the bucket:
+integrators test against their own Peppol address, so the recording has the
+same address in both parties while the replay has the playground company in one
+of them. No rule phrased in terms of values can tell the two apart there.
+
+The CII wrapper `URIUniversalCommunication` is masked rather than the `URIID`
+inside it because CII uses that same name for a contact's email address and for
+an attachment's URL, neither of which the environment decides.
 
 A raw XML send transmits the string it was given, so nothing about it is
 environment derived and **nothing is masked**: it has to come back byte for
