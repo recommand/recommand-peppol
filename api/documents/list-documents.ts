@@ -15,6 +15,7 @@ import {
 import { supportedDocumentTypeEnum } from "@peppol/db/schema";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
+import { sendTelegramNotification } from "@peppol/utils/system-notifications/telegram";
 
 const server = new Server();
 
@@ -162,6 +163,7 @@ async function _getTransmittedDocumentsImplementation(c: GetTransmittedDocuments
       })
     );
   } catch (error) {
+    sendTelegramNotification(`Failed to fetch transmitted documents for team ${c.var.team.id}: ${error instanceof Error ? error.message : String(error)}`);
     return c.json(
       actionFailure("Failed to fetch transmitted documents"),
       500
