@@ -10,9 +10,6 @@ const PROBE_TIMEOUT_MS = 5_000;
 /** A cold start runs migrations for every package and boots Vite. */
 const READY_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 500;
-/** Enough of the server log to explain a failed start. */
-const KEPT_OUTPUT_LINES = 80;
-
 let serverProcess: ChildProcess | null = null;
 let serverExited = false;
 let serverReady = false;
@@ -23,10 +20,7 @@ let pendingStart: Promise<void> | null = null;
 let startFailure: Error | null = null;
 /** Why the last probe failed, so a timeout can say what it was looking at. */
 let lastProbeError: string | null = null;
-/** Set while we are the ones killing the server, to quieten its exit noise. */
-let stoppingDevServer = false;
 let cleanupRegistered = false;
-const serverOutput: string[] = [];
 
 function normaliseHost(host: string): string {
   return host.replace(/\/+$/, "");
@@ -39,21 +33,6 @@ function normaliseHost(host: string): string {
  */
 export function getTestHost(): string {
   return normaliseHost(process.env.ETE_UNIT_TEST_HOST || DEFAULT_HOST);
-}
-
-function recordOutput(chunk: string): void {
-  for (const line of chunk.split("\n")) {
-    if (!line.trim()) continue;
-    serverOutput.push(line);
-  }
-  if (serverOutput.length > KEPT_OUTPUT_LINES) {
-    serverOutput.splice(0, serverOutput.length - KEPT_OUTPUT_LINES);
-  }
-}
-
-function recentOutput(): string {
-  if (serverOutput.length === 0) return "";
-  return `Last lines from the dev server (its full output is above):\n${serverOutput.join("\n")}`;
 }
 
 function getProjectRoot(): string {
@@ -143,9 +122,7 @@ async function waitForServer(
     // which is what happens when the server cannot boot (a bad DATABASE_URL, a
     // port already in use, a failed migration).
     if (serverStartedByTests && serverExited) {
-      throw new Error(
-        `The dev server exited before it became ready. ${recentOutput()}`,
-      );
+      throw new Error("The dev server exited before it became ready.");
     }
     if (await isReady(host)) {
       return;
@@ -155,7 +132,7 @@ async function waitForServer(
 
   throw new Error(
     `Server at ${host} did not become ready after ${Math.round(timeoutMs / 1000)} seconds.\n` +
-      `${lastProbeError ?? "The readiness check never passed."}\n${recentOutput()}`,
+      `${lastProbeError ?? "The readiness check never passed."}`,
   );
 }
 
@@ -205,12 +182,11 @@ async function startDevServer(): Promise<void> {
   }
   args.push("dev");
 
-  serverOutput.length = 0;
   serverExited = false;
 
   serverProcess = spawn("bun", args, {
     cwd: projectRoot,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ["ignore", "ignore", "ignore"],
     env: {
       ...process.env,
       NODE_ENV: "development",
@@ -231,39 +207,6 @@ async function startDevServer(): Promise<void> {
   serverStartedByTests = true;
   registerCleanup();
 
-  serverProcess.stdout?.on("data", (chunk: Buffer) => {
-    const output = chunk.toString();
-    if (!output.trim()) return;
-    recordOutput(output);
-    console.log(`[Server] ${output}`);
-  });
-
-  serverProcess.stderr?.on("data", (chunk: Buffer) => {
-    const output = chunk.toString();
-    if (!output.trim()) return;
-    recordOutput(output);
-
-    const lines = output.split("\n").filter((line) => line.trim());
-    for (const line of lines) {
-      if (
-        line.startsWith("$ ") ||
-        line.includes("concurrently") ||
-        line.trim() === "" ||
-        line.includes("exited with code 1") ||
-        // Our own SIGTERM coming back as concurrently reporting its children:
-        // 143 is 128 + SIGTERM. Shutting the server down is not a failure, and
-        // printing it as one makes a passing run look like it went wrong.
-        (stoppingDevServer &&
-          (line.includes("exited with code 143") ||
-            line.includes("code SIGTERM") ||
-            line.includes("was terminated by signal SIGTERM")))
-      ) {
-        continue;
-      }
-      console.error(`[Server Error] ${line}`);
-    }
-  });
-
   serverProcess.on("exit", () => {
     serverExited = true;
     serverReady = false;
@@ -282,7 +225,6 @@ export async function stopDevServer(): Promise<void> {
   }
 
   console.log(`Stopping dev server (PID: ${pid})...`);
-  stoppingDevServer = true;
   const processRef = serverProcess;
 
   const exited = new Promise<void>((resolve) => {
