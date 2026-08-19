@@ -273,9 +273,7 @@ Email is required,E-Mail-Adresse ist erforderlich
 Email Recipients,E-Mail-Empfänger
 Email Subject,E-Mail-Betreff
 Email-only delivery is only supported for (self-billing) invoices and credit notes,Die ausschließliche Zustellung per E-Mail wird nur für Self-Billing-Rechnungen und -Gutschriften unterstützt
-EN 16931 CII Credit Note D22B,EN-16931-CII-Gutschrift D22B
 EN 16931 CII Invoice + Credit Note D22B,EN-16931-CII-Rechnung + Gutschrift D22B
-EN 16931 CII Invoice D22B,EN-16931-CII-Rechnung D22B
 Enable or disable integration capabilities,Integrationsfunktionen aktivieren oder deaktivieren
 End Date,Enddatum
 End datetime (exclusive) *,Endzeitpunkt (exklusiv) *
@@ -376,16 +374,10 @@ For small businesses sending every month,Für kleine Unternehmen\, die jeden Mon
 Forward,Weiterleiten
 Forward to,Weiterleiten an
 Forward to someone else,An eine andere Person weiterleiten
-France CII Credit Note CIUS,Französische CII-Gutschrift CIUS
-France CII Credit Note Extended,Französische erweiterte CII-Gutschrift
 France CII Invoice + Credit Note CIUS,Französische CII-Rechnung + Gutschrift CIUS
 France CII Invoice + Credit Note CIUS (Non-Regulated),Französische CII-Rechnung + Gutschrift CIUS (nicht reguliert)
 France CII Invoice + Credit Note Extended,Französische erweiterte CII-Rechnung + Gutschrift
 France CII Invoice + Credit Note Extended (Non-Regulated),Französische erweiterte CII-Rechnung + Gutschrift (nicht reguliert)
-France CII Invoice CIUS,Französische CII-Rechnung CIUS
-France CII Invoice Extended,Französische erweiterte CII-Rechnung
-France Factur-X Credit Note,Französische Factur-X-Gutschrift
-France Factur-X Invoice,Französische Factur-X-Rechnung
 France Factur-X Invoice + Credit Note,Französische Factur-X-Rechnung + Gutschrift
 France Factur-X Invoice + Credit Note (Non-Regulated),Französische Factur-X-Rechnung + Gutschrift (nicht reguliert)
 France Invoicing CDAR,Französisches Rechnungs-CDAR
@@ -909,3 +901,114 @@ Your name,Ihr Name
 Your payment method is set up and ready for billing.,Ihre Zahlungsmethode ist eingerichtet und für die Abrechnung bereit.
 Your signature,Ihre Unterschrift
 Zero rated goods,Waren mit Nullsteuersatz
+A company verification finished,Eine Unternehmensverifizierung wurde abgeschlossen
+A document was received for a company,Für ein Unternehmen wurde ein Dokument empfangen
+A document was sent by a company,Ein Unternehmen hat ein Dokument gesendet
+Auto-generated PDF,Automatisch erzeugtes PDF
+Company verification,Unternehmensverifizierung
+Document label assigned,Dokument-Label zugewiesen
+Document label unassigned,Dokument-Label entfernt
+Document received,Dokument empfangen
+Document sent,Dokument gesendet
+Document type,Dokumenttyp
+Embedded attachments,Eingebettete Anhänge
+Error message,Fehlermeldung
+Label external ID,Externe Label-ID
+Receiver address,Empfängeradresse
+Sender address,Absenderadresse
+Verification status,Verifizierungsstatus
+XML document,XML-Dokument
+Rejected,Abgelehnt
+Error,Fehler
+Failed to load billing profile,Abrechnungsprofil konnte nicht geladen werden
+Billing profile updated successfully,Abrechnungsprofil erfolgreich aktualisiert
+Failed to update billing profile,Abrechnungsprofil konnte nicht aktualisiert werden
+Failed to update payment method,Zahlungsmethode konnte nicht aktualisiert werden
+A company verification update was recorded for {0}.,Für {0} wurde eine Aktualisierung der Unternehmensverifizierung erfasst.
+Action required: Verify {0} on the Peppol network,Aktion erforderlich: Verifizieren Sie {0} im Peppol-Netzwerk
+Amount,Betrag
+As an authorised representative of this company\, you need to verify your identity to activate {0} for electronic document exchange through Peppol.,Als bevollmächtigte Vertretung dieses Unternehmens müssen Sie Ihre Identität verifizieren\, um {0} für den elektronischen Dokumentenaustausch über Peppol zu aktivieren.
+Billing date,Abrechnungsdatum
+Company verification declined,Unternehmensverifizierung abgelehnt
+Company verification request,Anfrage zur Unternehmensverifizierung
+Company verification status for {0}: {1},Verifizierungsstatus von {0}: {1}
+Company verification update,Aktualisierung der Unternehmensverifizierung
+Company verification {0}: {1},Unternehmensverifizierung für {1}: {0}
+Company verified,Unternehmen verifiziert
+Complete verification,Verifizierung abschließen
+Dear {0}\,,Guten Tag {0}\,
+Document,Dokument
+Document number,Dokumentnummer
+Failed tasks,Fehlgeschlagene Aufgaben
+From,Von
+Go to your companies,Zu Ihren Unternehmen
+Great news! {0} has been manually verified and is now active on the Peppol network.,Gute Nachrichten! {0} wurde manuell verifiziert und ist jetzt im Peppol-Netzwerk aktiv.
+Hello\,,Guten Tag\,
+If you did not expect this request or have questions\, contact,Wenn Sie diese Anfrage nicht erwartet haben oder Fragen haben\, wenden Sie sich an
+If you have any questions\, contact,Bei Fragen wenden Sie sich an
+Integration failure,Integrationsfehler
+Integration failure: {0} for {1},Integrationsfehler: {0} für {1}
+Integration {0} failed for {1},Integration {0} ist für {1} fehlgeschlagen
+Invoice reference,Rechnungsreferenz
+Invoice {0},Rechnung {0}
+Label assigned to document,Label dem Dokument zugewiesen
+Label assigned: {0} on {1},Label zugewiesen: {0} an {1}
+Label removed from document,Label vom Dokument entfernt
+Label removed: {0} from {1},Label entfernt: {0} von {1}
+New {0} received,Neues Dokument empfangen: {0}
+New {0} received: {1},Neues Dokument empfangen: {0} {1}
+New {0} received for {1},Neues Dokument für {1} empfangen: {0}
+New {0} received from {1},Neues Dokument von {1} empfangen: {0}
+Open company,Unternehmen öffnen
+Open document,Dokument öffnen
+Open report,Bericht öffnen
+Open the document in Recommand to review the current labels and any follow-up actions.,Öffnen Sie das Dokument in Recommand\, um die aktuellen Labels und mögliche Folgeaktionen zu prüfen.
+Open the document in Recommand to review the label assignment and continue processing it.,Öffnen Sie das Dokument in Recommand\, um die Label-Zuweisung zu prüfen und die Verarbeitung fortzusetzen.
+Open your billing settings,Öffnen Sie Ihre Abrechnungseinstellungen
+Payment failed,Zahlung fehlgeschlagen
+Payment failed for invoice {0},Zahlung für Rechnung {0} fehlgeschlagen
+Please review the integration configuration and ensure all required settings are correct.,Prüfen Sie die Konfiguration der Integration und stellen Sie sicher\, dass alle erforderlichen Einstellungen korrekt sind.
+Please update your payment method in your account settings\, or contact us at,Aktualisieren Sie Ihre Zahlungsmethode in Ihren Kontoeinstellungen oder wenden Sie sich an
+Recommand invoice {0},Recommand-Rechnung {0}
+Reference,Referenz
+Subtotal (excl. VAT),Zwischensumme (ohne USt.)
+Thank you for using Recommand. Please find the summary of your invoice below.,Vielen Dank\, dass Sie Recommand nutzen. Nachfolgend finden Sie die Übersicht Ihrer Rechnung.
+Thank you for your understanding.,Vielen Dank für Ihr Verständnis.
+The document and any attachments are included with this email. Please review and take any necessary action.,Das Dokument und etwaige Anhänge sind dieser E-Mail beigefügt. Bitte prüfen Sie sie und ergreifen Sie die erforderlichen Maßnahmen.
+The integration {0} for company {1} failed during {2}.,Die Integration {0} für das Unternehmen {1} ist bei {2} fehlgeschlagen.
+The label {0} was assigned to a {1} for {2}.,Das Label {0} wurde einem Dokument ({1}) von {2} zugewiesen.
+The label {0} was removed from a {1} for {2}.,Das Label {0} wurde von einem Dokument ({1}) von {2} entfernt.
+The manual verification for {0} was declined.,Die manuelle Verifizierung für {0} wurde abgelehnt.
+The {0} has been accepted for processing by our approved reporting partner. The reported data is included with this email for your records.,Das Dokument ({0}) wurde von unserem zugelassenen Meldepartner zur Verarbeitung angenommen. Die gemeldeten Daten sind dieser E-Mail für Ihre Unterlagen beigefügt.
+The {0} has been delivered to the recipient through the Peppol network. The document and any attachments are included with this email for your records.,Das Dokument ({0}) wurde dem Empfänger über das Peppol-Netzwerk zugestellt. Das Dokument und etwaige Anhänge sind dieser E-Mail für Ihre Unterlagen beigefügt.
+This company is not active on the Peppol network yet. Please contact us if you believe this decision needs to be reviewed.,Dieses Unternehmen ist noch nicht im Peppol-Netzwerk aktiv. Wenden Sie sich an uns\, wenn Sie der Ansicht sind\, dass diese Entscheidung überprüft werden sollte.
+To,An
+Total (incl. VAT),Gesamt (inkl. USt.)
+Unknown company,Unbekanntes Unternehmen
+Updated,Aktualisiert
+VAT ({0}%),USt. ({0} %)
+We attempted to process the payment for your recent invoice\, but this was unsuccessful. Your payment method may need to be updated.,Wir haben versucht\, die Zahlung für Ihre letzte Rechnung zu verarbeiten\, was jedoch nicht erfolgreich war. Möglicherweise muss Ihre Zahlungsmethode aktualisiert werden.
+We have tried to deliver the invoice to you via the Peppol network. It is attached to this email for your records.,Wir haben versucht\, Ihnen die Rechnung über das Peppol-Netzwerk zuzustellen. Sie ist dieser E-Mail für Ihre Unterlagen beigefügt.
+You can now send and receive electronic documents through Peppol.,Sie können jetzt elektronische Dokumente über Peppol senden und empfangen.
+You will need to provide proof of identity during this process.,Während dieses Vorgangs müssen Sie einen Identitätsnachweis vorlegen.
+Your company {0} has received a new {1} via the Peppol network.,Ihr Unternehmen {0} hat über das Peppol-Netzwerk ein neues Dokument empfangen: {1}.
+Your company {0} has successfully filed a {1} with the {2}.,Ihr Unternehmen {0} hat ein Dokument bei {2} eingereicht: {1}.
+Your company {0} has successfully sent a {1} via the Peppol network.,Ihr Unternehmen {0} hat über das Peppol-Netzwerk ein Dokument gesendet: {1}.
+to resolve this issue.,um dieses Problem zu lösen.
+{0} ({1}) has asked you to complete the identity verification for {2} on the Peppol network.,{0} ({1}) hat Sie gebeten\, die Identitätsverifizierung für {2} im Peppol-Netzwerk abzuschließen.
+{0} could not be verified on the Peppol network,{0} konnte im Peppol-Netzwerk nicht verifiziert werden
+{0} filed,Dokument eingereicht: {0}
+{0} filed successfully,Dokument erfolgreich eingereicht: {0}
+{0} filed successfully: {1},Dokument erfolgreich eingereicht: {0} {1}
+{0} filed with {1},Dokument bei {1} eingereicht: {0}
+{0} has been verified on the Peppol network,{0} wurde im Peppol-Netzwerk verifiziert
+{0} sent,Dokument gesendet: {0}
+{0} sent successfully,Dokument erfolgreich gesendet: {0}
+{0} sent successfully for {1},Dokument erfolgreich für {1} gesendet: {0}
+{0} sent successfully: {1},Dokument erfolgreich gesendet: {0} {1}
+{0} sent to {1},Dokument an {1} gesendet: {0}
+{0} verification was declined,Die Verifizierung von {0} wurde abgelehnt
+{0} was assigned to {1} {2},{0} wurde {1} {2} zugewiesen
+{0} was removed from {1} {2},{0} wurde von {1} {2} entfernt
+{0} sent successfully to {1},Dokument erfolgreich an {1} gesendet: {0}
+{0} filed successfully with {1},Dokument erfolgreich bei {1} eingereicht: {0}

@@ -7,6 +7,7 @@ import { getMinimalTeamMembers } from "@core/data/team-members";
 import { render } from "@react-email/render";
 import { InvoiceEmail } from "@peppol/emails/invoice-email";
 import { formatISO } from "date-fns";
+import { getTeamNotificationT } from "@peppol/data/notification-language";
 
 export async function sendInvoiceAsBRBX(
   info: {
@@ -126,8 +127,13 @@ export async function sendInvoiceAsBRBX(
     }
   };
 
+  // The BRBX API takes one body and one recipient list per document, so this
+  // notification cannot be split per recipient language the way the payment
+  // failure reminder is: it goes out in the team's language.
+  const t = await getTeamNotificationT(info.teamId);
   const htmlBody = await render(
     InvoiceEmail({
+      t,
       companyName: info.companyName,
       invoiceNumber: invoice.invoiceNumber,
       totalAmountExcl: info.totalAmountExcl,
@@ -153,7 +159,7 @@ export async function sendInvoiceAsBRBX(
       email: dryRun ? undefined : {
         to: emailRecipients,
         when: "on_peppol_failure",
-        subject: `Recommand invoice ${invoice.invoiceNumber}`,
+        subject: t`Recommand invoice ${invoice.invoiceNumber}`,
         htmlBody: htmlBody,
       },
       pdfGeneration: {

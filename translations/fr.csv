@@ -868,18 +868,10 @@ SI-UBL 2.0 Invoice,Facture SI-UBL 2.0
 SI-UBL 2.0 Credit Note,Avoir SI-UBL 2.0
 Invoice Response,Réponse à une facture
 France Invoicing CDAR,CDAR de facturation française
-France CII Invoice CIUS,Facture CII France CIUS
 France UBL Invoice CIUS,Facture UBL France CIUS
 France UBL Credit Note CIUS,Avoir UBL France CIUS
 France UBL Invoice Extended,Facture UBL France Extended
 France UBL Credit Note Extended,Avoir UBL France Extended
-France CII Invoice Extended,Facture CII France Extended
-France CII Credit Note Extended,Avoir CII France Extended
-EN 16931 CII Invoice D22B,Facture EN 16931 CII D22B
-EN 16931 CII Credit Note D22B,Avoir EN 16931 CII D22B
-France Factur-X Invoice,Facture France Factur-X
-France Factur-X Credit Note,Avoir France Factur-X
-France CII Credit Note CIUS,Avoir CII France CIUS
 Vat Reverse Charge,Autoliquidation de la TVA
 Exempt from Tax,Exonéré de TVA
 Standard rate,Taux normal
@@ -909,3 +901,114 @@ France UBL Credit Note CIUS (Non-Regulated),Avoir UBL France CIUS (non réglemen
 France UBL Credit Note Extended (Non-Regulated),Avoir UBL France Extended (non réglementé)
 France UBL Invoice CIUS (Non-Regulated),Facture UBL France CIUS (non réglementé)
 France UBL Invoice Extended (Non-Regulated),Facture UBL France Extended (non réglementé)
+A company verification finished,Une vérification d'entreprise s'est terminée
+A document was received for a company,Un document a été reçu pour une entreprise
+A document was sent by a company,Un document a été envoyé par une entreprise
+Auto-generated PDF,PDF généré automatiquement
+Company verification,Vérification d'entreprise
+Document label assigned,Libellé de document attribué
+Document label unassigned,Libellé de document retiré
+Document received,Document reçu
+Document sent,Document envoyé
+Document type,Type de document
+Embedded attachments,Pièces jointes intégrées
+Error message,Message d'erreur
+Label external ID,Identifiant externe du libellé
+Receiver address,Adresse du destinataire
+Sender address,Adresse de l'expéditeur
+Verification status,Statut de vérification
+XML document,Document XML
+Rejected,Rejeté
+Error,Erreur
+Failed to load billing profile,Échec du chargement du profil de facturation
+Billing profile updated successfully,Profil de facturation mis à jour avec succès
+Failed to update billing profile,Échec de la mise à jour du profil de facturation
+Failed to update payment method,Échec de la mise à jour du moyen de paiement
+A company verification update was recorded for {0}.,Une mise à jour de la vérification d'entreprise a été enregistrée pour {0}.
+Action required: Verify {0} on the Peppol network,Action requise : vérifiez {0} sur le réseau Peppol
+Amount,Montant
+As an authorised representative of this company\, you need to verify your identity to activate {0} for electronic document exchange through Peppol.,En tant que représentant autorisé de cette entreprise\, vous devez vérifier votre identité pour activer {0} pour l'échange électronique de documents via Peppol.
+Billing date,Date de facturation
+Company verification declined,Vérification d'entreprise refusée
+Company verification request,Demande de vérification d'entreprise
+Company verification status for {0}: {1},Statut de vérification de {0} : {1}
+Company verification update,Mise à jour de la vérification d'entreprise
+Company verification {0}: {1},Vérification d'entreprise pour {1} : {0}
+Company verified,Entreprise vérifiée
+Complete verification,Terminer la vérification
+Dear {0}\,,Bonjour {0}\,
+Document,Document
+Document number,Numéro de document
+Failed tasks,Tâches en échec
+From,De
+Go to your companies,Accéder à vos entreprises
+Great news! {0} has been manually verified and is now active on the Peppol network.,Bonne nouvelle ! {0} a été vérifiée manuellement et est désormais active sur le réseau Peppol.
+Hello\,,Bonjour\,
+If you did not expect this request or have questions\, contact,Si vous n'attendiez pas cette demande ou si vous avez des questions\, contactez
+If you have any questions\, contact,Si vous avez des questions\, contactez
+Integration failure,Échec de l'intégration
+Integration failure: {0} for {1},Échec de l'intégration : {0} pour {1}
+Integration {0} failed for {1},L'intégration {0} a échoué pour {1}
+Invoice reference,Référence de facture
+Invoice {0},Facture {0}
+Label assigned to document,Libellé attribué au document
+Label assigned: {0} on {1},Libellé attribué : {0} sur {1}
+Label removed from document,Libellé retiré du document
+Label removed: {0} from {1},Libellé retiré : {0} de {1}
+New {0} received,Nouveau document reçu : {0}
+New {0} received: {1},Nouveau document reçu : {0} {1}
+New {0} received for {1},Nouveau document reçu pour {1} : {0}
+New {0} received from {1},Nouveau document reçu de {1} : {0}
+Open company,Ouvrir l'entreprise
+Open document,Ouvrir le document
+Open report,Ouvrir le rapport
+Open the document in Recommand to review the current labels and any follow-up actions.,Ouvrez le document dans Recommand pour consulter les libellés actuels et les actions de suivi éventuelles.
+Open the document in Recommand to review the label assignment and continue processing it.,Ouvrez le document dans Recommand pour vérifier l'attribution du libellé et poursuivre son traitement.
+Open your billing settings,Ouvrez vos paramètres de facturation
+Payment failed,Échec du paiement
+Payment failed for invoice {0},Échec du paiement de la facture {0}
+Please review the integration configuration and ensure all required settings are correct.,Vérifiez la configuration de l'intégration et assurez-vous que tous les paramètres requis sont corrects.
+Please update your payment method in your account settings\, or contact us at,Mettez à jour votre moyen de paiement dans les paramètres de votre compte ou contactez-nous à l'adresse
+Recommand invoice {0},Facture Recommand {0}
+Reference,Référence
+Subtotal (excl. VAT),Sous-total (hors TVA)
+Thank you for using Recommand. Please find the summary of your invoice below.,Merci d'utiliser Recommand. Vous trouverez ci-dessous le récapitulatif de votre facture.
+Thank you for your understanding.,Merci de votre compréhension.
+The document and any attachments are included with this email. Please review and take any necessary action.,Le document et ses éventuelles pièces jointes sont joints à cet e-mail. Veuillez les consulter et prendre les mesures nécessaires.
+The integration {0} for company {1} failed during {2}.,L'intégration {0} de l'entreprise {1} a échoué lors de {2}.
+The label {0} was assigned to a {1} for {2}.,Le libellé {0} a été attribué à un document ({1}) de {2}.
+The label {0} was removed from a {1} for {2}.,Le libellé {0} a été retiré d'un document ({1}) de {2}.
+The manual verification for {0} was declined.,La vérification manuelle de {0} a été refusée.
+The {0} has been accepted for processing by our approved reporting partner. The reported data is included with this email for your records.,Le document ({0}) a été accepté pour traitement par notre partenaire de déclaration agréé. Les données déclarées sont jointes à cet e-mail pour vos archives.
+The {0} has been delivered to the recipient through the Peppol network. The document and any attachments are included with this email for your records.,Le document ({0}) a été remis au destinataire via le réseau Peppol. Le document et ses éventuelles pièces jointes sont joints à cet e-mail pour vos archives.
+This company is not active on the Peppol network yet. Please contact us if you believe this decision needs to be reviewed.,Cette entreprise n'est pas encore active sur le réseau Peppol. Contactez-nous si vous estimez que cette décision doit être réexaminée.
+To,À
+Total (incl. VAT),Total (TVA comprise)
+Unknown company,Entreprise inconnue
+Updated,Mise à jour
+VAT ({0}%),TVA ({0} %)
+We attempted to process the payment for your recent invoice\, but this was unsuccessful. Your payment method may need to be updated.,Nous avons tenté de traiter le paiement de votre facture récente\, sans succès. Votre moyen de paiement doit peut-être être mis à jour.
+We have tried to deliver the invoice to you via the Peppol network. It is attached to this email for your records.,Nous avons tenté de vous remettre la facture via le réseau Peppol. Elle est jointe à cet e-mail pour vos archives.
+You can now send and receive electronic documents through Peppol.,Vous pouvez désormais envoyer et recevoir des documents électroniques via Peppol.
+You will need to provide proof of identity during this process.,Vous devrez fournir une preuve d'identité au cours de cette procédure.
+Your company {0} has received a new {1} via the Peppol network.,Votre entreprise {0} a reçu un nouveau document via le réseau Peppol : {1}.
+Your company {0} has successfully filed a {1} with the {2}.,Votre entreprise {0} a déposé un document auprès de {2} : {1}.
+Your company {0} has successfully sent a {1} via the Peppol network.,Votre entreprise {0} a envoyé un document via le réseau Peppol : {1}.
+to resolve this issue.,pour résoudre ce problème.
+{0} ({1}) has asked you to complete the identity verification for {2} on the Peppol network.,{0} ({1}) vous a demandé de finaliser la vérification d'identité pour {2} sur le réseau Peppol.
+{0} could not be verified on the Peppol network,{0} n'a pas pu être vérifiée sur le réseau Peppol
+{0} filed,Document déposé : {0}
+{0} filed successfully,Document déposé avec succès : {0}
+{0} filed successfully: {1},Document déposé avec succès : {0} {1}
+{0} filed with {1},Document déposé auprès de {1} : {0}
+{0} has been verified on the Peppol network,{0} a été vérifiée sur le réseau Peppol
+{0} sent,Document envoyé : {0}
+{0} sent successfully,Document envoyé avec succès : {0}
+{0} sent successfully for {1},Document envoyé avec succès pour {1} : {0}
+{0} sent successfully: {1},Document envoyé avec succès : {0} {1}
+{0} sent to {1},Document envoyé à {1} : {0}
+{0} verification was declined,La vérification de {0} a été refusée
+{0} was assigned to {1} {2},{0} a été attribué à {1} {2}
+{0} was removed from {1} {2},{0} a été retiré de {1} {2}
+{0} sent successfully to {1},Document envoyé avec succès à {1} : {0}
+{0} filed successfully with {1},Document déposé avec succès auprès de {1} : {0}

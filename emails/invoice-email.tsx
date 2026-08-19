@@ -1,6 +1,7 @@
 import { Hr, Text } from "@react-email/components";
 import { EmailLayout, EmailHeading, InfoSection } from "@core/emails/components/shared";
 import { SHADOW } from "@core/lib/config/colors";
+import { fallbackT, type TranslationFunction } from "@core/lib/translations";
 
 interface InvoiceEmailProps {
   companyName: string;
@@ -20,6 +21,7 @@ interface InvoiceEmailProps {
       percentage: string;
     };
   }[];
+  t?: TranslationFunction;
 }
 
 export const InvoiceEmail = ({
@@ -29,39 +31,36 @@ export const InvoiceEmail = ({
   totalVatAmount,
   totalAmountIncl,
   vatPercentage,
-  vatCategory,
   vatExemptionReason,
-  lines,
+  t = fallbackT,
 }: InvoiceEmailProps) => (
-  <EmailLayout preview={`Recommand invoice ${invoiceNumber}`}>
-    <EmailHeading>Invoice {invoiceNumber}</EmailHeading>
-    <Text className="mb-4">Dear {companyName},</Text>
+  <EmailLayout preview={t`Recommand invoice ${invoiceNumber}`} t={t}>
+    <EmailHeading>{t`Invoice ${invoiceNumber}`}</EmailHeading>
+    <Text className="mb-4">{t`Dear ${companyName},`}</Text>
     <Text className="mb-4">
-      Thank you for using Recommand. Please find the summary of your invoice
-      below.
+      {t`Thank you for using Recommand. Please find the summary of your invoice below.`}
     </Text>
     <InfoSection>
       <Text className="my-1 text-sm">
-        <strong>Subtotal (excl. VAT):</strong> € {totalAmountExcl.toFixed(2)}
+        <strong>{t`Subtotal (excl. VAT)`}:</strong> € {totalAmountExcl.toFixed(2)}
       </Text>
       {vatExemptionReason ? (
         <Text className="my-1 text-sm">
-          <strong>VAT:</strong> {vatExemptionReason}
+          <strong>{t`VAT`}:</strong> {t(vatExemptionReason)}
         </Text>
       ) : (
         <Text className="my-1 text-sm">
-          <strong>VAT ({vatPercentage}%):</strong> €{" "}
+          <strong>{t`VAT (${vatPercentage}%)`}:</strong> €{" "}
           {totalVatAmount.toFixed(2)}
         </Text>
       )}
       <Hr className={`my-3 border-[${SHADOW}]`} />
       <Text className="my-1 text-sm font-bold">
-        <strong>Total (incl. VAT):</strong> € {totalAmountIncl.toFixed(2)}
+        <strong>{t`Total (incl. VAT)`}:</strong> € {totalAmountIncl.toFixed(2)}
       </Text>
     </InfoSection>
     <Text className="mb-4">
-      We have tried to deliver the invoice to you via the Peppol network.
-      It is attached to this email for your records.
+      {t`We have tried to deliver the invoice to you via the Peppol network. It is attached to this email for your records.`}
     </Text>
   </EmailLayout>
 );

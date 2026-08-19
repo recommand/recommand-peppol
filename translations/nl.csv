@@ -172,9 +172,7 @@ Edit Customer,Klant bewerken
 Edit Label,Label bewerken
 Edit Supplier,Leverancier bewerken
 Email,E-mail
-EN 16931 CII Credit Note D22B,EN 16931 CII-creditnota D22B
 EN 16931 CII Invoice + Credit Note D22B,EN 16931 CII-factuur + creditnota D22B
-EN 16931 CII Invoice D22B,EN 16931 CII-factuur D22B
 Enable or disable integration capabilities,Integratiefunctionaliteiten inschakelen of uitschakelen
 End Date,Einddatum
 Enter the name of the person authorised to represent this company.,Voer de naam in van de persoon die is gemachtigd om dit bedrijf te vertegenwoordigen.
@@ -237,16 +235,10 @@ For small businesses sending every month,Voor kleine bedrijven die elke maand do
 Forward,Doorsturen
 Forward to,Doorsturen naar
 Forward to someone else,Doorsturen naar iemand anders
-France CII Credit Note CIUS,Franse CII-creditnota CIUS
-France CII Credit Note Extended,Franse uitgebreide CII-creditnota
 France CII Invoice + Credit Note CIUS,Franse CII-factuur + creditnota CIUS
 France CII Invoice + Credit Note CIUS (Non-Regulated),Franse CII-factuur + creditnota CIUS (niet-gereguleerd)
 France CII Invoice + Credit Note Extended,Franse uitgebreide CII-factuur + creditnota
 France CII Invoice + Credit Note Extended (Non-Regulated),Franse uitgebreide CII-factuur + creditnota (niet-gereguleerd)
-France CII Invoice CIUS,Franse CII-factuur CIUS
-France CII Invoice Extended,Franse uitgebreide CII-factuur
-France Factur-X Credit Note,Franse Factur-X-creditnota
-France Factur-X Invoice,Franse Factur-X-factuur
 France Factur-X Invoice + Credit Note,Franse Factur-X-factuur + creditnota
 France Factur-X Invoice + Credit Note (Non-Regulated),Franse Factur-X-factuur + creditnota (niet-gereguleerd)
 France Invoicing CDAR,Franse facturatie-CDAR
@@ -909,3 +901,114 @@ e.g.\, urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.
 €{0} per extra document,€{0} per extra document
 ✓ Sent over Peppol network,✓ Verzonden via het Peppol-netwerk
 ✓ Sent to {0},✓ Verzonden naar {0}
+A company verification finished,Een bedrijfsverificatie is afgerond
+A document was received for a company,Er is een document ontvangen voor een bedrijf
+A document was sent by a company,Er is een document verzonden door een bedrijf
+Auto-generated PDF,Automatisch gegenereerde pdf
+Company verification,Bedrijfsverificatie
+Document label assigned,Documentlabel toegewezen
+Document label unassigned,Documentlabel verwijderd
+Document received,Document ontvangen
+Document sent,Document verzonden
+Document type,Documenttype
+Embedded attachments,Ingesloten bijlagen
+Error message,Foutmelding
+Label external ID,Externe label-ID
+Receiver address,Ontvangeradres
+Sender address,Afzenderadres
+Verification status,Verificatiestatus
+XML document,XML-document
+Rejected,Afgewezen
+Error,Fout
+Failed to load billing profile,Facturatieprofiel laden mislukt
+Billing profile updated successfully,Facturatieprofiel succesvol bijgewerkt
+Failed to update billing profile,Facturatieprofiel bijwerken mislukt
+Failed to update payment method,Betaalmethode bijwerken mislukt
+A company verification update was recorded for {0}.,Er is een update van de bedrijfsverificatie geregistreerd voor {0}.
+Action required: Verify {0} on the Peppol network,Actie vereist: verifieer {0} op het Peppol-netwerk
+Amount,Bedrag
+As an authorised representative of this company\, you need to verify your identity to activate {0} for electronic document exchange through Peppol.,Als bevoegd vertegenwoordiger van dit bedrijf moet je je identiteit verifiëren om {0} te activeren voor elektronische documentuitwisseling via Peppol.
+Billing date,Facturatiedatum
+Company verification declined,Bedrijfsverificatie afgewezen
+Company verification request,Verzoek tot bedrijfsverificatie
+Company verification status for {0}: {1},Verificatiestatus van {0}: {1}
+Company verification update,Update bedrijfsverificatie
+Company verification {0}: {1},Bedrijfsverificatie voor {1}: {0}
+Company verified,Bedrijf geverifieerd
+Complete verification,Verificatie voltooien
+Dear {0}\,,Beste {0}\,
+Document,Document
+Document number,Documentnummer
+Failed tasks,Mislukte taken
+From,Van
+Go to your companies,Ga naar je bedrijven
+Great news! {0} has been manually verified and is now active on the Peppol network.,Goed nieuws! {0} is handmatig geverifieerd en nu actief op het Peppol-netwerk.
+Hello\,,Hallo\,
+If you did not expect this request or have questions\, contact,Als je dit verzoek niet verwachtte of vragen hebt\, neem dan contact op met
+If you have any questions\, contact,Als je vragen hebt\, neem dan contact op met
+Integration failure,Integratiefout
+Integration failure: {0} for {1},Integratiefout: {0} voor {1}
+Integration {0} failed for {1},Integratie {0} is mislukt voor {1}
+Invoice reference,Factuurreferentie
+Invoice {0},Factuur {0}
+Label assigned to document,Label toegewezen aan document
+Label assigned: {0} on {1},Label toegewezen: {0} aan {1}
+Label removed from document,Label verwijderd van document
+Label removed: {0} from {1},Label verwijderd: {0} van {1}
+New {0} received,Nieuw document ontvangen: {0}
+New {0} received: {1},Nieuw document ontvangen: {0} {1}
+New {0} received for {1},Nieuw document ontvangen voor {1}: {0}
+New {0} received from {1},Nieuw document ontvangen van {1}: {0}
+Open company,Bedrijf openen
+Open document,Document openen
+Open report,Rapport openen
+Open the document in Recommand to review the current labels and any follow-up actions.,Open het document in Recommand om de huidige labels en eventuele vervolgacties te bekijken.
+Open the document in Recommand to review the label assignment and continue processing it.,Open het document in Recommand om de labeltoewijzing te bekijken en de verwerking voort te zetten.
+Open your billing settings,Open je facturatie-instellingen
+Payment failed,Betaling mislukt
+Payment failed for invoice {0},Betaling mislukt voor factuur {0}
+Please review the integration configuration and ensure all required settings are correct.,Controleer de configuratie van de integratie en zorg dat alle vereiste instellingen kloppen.
+Please update your payment method in your account settings\, or contact us at,Werk je betaalmethode bij in je accountinstellingen of neem contact met ons op via
+Recommand invoice {0},Recommand factuur {0}
+Reference,Referentie
+Subtotal (excl. VAT),Subtotaal (excl. btw)
+Thank you for using Recommand. Please find the summary of your invoice below.,Bedankt voor het gebruik van Recommand. Hieronder vind je het overzicht van je factuur.
+Thank you for your understanding.,Bedankt voor je begrip.
+The document and any attachments are included with this email. Please review and take any necessary action.,Het document en eventuele bijlagen zijn bij deze e-mail gevoegd. Bekijk ze en onderneem de nodige actie.
+The integration {0} for company {1} failed during {2}.,De integratie {0} voor bedrijf {1} is mislukt tijdens {2}.
+The label {0} was assigned to a {1} for {2}.,Het label {0} is toegewezen aan een document ({1}) van {2}.
+The label {0} was removed from a {1} for {2}.,Het label {0} is verwijderd van een document ({1}) van {2}.
+The manual verification for {0} was declined.,De handmatige verificatie voor {0} is afgewezen.
+The {0} has been accepted for processing by our approved reporting partner. The reported data is included with this email for your records.,Het document ({0}) is geaccepteerd voor verwerking door onze erkende rapportagepartner. De gerapporteerde gegevens zijn bij deze e-mail gevoegd voor je administratie.
+The {0} has been delivered to the recipient through the Peppol network. The document and any attachments are included with this email for your records.,Het document ({0}) is via het Peppol-netwerk aan de ontvanger bezorgd. Het document en eventuele bijlagen zijn bij deze e-mail gevoegd voor je administratie.
+This company is not active on the Peppol network yet. Please contact us if you believe this decision needs to be reviewed.,Dit bedrijf is nog niet actief op het Peppol-netwerk. Neem contact met ons op als je vindt dat deze beslissing herzien moet worden.
+To,Aan
+Total (incl. VAT),Totaal (incl. btw)
+Unknown company,Onbekend bedrijf
+Updated,Bijgewerkt
+VAT ({0}%),Btw ({0}%)
+We attempted to process the payment for your recent invoice\, but this was unsuccessful. Your payment method may need to be updated.,We hebben geprobeerd de betaling voor je recente factuur te verwerken\, maar dat is niet gelukt. Mogelijk moet je betaalmethode worden bijgewerkt.
+We have tried to deliver the invoice to you via the Peppol network. It is attached to this email for your records.,We hebben geprobeerd de factuur via het Peppol-netwerk aan je te bezorgen. Ze is bij deze e-mail gevoegd voor je administratie.
+You can now send and receive electronic documents through Peppol.,Je kunt nu elektronische documenten versturen en ontvangen via Peppol.
+You will need to provide proof of identity during this process.,Tijdens dit proces moet je een identiteitsbewijs verstrekken.
+Your company {0} has received a new {1} via the Peppol network.,Je bedrijf {0} heeft een nieuw document ontvangen via het Peppol-netwerk: {1}.
+Your company {0} has successfully filed a {1} with the {2}.,Je bedrijf {0} heeft een document ingediend bij {2}: {1}.
+Your company {0} has successfully sent a {1} via the Peppol network.,Je bedrijf {0} heeft een document verzonden via het Peppol-netwerk: {1}.
+to resolve this issue.,om dit op te lossen.
+{0} ({1}) has asked you to complete the identity verification for {2} on the Peppol network.,{0} ({1}) heeft je gevraagd de identiteitsverificatie voor {2} op het Peppol-netwerk te voltooien.
+{0} could not be verified on the Peppol network,{0} kon niet worden geverifieerd op het Peppol-netwerk
+{0} filed,Document ingediend: {0}
+{0} filed successfully,Document succesvol ingediend: {0}
+{0} filed successfully: {1},Document succesvol ingediend: {0} {1}
+{0} filed with {1},Document ingediend bij {1}: {0}
+{0} has been verified on the Peppol network,{0} is geverifieerd op het Peppol-netwerk
+{0} sent,Document verzonden: {0}
+{0} sent successfully,Document succesvol verzonden: {0}
+{0} sent successfully for {1},Document succesvol verzonden voor {1}: {0}
+{0} sent successfully: {1},Document succesvol verzonden: {0} {1}
+{0} sent to {1},Document verzonden naar {1}: {0}
+{0} verification was declined,Verificatie van {0} is afgewezen
+{0} was assigned to {1} {2},{0} is toegewezen aan {1} {2}
+{0} was removed from {1} {2},{0} is verwijderd van {1} {2}
+{0} sent successfully to {1},Document succesvol verzonden naar {1}: {0}
+{0} filed successfully with {1},Document succesvol ingediend bij {1}: {0}

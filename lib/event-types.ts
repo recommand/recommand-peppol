@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { registerEventType } from "@core/data/rules/events";
+import type { EventTypeDefinition } from "@core/lib/rules/types";
 import {
   buildCompanyVerificationNotificationProps,
   buildDocumentLabelNotificationProps,
@@ -19,6 +20,44 @@ const receivedDocumentTypes = [
   "frenchB2CPaymentReport",
   "unknown",
 ] as const;
+
+/**
+ * English labels for the document type enum, used by the rule editor's value
+ * dropdowns. The enum values are code identifiers, so they are not translation
+ * keys — these labels are. Keep them identical to getDocumentTypeLabel() in
+ * @peppol/lib/client/document-type-labels, which is what the rest of the UI
+ * renders; the Record type keeps this list exhaustive.
+ */
+const documentTypeLabels: Record<(typeof receivedDocumentTypes)[number], string> = {
+  invoice: "Invoice",
+  creditNote: "Credit Note",
+  selfBillingInvoice: "Self Billing Invoice",
+  selfBillingCreditNote: "Self Billing Credit Note",
+  messageLevelResponse: "Message Level Response",
+  frenchInvoicingCdar: "French Invoicing CDAR",
+  frenchB2CSalesReport: "French B2C Sales Report",
+  frenchB2CPaymentReport: "French B2C Payment Report",
+  unknown: "Unknown",
+};
+
+const verificationStatuses = ["verified", "rejected", "error"] as const;
+
+const verificationStatusLabels: Record<(typeof verificationStatuses)[number], string> = {
+  verified: "Verified",
+  rejected: "Rejected",
+  error: "Error",
+};
+
+type ConditionField = EventTypeDefinition["conditionFields"][number];
+
+const documentTypeField: ConditionField = {
+  path: "payload.docType",
+  label: "Document type",
+  valueType: "enum",
+  operators: ["eq", "neq", "in", "notIn"],
+  enumValues: [...receivedDocumentTypes],
+  enumLabels: documentTypeLabels,
+};
 
 const documentReceivedPayloadSchema = z.object({
   companyId: z.string(),
@@ -55,7 +94,7 @@ const documentLabelPayloadSchema = z.object({
 
 const companyVerificationPayloadSchema = z.object({
   companyId: z.string(),
-  status: z.enum(["verified", "rejected", "error"]),
+  status: z.enum(verificationStatuses),
   errorMessage: z.string().nullable().optional(),
 });
 
@@ -81,7 +120,7 @@ export function registerPeppolEventTypes() {
     payload: documentReceivedPayloadSchema,
     conditionFields: [
       { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
-      { path: "payload.docType", label: "Document type", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...receivedDocumentTypes] },
+      documentTypeField,
       { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
       { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
     ],
@@ -113,7 +152,7 @@ export function registerPeppolEventTypes() {
     payload: documentSentPayloadSchema,
     conditionFields: [
       { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
-      { path: "payload.docType", label: "Document type", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...receivedDocumentTypes] },
+      documentTypeField,
       { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
       { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
     ],
@@ -147,7 +186,7 @@ export function registerPeppolEventTypes() {
       { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
       { path: "payload.labelId", label: "Label", valueType: "string", operators: ["eq", "neq", "in"], picker: "label" },
       { path: "payload.labelExternalId", label: "Label external ID", valueType: "string", operators: ["eq", "neq", "in"] },
-      { path: "payload.docType", label: "Document type", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...receivedDocumentTypes] },
+      documentTypeField,
       { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
       { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
     ],
@@ -184,7 +223,7 @@ export function registerPeppolEventTypes() {
       { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
       { path: "payload.labelId", label: "Label", valueType: "string", operators: ["eq", "neq", "in"], picker: "label" },
       { path: "payload.labelExternalId", label: "Label external ID", valueType: "string", operators: ["eq", "neq", "in"] },
-      { path: "payload.docType", label: "Document type", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...receivedDocumentTypes] },
+      documentTypeField,
       { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
       { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
     ],
@@ -219,7 +258,7 @@ export function registerPeppolEventTypes() {
     payload: companyVerificationPayloadSchema,
     conditionFields: [
       { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
-      { path: "payload.status", label: "Verification status", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: ["verified", "rejected", "error"] },
+      { path: "payload.status", label: "Verification status", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...verificationStatuses], enumLabels: verificationStatusLabels },
       { path: "payload.errorMessage", label: "Error message", valueType: "string", operators: ["eq", "neq", "exists"] },
     ],
     webhook: {

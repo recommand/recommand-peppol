@@ -1,11 +1,11 @@
 import { paymentFailureReminders } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { format, subDays } from "date-fns";
-import { getMinimalTeamMembers } from "@core/data/team-members";
 import { render } from "@react-email/render";
 import { FailedPaymentEmail } from "@peppol/emails/failed-payment";
 import { ServerClient } from "postmark";
 import { and, eq, gte } from "drizzle-orm";
+import { getTeamNotificationGroups } from "@peppol/data/notification-language";
 
 export type FailedPaymentEmailParams = {
   billingEventId: string;
@@ -42,37 +42,42 @@ export async function sendFailedPaymentEmail({
     return { emailSent: false, emailRecipients: [] };
   }
 
-  let emailRecipients: string[] = [];
-  if (billingEmail) {
-    emailRecipients = [billingEmail];
-  } else {
-    const teamMembers = await getMinimalTeamMembers(teamId);
-    emailRecipients = teamMembers.map(member => member.user.email);
-  }
+  // One group per language the recipients read, so a mixed-language team gets
+  // the reminder in each member's own language instead of the team's.
+  const groups = await getTeamNotificationGroups(teamId, {
+    configuredEmails: [billingEmail],
+  });
+  const emailRecipients = groups.flatMap((group) => group.emails);
 
   if (emailRecipients.length > 0) {
-    const emailHtml = await render(
-      FailedPaymentEmail({
-        companyName,
-        invoiceReference: invoiceReference ?? 0,
-        totalAmountIncl: parseFloat(totalAmountIncl),
-        billingDate: format(billingDate, "yyyy-MM-dd"),
-      })
-    );
-
     if (!process.env.POSTMARK_API_KEY) {
       throw new Error("POSTMARK_API_KEY is not set");
     }
 
     const postmarkClient = new ServerClient(process.env.POSTMARK_API_KEY);
 
-    await postmarkClient.sendEmail({
-      From: "billing@recommand.eu",
-      To: emailRecipients.join(", "),
-      Cc: "billing@recommand.eu",
-      Subject: `Payment failed for invoice ${invoiceReference ?? ""}`,
-      HtmlBody: emailHtml,
-    });
+    for (const [index, group] of groups.entries()) {
+      const t = group.t;
+      const emailHtml = await render(
+        FailedPaymentEmail({
+          t,
+          companyName,
+          invoiceReference: invoiceReference ?? 0,
+          totalAmountIncl: parseFloat(totalAmountIncl),
+          billingDate: format(billingDate, "yyyy-MM-dd"),
+        })
+      );
+
+      await postmarkClient.sendEmail({
+        From: "billing@recommand.eu",
+        To: group.emails.join(", "),
+        // Only the first send carries the copy to billing: the groups differ
+        // only in language, so more copies would tell them nothing new.
+        Cc: index === 0 ? "billing@recommand.eu" : undefined,
+        Subject: t`Payment failed for invoice ${invoiceReference ?? ""}`,
+        HtmlBody: emailHtml,
+      });
+    }
   }
 
   await db.insert(paymentFailureReminders).values({

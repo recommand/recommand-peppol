@@ -18,6 +18,7 @@ import {
   buildOutgoingDocumentNotificationAttachmentParts,
 } from "@peppol/data/email/document-notification-props";
 import { UNNAMED_PARTY } from "@peppol/utils/type-repository/document-types/constants";
+import { getCompanyNotificationT } from "@peppol/data/notification-language";
 
 function getDocumentUrl(transmittedDocumentId: string) {
   const baseUrl = (process.env.BASE_URL ?? "https://app.recommand.eu").replace(/\/$/, "");
@@ -49,10 +50,12 @@ export async function sendIncomingDocumentNotifications(options: {
       documentType?.email && options.parsedDocument
         ? documentType.email.extractDocumentDetails(options.parsedDocument)
         : {};
+    const t = await getCompanyNotificationT(options.companyId);
     const documentTypeLabel = documentType?.translatableTitle ?? "Document";
+    const typeLabel = t(documentTypeLabel);
     let subject = documentNumber
-      ? `New ${documentTypeLabel} Received: ${documentNumber}`
-      : `New ${documentTypeLabel} Received - ${options.companyName}`;
+      ? t`New ${typeLabel} received: ${documentNumber}`
+      : t`New ${typeLabel} received for ${options.companyName}`;
 
     if (options.isPlayground) {
       subject = `[PLAYGROUND/TEST] ${subject}`;
@@ -106,6 +109,7 @@ export async function sendIncomingDocumentNotifications(options: {
           to: notificationEmail.email,
           subject,
           email: DocumentIncomingNotification({
+            t,
             companyName: options.companyName,
             senderName: senderName ?? UNNAMED_PARTY,
             documentType: documentTypeLabel,
@@ -163,10 +167,12 @@ export async function sendOutgoingDocumentNotifications(options: {
       documentType?.email && options.parsedDocument
         ? documentType.email.extractDocumentDetails(options.parsedDocument)
         : {};
+    const t = await getCompanyNotificationT(options.companyId);
     const documentTypeLabel = documentType?.translatableTitle ?? "Document";
+    const typeLabel = t(documentTypeLabel);
     let subject = documentNumber
-      ? `${documentTypeLabel} Sent Successfully: ${documentNumber}`
-      : `${documentTypeLabel} Sent Successfully - ${options.companyName}`;
+      ? t`${typeLabel} sent successfully: ${documentNumber}`
+      : t`${typeLabel} sent successfully for ${options.companyName}`;
 
     if (options.isPlayground) {
       subject = `[PLAYGROUND/TEST] ${subject}`;
@@ -220,6 +226,7 @@ export async function sendOutgoingDocumentNotifications(options: {
           to: notificationEmail.email,
           subject,
           email: DocumentOutgoingNotification({
+            t,
             companyName: options.companyName,
             recipientName: receiverName ?? UNNAMED_PARTY,
             documentType: documentTypeLabel,

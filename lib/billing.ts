@@ -4,8 +4,13 @@ import type { BillingProfileFormData } from "@peppol/components/billing-profile-
 import { toast } from "@core/components/ui/sonner";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import type { BillingProfileData } from "@peppol/api/billing-profile";
+import { useTranslationStore } from "@core/lib/translation-store";
 
 const billingProfileClient = rc<BillingProfile>('v1');
+
+// These helpers run outside React, so they read the translation function from
+// the store directly instead of through the useTranslation() hook.
+const getT = () => useTranslationStore.getState().t;
 
 export async function fetchBillingProfile(teamId: string): Promise<BillingProfileData | null> {
   try {
@@ -20,7 +25,8 @@ export async function fetchBillingProfile(teamId: string): Promise<BillingProfil
     return null;
   } catch (error) {
     console.error('Error fetching billing profile:', error);
-    toast.error('Failed to load billing profile');
+    const t = getT();
+    toast.error(t`Failed to load billing profile`);
     return null;
   }
 }
@@ -47,7 +53,8 @@ export async function updateBillingProfile(
     if (onSuccess) {
       onSuccess(data.billingProfile);
     }
-    toast.success('Billing profile updated successfully');
+    const t = getT();
+    toast.success(t`Billing profile updated successfully`);
 
     if (data.checkoutUrl) {
       // Redirect to Mollie checkout URL
@@ -55,7 +62,8 @@ export async function updateBillingProfile(
     }
 
   } catch (error) {
-    toast.error('Failed to update billing profile');
+    const t = getT();
+    toast.error(t`Failed to update billing profile`);
   }
 }
 
@@ -74,6 +82,7 @@ export async function updatePaymentMethod(teamId: string) {
       window.location.href = data.checkoutUrl;
     }
   } catch (error) {
-    toast.error('Failed to update payment method');
+    const t = getT();
+    toast.error(t`Failed to update payment method`);
   }
 } 
