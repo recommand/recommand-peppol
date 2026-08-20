@@ -300,6 +300,35 @@ function maskSenderAddress(xml: string, parties: string[]): string {
 }
 
 /**
+ * The element that carries the document identifier the API generates when the
+ * request omits one, per document type.
+ *
+ * A message level response and a French CDAR both get a UUID written for them
+ * when their `id` is left out, and a UUID v7 carries the moment it was
+ * generated, so it can only ever match the recording by accident. What is
+ * masked is the *first* `ID` element inside the element named here — the
+ * response's own id, the acknowledgement's own id — and nothing else: the
+ * envelope id a message level response answers about and the invoice id a CDAR
+ * reports on came from the request, and those stay compared.
+ */
+const GENERATED_ID_PARENTS: Record<string, string> = {
+  messageLevelResponse: "ApplicationResponse",
+  frenchInvoicingCdar: "ExchangedDocument",
+};
+
+/** Masks the first `ID` element inside `parent`, leaving any later one alone. */
+function maskGeneratedId(xml: string, parent: string): string {
+  return xml.replace(elementPattern(parent), (element) => {
+    let masked = false;
+    return element.replace(elementPattern("ID"), (match, tag, attributes) => {
+      if (masked) return match;
+      masked = true;
+      return `<${tag}${attributes ?? ""}>[masked generated ID]</${tag}>`;
+    });
+  });
+}
+
+/**
  * The element names that hold something the environment decides, keyed by the
  * request field that would have decided it instead. UBL and CII names are both
  * listed because the same document type is sent in either syntax depending on
@@ -323,6 +352,11 @@ export type XmlMasks = {
   names: string[];
   /** The party elements whose Peppol address belongs to the sender. */
   senderParties: string[];
+  /**
+   * The element holding the document identifier the API generated, if it did.
+   * See `GENERATED_ID_PARENTS`.
+   */
+  generatedIdParent?: string;
 };
 
 /**
@@ -346,7 +380,16 @@ export function xmlMasks(request: any): XmlMasks {
       names.push(...ENVIRONMENT_ELEMENTS[field]);
     }
   }
-  return { names, senderParties: senderParties(request?.documentType) };
+  // Falsiness rather than `omitted`, because the API generates an id for an
+  // empty string too — see the note in document-types/messageLevelResponse.ts.
+  const generatedIdParent = !document.id
+    ? GENERATED_ID_PARENTS[request?.documentType]
+    : undefined;
+  return {
+    names,
+    senderParties: senderParties(request?.documentType),
+    generatedIdParent,
+  };
 }
 
 export function normaliseXml(
@@ -356,6 +399,9 @@ export function normaliseXml(
   if (xml === null) return null;
   let normalised = xml.replace(/\r\n/g, "\n").trim();
   normalised = maskSenderAddress(normalised, masks.senderParties);
+  if (masks.generatedIdParent) {
+    normalised = maskGeneratedId(normalised, masks.generatedIdParent);
+  }
   for (const name of masks.names) {
     normalised = maskElement(normalised, name);
   }

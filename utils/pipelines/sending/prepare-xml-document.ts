@@ -4,16 +4,19 @@ import {
   getDocumentFormatByDocTypeId,
   resolveFormatProcessId,
 } from "@peppol/utils/type-repository/document-formats";
+import { selfDeclaredDocTypeId } from "@peppol/utils/type-repository/document-formats/xml-detection";
 import { SendingFailure } from "./errors";
 import type { PreparedDocument, SendingInput } from "./types";
 
 export function prepareXmlDocument(input: SendingInput): PreparedDocument {
   const xml = input.document as string;
-  const detectedFormat = detectDocumentFormat(xml);
   const format = input.doctypeId
     ? getDocumentFormatByDocTypeId(input.doctypeId)
-    : detectedFormat;
-  if (!input.doctypeId && !format) {
+    : detectDocumentFormat(xml);
+  
+  const docTypeId =
+    input.doctypeId ?? format?.docTypeId ?? selfDeclaredDocTypeId(xml);
+  if (!docTypeId) {
     throw new SendingFailure(
       "Document type could not be detected automatically from your XML document. Please provide the doctypeId manually.",
       400,
@@ -51,7 +54,7 @@ export function prepareXmlDocument(input: SendingInput): PreparedDocument {
     type,
     parsed,
     xml,
-    docTypeId: input.doctypeId ?? format!.docTypeId,
+    docTypeId,
     processId: normalizeProcessId(processId),
     body: xml,
     contentType: "application/xml",
