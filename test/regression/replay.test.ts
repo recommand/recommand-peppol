@@ -57,9 +57,11 @@ console.log(
 const progress = createProgress(unreadable.length + 1 + recordings.length);
 
 /**
- * Same as `test`, but drives the status line and parks it before a failure so
- * bun's error is not overwritten. `--only-failures` hides the per-test pass
- * lines this replaces.
+ * Same as `test.concurrent`, but drives the status line and parks it before a
+ * failure so bun's error is not overwritten. Replays are I/O-bound and
+ * independent, so they overlap while waiting on the API. `--only-failures`
+ * hides the per-test pass lines this replaces; `--max-concurrency` caps how
+ * many run at once (see `test:regression` and the README).
  */
 function replayTest(
   name: string,
@@ -70,14 +72,14 @@ function replayTest(
     progress.begin(name);
     try {
       await fn();
-      progress.pass();
+      progress.pass(name);
     } catch (error) {
       progress.fail(name);
       throw error;
     }
   };
-  if (timeout === undefined) test(name, wrapped);
-  else test(name, wrapped, timeout);
+  if (timeout === undefined) test.concurrent(name, wrapped);
+  else test.concurrent(name, wrapped, timeout);
 }
 
 /**

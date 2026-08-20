@@ -82,19 +82,28 @@ bun run test:regression
 bun run test:regression
 
 # one recording, by its key — or any part of one
-bun test --timeout 120000 --only-failures ./test/regression/ -t "team_01H…/c_01H…/2026/08/16/sdr_01K….json"
+bun test --timeout 120000 --only-failures --max-concurrency 20 ./test/regression/ -t "team_01H…/c_01H…/2026/08/16/sdr_01K….json"
 
 # every recording of one day, or of one company
-bun test --timeout 120000 --only-failures ./test/regression/ -t "2026/08/16"
-bun test --timeout 120000 --only-failures ./test/regression/ -t "c_01H…"
+bun test --timeout 120000 --only-failures --max-concurrency 20 ./test/regression/ -t "2026/08/16"
+bun test --timeout 120000 --only-failures --max-concurrency 20 ./test/regression/ -t "c_01H…"
+
+# slower / gentler on a shared playground API
+bun test --timeout 120000 --only-failures --max-concurrency 4 ./test/regression/
 ```
+
+Recordings replay concurrently: each case is an independent HTTP round-trip,
+so they overlap while waiting on the API. `test:regression` caps that at 20
+(`--max-concurrency 20`); lower it if the playground or the database is
+contended, or raise it when the bottleneck is clearly network wait.
 
 Passing tests do not print. The suite writes one status line instead — how many
-have run, a bar, how many have failed, how long is left — and only a failure
-breaks it, in full, followed by bun's summary at the end:
+have finished, a bar, how many are in flight (`×N`), how many have failed, how
+long is left — and only a failure breaks it, in full, followed by bun's summary
+at the end:
 
 ```
-  347/1000  [=======>            ]  2 fail  8m left  …/2026/08/16/sdr_01K….json (invoice → 200)
+  347/1000  [=======>            ]  2 fail  ×18  8m left  …/2026/08/16/sdr_01K….json (invoice → 200)
 ```
 
 The `test:regression` script passes `--only-failures` so bun does not print a
@@ -133,6 +142,9 @@ command with `op run --environment <id> --account <account> --`.
 | `REGRESSION_RECORDING_LIMIT` | no | `1000` | How many of the newest recordings to replay; `0` means all |
 | `REGRESSION_RECORDING_PREFIX` | no | `peppol-send-document-recordings` | Narrows the listing to a team, a company, or a company on one day |
 | `REGRESSION_RECORDING_DIR` | no | | A local directory of recording JSON files, used instead of S3 |
+
+Concurrency is a Bun flag, not an env var: `--max-concurrency` (20 in
+`test:regression`) caps how many recordings are in flight at once.
 
 ### Where the recordings are read from
 

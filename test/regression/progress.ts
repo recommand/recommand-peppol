@@ -6,6 +6,9 @@
  * `--only-failures`, this replaces those lines with a count, a bar and an
  * estimate of how long is left.
  *
+ * Replays overlap under `test.concurrent`, so the line tracks how many are in
+ * flight and which one started most recently — not a single serial "current".
+ *
  * The line is written to `/dev/tty`, not stdout or stderr. Bun captures those
  * per test and prints each write as a new line, so a `\r` rewrite on stderr
  * still scrolls. The terminal device is outside that capture, so the same
@@ -24,7 +27,7 @@ const PREFIX = `${RECORDINGS_ROOT}/`;
 export type Progress = {
   /** Show work in progress without counting a result. */
   begin(name: string): void;
-  pass(): void;
+  pass(name: string): void;
   fail(name: string): void;
   /** Leave the status line on screen so later output is not overwritten. */
   finish(): void;
@@ -42,6 +45,8 @@ export function createProgress(
   let failed = 0;
   let startedAt = 0;
   let finished = false;
+  /** Insertion-ordered names of tests that have begun and not yet finished. */
+  const inFlight: string[] = [];
 
   function markStarted(): void {
     if (startedAt === 0) startedAt = Date.now();
@@ -60,7 +65,9 @@ export function createProgress(
     const width = String(Math.max(total, 1)).length;
     const current = String(completed).padStart(width);
     const failBit = failed > 0 ? `  ${failed} fail` : "";
-    const head = `  ${current}/${total}  ${bar(completed, total)}${failBit}${eta()}`;
+    const running =
+      !finished && inFlight.length > 0 ? `  ×${inFlight.length}` : "";
+    const head = `  ${current}/${total}  ${bar(completed, total)}${failBit}${running}${eta()}`;
     if (!name) return head;
     const room = lineWidth() - head.length - 2;
     if (room < 12) return head;
@@ -76,17 +83,26 @@ export function createProgress(
     return `  ${formatDuration(remaining)} left`;
   }
 
+  function leave(name: string): void {
+    const index = inFlight.lastIndexOf(name);
+    if (index >= 0) inFlight.splice(index, 1);
+  }
+
   return {
     begin(name) {
+      markStarted();
+      inFlight.push(name);
       render(name, false);
     },
-    pass() {
+    pass(name) {
       markStarted();
+      leave(name);
       completed++;
-      render(undefined, false);
+      render(inFlight.at(-1), false);
     },
     fail(name) {
       markStarted();
+      leave(name);
       completed++;
       failed++;
       render(name, true);

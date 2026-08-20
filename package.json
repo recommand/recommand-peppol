@@ -10,7 +10,7 @@
     "test": "bun test ./test/*.test.ts",
     "test:unit": "SKIP_E2E=1 bun test ./test/*.test.ts",
     "test:e2e": "bun test --timeout 120000 ./test/e2e/",
-    "test:regression": "bun test --timeout 120000 --only-failures ./test/regression/",
+    "test:regression": "bun test --timeout 120000 --only-failures --max-concurrency 20 ./test/regression/",
     "email:dev": "email dev --port 3002"
   },
   "devDependencies": {
