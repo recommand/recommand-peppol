@@ -24,6 +24,7 @@ import { improvementFor } from "./improvements";
 import {
   EmailMap,
   describeXmlDifference,
+  missingSenderIdentifier,
   networkDecidedOutcome,
   normaliseResponseBody,
   normaliseXml,
@@ -89,6 +90,7 @@ function replayTest(
  */
 const networkDecided: string[] = [];
 const senderIdentity: string[] = [];
+const senderUnregistered: string[] = [];
 const improved: string[] = [];
 const rejected: string[] = [];
 const xmlCompared: string[] = [];
@@ -149,6 +151,10 @@ describe("send document recordings", () => {
       senderIdentity.length > 0 &&
         `${senderIdentity.length} were refused because the playground company's VAT identity differs from the ` +
           `recorded sender's, which is the sender changing rather than the API`,
+      senderUnregistered.length > 0 &&
+        `${senderUnregistered.length} were refused in production because the company that sent them has no company ` +
+          `identifier, which the playground company does have, so the recorded refusal is the sending company's ` +
+          `configuration rather than the API`,
       improved.length > 0 &&
         `${improved.length} predate a change listed in improvements.ts, so they were held to the new behaviour ` +
           `rather than to the recorded one`,
@@ -235,6 +241,25 @@ describe("send document recordings", () => {
           // The document differs from the recorded one only in the seller the
           // API filled in, and that difference is what the validator refused.
           senderIdentity.push(label(loaded));
+        } else if (
+          missingSenderIdentifier(
+            recording.responseStatus,
+            recording.response,
+          ) &&
+          replay.status !== recording.responseStatus
+        ) {
+          // Production refused this one before it read the document, because
+          // the company sending it had no identifier. The playground company
+          // has one, so the replay gets further — and there is nothing to hold
+          // it to, since the recording never exercised the rest of the send.
+          senderUnregistered.push(label(loaded));
+          if (replay.status >= 400) {
+            throw new Error(
+              `This recording was refused in production because the sending company has no company identifier, ` +
+                `which the playground company does have, so the replay was only expected to get past that check. ` +
+                `It was refused for a different reason:\n  ${describeAnswer(replay.status, replay.body)}`,
+            );
+          }
         } else if (replay.status !== recording.responseStatus) {
           throw new Error(
             `The API answered ${replay.status} where the recording has ${recording.responseStatus}.\n` +

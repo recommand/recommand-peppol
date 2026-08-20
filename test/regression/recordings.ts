@@ -9,8 +9,8 @@
  *
  *   peppol-send-document-recordings/<teamId>/<companyId>/<yyyy>/<mm>/<dd>/<id>.json
  *
- * The key sorts chronologically (the date path first, then a ULID), so the
- * newest recordings are the last ones.
+ * The team and the company come first, so a key does not sort chronologically
+ * on its own; only its tail does. See `recordedAt`.
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -153,7 +153,35 @@ async function listKeys(client: S3Client): Promise<string[]> {
       : undefined;
   } while (continuationToken);
 
-  return keys.sort();
+  return keys.sort(byRecordedAt);
+}
+
+/**
+ * The chronological part of a key: `<yyyy>/<mm>/<dd>/<id>.json`.
+ *
+ * The team and the company come before the date in the path, so sorting keys
+ * as they stand orders by team first and `LIMIT` would take the alphabetically
+ * last teams rather than the newest sends — a bounded run would then replay
+ * one corner of the bucket while reporting that it replayed the newest N. The
+ * date path is zero padded and the id is a ULID, so the tail on its own does
+ * sort chronologically.
+ */
+function recordedAt(key: string): string {
+  return key.split("/").slice(-4).join("/");
+}
+
+/**
+ * Oldest first, so the newest recordings are the last ones. Exported for the
+ * same reason `fetchRecordings` is: it decides what a bounded run replays, so
+ * it is worth pinning without a bucket.
+ */
+export function byRecordedAt(a: string, b: string): number {
+  const left = recordedAt(a);
+  const right = recordedAt(b);
+  if (left !== right) return left < right ? -1 : 1;
+  // Two sends can share a ULID only if the same recording is listed twice, but
+  // the order still has to be total for a run to be reproducible.
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 function listLocalFiles(dir: string): string[] {
@@ -169,7 +197,7 @@ function listLocalFiles(dir: string): string[] {
     }
   };
   walk(dir);
-  return files.sort();
+  return files.sort(byRecordedAt);
 }
 
 function isRecording(value: any): value is Recording {

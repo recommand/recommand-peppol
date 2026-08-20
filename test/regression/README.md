@@ -39,8 +39,12 @@ peppol-send-document-recordings/<teamId>/<companyId>/<yyyy>/<mm>/<dd>/<id>.json
 ```
 
 Each holds the request that was received, the status and body that were
-answered, and the XML that was transmitted. The key sorts chronologically, so
-the newest recordings are the last ones — which is what the suite replays.
+answered, and the XML that was transmitted. The team and the company come
+before the date in the key, so a key does not sort chronologically on its own —
+the suite sorts by the `<yyyy>/<mm>/<dd>/<id>` tail (`byRecordedAt` in
+`recordings.ts`) and replays the newest. Sorting keys as they stand would order
+by team, and a bounded run would then replay the alphabetically last team while
+reporting that it replayed the newest N.
 
 ### Choosing which ones to replay
 
@@ -367,6 +371,35 @@ likely to hide something real:
 Giving the playground company a profile that matches is not an alternative — a
 company either has a VAT number or it does not, and the recordings come from
 both kinds.
+
+## Sends the recorded company never got to make
+
+A company with no row in `company_identifiers` is refused before the API looks
+at the document at all:
+
+```
+No sending company identifier found. Ensure you have added a company identifier
+to your company.
+```
+
+`getSendingCompanyIdentifier` raises it on the *sending* company, and the replay
+sends as the playground company, which has an identifier. So the recorded `400`
+cannot be reproduced — and there is nothing to hold the replay to either, since
+production never exercised the rest of the send. `missingSenderIdentifier` in
+`normalise.ts` recognises those recordings and they are counted in the summary
+instead of failing.
+
+It is the mirror image of the rule above: there the recording succeeded and the
+replay is refused over who is sending, here the recording was refused over who
+is sending and the replay gets further. Narrow in the same way:
+
+- only a `400`, and only when that message is the **only** thing the API
+  complained about, so a recording refused for this *and* something else is
+  compared as strictly as the rest;
+- only where the **replay did not answer the same thing**. A replay that is
+  refused too is compared normally;
+- and a replay refused for a *different* reason still fails, naming what it
+  answered. All that is waived is the recorded status, not the send.
 
 ## Improvements: when the recording is the thing that is wrong
 

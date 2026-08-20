@@ -108,6 +108,48 @@ export function senderIdentityRejection(
   );
 }
 
+/**
+ * The refusal a send gets when the company sending it has no identifier at all.
+ *
+ * `getSendingCompanyIdentifier` (data/company-identifiers.ts) refuses a company
+ * with no row in `company_identifiers` before anything about the document is
+ * looked at. That is a property of the company the recording was made for, and
+ * the replay sends as the playground company instead, which has one — so the
+ * recorded refusal cannot be reproduced, and the recording says nothing about
+ * what the API should have done with the document it carries, because
+ * production never got that far either.
+ *
+ * The mirror image of `senderIdentityRejection`: there the recording succeeded
+ * and the replay is refused over who is sending, here the recording was refused
+ * over who is sending and the replay gets further.
+ *
+ * Matched on the message because it is thrown from exactly one place and names
+ * the condition outright. Narrow in the same way as the rule above: only a 400,
+ * and only when it is the *only* thing the API complained about, so a recording
+ * refused for this and something else is compared as strictly as the rest.
+ */
+const NO_SENDING_IDENTIFIER =
+  "No sending company identifier found. Ensure you have added a company identifier to your company.";
+
+export function missingSenderIdentifier(status: number, body: any): boolean {
+  if (status !== 400) return false;
+
+  const errors = body?.errors;
+  if (!errors || typeof errors !== "object") return false;
+
+  // Not filtered by field, unlike the VAT rule above: this one is reported
+  // under `root` itself, so `root` is the message rather than a headline over
+  // it.
+  const messages = Object.values(errors).flatMap((value) =>
+    Array.isArray(value) ? value : [value],
+  );
+
+  return (
+    messages.length > 0 &&
+    messages.every((message) => message === NO_SENDING_IDENTIFIER)
+  );
+}
+
 /** Response fields that identify the environment rather than the outcome. */
 const VOLATILE_RESPONSE_FIELDS = [
   "id",
