@@ -24,6 +24,19 @@ import { RECORDINGS_ROOT } from "./recordings";
 const BAR_WIDTH = 20;
 const PREFIX = `${RECORDINGS_ROOT}/`;
 
+/**
+ * Red, line by line so a reset never straddles a wrap, and not at all when
+ * `NO_COLOR` is set. Kept here because this module already owns what a run
+ * writes to the terminal.
+ */
+export function red(text: string): string {
+  if (process.env.NO_COLOR) return text;
+  return text
+    .split("\n")
+    .map((line) => (line ? `\x1b[31m${line}\x1b[0m` : line))
+    .join("\n");
+}
+
 export type Progress = {
   /** Show work in progress without counting a result. */
   begin(name: string): void;

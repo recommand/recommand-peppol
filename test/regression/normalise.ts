@@ -164,6 +164,17 @@ const VOLATILE_RESPONSE_FIELDS = [
 ] as const;
 
 /**
+ * What became of the mail. The replay is not asked to send any (see
+ * `rewriteRequest`), so for a recording that asked for mail these describe a
+ * delivery the suite removed rather than anything the API decided.
+ */
+const EMAIL_OUTCOME_FIELDS = [
+  "sentOverEmail",
+  "emailRecipients",
+  "additionalEmailFailureContext",
+] as const;
+
+/**
  * Puts a response body in a canonical order so the comparison does not depend
  * on one.
  *
@@ -195,59 +206,64 @@ function canonicalise(value: any): any {
   return value;
 }
 
-export function normaliseResponseBody(body: any, emails: EmailMap): any {
+export function normaliseResponseBody(
+  body: any,
+  options: { emailWasNotSent: boolean },
+): any {
   if (!body || typeof body !== "object") return body;
 
   const normalised: Record<string, unknown> = { ...body };
   for (const field of VOLATILE_RESPONSE_FIELDS) {
     if (field in normalised) normalised[field] = `[${field}]`;
   }
-  if (Array.isArray(normalised.emailRecipients)) {
-    normalised.emailRecipients = normalised.emailRecipients.map((recipient) =>
-      typeof recipient === "string" ? emails.replace(recipient) : recipient,
-    );
+  // Dropped rather than masked: the replay answers with no such fields at all
+  // where the recording has them, so a placeholder would compare a presence
+  // that the suite itself decided.
+  if (options.emailWasNotSent) {
+    for (const field of EMAIL_OUTCOME_FIELDS) delete normalised[field];
   }
   return canonicalise(normalised);
 }
 
 /**
- * Where the replay sends the mail a recorded request asked for.
+ * Takes the mail out of a recorded request.
  *
- * Recorded requests carry the real addresses of real customers. Replaying them
- * as they stand would mail those people again, so every address is swapped for
- * a blackhole address before the request goes out, and the same swap is
- * applied to the recorded response so `emailRecipients` still lines up.
+ * A recorded request carries the real addresses of real customers, and there is
+ * nothing about the API to learn from mailing anyone: the delivery is
+ * Postmark's, the message is assembled from the same document that is compared
+ * in full anyway, and a run of this size would send tens of thousands of real
+ * messages — which is billed, rate limited, and fails for reasons that have
+ * nothing to do with this codebase. So the whole `email` block is removed
+ * before the request goes out, and the fields describing what became of it are
+ * removed from the comparison to match (`normaliseResponseBody`).
+ *
+ * What that gives up is stated plainly, because it is not nothing: the email
+ * options are no longer exercised, so a change in how `email.when` is read, or
+ * in which addresses a send reports back, is not caught here. The end-to-end
+ * suite next door is where email delivery is asserted, on addresses written for
+ * the purpose.
+ *
+ * Everything before delivery — the document, its validation, the Peppol leg —
+ * is untouched by this and is compared exactly as strictly as before.
  */
-export class EmailMap {
-  private readonly byAddress = new Map<string, string>();
-
-  constructor(recipients: string[], domain: string) {
-    recipients.forEach((recipient, index) => {
-      if (typeof recipient !== "string" || this.byAddress.has(recipient)) return;
-      this.byAddress.set(recipient, `regression+${index + 1}@${domain}`);
-    });
-  }
-
-  replace(address: string): string {
-    return this.byAddress.get(address) ?? address;
-  }
-
-  get size(): number {
-    return this.byAddress.size;
-  }
+export function rewriteRequest(request: any): any {
+  if (!requestsEmail(request)) return request;
+  const { email: _email, ...withoutEmail } = request;
+  return withoutEmail;
 }
 
-export function rewriteRequest(request: any, emails: EmailMap): any {
-  if (!request?.email?.to || !Array.isArray(request.email.to)) return request;
-  return {
-    ...request,
-    email: {
-      ...request.email,
-      to: request.email.to.map((address: unknown) =>
-        typeof address === "string" ? emails.replace(address) : address,
-      ),
-    },
-  };
+/** Whether a recorded request asked for the document to be mailed. */
+export function requestsEmail(request: any): boolean {
+  return Array.isArray(request?.email?.to) && request.email.to.length > 0;
+}
+
+/**
+ * A send whose only delivery is the mail: the API refuses it outright without
+ * `email.to`, so removing the mail leaves no request to replay. Those
+ * recordings are counted rather than replayed — see the README.
+ */
+export function isEmailOnlySend(request: any): boolean {
+  return requestsEmail(request) && (request?.recipient ?? null) === null;
 }
 
 /**

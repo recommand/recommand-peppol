@@ -47,7 +47,9 @@ export type LoadResult = {
    * Objects that could not be read at all. They are carried out of here rather
    * than thrown: loading runs while the module is being evaluated, so one
    * unreadable object thrown from here ends the run before a single replay has
-   * happened. Each one becomes a failing test of its own instead.
+   * happened. They are not failures either — an object that will not come out
+   * of the bucket says nothing about the API — so the run replays everything
+   * else and lists them, in red, when it is done.
    */
   unreadable: { key: string; error: Error }[];
 };
@@ -218,7 +220,8 @@ function assertRecording(value: any, key: string): LoadedRecording {
 }
 
 /**
- * How many objects are read at once, and how often a read is retried.
+ * How many objects are read at once, how often a read is retried, and what
+ * becomes of the ones that still will not read.
  *
  * A thousand recordings is a thousand GETs, and asking for them all at once
  * gets the connections closed underneath us: the run then dies before a single
@@ -226,21 +229,54 @@ function assertRecording(value: any, key: string): LoadedRecording {
  * A bucket is not the bottleneck here — the replays are — so the reads are
  * queued through a small pool, and the occasional dropped connection is
  * retried rather than being allowed to end the run.
+ *
+ * Those drops are load induced, though, so retrying a fifth of a second later
+ * while fifteen other reads are still in flight retries under the very
+ * conditions that caused them — which is why a large recording that drops
+ * mid-transfer tends to drop on all three attempts and be reported as
+ * unreadable when nothing is wrong with it. Whatever the pool could not read
+ * is therefore read again once the pool has drained, on its own and one object
+ * at a time, before it is called unreadable.
  */
 const CONCURRENCY = 16;
 const ATTEMPTS = 3;
+const ATTEMPT_PAUSE_MS = 200;
+const SOLO_ATTEMPTS = 3;
+const SOLO_ATTEMPT_PAUSE_MS = 1_000;
+
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
 
 /**
- * Reads every key, at most `CONCURRENCY` at a time. `read` is a parameter so
- * this can be exercised without a bucket.
+ * Reads every key, at most `CONCURRENCY` at a time, then reads what failed
+ * again on its own. `read` and `size` are parameters so this can be exercised
+ * without a bucket; `size` is only ever consulted for an object that is about
+ * to be reported as unreadable, and is allowed to fail.
  */
 export async function fetchRecordings(
   keys: string[],
   read: (key: string) => Promise<unknown>,
+  size?: (key: string) => Promise<number | null>,
 ): Promise<LoadResult> {
   const loaded: (LoadedRecording | null)[] = new Array(keys.length).fill(null);
-  const unreadable: { key: string; error: Error }[] = [];
+  // Kept with the position the key had, so that both the recordings and the
+  // failures come out in the order they were listed in however the reads
+  // interleaved, and a run stays reproducible.
+  const unreadable: { index: number; key: string; error: Error }[] = [];
+  const dropped: { index: number; key: string; error: Error }[] = [];
   let next = 0;
+
+  // A recording that reads but is not shaped like one is not going to be
+  // shaped like one on a second read, and a recorder change makes that true of
+  // every object at once — so only a failed *read* is worth repeating.
+  const store = (index: number, key: string, value: unknown): void => {
+    try {
+      loaded[index] = assertRecording(value, key);
+    } catch (error) {
+      unreadable.push({ index, key, error: asError(error) });
+    }
+  };
 
   const worker = async () => {
     while (true) {
@@ -248,12 +284,13 @@ export async function fetchRecordings(
       const key = keys[index];
       if (key === undefined) return;
       try {
-        loaded[index] = assertRecording(await withRetry(key, read), key);
-      } catch (error) {
-        unreadable.push({
+        store(
+          index,
           key,
-          error: error instanceof Error ? error : new Error(String(error)),
-        });
+          await withRetry(key, read, ATTEMPTS, ATTEMPT_PAUSE_MS),
+        );
+      } catch (error) {
+        dropped.push({ index, key, error: asError(error) });
       }
     }
   };
@@ -261,31 +298,82 @@ export async function fetchRecordings(
   await Promise.all(
     Array.from({ length: Math.min(CONCURRENCY, keys.length) }, worker),
   );
+
+  // The second pass: one object at a time, with nothing else in flight.
+  for (const { index, key } of dropped.sort((a, b) => a.index - b.index)) {
+    try {
+      store(
+        index,
+        key,
+        await withRetry(key, read, SOLO_ATTEMPTS, SOLO_ATTEMPT_PAUSE_MS),
+      );
+    } catch (error) {
+      unreadable.push({
+        index,
+        key,
+        error: await describeUnreadable(key, asError(error), size),
+      });
+    }
+  }
+
   return {
     recordings: loaded.filter((entry) => entry !== null),
-    unreadable,
+    unreadable: unreadable
+      .sort((a, b) => a.index - b.index)
+      .map(({ key, error }) => ({ key, error })),
   };
 }
 
 async function withRetry(
   key: string,
   read: (key: string) => Promise<unknown>,
+  attempts: number,
+  pauseMs: number,
 ): Promise<unknown> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await read(key);
     } catch (error) {
-      if (attempt === ATTEMPTS) {
-        throw new Error(
-          `Failed to read ${key} after ${ATTEMPTS} attempts. If it is a large ` +
-            `recording the connection may be dropping mid-transfer; check the ` +
-            `object's size before assuming the suite is at fault.`,
-          { cause: error },
-        );
-      }
-      await Bun.sleep(200 * attempt);
+      if (attempt === attempts) throw asError(error);
+      await Bun.sleep(pauseMs * attempt);
     }
   }
+}
+
+function describeSize(bytes: number): string {
+  const units = ["bytes", "KB", "MB", "GB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${unit === 0 ? value : value.toFixed(1)} ${units[unit]}`;
+}
+
+/**
+ * The error the failing test carries. The first thing to establish about an
+ * object that will not read is whether there is anything left in it to read,
+ * which is what its size says, so the message answers that question rather
+ * than asking the reader to go and look it up. A size that comes back while
+ * every read closes the socket means the metadata survived the body.
+ */
+async function describeUnreadable(
+  key: string,
+  error: Error,
+  size?: (key: string) => Promise<number | null>,
+): Promise<Error> {
+  const bytes = size ? await size(key).catch(() => null) : null;
+  return new Error(
+    `Failed to read ${key}: ${ATTEMPTS} attempts alongside the other reads and ` +
+      `${SOLO_ATTEMPTS} more on its own all ended in "${error.message}". ` +
+      (bytes === null
+        ? `Its size could not be read either, so start with whether it is still there at all.`
+        : `The object is ${describeSize(bytes)}. A size that answers while every read of the ` +
+          `body closes the socket means the metadata outlived the body, and there is nothing ` +
+          `left in it to replay.`),
+    { cause: error },
+  );
 }
 
 export function getRecordingSource(): RecordingSource {
@@ -294,8 +382,10 @@ export function getRecordingSource(): RecordingSource {
       description: `${LOCAL_DIR} (local directory)`,
       load: async () => {
         const files = listLocalFiles(LOCAL_DIR).slice(-LIMIT);
-        return fetchRecordings(files, async (file) =>
-          JSON.parse(readFileSync(file, "utf8")),
+        return fetchRecordings(
+          files,
+          async (file) => JSON.parse(readFileSync(file, "utf8")),
+          async (file) => statSync(file).size,
         );
       },
     };
@@ -306,7 +396,13 @@ export function getRecordingSource(): RecordingSource {
     load: async () => {
       const client = s3Client();
       const keys = (await listKeys(client)).slice(-LIMIT);
-      return fetchRecordings(keys, (key) => client.file(key).json());
+      return fetchRecordings(
+        keys,
+        (key) => client.file(key).json(),
+        // Metadata only: it answers for an object whose body no longer reads,
+        // which is the difference the failing test is there to report.
+        async (key) => (await client.stat(key)).size,
+      );
     },
   };
 }

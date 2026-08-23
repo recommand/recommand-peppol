@@ -15,9 +15,6 @@ export const HOST = (
 export const COMPANY_ID = process.env.ETE_UNIT_TEST_COMPANY_ID ?? "";
 export const TOKEN = process.env.ETE_UNIT_TEST_JWT ?? "";
 
-/** Postmark discards anything sent to blackhole.postmarkapp.com. */
-export const EMAIL_DOMAIN = "blackhole.postmarkapp.com";
-
 export const PLAYGROUND_PATH = "/api/peppol/playgrounds/current";
 
 export type ApiResponse = { status: number; body: any };

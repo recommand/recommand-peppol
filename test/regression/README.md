@@ -146,6 +146,7 @@ command with `op run --environment <id> --account <account> --`.
 | `REGRESSION_RECORDING_LIMIT` | no | `1000` | How many of the newest recordings to replay; `0` means all |
 | `REGRESSION_RECORDING_PREFIX` | no | `peppol-send-document-recordings` | Narrows the listing to a team, a company, or a company on one day |
 | `REGRESSION_RECORDING_DIR` | no | | A local directory of recording JSON files, used instead of S3 |
+| `REGRESSION_VALIDATION_URL` | no | `https://validation.recommand.dev/validate` | The validation service a refused replay is checked against (see below) |
 
 Concurrency is a Bun flag, not an env var: `--max-concurrency` (20 in
 `test:regression`) caps how many recordings are in flight at once.
@@ -181,11 +182,31 @@ network. It reads `isPlayground` and `useTestNetwork` from
 
 ## What is rewritten before a request is replayed
 
-**Email recipients.** A recorded request carries the real addresses of real
-customers. Every address in `email.to` is swapped for
-`regression+<n>@blackhole.postmarkapp.com`, which Postmark accepts and
-discards, and the same swap is applied to the recorded `emailRecipients` so the
-comparison still lines up.
+**The mail is removed.** A recorded request carries the real addresses of real
+customers, so the whole `email` block is taken out before the request is sent:
+the suite mails nobody, at all. Earlier it aimed the mail at a Postmark
+blackhole address instead, which was worse on every count — a run of this size
+sends tens of thousands of real messages, they are billed and rate limited, and
+when the provider refuses one the replay's answer differs from the recording's
+for a reason that has nothing to do with this codebase.
+
+What that gives up is worth stating: the email options are no longer exercised
+here, so a change in how `email.when` is read, or in which addresses a send
+reports back, is not caught by this suite. Those are asserted in the end-to-end
+suite next door, on addresses written for the purpose. Everything before
+delivery — the document, its validation, the Peppol leg — is untouched and is
+compared exactly as strictly as before.
+
+Because the request changed, the answer to it is compared accordingly: for a
+recording that asked for mail, `sentOverEmail`, `emailRecipients` and
+`additionalEmailFailureContext` are dropped from *both* sides. They describe a
+delivery the suite removed, not something the API decided. For a recording that
+asked for no mail they are compared as strictly as any other field.
+
+**Sends that are mail and nothing else** (`recipient: null`) have nothing left
+once the mail is taken out: the API refuses such a request outright, so
+replaying it would assert a refusal the suite itself caused. Those recordings
+are not replayed, and are counted at the end of the run.
 
 **The company id in the path.** Only that segment changes, so a recording of
 `/api/v1/:id/send` still exercises the `/api/v1` alias.
@@ -204,7 +225,9 @@ request supplied is never masked.
 Masked in the response body: `id`, `teamId`, `companyId`, `peppolMessageId`,
 `envelopeId`, and the `additionalPeppolFailureContext` /
 `additionalEmailFailureContext` strings, which quote the access point or the
-mail provider verbatim.
+mail provider verbatim. A recording that asked for mail has the whole email
+outcome dropped instead of masked, because the replay was not asked to send any
+— see above.
 
 Masked in the XML (see `normalise.ts`):
 
@@ -401,6 +424,59 @@ is sending and the replay gets further. Narrow in the same way:
 - and a replay refused for a *different* reason still fails, naming what it
   answered. All that is waived is the recorded status, not the send.
 
+## Documents the validator refuses now
+
+A send only leaves the building when the validation service does not call its
+document **invalid** — and the client answers `error` when the service cannot be
+reached, `not_supported` when it has no rules for the document, and the API
+sends on both. A recording is therefore not proof that its document was ever
+held against the rules. It is proof that nothing refused it on the day it was
+made.
+
+So a replay refused by validation where the recording was not is two very
+different things wearing the same face:
+
+- the API now builds a document it did not build before — a regression, and the
+  thing this suite exists to catch;
+- or it builds the same document as ever, and the **verdict** on that document
+  has moved: the service was unreachable when the recording was made, or its
+  rules have been updated since. Peppol publishes new Schematron twice a year,
+  and on the day it lands every recording of a document the new rules refuse
+  fails here at once.
+
+The two are told apart by asking the service about the document the recording
+itself carries (`validation.ts`). If it refuses that one under the same rules,
+in the same places, then the document the API builds is not what changed, and
+the recording is counted in the summary instead of failing. If it does not, the
+replay is refused for something the recorded document does not do, and that is
+a finding — the recording fails, quoting both answers:
+
+```
+error: The network settled how this send ended, so the replay was only expected
+to reach the network at all (200 or 422). It answered:
+  400: { … "PEPPOL-COMMON-R043: Belgian enterprise number MUST be stated in the correct format." }
+  The document this recording transmitted is not refused for PEPPOL-COMMON-R043 at
+  /:CreditNote[1]/cac:AccountingCustomerParty[1]/cac:Party[1]/cbc:EndpointID[1] — the
+  service calls it "valid" and objects to nothing at all. So the replay is refused for
+  something the recorded document does not do.
+```
+
+Narrow in the same way as the rules above:
+
+- only a **400 that validation produced**. A request the API turned down before
+  it built anything — a payload it could not parse, a company without an
+  identifier — has nothing to do with the rules and is compared as it always
+  was;
+- only when the recording **carries the document** it transmitted, since that is
+  what is asked about;
+- and the rule *and the place it fired* must both line up. The same rule failing
+  somewhere else in the document is a different failure, so a regression that
+  happens to trip a rule the recorded document trips elsewhere still fails.
+
+The cost is that such a recording has no XML compared: the replay was refused,
+so it stored no document to compare against. It is counted, like everything else
+this suite lets past.
+
 ## Improvements: when the recording is the thing that is wrong
 
 A recording is a snapshot of how the API behaved on the day it was made, not a
@@ -467,25 +543,46 @@ a time, retrying a read up to three times. Asking for a thousand objects at
 once instead gets the connections closed underneath the run (`S3Error:
 ConnectionClosed`).
 
-An object that still will not read after its three attempts does not end the
-run. It becomes a single failing test named `<key> (could not be read)`, and
-everything else is replayed as usual. This matters because loading happens
-while the module is being evaluated: an error thrown there aborts the run
-before a single replay has happened, which is a poor trade for one bad object
-out of a thousand.
+Those drops are load induced, so the three attempts are not independent: a
+large recording that drops mid-transfer with fifteen other reads in flight
+tends to drop on all three, a fifth of a second apart, under the very
+conditions that caused the first one. Whatever the pool could not read is
+therefore read again once the pool has drained — on its own, one object at a
+time, three more attempts a second apart. Only what fails that too is called
+unreadable, so an object reported here is one that would not read even with the
+bucket to itself.
 
-If one keeps failing, check whether the bucket still has it: a `stat()` that
-returns a size and an etag while both the S3 client and a presigned plain HTTP
-`GET` close the socket means the metadata survived and the body did not. That
-is data loss at the provider, not something this suite can work around — delete
-the object, since there is nothing left in it to replay, and see whether
-neighbouring keys of the same age read fine before assuming it is isolated.
+An object that still will not read does not end the run, and does not fail it
+either. An object that will not come out of the bucket says nothing about the
+API, and a run that found a real regression should not have that finding sitting
+among a dozen storage errors. Everything else is replayed as usual — which also
+matters because loading happens while the module is being evaluated, so an error
+thrown there aborts the run before a single replay has happened.
+
+It is not silence either. Once everything else has been reported, the run lists
+the objects it never saw, **in red**, with the size of each one:
+
+```
+2 recording(s) could not be read from s3://…/peppol-send-document-recordings and were not replayed:
+  …/2026/08/20/sdr_01K….json
+    Failed to read …: 3 attempts alongside the other reads and 3 more on its own all ended in
+    "ConnectionClosed". The object is 41.7 MB. A size that answers while every read of the body
+    closes the socket means the metadata outlived the body, and there is nothing left in it to replay.
+```
+
+The size is there because it is the next thing to establish: a `stat()` that
+answers while both the S3 client and a presigned plain HTTP `GET` close the
+socket means the metadata survived and the body did not. That is data loss at
+the provider, not something this suite can work around — delete the object,
+since there is nothing left in it to replay, and see whether neighbouring keys
+of the same age read fine before assuming it is isolated. `NO_COLOR` turns the
+red off.
 
 Then one send per recording, plus one fetch of the stored document. Each send stores
-a document in the playground, calls the validation service, renders a PDF when
-the recorded request asked for one, and mails the blackhole address when the
-recorded request asked for email — which still counts towards your Postmark
-volume. `REGRESSION_RECORDING_LIMIT` is what keeps a run bounded: at the
+a document in the playground, calls the validation service, and renders a PDF
+when the recorded request asked for one. No mail is sent and nothing is
+delivered, so a run costs no Postmark volume.
+`REGRESSION_RECORDING_LIMIT` is what keeps a run bounded: at the
 default of 1000, expect a run in the tens of minutes and 1000 documents in the
 playground. Lower it, or narrow `REGRESSION_RECORDING_PREFIX` to one company or
 one day, while iterating.
