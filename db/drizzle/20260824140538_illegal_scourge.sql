@@ -1,0 +1,2 @@
+ALTER TYPE "public"."peppol_supported_document_type" ADD VALUE 'frenchB2BiInvoiceReport' BEFORE 'unknown';--> statement-breakpoint
+ALTER TYPE "public"."peppol_supported_document_type" ADD VALUE 'frenchB2BiPaymentReport' BEFORE 'unknown';

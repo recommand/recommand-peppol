@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   buildFrenchDeclarant,
   toArratechB2CFlow,
-} from "../data/at/b2c-reporting";
+} from "../data/at/fr-reporting";
 import {
   frenchB2CReportSchema,
   getFrenchB2CReportDocumentProfile,
@@ -15,7 +15,8 @@ import { receivingCapabilities } from "../utils/type-repository/receiving-capabi
 const declarant = {
   siren: "123456789",
   name: "ACME SARL",
-};
+  role: "SE",
+} as const;
 
 const salesReport = {
   reference: "SALES-2026-07-01-GOODS",
@@ -55,25 +56,28 @@ describe("French B2C reporting", () => {
 
     expect(report.action).toBe("submit");
     expect(toArratechB2CFlow(report, declarant)).toEqual({
-      subFlux: "10.3",
-      clientOperationRef: "SALES-2026-07-01-GOODS",
-      transmissionType: "IN",
-      operation: "SUBMIT",
-      declarant,
-      payload: {
-        date: "2026-07-01",
-        currency: "EUR",
-        categoryCode: "TLB1",
-        taxExclusiveAmount: "10000.00",
-        taxTotal: "2000.00",
-        count: 42,
-        subTotals: [
-          {
-            taxPercent: "20.00",
-            taxableAmount: "10000.00",
-            taxTotal: "2000.00",
-          },
-        ],
+      profile: "FR-F10",
+      event: {
+        declarant,
+        clientOperationRef: "SALES-2026-07-01-GOODS",
+        transmissionType: "IN",
+        operation: "SUBMIT",
+        subFlux: "10.3",
+        payload: {
+          date: "2026-07-01",
+          currency: "EUR",
+          categoryCode: "TLB1",
+          taxExclusiveAmount: "10000.00",
+          taxTotal: "2000.00",
+          count: 42,
+          subTotals: [
+            {
+              taxPercent: "20.00",
+              taxableAmount: "10000.00",
+              taxTotal: "2000.00",
+            },
+          ],
+        },
       },
     });
   });
@@ -93,25 +97,28 @@ describe("French B2C reporting", () => {
     });
 
     expect(toArratechB2CFlow(report, declarant)).toEqual({
-      subFlux: "10.4",
-      clientOperationRef: "PAYMENTS-2026-07-01",
-      transmissionType: "RE",
-      operation: "SUBMIT",
-      declarant,
-      payload: {
-        paymentDate: "2026-07-01",
-        subTotals: [
-          {
-            taxPercent: "20.00",
-            currencyCode: "EUR",
-            amount: "12000.00",
-          },
-        ],
+      profile: "FR-F10",
+      event: {
+        declarant,
+        clientOperationRef: "PAYMENTS-2026-07-01",
+        transmissionType: "RE",
+        operation: "SUBMIT",
+        subFlux: "10.4",
+        payload: {
+          paymentDate: "2026-07-01",
+          subTotals: [
+            {
+              taxPercent: "20.00",
+              currencyCode: "EUR",
+              amount: "12000.00",
+            },
+          ],
+        },
       },
     });
   });
 
-  it("does not invent a provider transmission mode for cancellations", () => {
+  it("cancels under the reference of the report it cancels", () => {
     const report = frenchB2CReportSchema.parse({
       reference: "SALES-2026-07-01-SERVICES",
       action: "cancel",
@@ -131,8 +138,11 @@ describe("French B2C reporting", () => {
     });
 
     const providerPayload = toArratechB2CFlow(report, declarant);
-    expect(providerPayload.operation).toBe("CANCEL");
-    expect("transmissionType" in providerPayload).toBe(false);
+    expect(providerPayload.event.operation).toBe("CANCEL");
+    expect(providerPayload.event.transmissionType).toBe("IN");
+    expect(providerPayload.event.clientOperationRef).toBe(
+      "SALES-2026-07-01-SERVICES"
+    );
   });
 
   it("rejects unsupported sales categories and empty VAT breakdowns", () => {

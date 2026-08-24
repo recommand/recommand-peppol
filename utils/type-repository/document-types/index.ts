@@ -7,6 +7,8 @@ import { messageLevelResponseDocumentType } from "./messageLevelResponse";
 import { frenchInvoicingCdarDocumentType } from "./frenchInvoicingCdar";
 import { frenchB2CSalesReportDocumentType } from "./frenchB2CSalesReport";
 import { frenchB2CPaymentReportDocumentType } from "./frenchB2CPaymentReport";
+import { frenchB2BiInvoiceReportDocumentType } from "./frenchB2BiInvoiceReport";
+import { frenchB2BiPaymentReportDocumentType } from "./frenchB2BiPaymentReport";
 
 /** Every document type the platform knows, in no significant order. */
 export const documentTypes: readonly AnyDocumentType[] = [
@@ -18,6 +20,8 @@ export const documentTypes: readonly AnyDocumentType[] = [
   frenchInvoicingCdarDocumentType,
   frenchB2CSalesReportDocumentType,
   frenchB2CPaymentReportDocumentType,
+  frenchB2BiInvoiceReportDocumentType,
+  frenchB2BiPaymentReportDocumentType,
 ];
 
 export function getDocumentType(key: string): AnyDocumentType | undefined {

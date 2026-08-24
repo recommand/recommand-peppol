@@ -1185,6 +1185,8 @@ export default function Page() {
         { label: t`French Invoicing CDAR`, value: "frenchInvoicingCdar" },
         { label: t`French B2C Sales Report`, value: "frenchB2CSalesReport" },
         { label: t`French B2C Payment Report`, value: "frenchB2CPaymentReport" },
+        { label: t`French Cross-Border Invoice Report`, value: "frenchB2BiInvoiceReport" },
+        { label: t`French Cross-Border Payment Report`, value: "frenchB2BiPaymentReport" },
         { label: t`Unknown`, value: "unknown" },
       ],
     },

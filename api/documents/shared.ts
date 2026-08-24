@@ -19,6 +19,8 @@ const transmittedDocumentTypeSchema = z.enum([
     "frenchInvoicingCdar",
     "frenchB2CSalesReport",
     "frenchB2CPaymentReport",
+    "frenchB2BiInvoiceReport",
+    "frenchB2BiPaymentReport",
     "unknown",
 ]);
 

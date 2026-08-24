@@ -18,6 +18,8 @@ const receivedDocumentTypes = [
   "frenchInvoicingCdar",
   "frenchB2CSalesReport",
   "frenchB2CPaymentReport",
+  "frenchB2BiInvoiceReport",
+  "frenchB2BiPaymentReport",
   "unknown",
 ] as const;
 
@@ -37,6 +39,8 @@ const documentTypeLabels: Record<(typeof receivedDocumentTypes)[number], string>
   frenchInvoicingCdar: "French Invoicing CDAR",
   frenchB2CSalesReport: "French B2C Sales Report",
   frenchB2CPaymentReport: "French B2C Payment Report",
+  frenchB2BiInvoiceReport: "French Cross-Border Invoice Report",
+  frenchB2BiPaymentReport: "French Cross-Border Payment Report",
   unknown: "Unknown",
 };
 

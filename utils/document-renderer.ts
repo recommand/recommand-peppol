@@ -11,8 +11,10 @@ import type {
   FranceCdarStatusCode,
 } from "@peppol/utils/parsing/france-cdar/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
+import type { FrenchB2BiReport } from "@peppol/utils/parsing/b2bi-reporting/france";
 import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
 import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/types";
+import { FRANCE_B2BI_REPORT_TEMPLATE } from "@peppol/templates/france-b2bi-report";
 import { FRANCE_B2C_REPORT_TEMPLATE } from "@peppol/templates/france-b2c-report";
 import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
 import { Decimal } from "decimal.js";
@@ -183,6 +185,46 @@ type FranceB2CReportTemplateData = {
   taxAmount?: string;
   salesVatBreakdown: FranceB2CReportVatSubtotal[];
   paymentVatBreakdown: FranceB2CReportVatSubtotal[];
+};
+
+type FranceB2BiReportVatSubtotal = {
+  percentage: string;
+  currency: string;
+  taxableAmount?: string;
+  taxAmount?: string;
+  amount?: string;
+  category?: string;
+  exemptionReason?: string;
+};
+
+type FranceB2BiReportTemplateData = {
+  documentId: string;
+  documentType: string;
+  documentTypeLabel: string;
+  reference: string;
+  reportTypeLabel: string;
+  dateLabel: string;
+  date: string;
+  actionLabel: string;
+  isSubmission: boolean;
+  isCorrection: boolean;
+  isCancellation: boolean;
+  isInvoice: boolean;
+  isPayment: boolean;
+  currency: string;
+  documentKindLabel?: string;
+  documentNumber?: string;
+  invoiceNumber?: string;
+  issueDate: string;
+  dueDate?: string;
+  buyerScheme?: string;
+  buyerCompanyId?: string;
+  buyerVatNumber?: string;
+  buyerCountry?: string;
+  taxExclusiveAmount?: string;
+  taxAmount?: string;
+  invoiceVatBreakdown: FranceB2BiReportVatSubtotal[];
+  paymentVatBreakdown: FranceB2BiReportVatSubtotal[];
 };
 
 const FRANCE_B2C_REPORT_ACTION_LABELS: Record<FrenchB2CReport["action"], string> = {
@@ -565,6 +607,68 @@ export function buildFranceB2CReportTemplateData(
   };
 }
 
+export function buildFranceB2BiReportTemplateData(
+  parsed: FrenchB2BiReport,
+  context: DocumentRenderContext,
+): FranceB2BiReportTemplateData {
+  const isInvoice = parsed.type === "invoice";
+  const currency = parsed.currency;
+
+  return {
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: context.documentTypeTitle,
+    reference: parsed.reference,
+    reportTypeLabel: isInvoice
+      ? "Cross-border invoice"
+      : "Cross-border payment received",
+    dateLabel: isInvoice ? "Issue date" : "Payment date",
+    date: isInvoice ? parsed.issueDate : parsed.date,
+    actionLabel: FRANCE_B2C_REPORT_ACTION_LABELS[parsed.action],
+    isSubmission: parsed.action === "submit",
+    isCorrection: parsed.action === "correct",
+    isCancellation: parsed.action === "cancel",
+    isInvoice,
+    isPayment: !isInvoice,
+    currency,
+    issueDate: parsed.issueDate,
+    documentKindLabel: isInvoice
+      ? parsed.documentType === "creditNote"
+        ? "Credit note"
+        : "Invoice"
+      : undefined,
+    documentNumber: isInvoice ? parsed.documentNumber : undefined,
+    invoiceNumber: isInvoice ? undefined : parsed.invoiceNumber,
+    dueDate: (isInvoice && parsed.dueDate) || undefined,
+    buyerScheme: isInvoice ? parsed.buyer.enterpriseNumberScheme : undefined,
+    buyerCompanyId: isInvoice ? parsed.buyer.enterpriseNumber : undefined,
+    buyerVatNumber: (isInvoice && parsed.buyer.vatNumber) || undefined,
+    buyerCountry: isInvoice ? parsed.buyer.country : undefined,
+    taxExclusiveAmount: isInvoice ? parsed.taxExclusiveAmount : undefined,
+    taxAmount: isInvoice ? parsed.taxAmount : undefined,
+    // The template renders one table per report type, so each breakdown is only
+    // populated for the type it belongs to.
+    invoiceVatBreakdown: isInvoice
+      ? parsed.vatBreakdown.map((subtotal) => ({
+          percentage: subtotal.percentage,
+          taxableAmount: subtotal.taxableAmount,
+          taxAmount: subtotal.taxAmount,
+          category: subtotal.category,
+          exemptionReason:
+            subtotal.exemptionReason ?? subtotal.exemptionReasonCode ?? undefined,
+          currency,
+        }))
+      : [],
+    paymentVatBreakdown: isInvoice
+      ? []
+      : parsed.vatBreakdown.map((subtotal) => ({
+          percentage: subtotal.percentage,
+          amount: subtotal.amount,
+          currency,
+        })),
+  };
+}
+
 /**
  * Whether a document has a layout to render to HTML or PDF. Callers that render
  * opportunistically (notification attachments, exports) should check this first.
@@ -635,6 +739,18 @@ export async function renderFranceB2CReport<F extends "html" | "pdf">(
   );
 }
 
+export async function renderFranceB2BiReport<F extends "html" | "pdf">(
+  parsed: FrenchB2BiReport,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    FRANCE_B2BI_REPORT_TEMPLATE,
+    buildFranceB2BiReportTemplateData(parsed, context),
+    options,
+  );
+}
+
 /**
  * The one place the format option is turned into renderTailwindTemplate's flags,
  * so every layout treats `pdfa` and the preview flag identically.
@@ -672,7 +788,7 @@ async function renderStoredDocument<F extends "html" | "pdf">(
   }
   if (!document.parsed && documentType.class !== "billing") {
     const label = documentType.class === "reporting"
-      ? "French B2C report"
+      ? "French report"
       : documentType.translatableTitle;
     throw new Error(`${label} document missing parsed data`);
   }

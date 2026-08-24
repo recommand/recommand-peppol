@@ -16,14 +16,14 @@ export const frenchB2CReportActionSchema = z
   .openapi({
     example: "submit",
     description:
-      "Use `submit` for a new daily report, `correct` to replace a report sent earlier for that day, or `cancel` to cancel it. Defaults to `submit`.",
+      "Use `submit` for a new daily report, `correct` to replace a report sent earlier under the same reference, or `cancel` to cancel it. Defaults to `submit`.",
   });
 
 const frenchB2CReportBaseShape = {
   reference: z.string().min(1).openapi({
     example: "SALES-2026-07-01-GOODS",
     description:
-      "Your unique reference for this submission. Reuse it only when retrying the exact same request. Use a new reference for a correction or cancellation.",
+      "Your unique reference for this submission. Reuse the same reference when retrying, correcting or cancelling this report; a new reference always files a new report.",
   }),
   action: frenchB2CReportActionSchema,
 };

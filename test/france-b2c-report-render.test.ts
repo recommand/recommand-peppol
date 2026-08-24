@@ -202,6 +202,6 @@ describe("French B2C report rendering", () => {
         type: "frenchB2CSalesReport",
         parsed: null,
       } as unknown as PublicTransmittedDocument)
-    ).rejects.toThrow("French B2C report document missing parsed data");
+    ).rejects.toThrow("French report document missing parsed data");
   });
 });

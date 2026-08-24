@@ -57,6 +57,8 @@ export function extractDocumentNumberForType(
     | "frenchInvoicingCdar"
     | "frenchB2CSalesReport"
     | "frenchB2CPaymentReport"
+    | "frenchB2BiInvoiceReport"
+    | "frenchB2BiPaymentReport"
     | "unknown"
 ): string | null {
   const anyParsed = parsed as any;

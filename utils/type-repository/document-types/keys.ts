@@ -13,6 +13,8 @@ export const TRANSACTION_MESSAGING_DOCUMENT_TYPE_KEYS = [
 export const REPORTING_DOCUMENT_TYPE_KEYS = [
   "frenchB2CSalesReport",
   "frenchB2CPaymentReport",
+  "frenchB2BiInvoiceReport",
+  "frenchB2BiPaymentReport",
 ] as const;
 
 export type BillingDocumentTypeKey =

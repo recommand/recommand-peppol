@@ -32,6 +32,7 @@ import type {
 import { validationResponse, validationResult } from "@peppol/types/validation";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import type { FranceCdar } from "@peppol/utils/parsing/france-cdar/schemas";
+import type { FrenchB2BiReport } from "@peppol/utils/parsing/b2bi-reporting/france";
 import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
@@ -80,6 +81,8 @@ export const supportedDocumentTypes = z.enum([
   "frenchInvoicingCdar",
   "frenchB2CSalesReport",
   "frenchB2CPaymentReport",
+  "frenchB2BiInvoiceReport",
+  "frenchB2BiPaymentReport",
   "unknown",
 ]);
 export const supportedDocumentTypeEnum = pgEnum(
@@ -552,6 +555,7 @@ export const transmittedDocuments = pgTable(
       | MessageLevelResponse
       | FranceCdar
       | FrenchB2CReport
+      | FrenchB2BiReport
     >(),
     validation: jsonb("validation").$type<z.infer<typeof validationResponse>>(),
 

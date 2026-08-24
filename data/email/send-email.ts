@@ -26,12 +26,19 @@ export async function sendDocumentEmail(options: {
   let subject = options.subject;
   let htmlBody = options.htmlBody;
 
+  // Only a billing document names a seller alongside its document number; a
+  // report carries a document number too, but about the document it reports on.
   if (!subject) {
-    if (options.parsedDocument && "invoiceNumber" in options.parsedDocument) {
+    if (
+      options.parsedDocument &&
+      "seller" in options.parsedDocument &&
+      "invoiceNumber" in options.parsedDocument
+    ) {
       subject = `${documentTypeTitle} ${options.parsedDocument.invoiceNumber}`;
       senderName = options.parsedDocument.seller.name;
     } else if (
       options.parsedDocument &&
+      "seller" in options.parsedDocument &&
       "creditNoteNumber" in options.parsedDocument
     ) {
       subject = `${documentTypeTitle} ${options.parsedDocument.creditNoteNumber}`;
@@ -45,6 +52,7 @@ export async function sendDocumentEmail(options: {
     const documentTypeTitleLowercase = documentTypeTitle.toLowerCase();
     if (
       options.parsedDocument &&
+      "seller" in options.parsedDocument &&
       "buyer" in options.parsedDocument &&
       options.parsedDocument.buyer?.name
     ) {

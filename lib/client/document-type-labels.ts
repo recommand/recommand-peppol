@@ -26,6 +26,10 @@ export function getDocumentTypeLabel(t: TranslationFunction, type: string): stri
       return t`French B2C Sales Report`;
     case "frenchB2CPaymentReport":
       return t`French B2C Payment Report`;
+    case "frenchB2BiInvoiceReport":
+      return t`French Cross-Border Invoice Report`;
+    case "frenchB2BiPaymentReport":
+      return t`French Cross-Border Payment Report`;
     case "unknown":
       return t`Unknown`;
     default:
