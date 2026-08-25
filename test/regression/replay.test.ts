@@ -348,7 +348,10 @@ describe("send document recordings", () => {
         }
 
         const masks = xmlMasks(recording.request);
-        const expectedXml = normaliseXml(recording.xmlDocument, masks)!;
+        const recordedXml = improvement?.rewriteXml
+          ? improvement.rewriteXml(recording.xmlDocument, recording)
+          : recording.xmlDocument;
+        const expectedXml = normaliseXml(recordedXml, masks)!;
         const replayedXml = normaliseXml(actualXml, masks)!;
         if (expectedXml !== replayedXml) {
           throw new Error(

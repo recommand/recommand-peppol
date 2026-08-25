@@ -37,7 +37,29 @@ export type Improvement = {
   matches: (recording: Recording) => boolean;
   /** What the replay is allowed to answer instead. */
   allows: (status: number, body: any) => boolean;
+  /**
+   * Rewrites the recorded XML into what the replay is now expected to
+   * transmit. Absent for improvements that only changed the HTTP answer.
+   * Anything the rewrite does not account for still fails the comparison.
+   */
+  rewriteXml?: (xml: string, recording: Recording) => string;
 };
+
+const PEPPOL_BIS3_PROFILE_ID =
+  "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
+const FRANCE_BILLING_PROCESS_IDS = [
+  "urn:peppol:france:billing:regulated",
+  "urn:peppol:france:billing:non-regulated",
+] as const;
+
+function isFranceBillingProcessId(
+  processId: unknown,
+): processId is (typeof FRANCE_BILLING_PROCESS_IDS)[number] {
+  return (
+    typeof processId === "string" &&
+    (FRANCE_BILLING_PROCESS_IDS as readonly string[]).includes(processId)
+  );
+}
 
 export const IMPROVEMENTS: Improvement[] = [
   {
@@ -49,6 +71,32 @@ export const IMPROVEMENTS: Improvement[] = [
       typeof recording.request?.document === "string" &&
       recording.request.document.includes("urn:fdc:nen.nl:nlcius:v1.0"),
     allows: (status) => status === 200,
+  },
+  {
+    reason:
+      "JSON invoices and credit notes sent with a French billing process now write that process into cbc:ProfileID. Production used to ignore processId in the generated UBL and always write the Peppol BIS Billing 3 profile.",
+    since: "2026-10-01",
+    matches: (recording) => {
+      const documentType = recording.request?.documentType;
+      if (documentType !== "invoice" && documentType !== "creditNote") {
+        return false;
+      }
+      if (!isFranceBillingProcessId(recording.request?.processId)) {
+        return false;
+      }
+      return (
+        typeof recording.xmlDocument === "string" &&
+        recording.xmlDocument.includes(
+          `<cbc:ProfileID>${PEPPOL_BIS3_PROFILE_ID}</cbc:ProfileID>`,
+        )
+      );
+    },
+    allows: (status) => status === 200,
+    rewriteXml: (xml, recording) =>
+      xml.replaceAll(
+        `<cbc:ProfileID>${PEPPOL_BIS3_PROFILE_ID}</cbc:ProfileID>`,
+        `<cbc:ProfileID>${recording.request.processId}</cbc:ProfileID>`,
+      ),
   },
 ];
 
