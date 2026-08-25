@@ -1,38 +1,40 @@
-import type { TranslationFunction } from "@core/lib/translations";
+import { fallbackT, type TranslationFunction } from "@core/lib/translations";
+import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/keys";
 
 /**
- * Human-readable, translatable label for a document type enum value.
+ * The name of every document type, and the only place each one is written.
  *
  * The enum values (creditNote, frenchInvoicingCdar, …) are not translation
- * keys, so translating them directly is a no-op. Every place that shows a
- * document type to a user should go through here so the table, the detail page
- * and the type filter stay in agreement.
+ * keys, so translating them directly is a no-op. Everything that names a
+ * document type goes through here: the tables and filters in the UI, the rule
+ * editor's dropdowns, and the registry entries themselves, whose
+ * `translatableTitle` is `getDocumentTypeTitle(key)`.
+ *
+ * The labels are written as `t("…")` calls rather than looked up from a plain
+ * record so that scripts/analyze-translations.ts still sees them as terms.
+ * This module stays free of registry imports so client bundles can use it.
  */
-export function getDocumentTypeLabel(t: TranslationFunction, type: string): string {
-  switch (type) {
-    case "invoice":
-      return t`Invoice`;
-    case "creditNote":
-      return t`Credit Note`;
-    case "selfBillingInvoice":
-      return t`Self Billing Invoice`;
-    case "selfBillingCreditNote":
-      return t`Self Billing Credit Note`;
-    case "messageLevelResponse":
-      return t`Message Level Response`;
-    case "frenchInvoicingCdar":
-      return t`French Invoicing CDAR`;
-    case "frenchB2CSalesReport":
-      return t`French B2C Sales Report`;
-    case "frenchB2CPaymentReport":
-      return t`French B2C Payment Report`;
-    case "frenchB2BiInvoiceReport":
-      return t`French Cross-Border Invoice Report`;
-    case "frenchB2BiPaymentReport":
-      return t`French Cross-Border Payment Report`;
-    case "unknown":
-      return t`Unknown`;
-    default:
-      return type;
-  }
+export function getDocumentTypeLabel(
+  t: TranslationFunction,
+  type: string,
+): string {
+  const labels: Record<StoredDocumentType, string> = {
+    invoice: t("Invoice"),
+    creditNote: t("Credit Note"),
+    selfBillingInvoice: t("Self Billing Invoice"),
+    selfBillingCreditNote: t("Self Billing Credit Note"),
+    messageLevelResponse: t("Message Level Response"),
+    frenchInvoicingCdar: t("French Invoicing CDAR"),
+    frenchB2CSalesReport: t("French B2C Sales Report"),
+    frenchB2CPaymentReport: t("French B2C Payment Report"),
+    frenchB2BiInvoiceReport: t("French Cross-Border Invoice Report"),
+    frenchB2BiPaymentReport: t("French Cross-Border Payment Report"),
+    unknown: t("Unknown"),
+  };
+  return labels[type as StoredDocumentType] ?? type;
+}
+
+/** The untranslated English name of a document type, for server-side use. */
+export function getDocumentTypeTitle(type: StoredDocumentType): string {
+  return getDocumentTypeLabel(fallbackT, type);
 }

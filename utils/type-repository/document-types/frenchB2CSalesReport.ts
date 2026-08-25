@@ -1,5 +1,6 @@
 import { renderFranceB2CReport } from "@peppol/utils/document-renderer";
 import { frenchB2CSalesReportSchema } from "@peppol/utils/parsing/b2c-reporting/france";
+import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
 import type { DocumentType } from "./types";
 import { FRENCH_TAX_ADMINISTRATION_NAME } from "./constants";
 import { normalize } from "./normalize";
@@ -9,7 +10,7 @@ export const frenchB2CSalesReportDocumentType: DocumentType<
   typeof frenchB2CSalesReportSchema
 > = {
   key: "frenchB2CSalesReport",
-  translatableTitle: "French B2C Sales Report",
+  translatableTitle: getDocumentTypeTitle("frenchB2CSalesReport"),
   class: "reporting",
   sendSchema: frenchB2CSalesReportSchema,
   documentSchema: frenchB2CSalesReportSchema,

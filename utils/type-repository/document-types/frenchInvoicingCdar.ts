@@ -7,6 +7,7 @@ import {
   sendFranceCdarSchema,
 } from "@peppol/utils/parsing/france-cdar/schemas";
 import { parsePeppolAddress } from "@peppol/utils/parsing/peppol-address";
+import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
 import type { DocumentType } from "./types";
 import { normalize } from "./normalize";
 
@@ -15,7 +16,7 @@ export const frenchInvoicingCdarDocumentType: DocumentType<
   typeof franceCdarSchema
 > = {
   key: "frenchInvoicingCdar",
-  translatableTitle: "French Invoicing CDAR",
+  translatableTitle: getDocumentTypeTitle("frenchInvoicingCdar"),
   class: "transactionMessaging",
   sendSchema: sendFranceCdarSchema,
   documentSchema: franceCdarSchema,

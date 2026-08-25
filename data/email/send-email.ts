@@ -19,52 +19,36 @@ export async function sendDocumentEmail(options: {
   htmlBody?: string;
   isPlayground?: boolean;
 }) {
-  let senderName = "";
   const documentType = getDocumentType(options.type);
   const documentTypeTitle = documentType?.translatableTitle ?? "Document";
   const filename = getDocumentFilename(options.type, options.parsedDocument);
-  let subject = options.subject;
-  let htmlBody = options.htmlBody;
 
-  // Only a billing document names a seller alongside its document number; a
-  // report carries a document number too, but about the document it reports on.
-  if (!subject) {
-    if (
-      options.parsedDocument &&
-      "seller" in options.parsedDocument &&
-      "invoiceNumber" in options.parsedDocument
-    ) {
-      subject = `${documentTypeTitle} ${options.parsedDocument.invoiceNumber}`;
-      senderName = options.parsedDocument.seller.name;
-    } else if (
-      options.parsedDocument &&
-      "seller" in options.parsedDocument &&
-      "creditNoteNumber" in options.parsedDocument
-    ) {
-      subject = `${documentTypeTitle} ${options.parsedDocument.creditNoteNumber}`;
-      senderName = options.parsedDocument.seller.name;
-    } else {
-      subject = documentTypeTitle;
-    }
-  }
+  // Who a document is from and to, and what it is numbered, is the document
+  // type's own business: a report carries an invoice number as well, but it
+  // names the document it reports on, and self-billing reverses the two
+  // parties. Only types that can be delivered by email name an email sender.
+  const details =
+    options.parsedDocument && documentType?.email?.isEmailDeliverySupported
+      ? documentType.email.extractDocumentDetails(options.parsedDocument)
+      : undefined;
+  const senderName = details?.senderName ?? "";
 
-  if (!htmlBody) {
-    const documentTypeTitleLowercase = documentTypeTitle.toLowerCase();
-    if (
-      options.parsedDocument &&
-      "seller" in options.parsedDocument &&
-      "buyer" in options.parsedDocument &&
-      options.parsedDocument.buyer?.name
-    ) {
-      htmlBody = `Dear ${options.parsedDocument.buyer.name}, you can find your ${documentTypeTitleLowercase} attached.`;
-    } else {
-      htmlBody = `Dear, you can find your ${documentTypeTitleLowercase} attached.`;
-    }
-  }
+  const subject =
+    options.subject ??
+    (details?.documentNumber
+      ? `${documentTypeTitle} ${details.documentNumber}`
+      : documentTypeTitle);
 
-  if (options.isPlayground) {
-    subject = `[PLAYGROUND/TEST] ${subject}`;
-  }
+  const documentTypeTitleLowercase = documentTypeTitle.toLowerCase();
+  const htmlBody =
+    options.htmlBody ??
+    (details?.receiverName
+      ? `Dear ${details.receiverName}, you can find your ${documentTypeTitleLowercase} attached.`
+      : `Dear, you can find your ${documentTypeTitleLowercase} attached.`);
+
+  const finalSubject = options.isPlayground
+    ? `[PLAYGROUND/TEST] ${subject}`
+    : subject;
 
   const attachments = extractDocumentAttachments(options.parsedDocument);
 
@@ -83,7 +67,7 @@ export async function sendDocumentEmail(options: {
       ? `${senderName} <noreply-documents@recommand.eu>`
       : "noreply-documents@recommand.eu",
     to: options.to,
-    subject: subject,
+    subject: finalSubject,
     email: htmlBody,
     attachments: attachments,
   });

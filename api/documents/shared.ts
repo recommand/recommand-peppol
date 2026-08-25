@@ -9,20 +9,9 @@ import { franceCdarSchema } from "@peppol/utils/parsing/france-cdar/schemas";
 import { frenchB2CReportSchema } from "@peppol/utils/parsing/b2c-reporting/france";
 import { labelResponse } from "@peppol/api/labels/shared";
 import { validationResponse } from "@peppol/types/validation";
+import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/document-types/keys";
 
-const transmittedDocumentTypeSchema = z.enum([
-    "invoice",
-    "creditNote",
-    "selfBillingInvoice",
-    "selfBillingCreditNote",
-    "messageLevelResponse",
-    "frenchInvoicingCdar",
-    "frenchB2CSalesReport",
-    "frenchB2CPaymentReport",
-    "frenchB2BiInvoiceReport",
-    "frenchB2BiPaymentReport",
-    "unknown",
-]);
+const transmittedDocumentTypeSchema = z.enum(STORED_DOCUMENT_TYPE_KEYS);
 
 export const transmittedDocumentResponse = z.object({
     id: z.string(),

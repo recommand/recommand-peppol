@@ -8,41 +8,23 @@ import {
   buildOutgoingDocumentNotificationProps,
   buildPeppolDocumentEmailAttachments,
 } from "@peppol/data/email/document-notification-props";
+import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
+import {
+  STORED_DOCUMENT_TYPE_KEYS,
+  type StoredDocumentType,
+} from "@peppol/utils/type-repository/document-types/keys";
 
-const receivedDocumentTypes = [
-  "invoice",
-  "creditNote",
-  "selfBillingInvoice",
-  "selfBillingCreditNote",
-  "messageLevelResponse",
-  "frenchInvoicingCdar",
-  "frenchB2CSalesReport",
-  "frenchB2CPaymentReport",
-  "frenchB2BiInvoiceReport",
-  "frenchB2BiPaymentReport",
-  "unknown",
-] as const;
+const receivedDocumentTypes = STORED_DOCUMENT_TYPE_KEYS;
 
 /**
  * English labels for the document type enum, used by the rule editor's value
  * dropdowns. The enum values are code identifiers, so they are not translation
- * keys — these labels are. Keep them identical to getDocumentTypeLabel() in
- * @peppol/lib/client/document-type-labels, which is what the rest of the UI
- * renders; the Record type keeps this list exhaustive.
+ * keys — the labels are, and they come from the same place the rest of the UI
+ * takes them from.
  */
-const documentTypeLabels: Record<(typeof receivedDocumentTypes)[number], string> = {
-  invoice: "Invoice",
-  creditNote: "Credit Note",
-  selfBillingInvoice: "Self Billing Invoice",
-  selfBillingCreditNote: "Self Billing Credit Note",
-  messageLevelResponse: "Message Level Response",
-  frenchInvoicingCdar: "French Invoicing CDAR",
-  frenchB2CSalesReport: "French B2C Sales Report",
-  frenchB2CPaymentReport: "French B2C Payment Report",
-  frenchB2BiInvoiceReport: "French Cross-Border Invoice Report",
-  frenchB2BiPaymentReport: "French Cross-Border Payment Report",
-  unknown: "Unknown",
-};
+const documentTypeLabels = Object.fromEntries(
+  receivedDocumentTypes.map((type) => [type, getDocumentTypeTitle(type)]),
+) as Record<StoredDocumentType, string>;
 
 const verificationStatuses = ["verified", "rejected", "error"] as const;
 

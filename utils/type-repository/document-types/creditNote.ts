@@ -5,6 +5,7 @@ import {
   sendCreditNoteSchema,
 } from "@peppol/utils/parsing/creditnote/schemas";
 import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
+import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
 import type { DocumentType } from "./types";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
@@ -14,7 +15,7 @@ export const creditNoteDocumentType: DocumentType<
   typeof creditNoteSchema
 > = {
   key: "creditNote",
-  translatableTitle: "Credit Note",
+  translatableTitle: getDocumentTypeTitle("creditNote"),
   class: "billing",
   sendSchema: sendCreditNoteSchema,
   documentSchema: creditNoteSchema,

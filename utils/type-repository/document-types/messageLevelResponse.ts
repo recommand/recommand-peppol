@@ -4,6 +4,7 @@ import {
   messageLevelResponseSchema,
   sendMessageLevelResponseSchema,
 } from "@peppol/utils/parsing/message-level-response/schemas";
+import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
 import type { DocumentType } from "./types";
 
 export const messageLevelResponseDocumentType: DocumentType<
@@ -11,7 +12,7 @@ export const messageLevelResponseDocumentType: DocumentType<
   typeof messageLevelResponseSchema
 > = {
   key: "messageLevelResponse",
-  translatableTitle: "Message Level Response",
+  translatableTitle: getDocumentTypeTitle("messageLevelResponse"),
   class: "transactionMessaging",
   sendSchema: sendMessageLevelResponseSchema,
   documentSchema: messageLevelResponseSchema,

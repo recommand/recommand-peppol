@@ -5,6 +5,7 @@ import {
   sendInvoiceSchema,
 } from "@peppol/utils/parsing/invoice/schemas";
 import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
+import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
 import type { DocumentType } from "./types";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
@@ -14,7 +15,7 @@ export const invoiceDocumentType: DocumentType<
   typeof invoiceSchema
 > = {
   key: "invoice",
-  translatableTitle: "Invoice",
+  translatableTitle: getDocumentTypeTitle("invoice"),
   class: "billing",
   sendSchema: sendInvoiceSchema,
   documentSchema: invoiceSchema,

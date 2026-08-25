@@ -5,6 +5,7 @@ import {
   sendSelfBillingInvoiceSchema,
 } from "@peppol/utils/parsing/self-billing-invoice/schemas";
 import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
+import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
 import type { DocumentType } from "./types";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
@@ -14,7 +15,7 @@ export const selfBillingInvoiceDocumentType: DocumentType<
   typeof selfBillingInvoiceSchema
 > = {
   key: "selfBillingInvoice",
-  translatableTitle: "Self Billing Invoice",
+  translatableTitle: getDocumentTypeTitle("selfBillingInvoice"),
   class: "billing",
   sendSchema: sendSelfBillingInvoiceSchema,
   documentSchema: selfBillingInvoiceSchema,

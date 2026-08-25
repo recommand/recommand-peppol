@@ -30,10 +30,8 @@ import type {
   IntegrationState,
 } from "@peppol/types/integration";
 import { validationResponse, validationResult } from "@peppol/types/validation";
-import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
-import type { FranceCdar } from "@peppol/utils/parsing/france-cdar/schemas";
-import type { FrenchB2BiReport } from "@peppol/utils/parsing/b2bi-reporting/france";
-import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
+import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/document-types/keys";
+import type { ParsedDocument } from "@peppol/utils/type-repository/document-types/parsed";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
 
@@ -72,19 +70,7 @@ export const validIsoIcdSchemeIdentifiers = pgEnum(
   zodValidIsoIcdSchemeIdentifiers.options
 );
 
-export const supportedDocumentTypes = z.enum([
-  "invoice",
-  "creditNote",
-  "selfBillingInvoice",
-  "selfBillingCreditNote",
-  "messageLevelResponse",
-  "frenchInvoicingCdar",
-  "frenchB2CSalesReport",
-  "frenchB2CPaymentReport",
-  "frenchB2BiInvoiceReport",
-  "frenchB2BiPaymentReport",
-  "unknown",
-]);
+export const supportedDocumentTypes = z.enum(STORED_DOCUMENT_TYPE_KEYS);
 export const supportedDocumentTypeEnum = pgEnum(
   "peppol_supported_document_type",
   supportedDocumentTypes.options
@@ -547,16 +533,7 @@ export const transmittedDocuments = pgTable(
     emailRecipients: text("email_recipients").notNull().array().default([]),
 
     type: supportedDocumentTypeEnum("type").notNull().default("unknown"),
-    parsed: jsonb("parsed").$type<
-      | Invoice
-      | CreditNote
-      | SelfBillingInvoice
-      | SelfBillingCreditNote
-      | MessageLevelResponse
-      | FranceCdar
-      | FrenchB2CReport
-      | FrenchB2BiReport
-    >(),
+    parsed: jsonb("parsed").$type<ParsedDocument>(),
     validation: jsonb("validation").$type<z.infer<typeof validationResponse>>(),
 
     senderName: text("sender_name"),

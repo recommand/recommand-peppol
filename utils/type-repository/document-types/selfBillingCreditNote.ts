@@ -5,6 +5,7 @@ import {
   sendSelfBillingCreditNoteSchema,
 } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
 import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
+import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
 import type { DocumentType } from "./types";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
@@ -14,7 +15,7 @@ export const selfBillingCreditNoteDocumentType: DocumentType<
   typeof selfBillingCreditNoteSchema
 > = {
   key: "selfBillingCreditNote",
-  translatableTitle: "Self Billing Credit Note",
+  translatableTitle: getDocumentTypeTitle("selfBillingCreditNote"),
   class: "billing",
   sendSchema: sendSelfBillingCreditNoteSchema,
   documentSchema: selfBillingCreditNoteSchema,

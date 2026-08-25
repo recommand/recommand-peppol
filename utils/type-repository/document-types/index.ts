@@ -10,8 +10,14 @@ import { frenchB2CPaymentReportDocumentType } from "./frenchB2CPaymentReport";
 import { frenchB2BiInvoiceReportDocumentType } from "./frenchB2BiInvoiceReport";
 import { frenchB2BiPaymentReportDocumentType } from "./frenchB2BiPaymentReport";
 
-/** Every document type the platform knows, in no significant order. */
-export const documentTypes: readonly AnyDocumentType[] = [
+/**
+ * Every document type the platform knows, in no significant order.
+ *
+ * Declared as a tuple rather than `readonly AnyDocumentType[]` so the entries
+ * keep their concrete schema types: `ParsedDocument` in ./parsed is derived
+ * from this list, and a widened element type would collapse it to `any`.
+ */
+export const documentTypes = [
   invoiceDocumentType,
   creditNoteDocumentType,
   selfBillingInvoiceDocumentType,
@@ -22,8 +28,10 @@ export const documentTypes: readonly AnyDocumentType[] = [
   frenchB2CPaymentReportDocumentType,
   frenchB2BiInvoiceReportDocumentType,
   frenchB2BiPaymentReportDocumentType,
-];
+] as const satisfies readonly AnyDocumentType[];
 
 export function getDocumentType(key: string): AnyDocumentType | undefined {
-  return documentTypes.find((documentType) => documentType.key === key);
+  return (documentTypes as readonly AnyDocumentType[]).find(
+    (documentType) => documentType.key === key,
+  );
 }
