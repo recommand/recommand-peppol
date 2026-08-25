@@ -22,6 +22,7 @@ import {
 import { improvementFor } from "./improvements";
 import {
   describeXmlDifference,
+  franceSetupRejection,
   isEmailOnlySend,
   missingSenderIdentifier,
   networkDecidedOutcome,
@@ -95,6 +96,7 @@ const emailNotSent: string[] = [];
 const emailOnly: string[] = [];
 const senderIdentity: string[] = [];
 const senderUnregistered: string[] = [];
+const franceNotSetUp: string[] = [];
 const improved: string[] = [];
 const rejected: string[] = [];
 const xmlCompared: string[] = [];
@@ -169,6 +171,10 @@ describe("send document recordings", () => {
         `${senderUnregistered.length} were refused in production because the company that sent them has no company ` +
           `identifier, which the playground company does have, so the recorded refusal is the sending company's ` +
           `configuration rather than the API`,
+      franceNotSetUp.length > 0 &&
+        `${franceNotSetUp.length} were sent in production by a company set up for the French regulated flows, which ` +
+          `the playground company is not, so the replay was refused over the sending company's configuration rather ` +
+          `than the API — they were not replayed any further`,
       improved.length > 0 &&
         `${improved.length} predate a change listed in improvements.ts, so they were held to the new behaviour ` +
           `rather than to the recorded one`,
@@ -246,6 +252,22 @@ describe("send document recordings", () => {
         // recorded answer is out of date, so the replay is held to what
         // improvements.ts says the new answer is instead.
         const improvement = improvementFor(recording);
+
+        // Checked before the improvement below: a send refused over the
+        // company sending it never reached the behaviour an improvement
+        // describes, so there is nothing to hold it to.
+        if (
+          franceSetupRejection(replay.status, replay.body) &&
+          replay.status !== recording.responseStatus
+        ) {
+          // Production sent this one for a company registered in France and on
+          // the French access point. The playground company is neither, so the
+          // replay is refused before the document is built — the sending
+          // company's configuration rather than the API, and nothing is left of
+          // the send to compare.
+          franceNotSetUp.push(label(loaded));
+          return;
+        }
 
         if (improvement) {
           improved.push(label(loaded));

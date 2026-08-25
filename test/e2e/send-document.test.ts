@@ -10,7 +10,7 @@
  * See e2e/README.md for configuration.
  */
 
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 // Process management only. The API contract below is asserted purely over
 // HTTP, without importing anything from the package under test.
 import { ensureServerRunning } from "../utils/dev-server";
@@ -28,11 +28,14 @@ import {
   UNREACHABLE_RECIPIENT,
   apiIsAnswering,
   assertPlaygroundTeam,
+  createCompany,
+  deleteCompany,
   getCompany,
   getDocument,
   normaliseRecipient,
   requireConfig,
   sendDocument,
+  sendPathFor,
   type ApiResponse,
 } from "./helpers";
 import {
@@ -74,6 +77,8 @@ const ERROR = {
   processIdNotDetected:
     "Failed to detect process id. Please provide the processId manually.",
   processIdNotSupported: "Process identifier is not supported for invoice.",
+  franceNotSetUp:
+    "This company is not set up for French regulated document flows. Please contact support@recommand.eu.",
   validationFailed:
     "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
   unauthorized: "Unauthorized",
@@ -1242,11 +1247,14 @@ e2eDescribe("send document: doctypeId and processId on JSON documents", () => {
   );
 
   test(
-    "accepts the French regulated process on the French CII doctype",
+    "refuses the French regulated flows for a company outside them",
     async () => {
-      // The same processId the plain CII doctype refuses above: this one lists
-      // it, so the document is generated as a French CIUS CII invoice and
-      // travels over the regulated process.
+      // The doctype and the processId are both in order here: this is the very
+      // processId the plain CII doctype refuses above, and the French one lists
+      // it. What is refused is the company. French regulated documents are only
+      // sent for a company registered in France, and outside the playground only
+      // over the French access point — which the company this suite is
+      // configured with is not, so the send never reaches the document.
       const response = await sendDocument({
         recipient: RECIPIENT,
         documentType: "invoice",
@@ -1254,9 +1262,77 @@ e2eDescribe("send document: doctypeId and processId on JSON documents", () => {
         doctypeId: DOC_TYPE_ID.franceCiusCiiInvoice,
         processId: PROCESS_ID.franceRegulated,
       });
+      expectFailure(response, 400, ERROR.franceNotSetUp);
+    },
+    TIMEOUT
+  );
+});
+
+// The SIREN of the seller the French documents in this suite are sold by, so
+// the company that sends them and the seller inside them are one business.
+const FRENCH_SIREN = "303265045";
+
+e2eDescribe("send document: a French company", () => {
+  // The company this suite is configured with is not French, so the block above
+  // only gets as far as the refusal. A French company is what the regulated
+  // flows are for, so this block creates one for the duration of its tests and
+  // deletes it again: creating it in France is what puts it on the French
+  // access point, which is the other half of what the flows require.
+  let frenchCompanyId = "";
+
+  beforeAll(async () => {
+    if (SKIP_E2E) return;
+    const response = await createCompany({
+      name: "Recommand E2E Vendeur",
+      address: "1 rue du Vendeur",
+      postalCode: "75001",
+      city: "Paris",
+      country: "FR",
+      enterpriseNumber: FRENCH_SIREN,
+    });
+    if (response.status !== 200 || !response.body?.company?.id) {
+      throw new Error(
+        `Could not create the French company these tests send from. ` +
+          `POST /api/peppol/companies returned ${response.status}: ${JSON.stringify(response.body)}`
+      );
+    }
+    expect(response.body.company.country).toBe("FR");
+    frenchCompanyId = response.body.company.id;
+  }, TIMEOUT);
+
+  // Left behind, a company keeps answering on the network for documents nobody
+  // is reading, so it goes even if the tests failed.
+  afterAll(async () => {
+    if (!frenchCompanyId) return;
+    const response = await deleteCompany(frenchCompanyId);
+    if (response.status !== 200) {
+      console.error(
+        `Failed to delete the French company ${frenchCompanyId}: ` +
+          `${response.status}: ${JSON.stringify(response.body)}`
+      );
+    }
+  }, TIMEOUT);
+
+  test(
+    "accepts the French regulated process on the French CII doctype",
+    async () => {
+      // The case the configured company is refused for, sent by a company that
+      // is set up for it: the document is generated as a French CIUS CII
+      // invoice and travels over the regulated process.
+      const response = await sendDocument(
+        {
+          recipient: RECIPIENT,
+          documentType: "invoice",
+          document: frenchInvoiceDocument(),
+          doctypeId: DOC_TYPE_ID.franceCiusCiiInvoice,
+          processId: PROCESS_ID.franceRegulated,
+        },
+        { path: sendPathFor(frenchCompanyId) }
+      );
       expect(response.status).toBe(200);
 
       const stored = await getDocument(response.body.id);
+      expect(stored.body.document.companyId).toBe(frenchCompanyId);
       expect(stored.body.document.docTypeId).toBe(
         DOC_TYPE_ID.franceCiusCiiInvoice
       );

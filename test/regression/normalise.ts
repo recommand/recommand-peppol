@@ -131,23 +131,45 @@ export function senderIdentityRejection(
 const NO_SENDING_IDENTIFIER =
   "No sending company identifier found. Ensure you have added a company identifier to your company.";
 
-export function missingSenderIdentifier(status: number, body: any): boolean {
-  if (status !== 400) return false;
-
+/**
+ * Whether a refusal complained of one thing only, and that thing was `message`.
+ *
+ * Not filtered by field, unlike the VAT rule above: the messages these rules
+ * match are reported under `root` itself, so `root` is the message rather than
+ * a headline over it.
+ */
+function refusedOnlyBecause(body: any, message: string): boolean {
   const errors = body?.errors;
   if (!errors || typeof errors !== "object") return false;
 
-  // Not filtered by field, unlike the VAT rule above: this one is reported
-  // under `root` itself, so `root` is the message rather than a headline over
-  // it.
   const messages = Object.values(errors).flatMap((value) =>
     Array.isArray(value) ? value : [value],
   );
 
-  return (
-    messages.length > 0 &&
-    messages.every((message) => message === NO_SENDING_IDENTIFIER)
-  );
+  return messages.length > 0 && messages.every((entry) => entry === message);
+}
+
+export function missingSenderIdentifier(status: number, body: any): boolean {
+  return status === 400 && refusedOnlyBecause(body, NO_SENDING_IDENTIFIER);
+}
+
+/**
+ * The refusal a send gets when the company sending it is not set up for the
+ * French regulated flows.
+ *
+ * Only a company registered in France sends over the French processes and
+ * doctypes, and outside the playground only over the French access point. A
+ * recording of one was made for a company that is; the playground company is
+ * not, so the replay is refused before the document is built. Like the rule
+ * above, that is the sending company's configuration rather than the API, and
+ * it is matched the same way: thrown from one place, named outright, and only
+ * when it is the only thing the API complained about.
+ */
+const NOT_SET_UP_FOR_FRANCE =
+  "This company is not set up for French regulated document flows. Please contact support@recommand.eu.";
+
+export function franceSetupRejection(status: number, body: any): boolean {
+  return status === 400 && refusedOnlyBecause(body, NOT_SET_UP_FOR_FRANCE);
 }
 
 /** Response fields that identify the environment rather than the outcome. */

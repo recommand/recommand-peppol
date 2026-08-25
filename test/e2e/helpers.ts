@@ -85,6 +85,19 @@ export function getDocument(documentId: string): Promise<ApiResponse> {
   return api(`/api/peppol/documents/${documentId}`);
 }
 
+/** The send route of a company other than the one the suite is configured with. */
+export function sendPathFor(companyId: string): string {
+  return `/api/peppol/${companyId}/send`;
+}
+
+export function createCompany(company: unknown): Promise<ApiResponse> {
+  return api("/api/peppol/companies", { method: "POST", body: company });
+}
+
+export function deleteCompany(companyId: string): Promise<ApiResponse> {
+  return api(`/api/peppol/companies/${companyId}`, { method: "DELETE" });
+}
+
 export function getCompany(): Promise<ApiResponse> {
   return api(`/api/peppol/companies/${COMPANY_ID}`);
 }
