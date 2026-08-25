@@ -2,7 +2,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charSet="utf-8" />
-    <title>Mandate for electronic invoicing - {{reference}}</title>
+    <title>{{title}} - {{reference}}</title>
     <style>
       /* Tailwind preflight is injected by the Tailwind PDF generator */
       @page { size: A4; margin: 16mm; }
@@ -25,12 +25,7 @@ export const MANDATE_TEMPLATE = `<!DOCTYPE html>
         <p class="text-xs font-semibold tracking-wide uppercase text-slate-500">
           Mandate
         </p>
-        <h1 class="mt-1 text-2xl font-semibold tracking-tight">
-          Mandate for electronic invoicing
-        </h1>
-        {{#frenchTitle}}
-          <p class="mt-1 text-sm text-slate-500">{{frenchTitle}}</p>
-        {{/frenchTitle}}
+        <h1 class="mt-1 text-2xl font-semibold tracking-tight">{{title}}</h1>
         <p class="mt-3 text-xs text-slate-500 space-x-2">
           <span>Reference: {{reference}}</span>
           <span>&bull;</span>

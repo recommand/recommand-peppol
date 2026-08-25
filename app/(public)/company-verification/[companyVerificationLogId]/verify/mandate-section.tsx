@@ -14,6 +14,8 @@ const client = rc<Companies>("v1");
 type MandateSectionProps = {
     companyVerificationLogId: string;
     companyName: string;
+    /** The document's own name, as it appears on the PDF. */
+    mandateTitle: string | null;
     firstName: string;
     lastName: string;
     isSigning: boolean;
@@ -25,6 +27,7 @@ type MandateSectionProps = {
 export function MandateSection({
     companyVerificationLogId,
     companyName,
+    mandateTitle,
     firstName,
     lastName,
     isSigning,
@@ -38,6 +41,8 @@ export function MandateSection({
     const [isDownloading, setIsDownloading] = useState(false);
 
     const fullName = `${firstName} ${lastName}`.trim();
+    // Older contexts predate the per-jurisdiction title, so fall back to ours.
+    const documentTitle = mandateTitle ?? t`Mandate for electronic invoicing`;
     const signatureDate = new Date().toLocaleDateString(language, {
         year: "numeric",
         month: "long",
@@ -79,7 +84,7 @@ export function MandateSection({
         <>
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">{t`Mandate for electronic invoicing`}</CardTitle>
+                    <CardTitle className="text-base">{documentTitle}</CardTitle>
                     <CardDescription>
                         {t`Read the mandate you are about to sign on behalf of ${companyName}. It authorises us to send, receive and register electronic invoices for the company.`}
                     </CardDescription>
@@ -88,7 +93,7 @@ export function MandateSection({
                     <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4">
                         <FileText className="h-8 w-8 shrink-0 text-muted-foreground" />
                         <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{t`Mandate for electronic invoicing`}</p>
+                            <p className="text-sm font-medium truncate">{documentTitle}</p>
                             <p className="text-xs text-muted-foreground">
                                 {t`PDF, drawn up for ${fullName}`}
                             </p>

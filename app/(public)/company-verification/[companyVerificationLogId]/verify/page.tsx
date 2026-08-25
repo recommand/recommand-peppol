@@ -43,6 +43,7 @@ type VerificationContext = {
     representatives: Representative[];
     isPlayground: boolean;
     isMandateRequired: boolean;
+    mandateTitle: string | null;
 };
 
 type VerificationStep = "details" | "mandate";
@@ -417,6 +418,7 @@ export default function Page() {
                     <MandateSection
                         companyVerificationLogId={companyVerificationLogId!}
                         companyName={companyName}
+                        mandateTitle={context.mandateTitle}
                         firstName={effectiveFirstName}
                         lastName={effectiveLastName}
                         isSigning={isSubmitting}

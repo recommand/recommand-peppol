@@ -5,7 +5,7 @@ import { UserFacingError } from "@peppol/utils/util";
 import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 import { getParticipantByIdentifier } from "./smp";
 import {
-  DEFAULT_SIGNATORY_ROLE,
+  getMandateDocument,
   renderMandatePdf,
   resolveCompanyKycIdentity,
   type CompanyKycIdentity,
@@ -58,7 +58,8 @@ export async function buildMandateInput({
     signatory: {
       firstName: signatory.firstName,
       lastName: signatory.lastName,
-      role: signatory.role ?? DEFAULT_SIGNATORY_ROLE,
+      role:
+        signatory.role ?? getMandateDocument(company.country).defaultSignatoryRole,
     },
     signedAt,
     proofReference,

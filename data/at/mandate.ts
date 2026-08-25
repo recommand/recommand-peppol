@@ -1,29 +1,8 @@
 import type { Company } from "@peppol/data/companies";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
-import { TZDate } from "@date-fns/tz";
-import { format } from "date-fns";
-import { MANDATE_TEMPLATE } from "@peppol/templates/mandate";
-import { getCountryName } from "@peppol/utils/countries";
 import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
-import { FRANCE_MANDATE_COPY, resolveFrenchCompanyIdentity } from "./france";
-
-/**
- * Arratech is the platform the company mandates towards the authorities;
- * Recommand is the operator the company contracted with.
- */
-const MANDATARY = {
-  name: "Arratech",
-  role: "Peppol access point and service metadata publisher",
-};
-
-const OPERATOR = {
-  name: "Recommand",
-  role: "e-invoicing operator",
-};
-
-export const DEFAULT_SIGNATORY_ROLE = "Legal representative";
-
-const PROOF_METHOD = "Didit (electronic identity verification)";
+import { DEFAULT_MANDATE_DOCUMENT } from "./mandates/default";
+import { FRENCH_MANDATE_DOCUMENT } from "./mandates/france";
 
 export type CompanyIdentityRow = {
   label: string;
@@ -39,76 +18,11 @@ export type CompanyKycIdentity = {
   notes: string[];
 };
 
-/**
- * Names the company for its KYC file. Only France has a number format we know
- * how to check, so companies from other countries are named by whatever legal
- * and tax identifiers they registered, as is.
- */
-export function resolveCompanyKycIdentity(
-  company: Pick<Company, "country" | "enterpriseNumber" | "enterpriseNumberScheme" | "vatNumber">,
-  identifiers: Pick<CompanyIdentifier, "scheme" | "identifier">[],
-): CompanyKycIdentity {
-  if (company.country === "FR") {
-    return resolveFrenchCompanyIdentity(company, identifiers);
-  }
-
-  const rows: CompanyIdentityRow[] = [];
-  if (company.enterpriseNumber) {
-    rows.push({
-      label: company.enterpriseNumberScheme
-        ? `Company number (${company.enterpriseNumberScheme})`
-        : "Company number",
-      value: company.enterpriseNumber,
-    });
-  }
-  if (company.vatNumber) {
-    rows.push({ label: "VAT number", value: company.vatNumber });
-  }
-
-  return { rows, notes: [] };
-}
-
-type MandateParty = {
-  legalName: string;
-  street: string;
-  postalCode: string;
-  city: string;
-  countryName: string;
-  rows: CompanyIdentityRow[];
-};
-
-export type MandateScopeItem = {
-  title: string;
-  description: string;
-};
-
-type MandateElectronicAddress = {
-  value: string;
-};
-
-type MandateSignatory = {
-  fullName: string;
-  role: string;
-  signedAt: string;
-  proofMethod: string;
-  /** Null while the mandate is still the draft the signatory is reading. */
-  proofReference: string | null;
-};
-
-export type MandateTemplateData = {
-  reference: string;
-  issueDate: string;
-  frenchTitle: string | null;
-  company: MandateParty;
-  platform: {
-    description: string;
-  };
-  scopeItems: MandateScopeItem[];
-  electronicAddresses: MandateElectronicAddress[];
-  effectiveDate: string;
-  durationLabel: string;
-  signatory: MandateSignatory;
-};
+/** Everything a document needs to name the company by its own numbers. */
+export type CompanyIdentitySource = Pick<
+  Company,
+  "country" | "enterpriseNumber" | "enterpriseNumberScheme" | "vatNumber"
+>;
 
 export type MandateInput = {
   reference: string;
@@ -128,99 +42,58 @@ export type MandateInput = {
   proofReference: string | null;
 };
 
-function formatMandateDate(date: Date): string {
-  return format(TZDate.tz("Europe/Brussels", date), "yyyy-MM-dd");
-}
-
-function formatMandateDateTime(date: Date): string {
-  return format(TZDate.tz("Europe/Brussels", date), "yyyy-MM-dd HH:mm");
-}
-
-function buildScopeItems(company: Company, isFrance: boolean): MandateScopeItem[] {
-  const scopeItems: MandateScopeItem[] = [];
-
-  if (company.isSmpRecipient) {
-    scopeItems.push({
-      title: "Receiving electronic invoices",
-      description: isFrance
-        ? FRANCE_MANDATE_COPY.receivingDescription
-        : "Receiving the electronic invoices, credit notes and responses addressed to the company's electronic addresses, on its behalf.",
-    });
-  }
-
-  if (company.accessPointProvider === "at-shared-ap") {
-    scopeItems.push({
-      title: "Sending electronic invoices",
-      description:
-        "Transmitting the invoices, credit notes and responses issued by the company to the platforms of its trading partners.",
-    });
-  }
-
-  if (isFrance) {
-    scopeItems.push(FRANCE_MANDATE_COPY.eReportingScopeItem);
-  }
-
-  scopeItems.push({
-    title: "Directory registration",
-    description: isFrance
-      ? FRANCE_MANDATE_COPY.directoryDescription
-      : "Registering, updating and removing the company's electronic addresses and the document types it accepts in the Peppol network and its directory.",
-  });
-
-  return scopeItems;
-}
-
 /**
- * One sentence naming the mandatary and, for France, its PA registration,
- * followed by the operator the mandate was concluded through.
+ * The mandate one jurisdiction files with its KYC. Countries whose authority
+ * prescribes a model implement it here; everyone else gets the default one.
+ *
+ * To add a country: write a module exporting a MandateDocument, add its
+ * template next to the others, and register it in MANDATE_DOCUMENTS below.
  */
-function buildPlatformDescription(isFrance: boolean): string {
-  const platform = isFrance
-    ? `${FRANCE_MANDATE_COPY.platformRole} ${MANDATARY.name}, immatriculation ${FRANCE_MANDATE_COPY.platformRegistration}`
-    : `${MANDATARY.name}, ${MANDATARY.role}`;
+export type MandateDocument = {
+  /**
+   * The document's own name. Shown verbatim wherever the UI offers it, so that
+   * the page and the PDF the signatory downloads call it the same thing.
+   */
+  title: string;
+  /** Printed as the signatory's function when they did not state one. */
+  defaultSignatoryRole: string;
+  /**
+   * Names the company for its KYC file, from everything it told us about
+   * itself. Throws a UserFacingError when the numbers cannot be trusted.
+   */
+  resolveIdentity(
+    company: CompanyIdentitySource,
+    identifiers: Pick<CompanyIdentifier, "scheme" | "identifier">[],
+  ): CompanyKycIdentity;
+  /** Mustache template rendered to the PDF that is filed with the KYC. */
+  template: string;
+  /** Turns the mandate into what its template renders. */
+  buildTemplateData(input: MandateInput): unknown;
+};
 
-  return `${platform}. Mandate concluded through ${OPERATOR.name}, ${OPERATOR.role}.`;
+const MANDATE_DOCUMENTS: Record<string, MandateDocument> = {
+  FR: FRENCH_MANDATE_DOCUMENT,
+};
+
+export function getMandateDocument(
+  country: string | null | undefined,
+): MandateDocument {
+  return (country ? MANDATE_DOCUMENTS[country] : undefined) ?? DEFAULT_MANDATE_DOCUMENT;
 }
 
-export function buildMandateTemplateData(input: MandateInput): MandateTemplateData {
-  const { company, identifiers, identity, signatory, signedAt } = input;
-  const isFrance = company.country === "FR";
-
-  return {
-    reference: input.reference,
-    issueDate: formatMandateDate(signedAt),
-    frenchTitle: isFrance ? FRANCE_MANDATE_COPY.title : null,
-    company: {
-      legalName: company.name,
-      street: company.address,
-      postalCode: company.postalCode,
-      city: company.city,
-      countryName: getCountryName(company.country),
-      rows: identity.rows,
-    },
-    platform: {
-      description: buildPlatformDescription(isFrance),
-    },
-    scopeItems: buildScopeItems(company, isFrance),
-    electronicAddresses: identifiers.map((identifier) => ({
-      value: `${identifier.scheme}:${identifier.identifier}`,
-    })),
-    effectiveDate: formatMandateDate(signedAt),
-    durationLabel: "an indefinite term",
-    signatory: {
-      fullName: `${signatory.firstName} ${signatory.lastName}`.trim(),
-      role: signatory.role,
-      signedAt: formatMandateDateTime(signedAt),
-      proofMethod: PROOF_METHOD,
-      proofReference: input.proofReference,
-    },
-  };
+export function resolveCompanyKycIdentity(
+  company: CompanyIdentitySource,
+  identifiers: Pick<CompanyIdentifier, "scheme" | "identifier">[],
+): CompanyKycIdentity {
+  return getMandateDocument(company.country).resolveIdentity(company, identifiers);
 }
 
 export async function renderMandatePdf(input: MandateInput): Promise<Buffer> {
-  const data = buildMandateTemplateData(input);
-  const pdf = await renderTailwindTemplate(MANDATE_TEMPLATE, data, {
-    preview: false,
-  });
+  const document = getMandateDocument(input.company.country);
+  const pdf = await renderTailwindTemplate(
+    document.template,
+    document.buildTemplateData(input),
+    { preview: false },
+  );
   return pdf as Buffer;
 }
