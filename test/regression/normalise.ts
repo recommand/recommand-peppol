@@ -62,15 +62,22 @@ export function sellerFromSendingCompany(request: any): boolean {
 const SENDER_VAT_RULE = /BT-31|BT-63|Seller VAT identifier/;
 
 /**
- * Whether a replay was refused only because of *who* is sending it.
+ * Whether a send was refused only because of *who* is sending it.
  *
  * When a request omits `seller`, the API fills it in from the company doing the
  * sending — the recorded company in production, the playground company here.
  * If the two differ in whether they have a VAT number at all, the replayed
  * document carries a seller VAT identifier where the recorded one did not, or
- * the other way round, and the validator refuses it. Nothing about the API
- * changed; the sender did, and it is the one piece of the environment that
+ * the other way round, and the validator refuses one of them. Nothing about the
+ * API changed; the sender did, and it is the one piece of the environment that
  * reaches the validator where masking cannot follow.
+ *
+ * Asked of either side, because the difference cuts both ways: a recorded
+ * sender with no VAT number is refused where the playground company gets
+ * through, and a recorded sender with one gets through where the playground
+ * company is refused. The caller passes the recording's own answer for the
+ * first and the replay's for the second; the request is the same either way,
+ * since it is the request that left the seller to be filled in.
  *
  * Narrow on purpose, so it cannot swallow a real rejection:
  *
@@ -78,9 +85,10 @@ const SENDER_VAT_RULE = /BT-31|BT-63|Seller VAT identifier/;
  *   its own is compared as strictly as any other;
  * - only when *every* rule that fired is about the seller's VAT identity, so a
  *   document with any other problem still fails;
- * - and the caller applies it only where the recording succeeded, which is what
- *   makes the sender the only candidate: production validated the same document
- *   against the same rules and passed.
+ * - and the caller applies it only where the two sides answered differently and
+ *   the other side was not refused, which is what makes the sender the only
+ *   candidate: the same document was validated against the same rules there and
+ *   passed.
  */
 export function senderIdentityRejection(
   request: any,
