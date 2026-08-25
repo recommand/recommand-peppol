@@ -13,6 +13,7 @@ import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { ulid } from "ulid";
 import { SendingFailure } from "./errors";
+import { assertFranceRegulatedSendingSupported } from "./france-regulated-guard";
 import { prepareJsonDocument } from "./prepare-json-document";
 import { prepareXmlDocument } from "./prepare-xml-document";
 import type { SendingContext } from "./types";
@@ -26,7 +27,7 @@ export async function sendingPipeline(c: SendingContext) {
     inputFormat = input.documentType === "xml" ? "xml" : "json_api";
     const company = c.var.company;
     const team = c.var.team;
-    const isPlayground = team.isPlayground;
+    const isPlayground = team.isPlayground ?? false;
     const useTestNetwork = team.useTestNetwork ?? false;
     const documentId = `doc_${ulid()}`;
     const recipientAddress = normalizePeppolAddress(input.recipient);
@@ -66,6 +67,15 @@ export async function sendingPipeline(c: SendingContext) {
             recipientAddress,
             documentId,
           });
+
+    // We want to ensure French regulated flows are only supported for companies in France and over the AT access point.
+    assertFranceRegulatedSendingSupported({
+      docTypeId: prepared.docTypeId,
+      processId: prepared.processId,
+      company,
+      isPlayground,
+    });
+
     const xmlDocument = recipientAddress === null ? null : prepared.xml;
     c.set("sendDocumentRecordingXml", xmlDocument);
 
