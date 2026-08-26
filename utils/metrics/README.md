@@ -58,13 +58,32 @@ label.
 
 ## Deployment
 
-Kamal publishes `9464:9464` on the host (`config/deploy.yml`,
-`config/deploy.production-ha.yml`). The port bypasses `kamal-proxy`, so it is
-never reachable through the public hostnames.
+The app container must **never** publish a host port. Kamal boots the new
+container and only stops the old one after the proxy has cut over
+(`Kamal::Cli::App::Boot#run`), so the two overlap and a fixed published port
+fails with `port is already allocated` on every deploy.
+
+Instead the app container gets a stable DNS name on the `kamal` network
+(`options: network-alias: peppol-metrics`), and a `metrics-proxy` accessory
+publishes host port 9464 and forwards to it. Accessories are not recreated by
+`kamal deploy`, so the accessory keeps the port across deploys, and socat
+re-resolves the alias per connection so it follows the new container by itself.
+
+Boot it once per destination (it is not part of `kamal deploy`):
+
+```bash
+kamal accessory boot metrics-proxy
+kamal accessory boot metrics-proxy -d production-ha
+```
 
 Restrict the port to the Prometheus node in the host firewall.
 
-The bearer token is the second line of defence, checked in constant time.
+The bearer token is the second line of defence, checked in constant time by the
+app. socat is a plain TCP forwarder and never sees the token.
+
+During the few seconds of a deploy both app containers answer to the alias, so a
+scrape may land on the outgoing one. Counters reset on deploy regardless, and
+`rate()` handles resets, so this is harmless.
 
 ## Prometheus scrape config
 
