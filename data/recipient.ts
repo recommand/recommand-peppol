@@ -64,6 +64,27 @@ const smpXmlParser = new XMLParser({
   removeNSPrefix: true,
 });
 
+/**
+ * Read the document type id out of a ServiceMetadataReference URL, whose path ends in
+ * `/services/{scheme}::{docTypeId}`. Returns null for a reference that is not shaped
+ * that way, which is all an SMP tells us about a document type we cannot address.
+ */
+export function docTypeIdFromServiceMetadataRef(ref: string): string | null {
+  try {
+    const url = new URL(ref);
+    const servicesIdx = url.pathname.lastIndexOf("/services/");
+    if (servicesIdx === -1) return null;
+
+    const rawDocType = url.pathname.substring(servicesIdx + "/services/".length);
+    const decoded = decodeURIComponent(rawDocType);
+    // Strip the scheme prefix (e.g. "busdox-docid-qns::")
+    const schemeEnd = decoded.indexOf("::");
+    return schemeEnd !== -1 ? decoded.substring(schemeEnd + 2) : decoded;
+  } catch {
+    return null;
+  }
+}
+
 export async function verifyRecipient({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}) {
   const smpUrl = await getSmpUrl({recipientAddress, useTestNetwork});
 
@@ -116,22 +137,9 @@ export async function verifyRecipient({recipientAddress, useTestNetwork}: {recip
     
     // Derive supportedDocuments from service metadata reference URLs
     const supportedDocuments = serviceMetadataRefs.map(ref => {
-      try {
-        // Extract document type ID from the URL path: .../services/{scheme}::{docTypeId}
-        const url = new URL(ref);
-        const servicesIdx = url.pathname.lastIndexOf("/services/");
-        if (servicesIdx === -1) return null;
-
-        const rawDocType = url.pathname.substring(servicesIdx + "/services/".length);
-        const decoded = decodeURIComponent(rawDocType);
-        // Strip the scheme prefix (e.g. "busdox-docid-qns::")
-        const schemeEnd = decoded.indexOf("::");
-        const docTypeId = schemeEnd !== -1 ? decoded.substring(schemeEnd + 2) : decoded;
-
-        return { name: getDocumentTypeName(docTypeId), docTypeId };
-      } catch {
-        return null;
-      }
+      const docTypeId = docTypeIdFromServiceMetadataRef(ref);
+      if (!docTypeId) return null;
+      return { name: getDocumentTypeName(docTypeId), docTypeId };
     }).filter((d): d is { name: string; docTypeId: string } => d !== null);
 
     return {
@@ -215,6 +223,32 @@ export async function fetchServiceMetadata(serviceMetadataUrl: string, options?:
   } catch {
     return null;
   }
+}
+
+/**
+ * List the process ids a ServiceMetadata registration is addressable over, in the order
+ * the SMP states them. The scheme is dropped so the ids compare against the ones the
+ * document format registry declares, which are written unqualified.
+ */
+export async function fetchServiceProcessIds(serviceMetadataUrl: string): Promise<string[]> {
+  const response = await fetch(serviceMetadataUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch service metadata: ${response.statusText}`);
+  }
+
+  const doc = smpXmlParser.parse(await response.text());
+  const serviceMetadata = doc.ServiceMetadata || doc.SignedServiceMetadata?.ServiceMetadata;
+  const processList = serviceMetadata?.ServiceInformation?.ProcessList;
+  const processes = Array.isArray(processList?.Process)
+    ? processList.Process
+    : processList?.Process
+      ? [processList.Process]
+      : [];
+
+  return processes
+    .map((process: any) => qualifiedProcessId(process?.ProcessIdentifier))
+    .filter((processId: string | null): processId is string => processId !== null)
+    .map((processId: string) => processId.substring(processId.indexOf("::") + 2));
 }
 
 export async function verifyDocumentSupport({recipientAddress, documentType, processId, useTestNetwork}: {recipientAddress: string, documentType: string, processId?: string, useTestNetwork: boolean}) {

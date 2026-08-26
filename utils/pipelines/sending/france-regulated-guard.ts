@@ -39,18 +39,7 @@ export function assertFranceRegulatedSendingSupported(options: {
   company: { country: string; accessPointProvider: AccessPointProviderId };
   isPlayground: boolean;
 }): void {
-  const { docTypeId, processId, company, isPlayground } = options;
-
-  const isFranceRegulated =
-    isFranceBillingProcessId(processId) || FRANCE_DOC_TYPE_IDS.has(docTypeId);
-  if (!isFranceRegulated) {
-    return;
-  }
-
-  const isFrenchCompany = company.country.toUpperCase() === "FR";
-  const usesFranceAccessPoint =
-    isPlayground || company.accessPointProvider === FRANCE_ACCESS_POINT_PROVIDER;
-  if (isFrenchCompany && usesFranceAccessPoint) {
+  if (isFranceRegulatedSendingSupported(options)) {
     return;
   }
 
@@ -58,4 +47,29 @@ export function assertFranceRegulatedSendingSupported(options: {
     "This company is not set up for French regulated document flows. Please contact support@recommand.eu.",
     400,
   );
+}
+
+/**
+ * The same test as a question rather than a demand, for choosing between document type
+ * and process combinations: one the company is not set up for is not a combination a
+ * document can be routed over.
+ */
+export function isFranceRegulatedSendingSupported(options: {
+  docTypeId: string;
+  processId: string;
+  company: { country: string; accessPointProvider: AccessPointProviderId };
+  isPlayground: boolean;
+}): boolean {
+  const { docTypeId, processId, company, isPlayground } = options;
+
+  const isFranceRegulated =
+    isFranceBillingProcessId(processId) || FRANCE_DOC_TYPE_IDS.has(docTypeId);
+  if (!isFranceRegulated) {
+    return true;
+  }
+
+  const isFrenchCompany = company.country.toUpperCase() === "FR";
+  const usesFranceAccessPoint =
+    isPlayground || company.accessPointProvider === FRANCE_ACCESS_POINT_PROVIDER;
+  return isFrenchCompany && usesFranceAccessPoint;
 }

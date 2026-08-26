@@ -33,3 +33,22 @@ export function resolveCountrySpecificProcessId(
   }
   return processId;
 }
+
+/**
+ * Whether the document may travel over this process id: a country that claims the
+ * process must claim it for this very document. France exchanges the same document types
+ * over a regulated and a non-regulated process and the document states which one it
+ * belongs to, so the other one is not an alternative the document can fall back to.
+ */
+export function isCountrySpecificProcessIdAllowed(
+  processId: string,
+  document: unknown
+): boolean {
+  for (const resolve of COUNTRY_SPECIFIC_PROCESS_RESOLVERS) {
+    const countrySpecificProcessId = resolve(processId, document);
+    if (countrySpecificProcessId) {
+      return countrySpecificProcessId === processId;
+    }
+  }
+  return true;
+}

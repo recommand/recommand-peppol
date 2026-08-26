@@ -1,4 +1,7 @@
-import { resolveCountrySpecificProcessId } from "@peppol/utils/parsing/country-specific/process";
+import {
+  isCountrySpecificProcessIdAllowed,
+  resolveCountrySpecificProcessId,
+} from "@peppol/utils/parsing/country-specific/process";
 import { parseXmlForDetection } from "./xml-detection";
 import type { AnyDocumentFormat } from "./types";
 import { peppolUblBis3InvoiceFormat } from "./peppol-ubl-bis3-invoice";
@@ -27,13 +30,13 @@ export const documentFormats: readonly AnyDocumentFormat[] = [
   peppolUblMlrFormat,
   siUblInvoiceFormat,
   siUblCreditnoteFormat,
-  ciiD22bEn16931Format,
-  ciiD22bFranceCiusFormat,
-  ciiD22bFranceExtendedFormat,
   ublFranceCiusInvoiceFormat,
   ublFranceCiusCreditnoteFormat,
   ublFranceExtendedInvoiceFormat,
   ublFranceExtendedCreditnoteFormat,
+  ciiD22bEn16931Format,
+  ciiD22bFranceCiusFormat,
+  ciiD22bFranceExtendedFormat,
   facturxFranceFormat,
   franceCdarFormat,
 ];
@@ -62,6 +65,34 @@ export function resolveFormatProcessId(
     format.resolveProcessId?.(document) ??
     resolveCountrySpecificProcessId(format.supportedProcessIds[0], document)
   );
+}
+
+/**
+ * Every process id the format may send this document over, most preferred first: the one
+ * the document itself selects, then the remaining declared ones in the order the format
+ * states them, which is the order they are to be preferred in. A format that resolves the
+ * process from the document offers no alternatives — the resolved one is the only process
+ * that matches what the document says it is.
+ */
+export function resolveFormatProcessIdCandidates(
+  format: AnyDocumentFormat,
+  document: unknown
+): string[] {
+  const resolved = format.resolveProcessId?.(document as any);
+  if (resolved) return [resolved];
+
+  const preferred = resolveCountrySpecificProcessId(
+    format.supportedProcessIds[0],
+    document
+  );
+  return [
+    preferred,
+    ...format.supportedProcessIds.filter(
+      (processId) =>
+        processId !== preferred &&
+        isCountrySpecificProcessIdAllowed(processId, document)
+    ),
+  ];
 }
 
 export function detectDocumentFormat(

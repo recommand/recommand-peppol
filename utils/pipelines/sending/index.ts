@@ -7,6 +7,7 @@ import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import { sendDocumentEmail } from "@peppol/data/email/send-email";
 import { simulateSendAs4 } from "@peppol/data/playground/simulate-ap";
 import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
+import { getRecipientCapabilities } from "@peppol/data/recipient-capabilities";
 import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
@@ -57,6 +58,23 @@ export async function sendingPipeline(c: SendingContext) {
 
     const senderIdentifier = await getSendingCompanyIdentifier(company.id);
     const senderAddress = `${senderIdentifier.scheme}:${senderIdentifier.identifier}`;
+
+    // Raw XML already is one specific format, and states the process it belongs to, so
+    // there is nothing to route: only a JSON document, which we still have to write,
+    // can be adapted to what the recipient is able to receive. Looking the recipient up
+    // costs a request, so it only happens when something is left to decide.
+    const recipientCapabilities =
+      recipientAddress !== null &&
+      input.documentType !== "xml" &&
+      (!input.doctypeId || !input.processId)
+        ? await getRecipientCapabilities({
+            recipientAddress,
+            isPlayground,
+            useTestNetwork,
+            teamId: team.id,
+          })
+        : null;
+
     const prepared =
       input.documentType === "xml"
         ? prepareXmlDocument(input)
@@ -66,6 +84,8 @@ export async function sendingPipeline(c: SendingContext) {
             senderAddress,
             recipientAddress,
             documentId,
+            isPlayground,
+            recipientCapabilities,
           });
 
     // We want to ensure French regulated flows are only supported for companies in France and over the AT access point.
@@ -87,7 +107,12 @@ export async function sendingPipeline(c: SendingContext) {
     let as4Response: SendAs4Response | null = null;
     let peppolFailure = "";
     if (recipientAddress !== null) {
-      if (isPlayground && !useTestNetwork) {
+      if (prepared.peppolRoutingFailure) {
+        // The recipient receives nothing this document can be written as, so the
+        // transmission is skipped rather than handed to an access point that can only
+        // return the same answer. Email delivery, if configured, still applies.
+        peppolFailure = prepared.peppolRoutingFailure;
+      } else if (isPlayground && !useTestNetwork) {
         try {
           await simulateSendAs4({
             senderId: senderAddress,

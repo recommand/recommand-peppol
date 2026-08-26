@@ -1,15 +1,11 @@
+import type { RecipientCapabilities } from "@peppol/data/recipient-capabilities";
 import { generateAndAttachRepositoryPdf } from "@peppol/utils/pdf-attachment-helper";
 import { UserFacingError } from "@peppol/utils/util";
-import { normalizeProcessId } from "@peppol/utils/parsing/process-id";
-import {
-  getDocumentFormatByDocTypeId,
-  getDocumentFormatsByDocumentTypeKey,
-  resolveFormatProcessId,
-} from "@peppol/utils/type-repository/document-formats";
 import type { AnyDocumentFormat } from "@peppol/utils/type-repository/document-formats/types";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import { SendingFailure } from "./errors";
+import { selectFormatAndProcess } from "./select-format";
 import type { PreparedDocument, SendingContext, SendingInput } from "./types";
 
 const NULL_RECIPIENT_ADDRESS = "0000:0000";
@@ -63,6 +59,12 @@ export async function prepareJsonDocument(options: {
   recipientAddress: string | null;
   documentId: string;
   wrapContainer?: boolean;
+  isPlayground?: boolean;
+  /**
+   * What the recipient can receive, when it is a send that may be autorouted. Absent for
+   * the endpoints that only generate a document, which have no transmission to route.
+   */
+  recipientCapabilities?: RecipientCapabilities | null;
 }): Promise<PreparedDocument> {
   const {
     input,
@@ -71,6 +73,8 @@ export async function prepareJsonDocument(options: {
     recipientAddress,
     documentId,
     wrapContainer = true,
+    isPlayground = false,
+    recipientCapabilities = null,
   } = options;
   const documentType = getDocumentType(input.documentType);
   if (!documentType) {
@@ -90,31 +94,17 @@ export async function prepareJsonDocument(options: {
     );
   }
 
-  const formats = getDocumentFormatsByDocumentTypeKey(documentType.key);
-  const format = input.doctypeId
-    ? getDocumentFormatByDocTypeId(input.doctypeId)
-    : formats[0];
-  if (!format || !formats.includes(format)) {
-    throw new SendingFailure(
-      `Document type identifier is not supported for ${documentType.key}.`,
-      400,
-    );
-  }
-
-  const processId = input.processId
-    ? normalizeProcessId(input.processId)
-    : resolveFormatProcessId(format, document);
-  // Unlike raw XML, where the process id only names the process the document
-  // travels over, here it is written into the document we generate as its
-  // profile identifier. An unsupported one therefore produces a document the
-  // network refuses, so say which field is at fault instead of letting it come
-  // back as a list of failed validation rules.
-  if (input.processId && !format.supportedProcessIds.includes(processId)) {
-    throw new SendingFailure(
-      `Process identifier is not supported for ${documentType.key}.`,
-      400,
-    );
-  }
+  const { format, processId, peppolRoutingFailure } =
+    await selectFormatAndProcess({
+      documentType,
+      document,
+      recipientAddress,
+      doctypeId: input.doctypeId,
+      processId: input.processId,
+      company,
+      isPlayground,
+      capabilities: recipientCapabilities,
+    });
   const encode = (value: any) =>
     format.encode(value, processId, {
       senderAddress,
@@ -173,6 +163,7 @@ export async function prepareJsonDocument(options: {
     xml,
     docTypeId: format.docTypeId,
     processId,
+    peppolRoutingFailure,
     body,
     contentType: format.container?.contentType ?? "application/xml",
     originalPayload,

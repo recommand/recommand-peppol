@@ -169,13 +169,13 @@ export const sendDocumentBaseShape = {
     }),
   doctypeId: z.string().optional().openapi({
     description:
-      "The document type identifier. For JSON documents this defaults to the standard Peppol BIS 3 UBL document type for the selected documentType. For raw XML documents it can be detected automatically where supported.",
+      "The document type identifier. For JSON documents it is selected automatically: the recipient is looked up and the document is sent as the first format, in our order of preference, the recipient is registered to receive it in, falling back to the standard Peppol BIS 3 UBL document type for the selected documentType. For raw XML documents it can be detected automatically where supported.",
     example:
       "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
   }),
   processId: z.string().optional().openapi({
     description:
-      "Optional process identifier override. It is detected automatically for supported JSON and XML document types.",
+      "Optional process identifier override. It is detected automatically for supported JSON and XML document types. For JSON documents the process the recipient is registered for is preferred, as far as the document itself leaves the choice open.",
     example: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
   }),
 } as const;

@@ -31,4 +31,10 @@ export type PreparedDocument = {
   body: BodyInit;
   contentType: string;
   originalPayload: { content: Buffer; containerFormat: "pdf" } | null;
+  /**
+   * Why the document cannot be transmitted over Peppol, when autorouting established
+   * that the recipient receives nothing this document can be sent as. The document is
+   * still prepared, so email delivery keeps working.
+   */
+  peppolRoutingFailure?: string;
 };

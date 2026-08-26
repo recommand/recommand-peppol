@@ -260,10 +260,14 @@ describe("send document recordings", () => {
 
         // Checked before the improvement below: a send refused over the
         // company sending it never reached the behaviour an improvement
-        // describes, so there is nothing to hold it to.
+        // describes, so there is nothing to hold it to. What the recording
+        // answered does not come into it — it was refused for a reason of its
+        // own, which the replay never got far enough to reach, and a recorded
+        // refusal that happens to share the 400 is a coincidence rather than
+        // the same outcome.
         if (
           franceSetupRejection(replay.status, replay.body) &&
-          replay.status !== recording.responseStatus
+          !franceSetupRejection(recording.responseStatus, recording.response)
         ) {
           // Production sent this one for a company registered in France and on
           // the French access point. The playground company is neither, so the
@@ -278,8 +282,9 @@ describe("send document recordings", () => {
           improved.push(label(loaded));
           if (!improvement.allows(replay.status, replay.body)) {
             throw new Error(
-              `The replay answered ${replay.status}, which the improvement covering this recording does not allow:\n` +
-                `  ${improvement.reason}\n` +
+              `The replay answered what the improvement covering this recording does not allow:\n` +
+                `  ${describeAnswer(replay.status, replay.body)}\n` +
+                `The improvement:\n  ${improvement.reason}\n` +
                 `Either that improvement regressed, or its entry in improvements.ts needs updating.`,
             );
           }
