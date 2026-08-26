@@ -19,16 +19,30 @@ The endpoint only needs two calls (see `api/send-document.ts`):
 ## Exposed metrics
 
 
-| Metric                                      | Type      | Labels                     |
-| ------------------------------------------- | --------- | -------------------------- |
-| `peppol_send_document_requests_total`       | counter   | `outcome`, `status`        |
-| `peppol_send_document_duration_seconds`     | histogram | `outcome`                  |
-| `peppol_send_document_in_flight`            | gauge     | —                          |
-| `peppol_send_document_deliveries_total`     | counter   | `channel`, `document_type` |
+| Metric                                  | Type      | Labels                                  |
+| --------------------------------------- | --------- | --------------------------------------- |
+| `peppol_send_document_requests_total`   | counter   | `network`, `outcome`, `status`          |
+| `peppol_send_document_duration_seconds` | histogram | `network`, `outcome`                    |
+| `peppol_send_document_in_flight`        | gauge     | —                                       |
+| `peppol_send_document_deliveries_total` | counter   | `network`, `channel`, `document_type`   |
 
 
 `outcome` is one of `success`, `unauthorized`, `rejected` (4xx),
 `delivery_failed` (422) and `error` (5xx).
+
+`network` separates real customer traffic from the rest, mirroring the branch in
+the endpoint itself:
+
+| Value        | Team state                            | What happens                                    |
+| ------------ | ------------------------------------- | ----------------------------------------------- |
+| `production` | not playground, test network off      | Real AS4 onto the production Peppol network.    |
+| `test`       | test network on (playground or not)   | Real AS4 onto the Peppol test network.          |
+| `playground` | playground, test network off          | Simulated, never leaves our own system.         |
+| `unknown`    | —                                     | Request failed auth, so no team was resolved.   |
+
+`in_flight` is deliberately unlabelled: it is incremented before the auth
+middleware has resolved the team, so it could not be decremented under the same
+label.
 
 ## Configuration
 
@@ -70,10 +84,19 @@ scrape_configs:
 Each app server keeps its own in-process counters, so aggregate across
 instances in Grafana, e.g.:
 
+Always filter on `network="production"` for alerting, otherwise playground and
+test traffic will mask (or fake) real problems:
+
 ```promql
-sum(rate(peppol_send_document_requests_total{outcome="success"}[5m]))
-histogram_quantile(0.95, sum by (le) (rate(peppol_send_document_duration_seconds_bucket[5m])))
-sum by (channel) (rate(peppol_send_document_deliveries_total[5m]))
+sum(rate(peppol_send_document_requests_total{network="production",outcome="error"}[5m]))
+histogram_quantile(0.95, sum by (le) (rate(peppol_send_document_duration_seconds_bucket{network="production"}[5m])))
+sum by (channel) (rate(peppol_send_document_deliveries_total{network="production"}[5m]))
+```
+
+Drop the filter, or group `by (network)`, when you want to see all traffic:
+
+```promql
+sum by (network) (rate(peppol_send_document_requests_total[5m]))
 ```
 
 Counters reset to zero on every deploy (they live in process memory); `rate()`

@@ -900,6 +900,8 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
 
     recordSendDocumentDelivery({
       documentType: type,
+      isPlayground,
+      useTestNetwork,
       sentOverPeppol: sentPeppol,
       emailRecipientCount: sentEmailRecipients.length,
     });
