@@ -148,11 +148,6 @@ export async function sendingPipeline(c: SendingContext) {
         });
         sentPeppol = as4Response.ok;
         if (!sentPeppol) {
-          sendSystemAlert(
-            "Document Sending Failed",
-            `Failed to send document over Peppol network. Response: \`\`\`\n${JSON.stringify(as4Response, null, 2)}\n\`\`\``,
-            "error",
-          );
           peppolFailure =
             as4Response.sendingException?.message ??
             "No additional context available, please contact support@recommand.eu if you could use our help.";
@@ -193,11 +188,6 @@ export async function sendingPipeline(c: SendingContext) {
     }
 
     if (!sentPeppol && emailRecipients.length === 0) {
-      sendSystemAlert(
-        "Document Sending Failed",
-        `Failed to send document over Peppol network and email. ${peppolFailure} ${emailFailure}`,
-        "error",
-      );
       throw new SendingFailure(
         `Failed to send document over Peppol network and email. ${peppolFailure} ${emailFailure}`,
         422,
