@@ -27,8 +27,6 @@ const DEFAULT_DOCUMENT_TYPES: ReceivingCapability[] = [
 ];
 
 const FRANCE_DEFAULT_DOCUMENT_TYPES: ReceivingCapability[] = [
-    getReceivingCapability("peppol-ubl-bis3-invoice", FRANCE_REGULATED_PROCESS_ID),
-    getReceivingCapability("peppol-ubl-bis3-creditnote", FRANCE_REGULATED_PROCESS_ID),
     getReceivingCapability("ubl-france-cius-invoice", FRANCE_REGULATED_PROCESS_ID),
     getReceivingCapability("ubl-france-cius-creditnote", FRANCE_REGULATED_PROCESS_ID),
     getReceivingCapability("ubl-france-extended-invoice", FRANCE_REGULATED_PROCESS_ID),
