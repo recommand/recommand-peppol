@@ -88,35 +88,3 @@ export async function deleteServiceGroup({
 
   return true;
 }
-
-export async function migrateParticipantToOurSMP({
-  peppolIdentifierEas,
-  peppolIdentifierAddress,
-  migrationKey,
-  useTestNetwork,
-}:{
-  peppolIdentifierEas: string;
-  peppolIdentifierAddress: string;
-  migrationKey: string;
-  useTestNetwork: boolean;
-}) {
-  const serviceGroupId = `${peppolIdentifierEas}:${peppolIdentifierAddress}`;
-  
-  const response = await fetchSmp(
-    `migration/inbound/${SCHEME}::${serviceGroupId}/${migrationKey}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      useTestNetwork,
-    }
-  );
-
-  if (!response.ok) {
-    console.error(await response.text());
-    throw new UserFacingError("Failed to migrate participant to our SMP");
-  }
-
-  return true;
-}

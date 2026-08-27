@@ -1,9 +1,8 @@
 import { UserFacingError } from "@peppol/utils/util";
 import { getCompanyById, type Company, type InsertCompany } from "../companies";
-import { deleteServiceGroup, migrateParticipantToOurSMP, registerServiceGroup } from "./service-group";
+import { deleteServiceGroup, registerServiceGroup } from "./service-group";
 import { deleteServiceMetadata, registerServiceMetadata } from "./service-metadata";
 import { registerBusinessCard } from "./business-card";
-import { getMigrationToken } from "../hermes";
 import { canUpsertCompanyIdentifier, getCompanyIdentifiers, type CompanyIdentifier } from "../company-identifiers";
 import { getCompanyDocumentTypes, type CompanyDocumentType } from "../company-document-types";
 import { verifyRecipient } from "../recipient";
@@ -81,34 +80,19 @@ async function registerCompanyIdentifier({company, identifier, documentTypes, us
       useTestNetwork,
     });
   }catch(error){
+    console.error(error);
+    // Try to get the SMP hostnames so we can make a more descriptive error message
+    let smpHostnames: string[] = [];
     try{
-      if(identifier.scheme === "0208" && !useTestNetwork){
-        // The company might be registered in Hermes already, try to migrate it to our SMP
-        const migrationToken = await getMigrationToken(identifier.identifier);
-        await migrateParticipantToOurSMP({
-          peppolIdentifierEas: identifier.scheme,
-          peppolIdentifierAddress: identifier.identifier,
-          migrationKey: migrationToken,
-          useTestNetwork,
-        });
-      } else {
-        throw error;
-      }
+      const recipientVerification = await verifyRecipient({recipientAddress: identifier.scheme + ":" + identifier.identifier, useTestNetwork});
+      smpHostnames = recipientVerification.smpHostnames;
     }catch(error){
-      console.error(error);
-      // Try to get the SMP hostnames so we can make a more descriptive error message
-      let smpHostnames: string[] = [];
-      try{
-        const recipientVerification = await verifyRecipient({recipientAddress: identifier.scheme + ":" + identifier.identifier, useTestNetwork});
-        smpHostnames = recipientVerification.smpHostnames;
-      }catch(error){
-        // Ignore the error
-      }
-      if(smpHostnames.length > 0){
-        throw new UserFacingError(`Failed to register company identifier ${identifier.scheme}:${identifier.identifier}, it might already be registered with another SMP (${smpHostnames.join(", ")}). Please revoke your registration with the other SMP and try again. Feel free to contact support@recommand.eu if you are unsure about how to proceed.`);
-      }else{
-        throw new UserFacingError(`Failed to register company identifier ${identifier.scheme}:${identifier.identifier}, it might already be registered with another SMP. Please ensure this is not the case. Feel free to contact support@recommand.eu if you are unsure about how to proceed.`);
-      }
+      // Ignore the error
+    }
+    if(smpHostnames.length > 0){
+      throw new UserFacingError(`Failed to register company identifier ${identifier.scheme}:${identifier.identifier}, it might already be registered with another SMP (${smpHostnames.join(", ")}). Please revoke your registration with the other SMP and try again. Feel free to contact support@recommand.eu if you are unsure about how to proceed.`);
+    }else{
+      throw new UserFacingError(`Failed to register company identifier ${identifier.scheme}:${identifier.identifier}, it might already be registered with another SMP. Please ensure this is not the case. Feel free to contact support@recommand.eu if you are unsure about how to proceed.`);
     }
   }
 
