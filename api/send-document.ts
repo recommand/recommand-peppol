@@ -81,6 +81,10 @@ import {
   captureSendDocumentRecording,
   type SendDocumentRecordingContext,
 } from "@peppol/data/send-document-recording";
+import {
+  recordSendDocumentDelivery,
+  trackSendDocument,
+} from "@peppol/utils/metrics";
 
 const server = new Server();
 
@@ -127,6 +131,7 @@ type SendDocumentContext = Context<
 
 const _sendDocument = server.post(
   "/:companyId/sendDocument",
+  trackSendDocument,
   requireIntegrationSupportedCompanyAccess(),
   requireValidSubscription(),
   requireCompanyVerificationForStrictTeams(),
@@ -138,6 +143,7 @@ const _sendDocument = server.post(
 
 const _sendDocumentMinimal = server.post(
   "/:companyId/send",
+  trackSendDocument,
   requireIntegrationSupportedCompanyAccess(),
   requireValidSubscription(),
   requireCompanyVerificationForStrictTeams(),
@@ -890,6 +896,14 @@ async function _sendDocumentImplementation(c: SendDocumentContext) {
         peppolMessageId: as4Response?.peppolMessageId ?? null,
         envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
       },
+    });
+
+    recordSendDocumentDelivery({
+      documentType: type,
+      isPlayground,
+      useTestNetwork,
+      sentOverPeppol: sentPeppol,
+      emailRecipientCount: sentEmailRecipients.length,
     });
 
     return c.json(

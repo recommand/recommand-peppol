@@ -31,6 +31,7 @@ import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
 import { registerPeppolEventTypes } from "./lib/event-types";
+import { initializeMetricsServer } from "./utils/metrics";
 import "./lib/permissions";
 
 export let logger: Logger;
@@ -48,6 +49,8 @@ export async function init(app: RecommandApp, server: Server) {
   initializeIntegrationCronJobs(logger);
   initializeOffloadCronJobs(logger);
   initializeS3DeletionCronJobs(logger);
+
+  initializeMetricsServer(logger);
 
   const exclude: RegExp[] = [
     /^\/api\/core(?!\/auth\/verify).*$/, // Exclude all core API endpoints except the auth/verify endpoint
