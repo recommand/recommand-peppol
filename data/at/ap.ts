@@ -7,10 +7,12 @@ import {
 import { verifyDocumentSupport } from "@peppol/data/recipient";
 import {
   buildStandardBusinessDocument,
+  extractStandardBusinessDocumentPayload,
   type SbdhPayload,
 } from "@peppol/utils/sbdh";
 import { UserFacingError } from "@peppol/utils/util";
-import { fetchArratechJson, getArratechConfig } from "./client";
+import { claimOutgoingEnvelope } from "@peppol/data/provider-sent/claims";
+import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 
 // Arratech does not synchronously check receiver support before accepting a transaction, so
 // we perform the SMP-level document type and process check ourselves.
@@ -102,6 +104,11 @@ export async function sendAs4(options: {
       payload: await toSbdhPayload(options.body, options.contentType),
     });
 
+    // Claimed before Arratech sees the document, so the transaction it reports back
+    // for this envelope is already recognisable as one of our sends (see
+    // data/provider-sent).
+    await claimOutgoingEnvelope(standardBusinessDocument.instanceIdentifier);
+
     const searchParams = new URLSearchParams({ ap: config.apRef });
     const { transactionId } = await fetchArratechJson<{ transactionId: string }>(
       `/orgs/${config.orgId}/transactions?${searchParams.toString()}`,
@@ -140,4 +147,38 @@ export async function sendAs4(options: {
       },
     };
   }
+}
+
+/**
+ * Downloads the business document of a transaction and unwraps it from its SBDH
+ * envelope, for both the documents Arratech received for us and the ones it sent on
+ * our behalf. Returns null when the document cannot be fetched, which is retried
+ * rather than treated as an empty document.
+ */
+export async function downloadBusinessDocument(options: {
+  transactionId: string;
+  useTestNetwork: boolean;
+}): Promise<{ body: string | Blob; contentType: string } | null> {
+  const config = getArratechConfig(options.useTestNetwork);
+  const response = await fetchArratech(
+    `/orgs/${config.orgId}/transactions/${options.transactionId}/business_document`,
+    { useTestNetwork: options.useTestNetwork }
+  );
+  if (!response.ok) {
+    console.error("Failed to download Arratech business document:", response.status);
+    return null;
+  }
+
+  const documentPayload = extractStandardBusinessDocumentPayload(
+    await response.text()
+  );
+  if (documentPayload.kind === "binary") {
+    return {
+      contentType: documentPayload.mimeType,
+      body: new Blob([new Uint8Array(documentPayload.content)], {
+        type: documentPayload.mimeType,
+      }),
+    };
+  }
+  return { contentType: "application/xml", body: documentPayload.xml };
 }

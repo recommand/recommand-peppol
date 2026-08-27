@@ -1,4 +1,4 @@
-import { audit } from "@core/lib/audit";
+import { audit, writeAuditEvent, type AuditEventInput } from "@core/lib/audit";
 import { publishEvent } from "@core/data/rules/events";
 import type { Company } from "@peppol/data/companies";
 import {
@@ -15,8 +15,10 @@ import {
 } from "@peppol/data/offload/storage";
 import { sendOutgoingDocumentNotifications } from "@peppol/data/send-document-notifications";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
+import { isUniqueViolation } from "@peppol/utils/db-errors";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { db } from "@recommand/db";
+import { eq } from "drizzle-orm";
 import type { Context } from "@recommand/lib/api";
 
 export type {
@@ -31,7 +33,9 @@ export type {
  * whether it was transmitted over Peppol or filed with a tax administration.
  */
 export async function recordOutgoingDocument(options: {
-  c: Context<any>;
+  /** The request that produced the document, for the audit trail. Null when a
+   * background worker records a document an access point sent on our behalf. */
+  c: Context<any> | null;
   id: string;
   teamId: string;
   company: Company;
@@ -79,20 +83,49 @@ export async function recordOutgoingDocument(options: {
     }
   }
 
-  const transmittedDocument = await db
-    .insert(transmittedDocuments)
-    .values(
-      buildOutgoingDocumentRow({
-        id,
-        teamId,
-        company,
-        document,
-        delivery,
-        storage,
-      })
-    )
-    .returning({ id: transmittedDocuments.id })
-    .then((rows) => rows[0]);
+  let transmittedDocument: { id: string };
+  try {
+    transmittedDocument = await db
+      .insert(transmittedDocuments)
+      .values(
+        buildOutgoingDocumentRow({
+          id,
+          teamId,
+          company,
+          document,
+          delivery,
+          storage,
+        })
+      )
+      .returning({ id: transmittedDocuments.id })
+      .then((rows) => rows[0]);
+  } catch (error) {
+    // ap_transaction_id is unique, so a conflict means this exact transaction was
+    // already recorded from the access point's report of it (see data/provider-sent),
+    // which only happens when that report could not be matched to this send's envelope
+    // claim. Everything that follows from the document has then already happened, so
+    // this returns what is there instead of failing a send whose document did leave
+    // the platform.
+    const existing =
+      facts.apTransactionId && isUniqueViolation(error)
+        ? await db
+            .select({ id: transmittedDocuments.id })
+            .from(transmittedDocuments)
+            .where(eq(transmittedDocuments.apTransactionId, facts.apTransactionId))
+            .limit(1)
+            .then((rows) => rows[0])
+        : undefined;
+    if (!existing) {
+      throw error;
+    }
+    sendSystemAlert(
+      "Outgoing Document Already Recorded",
+      `Transaction ${facts.apTransactionId} was already recorded as document ${existing.id} when the sending pipeline tried to record it. ` +
+        `The access point's report of this transaction was not matched to its envelope claim.`,
+      "warning"
+    );
+    return existing;
+  }
 
   await publishEvent("peppol.document.sent.v1", {
     teamId,
@@ -144,7 +177,7 @@ export async function recordOutgoingDocument(options: {
     );
   }
 
-  await audit(c, {
+  const auditEvent: AuditEventInput = {
     action: "create",
     subsystem: "peppol.documents",
     objectType: "peppol.document",
@@ -167,7 +200,12 @@ export async function recordOutgoingDocument(options: {
       envelopeId: facts.envelopeId,
       externalReferenceId: facts.externalReferenceId,
     },
-  });
+  };
+  if (c) {
+    await audit(c, auditEvent);
+  } else {
+    await writeAuditEvent(auditEvent);
+  }
 
   return transmittedDocument;
 }

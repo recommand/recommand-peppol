@@ -72,21 +72,23 @@ export async function getCompanyById(
 }
 
 /**
- * Get a company by its Peppol ID. When no playgroundTeamId is provided, the function will return a production company, otherwise it will return the company from the requested playground team.
+ * Find a company by its Peppol ID. When no playgroundTeamId is provided, the function will return a production company, otherwise it will return the company from the requested playground team.
  * @param peppolId The Peppol ID of the company
  * @param playgroundTeamId The team ID of the playground team, if the company is in a playground team. If no playgroundTeamId is provided, the function will return a production company.
- * @returns The company
+ * @param requireSmpRecipient Only match companies registered as SMP recipient. Receiving requires that registration, sending does not.
+ * @returns The company, or undefined when no company matches
  */
-export async function getCompanyByPeppolId({
+export async function findCompanyByPeppolId({
   peppolId,
   playgroundTeamId,
   useTestNetwork,
+  requireSmpRecipient = true,
 }: {
   peppolId: string,
   playgroundTeamId?: string
   useTestNetwork?: boolean;
-}): Promise<Company> {
-  let originalPeppolId = peppolId;
+  requireSmpRecipient?: boolean;
+}): Promise<Company | undefined> {
   // The peppolId might start with iso6523-actorid-upis::
   if (peppolId.startsWith("iso6523-actorid-upis::")) {
     peppolId = peppolId.split("::")[1];
@@ -105,7 +107,7 @@ export async function getCompanyByPeppolId({
     .leftJoin(teamExtensions, eq(companies.teamId, teamExtensions.id))
     .where(
       and(
-        eq(companies.isSmpRecipient, true), // Only include companies that are registered as SMP recipient
+        requireSmpRecipient ? eq(companies.isSmpRecipient, true) : undefined, // Only include companies that are registered as SMP recipient
         eq(companyIdentifiers.scheme, scheme.toLowerCase()),
         eq(companyIdentifiers.identifier, identifier.toLowerCase()),
         playgroundTeamId ? eq(companies.teamId, playgroundTeamId) : (
@@ -117,10 +119,23 @@ export async function getCompanyByPeppolId({
         useTestNetwork ? eq(teamExtensions.useTestNetwork, true) : undefined
       )
     );
-  if (results.length === 0) {
-    throw new Error(`Company with peppol id ${originalPeppolId} not found as ${useTestNetwork ? "test" : "production"} company`);
+  return results[0]?.peppol_companies;
+}
+
+/**
+ * Get a company by its Peppol ID, throwing when no company matches. See findCompanyByPeppolId.
+ */
+export async function getCompanyByPeppolId(options: {
+  peppolId: string,
+  playgroundTeamId?: string
+  useTestNetwork?: boolean;
+  requireSmpRecipient?: boolean;
+}): Promise<Company> {
+  const company = await findCompanyByPeppolId(options);
+  if (!company) {
+    throw new Error(`Company with peppol id ${options.peppolId} not found as ${options.useTestNetwork ? "test" : "production"} company`);
   }
-  return results[0].peppol_companies;
+  return company;
 }
 
 function validateCompanyCountryIdentifiers({

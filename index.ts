@@ -30,6 +30,7 @@ import teamsServer from "./api/teams/get-team-extension";
 import customersServer from "./api/customers";
 import { initializeIntegrationCronJobs } from "./data/integrations/cron";
 import { initializeOffloadCronJobs } from "./data/offload/cron";
+import { initializeProviderSentCronJobs } from "./data/provider-sent/cron";
 import { initializeS3DeletionCronJobs } from "./data/s3-deletion/cron";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
@@ -52,6 +53,7 @@ export async function init(app: RecommandApp, server: Server) {
 
   initializeIntegrationCronJobs(logger);
   initializeOffloadCronJobs(logger);
+  initializeProviderSentCronJobs(logger);
   initializeS3DeletionCronJobs(logger);
 
   initializeMetricsServer(logger);
