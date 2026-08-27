@@ -2,10 +2,11 @@
  * Loading of send document recordings.
  *
  * Recordings are the JSON blobs the API writes to S3 for every send: the
- * request it received, the status and body it answered with, and the XML it
- * transmitted. Their shape and layout are written out here rather than
- * imported, so a change to the recorder that breaks this suite is a change
- * this suite is supposed to notice.
+ * request it received, the status and body it answered with, the XML it
+ * transmitted, and the document type identifier and the process it transmitted
+ * it under. Their shape and layout are written out here rather than imported,
+ * so a change to the recorder that breaks this suite is a change this suite is
+ * supposed to notice.
  *
  *   peppol-send-document-recordings/<teamId>/<companyId>/<yyyy>/<mm>/<dd>/<id>.json
  *
@@ -29,6 +30,16 @@ export type Recording = {
   responseStatus: number;
   response: any;
   xmlDocument: string | null;
+  /**
+   * How the send was routed: the document type identifier it was transmitted
+   * under and the process it travelled over. Absent on a send that was refused
+   * before a document was prepared, and on any recording made before the
+   * recorder wrote them down — the replay then routes the document itself,
+   * which is what this suite always did. See `withRecordedRouting` in
+   * `normalise.ts`.
+   */
+  docTypeId?: string | null;
+  processId?: string | null;
 };
 
 /**

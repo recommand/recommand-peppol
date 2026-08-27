@@ -30,6 +30,7 @@ import {
   normaliseXml,
   requestsEmail,
   rewriteRequest,
+  routedByReplayItself,
   senderIdentityRejection,
   xmlMasks,
 } from "./normalise";
@@ -97,6 +98,7 @@ const emailOnly: string[] = [];
 const senderIdentity: string[] = [];
 const senderIdentityAccepted: string[] = [];
 const senderUnregistered: string[] = [];
+const routedByReplay: string[] = [];
 const franceNotSetUp: string[] = [];
 const improved: string[] = [];
 const rejected: string[] = [];
@@ -174,6 +176,10 @@ describe("send document recordings", () => {
           `number or the scheme its endpoint is registered under — which the playground company's differs from, so ` +
           `the replay got past the rule that fired there; again the sender changing rather than the API, and their ` +
           `XML was still compared`,
+      routedByReplay.length > 0 &&
+        `${routedByReplay.length} predate the recorder writing down which document type identifier and process a ` +
+          `send was transmitted under, so the replay chose a format and a process for them rather than being handed ` +
+          `the recorded ones — for those, what the recipient is registered to receive still decides`,
       senderUnregistered.length > 0 &&
         `${senderUnregistered.length} were refused in production because the company that sent them has no company ` +
           `identifier, which the playground company does have, so the recorded refusal is the sending company's ` +
@@ -239,9 +245,16 @@ describe("send document recordings", () => {
         const emailWasNotSent = requestsEmail(recording.request);
         if (emailWasNotSent) emailNotSent.push(label(loaded));
 
+        // The replay is told which document type identifier and process the
+        // recording was transmitted under, so it writes the same document
+        // without looking the recipient up on a network that has never heard
+        // of it. A recording that says neither is routed by the replay itself,
+        // which is what this suite did before the recorder wrote them down.
+        if (routedByReplayItself(recording)) routedByReplay.push(label(loaded));
+
         const replay = await sendDocument(
           replayPath(recording),
-          rewriteRequest(recording.request),
+          rewriteRequest(recording),
         );
 
         // Delivery is the one thing the playground cannot reproduce: the

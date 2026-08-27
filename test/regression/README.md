@@ -39,7 +39,9 @@ peppol-send-document-recordings/<teamId>/<companyId>/<yyyy>/<mm>/<dd>/<id>.json
 ```
 
 Each holds the request that was received, the status and body that were
-answered, and the XML that was transmitted. The team and the company come
+answered, the XML that was transmitted, and the document type identifier and
+process it was transmitted under (`docTypeId` and `processId`, absent on a send
+refused before a document was prepared). The team and the company come
 before the date in the key, so a key does not sort chronologically on its own —
 the suite sorts by the `<yyyy>/<mm>/<dd>/<id>` tail (`byRecordedAt` in
 `recordings.ts`) and replays the newest. Sorting keys as they stand would order
@@ -207,6 +209,32 @@ asked for no mail they are compared as strictly as any other field.
 once the mail is taken out: the API refuses such a request outright, so
 replaying it would assert a refusal the suite itself caused. Those recordings
 are not replayed, and are counted at the end of the run.
+
+**The document type identifier and the process are named.** A request that
+leaves either open has it decided by looking the recipient up and taking the
+first format and process that recipient is registered to receive. The playground
+cannot reproduce that lookup: it answers from the companies registered in the
+playground team, and a production recipient is not one of them, so the replay
+would fall back to the default format and write a different document than the
+recording did for every send production routed elsewhere. The recorder writes
+down what production resolved, and the replay passes it back as `doctypeId` and
+`processId` — which is what the send API offers any caller who already knows
+where the document is going, so the lookup is skipped entirely.
+
+What that gives up is the *routing decision* itself: that a request naming
+neither is sent as the format the recipient is registered for. It is the one
+part of a send decided by the network rather than by the request, so a replay
+against the playground could not have asserted it either way;
+`test/send-document-autorouting.test.ts` is where it is asserted, against a
+lookup written for the purpose. Everything the format and the process then
+produce — the document, its identifiers, its profile — is compared as strictly
+as before.
+
+Two kinds of send keep routing themselves. **Raw XML** is never routed by a
+lookup — the document states its own type and process, and detecting those is a
+contract of its own that naming them would hide. And a **recording made before
+the recorder wrote them down** has nothing to pass, so the replay chooses for
+itself, exactly as this suite did before; those are counted at the end of a run.
 
 **The company id in the path.** Only that segment changes, so a recording of
 `/api/v1/:id/send` still exercises the `/api/v1` alias.

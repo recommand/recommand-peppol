@@ -89,6 +89,15 @@ export async function sendingPipeline(c: SendingContext) {
             recipientCapabilities,
           });
 
+    // Recorded as soon as it is known, before the guard below can refuse the send: how a
+    // document was going to be routed is what a replay needs in order to send the same
+    // one, and it is the one part of that decision a recipient lookup made rather than
+    // the request.
+    c.set("sendDocumentRecordingRouting", {
+      docTypeId: prepared.docTypeId,
+      processId: prepared.processId,
+    });
+
     // We want to ensure French regulated flows are only supported for companies in France and over the AT access point.
     assertFranceRegulatedSendingSupported({
       docTypeId: prepared.docTypeId,

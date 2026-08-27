@@ -30,11 +30,27 @@ function getRecordingS3Options() {
   };
 }
 
+/**
+ * How a send was routed: the document type identifier it was transmitted under and the
+ * process it travelled over, as the sending pipeline resolved them.
+ *
+ * Both are chosen from what the recipient is registered to receive when the request
+ * leaves either of them open, so they are not derivable from the request alone — which
+ * is why they are recorded rather than worked out again later. A replay that is handed
+ * them sends the same document the recording did without having to look the recipient up
+ * on a network that does not know it.
+ */
+export type SendDocumentRecordingRouting = {
+  docTypeId: string;
+  processId: string;
+};
+
 export type SendDocumentRecordingContext = {
   Variables: {
     team: { id: string };
     company: { id: string };
     sendDocumentRecordingXml: string | null;
+    sendDocumentRecordingRouting: SendDocumentRecordingRouting | null;
   };
 };
 
@@ -48,6 +64,9 @@ export type SendDocumentRecording = {
   responseStatus: number;
   response: unknown;
   xmlDocument: string | null;
+  /** Null for a send refused before a document was prepared. */
+  docTypeId: string | null;
+  processId: string | null;
 };
 
 export const SEND_DOCUMENT_RECORDINGS_S3_ROOT =
@@ -56,6 +75,7 @@ export const SEND_DOCUMENT_RECORDINGS_S3_ROOT =
 export const captureSendDocumentRecording =
   createMiddleware<SendDocumentRecordingContext>(async (c, next) => {
     c.set("sendDocumentRecordingXml", null);
+    c.set("sendDocumentRecordingRouting", null);
 
     if (!getRecordingsBucket()) {
       await next();
@@ -66,6 +86,7 @@ export const captureSendDocumentRecording =
     await next();
 
     const response = c.res.clone();
+    const routing = c.get("sendDocumentRecordingRouting");
     const recording = {
       teamId: c.var.team.id,
       companyId: c.var.company.id,
@@ -73,6 +94,8 @@ export const captureSendDocumentRecording =
       request,
       responseStatus: c.res.status,
       xmlDocument: c.get("sendDocumentRecordingXml"),
+      docTypeId: routing?.docTypeId ?? null,
+      processId: routing?.processId ?? null,
     };
 
     void (async () => {

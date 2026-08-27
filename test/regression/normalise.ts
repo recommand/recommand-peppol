@@ -12,6 +12,8 @@
  * wherever they can be. A field the request supplied is never masked.
  */
 
+import type { Recording } from "./recordings";
+
 /**
  * Whether the Peppol network, rather than the API, decided how a send ended.
  *
@@ -316,6 +318,15 @@ export function normaliseResponseBody(
 }
 
 /**
+ * The recorded request as the replay sends it: without its mail, and naming
+ * the document type identifier and the process the recording was transmitted
+ * under. Both are explained on the functions below.
+ */
+export function rewriteRequest(recording: Recording): any {
+  return withRecordedRouting(withoutEmail(recording.request), recording);
+}
+
+/**
  * Takes the mail out of a recorded request.
  *
  * A recorded request carries the real addresses of real customers, and there is
@@ -336,10 +347,87 @@ export function normaliseResponseBody(
  * Everything before delivery — the document, its validation, the Peppol leg —
  * is untouched by this and is compared exactly as strictly as before.
  */
-export function rewriteRequest(request: any): any {
+function withoutEmail(request: any): any {
   if (!requestsEmail(request)) return request;
-  const { email: _email, ...withoutEmail } = request;
-  return withoutEmail;
+  const { email: _email, ...rest } = request;
+  return rest;
+}
+
+/**
+ * Names the document type identifier and the process the recording was sent
+ * under.
+ *
+ * A request that leaves either of them open has them decided by looking the
+ * recipient up and taking the first format and process it is registered to
+ * receive. The playground cannot reproduce that lookup: it answers from the
+ * companies registered in the playground team, and a production recipient is
+ * not one of them. The replay would fall back to the default format and write
+ * a different document than the recording did for every send production routed
+ * anywhere else.
+ *
+ * So the replay is told what production resolved. The recorder writes both
+ * down — `docTypeId` and `processId` on the recording — and naming them is
+ * what the send API offers any caller who already knows where the document is
+ * going: the lookup is skipped entirely, and the format and the process are
+ * the recorded ones rather than whatever this environment would have picked.
+ *
+ * What that gives up is the routing *decision* itself: that a request naming
+ * neither is sent as the format the recipient is registered for. It is the one
+ * part of a send decided by the network rather than by the request, so it is
+ * not something a replay against the playground could have asserted either
+ * way; `test/send-document-autorouting.test.ts` is where it is asserted,
+ * against a lookup written for the purpose. Everything the format and the
+ * process then produce — the document, its identifiers, its profile — is
+ * compared as strictly as before.
+ *
+ * Two kinds of send keep routing themselves:
+ *
+ * - **raw XML**, which no lookup routes: the document states its own type and
+ *   process, and detecting those from it is a contract of its own that naming
+ *   them here would hide;
+ * - **a recording that carries neither**, which is a send refused before a
+ *   document was prepared, or one made before the recorder wrote them down.
+ *   The replay routes the document itself, exactly as this suite always did.
+ */
+function withRecordedRouting(request: any, recording: Recording): any {
+  if (!hasRecordedRouting(recording)) return request;
+  return {
+    ...request,
+    // The request field is `doctypeId`; the recording's is `docTypeId`.
+    doctypeId: recording.docTypeId,
+    processId: recording.processId,
+  };
+}
+
+/** Whether the recording says how the send was routed, so the replay can be told. */
+function hasRecordedRouting(recording: Recording): boolean {
+  return (
+    !routesItself(recording) &&
+    typeof recording.docTypeId === "string" &&
+    typeof recording.processId === "string"
+  );
+}
+
+/** A raw XML send, which states its own document type and process. */
+function routesItself(recording: Recording): boolean {
+  return recording.request?.documentType === "xml";
+}
+
+/**
+ * Whether the replay had to route a send itself, because the recording
+ * transmitted a document without saying which format and process it
+ * transmitted it as — a recording made before the recorder wrote them down. A
+ * send refused before a document was prepared has no routing to carry and
+ * nothing to compare, so it does not count here, and neither does raw XML.
+ * Counted at the end of a run, so that a replay which chose the format for
+ * itself does not do so silently.
+ */
+export function routedByReplayItself(recording: Recording): boolean {
+  return (
+    !routesItself(recording) &&
+    recording.xmlDocument !== null &&
+    !hasRecordedRouting(recording)
+  );
 }
 
 /** Whether a recorded request asked for the document to be mailed. */
