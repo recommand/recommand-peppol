@@ -34,7 +34,7 @@ const server = new Server();
 // Raw XML has nothing to generate, so it is dropped from the document types
 // this endpoint takes. The list is derived from the send schema rather than
 // spelled out again, so a newly supported document type is accepted here too.
-const generateXmlDocumentTypes = documentTypeSchema.options.filter(
+const generateDocumentTypes = documentTypeSchema.options.filter(
   (type): type is Exclude<DocumentType, typeof DocumentType.XML> =>
     type !== DocumentType.XML,
 );
@@ -43,7 +43,7 @@ const generateXmlDocumentTypes = documentTypeSchema.options.filter(
 // no meaning, and a null recipient means email-only delivery there, which throws
 // the generated XML away instead of transmitting or storing it: there is no
 // document to generate for one here.
-const { email: _email, ...generateXmlBaseShape } = {
+const { email: _email, ...generateBaseShape } = {
   ...sendDocumentBaseShape,
   recipient: z.string().openapi({
     description:
@@ -52,21 +52,21 @@ const { email: _email, ...generateXmlBaseShape } = {
   }),
 };
 
-const generateXmlSchema = documentRequestSchema(
-  generateXmlBaseShape,
-  generateXmlDocumentTypes,
+const generateSchema = documentRequestSchema(
+  generateBaseShape,
+  generateDocumentTypes,
 );
 
-type GenerateXmlContext = Context<
+type GenerateContext = Context<
   AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext,
   string,
   {
-    in: { json: z.input<typeof generateXmlSchema> };
-    out: { json: z.infer<typeof generateXmlSchema> };
+    in: { json: z.input<typeof generateSchema> };
+    out: { json: z.infer<typeof generateSchema> };
   }
 >;
 
-const generateXmlResponse = z.object({
+const generateResponse = z.object({
   xml: z.string().openapi({
     description: "The generated XML document.",
   }),
@@ -86,15 +86,15 @@ const generateXmlResponse = z.object({
 });
 
 const routeDescription = describeRoute({
-  operationId: "generateXml",
+  operationId: "generate",
   description:
     "Generate the XML document that would be sent for the given payload, without sending or storing it. Accepts the same body as the send document endpoint, minus the email delivery options and the raw XML document type, which has nothing to generate. The generated document is validated exactly as it is when sending, so it only comes back if it would be accepted by the Peppol network. Documents generated through this endpoint do not count towards your Recommand subscription usage.",
-  summary: "Generate XML",
+  summary: "Generate Document",
   tags: ["Sending"],
   responses: {
     ...describeSuccessResponseWithZod(
       "Successfully generated document",
-      generateXmlResponse,
+      generateResponse,
     ),
     ...describeErrorResponse(
       400,
@@ -103,7 +103,7 @@ const routeDescription = describeRoute({
   },
 });
 
-async function generateXmlImplementation(c: GenerateXmlContext) {
+async function generateImplementation(c: GenerateContext) {
   try {
     const input = c.req.valid("json");
     const senderIdentifier = await getSendingCompanyIdentifier(
@@ -156,15 +156,15 @@ async function generateXmlImplementation(c: GenerateXmlContext) {
   }
 }
 
-const generateXml = server.post(
-  "/:companyId/generateXml",
+const generateDocument = server.post(
+  "/:companyId/generate",
   requireIntegrationSupportedCompanyAccess(),
   requireValidSubscription(),
   routeDescription,
-  zodValidator("json", generateXmlSchema),
-  generateXmlImplementation,
+  zodValidator("json", generateSchema),
+  generateImplementation,
 );
 
-export type GenerateXml = typeof generateXml;
+export type GenerateDocument = typeof generateDocument;
 
 export default server;
