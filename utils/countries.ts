@@ -1,4 +1,10 @@
-import { INVOICE_DOCUMENT_TYPE_INFO, CREDIT_NOTE_DOCUMENT_TYPE_INFO, SI_UBL_INVOICE_DOCUMENT_TYPE_INFO, SI_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO, type DocumentTypeInfo } from "./document-types";
+import {
+    FRANCE_REGULATED_PROCESS_ID,
+} from "./type-repository/document-formats/france-process";
+import {
+    getReceivingCapability,
+} from "./type-repository/receiving-capabilities";
+import type { ReceivingCapability } from "./type-repository/receiving-capabilities/types";
 
 export type CountrySupportLevel = "supported" | "partial" | "unsupported";
 
@@ -9,12 +15,28 @@ export type CountryInfo = {
     supportLevel: CountrySupportLevel;
     defaultVatScheme?: string | null;
     defaultEnterpriseNumberScheme?: string | null;
-    defaultDocumentTypes: DocumentTypeInfo[];
+    defaultDocumentTypes: ReceivingCapability[];
 }
 
-const DEFAULT_DOCUMENT_TYPES: DocumentTypeInfo[] = [
-    INVOICE_DOCUMENT_TYPE_INFO,
-    CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+const PEPPOL_BILLING_PROCESS_ID =
+    "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
+
+const DEFAULT_DOCUMENT_TYPES: ReceivingCapability[] = [
+    getReceivingCapability("peppol-ubl-bis3-invoice", PEPPOL_BILLING_PROCESS_ID),
+    getReceivingCapability("peppol-ubl-bis3-creditnote", PEPPOL_BILLING_PROCESS_ID),
+];
+
+const FRANCE_DEFAULT_DOCUMENT_TYPES: ReceivingCapability[] = [
+    getReceivingCapability("peppol-ubl-bis3-invoice", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("peppol-ubl-bis3-creditnote", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("ubl-france-cius-invoice", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("ubl-france-cius-creditnote", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("ubl-france-extended-invoice", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("ubl-france-extended-creditnote", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("cii-d22b-france-cius", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("cii-d22b-france-extended", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("facturx-france", FRANCE_REGULATED_PROCESS_ID),
+    getReceivingCapability("france-cdar", FRANCE_REGULATED_PROCESS_ID),
 ];
 
 export const COUNTRIES: CountryInfo[] = ([
@@ -88,9 +110,8 @@ export const COUNTRIES: CountryInfo[] = ([
         name: "France",
         flag: "🇫🇷",
         supportLevel: "supported",
-        defaultVatScheme: "9957",
-        defaultEnterpriseNumberScheme: "0002",
-        defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
+        defaultEnterpriseNumberScheme: "0225",
+        defaultDocumentTypes: FRANCE_DEFAULT_DOCUMENT_TYPES,
     },
     {
         code: "DE",
@@ -167,8 +188,8 @@ export const COUNTRIES: CountryInfo[] = ([
         defaultEnterpriseNumberScheme: "0106",
         defaultDocumentTypes: [
             ...DEFAULT_DOCUMENT_TYPES,
-            SI_UBL_INVOICE_DOCUMENT_TYPE_INFO,
-            SI_UBL_CREDIT_NOTE_DOCUMENT_TYPE_INFO,
+            getReceivingCapability("si-ubl-invoice", PEPPOL_BILLING_PROCESS_ID),
+            getReceivingCapability("si-ubl-creditnote", PEPPOL_BILLING_PROCESS_ID),
         ],
     },
     {
@@ -302,6 +323,10 @@ export const COUNTRIES: CountryInfo[] = ([
         defaultDocumentTypes: DEFAULT_DOCUMENT_TYPES,
     },
 ] satisfies CountryInfo[]).sort((a, b) => a.name.localeCompare(b.name));
+
+export function getCountryName(countryCode: string): string {
+    return COUNTRIES.find((country) => country.code === countryCode)?.name ?? countryCode;
+}
 
 export function getCountrySupportLevel(countryCode: string | null | undefined): CountrySupportLevel | undefined {
     return COUNTRIES.find((country) => country.code === countryCode)?.supportLevel;

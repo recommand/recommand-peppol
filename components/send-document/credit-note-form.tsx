@@ -15,6 +15,7 @@ import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { Party } from "@peppol/utils/parsing/invoice/schemas";
 import { format } from "date-fns";
+import { useTranslation } from "@core/hooks/use-translation";
 import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
 import { useActiveTeam } from "@core/hooks/user";
@@ -45,6 +46,7 @@ export function CreditNoteForm({
   mode,
   groupedCounterpartyKey,
 }: CreditNoteFormProps) {
+  const { t } = useTranslation();
   const activeTeam = useActiveTeam();
   const [creditNote, setCreditNote] = useState<Partial<CreditNote>>({
     creditNoteNumber: "",
@@ -344,7 +346,7 @@ export function CreditNoteForm({
     <div className="space-y-6">
       <div className="grid gap-4">
         <div>
-          <Label htmlFor="creditNoteNumber">Credit Note Number *</Label>
+          <Label htmlFor="creditNoteNumber">{t`Credit Note Number *`}</Label>
           <Input
             id="creditNoteNumber"
             value={creditNote.creditNoteNumber || ""}
@@ -357,7 +359,7 @@ export function CreditNoteForm({
         </div>
 
         <div>
-          <Label htmlFor="issueDate">Issue Date</Label>
+          <Label htmlFor="issueDate">{t`Issue Date`}</Label>
           <Input
             id="issueDate"
             type="date"
@@ -372,14 +374,14 @@ export function CreditNoteForm({
         </div>
 
         <div>
-          <Label htmlFor="buyerReference">Buyer Reference</Label>
+          <Label htmlFor="buyerReference">{t`Buyer Reference`}</Label>
           <Input
             id="buyerReference"
             value={creditNote.buyerReference || ""}
             onChange={(e) =>
               handleFieldChange("buyerReference", e.target.value)
             }
-            placeholder="An identifier assigned by the buyer for internal routing purposes."
+            placeholder={t`An identifier assigned by the buyer for internal routing purposes.`}
           />
         </div>
       </div>
@@ -389,7 +391,7 @@ export function CreditNoteForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("creditedInvoices")}
         >
-          <span>Credited Invoices</span>
+          <span>{t`Credited Invoices`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.creditedInvoices ? "rotate-180" : ""}`}
           />
@@ -399,7 +401,7 @@ export function CreditNoteForm({
             {(creditNote.invoiceReferences || []).map((ref, index) => (
               <div key={index} className="flex gap-2 items-end">
                 <div className="flex-1">
-                  <Label htmlFor={`invoiceRef-${index}-id`}>Invoice ID *</Label>
+                  <Label htmlFor={`invoiceRef-${index}-id`}>{t`Invoice ID *`}</Label>
                   <Input
                     id={`invoiceRef-${index}-id`}
                     value={ref.id || ""}
@@ -412,7 +414,7 @@ export function CreditNoteForm({
                   />
                 </div>
                 <div className="flex-1">
-                  <Label htmlFor={`invoiceRef-${index}-date`}>Issue Date</Label>
+                  <Label htmlFor={`invoiceRef-${index}-date`}>{t`Issue Date`}</Label>
                   <Input
                     id={`invoiceRef-${index}-date`}
                     type="date"
@@ -458,7 +460,7 @@ export function CreditNoteForm({
               }}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Invoice Reference
+              {t`Add Invoice Reference`}
             </Button>
           </div>
         </CollapsibleContent>
@@ -472,8 +474,8 @@ export function CreditNoteForm({
           >
             <span>
               {isSelfBilling
-                ? "Buyer Information (Auto-populated)"
-                : "Buyer Information *"}
+                ? t`Buyer Information (Auto-populated)`
+                : t`Buyer Information *`}
             </span>
             <ChevronDown
               className={`h-4 w-4 transition-transform ${openSections.buyer ? "rotate-180" : ""}`}
@@ -498,8 +500,8 @@ export function CreditNoteForm({
           >
             <span>
               {isSelfBilling
-                ? "Seller Information *"
-                : "Seller Information (Auto-populated)"}
+                ? t`Seller Information *`
+                : t`Seller Information (Auto-populated)`}
             </span>
             <ChevronDown
               className={`h-4 w-4 transition-transform ${openSections.seller ? "rotate-180" : ""}`}
@@ -521,7 +523,7 @@ export function CreditNoteForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("lines")}
         >
-          <span>Credit Note Lines *</span>
+          <span>{t`Credit Note Lines *`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.lines ? "rotate-180" : ""}`}
           />
@@ -537,12 +539,12 @@ export function CreditNoteForm({
 
       {requiresExemptionReason && (
         <div>
-          <Label htmlFor="vatExemptionReason">VAT Exemption Reason *</Label>
+          <Label htmlFor="vatExemptionReason">{t`VAT Exemption Reason *`}</Label>
           <Textarea
             id="vatExemptionReason"
             value={vatExemptionReason}
             onChange={(e) => handleVatExemptionReasonChange(e.target.value)}
-            placeholder="Reason why the credit note is exempt from VAT"
+            placeholder={t`Reason why the credit note is exempt from VAT`}
             rows={3}
             required
           />
@@ -554,7 +556,7 @@ export function CreditNoteForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("payment")}
         >
-          <span>Payment Information</span>
+          <span>{t`Payment Information`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.payment ? "rotate-180" : ""}`}
           />
@@ -574,7 +576,7 @@ export function CreditNoteForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("attachments")}
         >
-          <span>Attachments</span>
+          <span>{t`Attachments`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.attachments ? "rotate-180" : ""}`}
           />
@@ -594,19 +596,19 @@ export function CreditNoteForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("notes")}
         >
-          <span>Additional Notes</span>
+          <span>{t`Additional Notes`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.notes ? "rotate-180" : ""}`}
           />
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-4">
           <div>
-            <Label htmlFor="note">Note</Label>
+            <Label htmlFor="note">{t`Note`}</Label>
             <Textarea
               id="note"
               value={creditNote.note || ""}
               onChange={(e) => handleFieldChange("note", e.target.value)}
-              placeholder="Reason for credit note"
+              placeholder={t`Reason for credit note`}
               rows={3}
             />
           </div>

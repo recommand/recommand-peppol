@@ -15,7 +15,6 @@ import { toast } from "@core/components/ui/sonner";
 import { useActiveTeam } from "@core/hooks/user";
 import { Loader2, Tag, X, Pencil, Trash2 } from "lucide-react";
 import { ColumnHeader } from "@core/components/data-table/column-header";
-import { format } from "date-fns";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import type { Suppliers } from "@peppol/api/suppliers";
 import type { Labels } from "@peppol/api/labels";
@@ -42,6 +41,7 @@ import { Input } from "@core/components/ui/input";
 import { Label } from "@core/components/ui/label";
 import { AsyncButton } from "@core/components/async-button";
 import type { Label as LabelType } from "@peppol/types/label";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Suppliers>("v1");
 const labelsClient = rc<Labels>("v1");
@@ -74,6 +74,7 @@ const defaultSupplierFormData: SupplierFormData = {
 };
 
 export default function Page() {
+  const { t, language } = useTranslation();
   const {
     page,
     limit,
@@ -113,13 +114,13 @@ export default function Page() {
       const json = await response.json();
 
       if (!json.success || !Array.isArray(json.labels)) {
-        toast.error("Failed to load labels");
+        toast.error(t`Failed to load labels`);
         setLabels([]);
       } else {
         setLabels(json.labels);
       }
     } catch (error) {
-      toast.error("Failed to load labels");
+      toast.error(t`Failed to load labels`);
       setLabels([]);
     }
   }, [activeTeam?.id]);
@@ -143,7 +144,7 @@ export default function Page() {
       const json = await response.json();
 
       if (!json.success) {
-        toast.error("Failed to load suppliers");
+        toast.error(t`Failed to load suppliers`);
         setSuppliers([]);
         setTotal(0);
       } else {
@@ -155,7 +156,7 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Error fetching suppliers:", error);
-      toast.error("Failed to load suppliers");
+      toast.error(t`Failed to load suppliers`);
       setSuppliers([]);
       setTotal(0);
     } finally {
@@ -217,7 +218,7 @@ export default function Page() {
             : s
         )
       );
-      toast.error("Failed to assign label");
+      toast.error(t`Failed to assign label`);
     }
   };
 
@@ -267,18 +268,18 @@ export default function Page() {
           )
         );
       }
-      toast.error("Failed to unassign label");
+      toast.error(t`Failed to unassign label`);
     }
   };
 
   const handleUpsertSupplier = async () => {
     if (!activeTeam?.id) {
-      toast.error("No active team selected");
+      toast.error(t`No active team selected`);
       return;
     }
 
     if (!formData.name.trim()) {
-      toast.error("Name is required");
+      toast.error(t`Name is required`);
       return;
     }
 
@@ -298,7 +299,7 @@ export default function Page() {
       }
 
       toast.success(
-        dialogMode === "edit" ? "Supplier updated successfully" : "Supplier created successfully"
+        dialogMode === "edit" ? t`Supplier updated successfully` : t`Supplier created successfully`
       );
 
       setFormData(defaultSupplierFormData);
@@ -307,14 +308,14 @@ export default function Page() {
       fetchSuppliers();
     } catch (error) {
       console.error("Error upserting supplier:", error);
-      toast.error("Failed to save supplier");
+      toast.error(t`Failed to save supplier`);
     }
   };
 
   const handleDeleteSupplier = async (id: string) => {
     if (!activeTeam?.id) return;
 
-    if (!confirm("Are you sure you want to delete this supplier? This action cannot be undone.")) {
+    if (!confirm(t`Are you sure you want to delete this supplier? This action cannot be undone.`)) {
       return;
     }
 
@@ -332,18 +333,19 @@ export default function Page() {
         return;
       }
 
-      toast.success("Supplier deleted successfully");
+      toast.success(t`Supplier deleted successfully`);
       fetchSuppliers();
     } catch (error) {
       console.error("Error deleting supplier:", error);
-      toast.error("Failed to delete supplier");
+      toast.error(t`Failed to delete supplier`);
     }
   };
 
   const columns: ColumnDef<Supplier>[] = [
     {
       accessorKey: "name",
-      header: ({ column }) => <ColumnHeader column={column} title="Name" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Name`} />,
+      meta: { label: t`Name` },
       cell: ({ row }) => {
         const name = row.getValue("name") as string;
         return <span>{name}</span>;
@@ -352,7 +354,8 @@ export default function Page() {
     },
     {
       accessorKey: "vatNumber",
-      header: ({ column }) => <ColumnHeader column={column} title="VAT Number" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`VAT Number`} />,
+      meta: { label: t`VAT Number` },
       cell: ({ row }) => {
         const vatNumber = row.getValue("vatNumber") as string | null;
         return vatNumber ? <span>{vatNumber}</span> : <span className="text-muted-foreground">-</span>;
@@ -361,7 +364,8 @@ export default function Page() {
     },
     {
       accessorKey: "peppolAddresses",
-      header: ({ column }) => <ColumnHeader column={column} title="Peppol Addresses" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Peppol Addresses`} />,
+      meta: { label: t`Peppol Addresses` },
       cell: ({ row }) => {
         const peppolAddresses = row.getValue("peppolAddresses") as string[];
         return (
@@ -381,17 +385,22 @@ export default function Page() {
     {
       accessorKey: "createdAt",
       header: ({ column }) => (
-        <ColumnHeader column={column} title="Created At" />
+        <ColumnHeader column={column} title={t`Created At`} />
       ),
+      meta: { label: t`Created At` },
       cell: ({ row }) => {
         const date = row.getValue("createdAt") as string;
-        return format(new Date(date), "PPpp");
+        return new Date(date).toLocaleString(language, {
+          dateStyle: "medium",
+          timeStyle: "medium",
+        });
       },
       enableGlobalFilter: true,
     },
     {
       accessorKey: "labels",
-      header: ({ column }) => <ColumnHeader column={column} title="Labels" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Labels`} />,
+      meta: { label: t`Labels` },
       cell: ({ row }) => {
         const supplierLabels = row.original.labels || [];
         const supplierId = row.original.id;
@@ -408,13 +417,13 @@ export default function Page() {
             ))}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" title="Add label">
+                <Button variant="ghost" size="icon" title={t`Add label`}>
                   <Tag className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64 p-0" align="start">
                 <div className="p-2">
-                  <div className="text-sm font-medium mb-2">Assign Labels</div>
+                  <div className="text-sm font-medium mb-2">{t`Assign Labels`}</div>
                   <div className="space-y-1 max-h-64 overflow-y-auto">
                     {labels
                       .filter((label) => !supplierLabels.some((l) => l.id === label.id))
@@ -435,7 +444,7 @@ export default function Page() {
                       ))}
                     {labels.filter((label) => !supplierLabels.some((l) => l.id === label.id)).length === 0 && (
                       <div className="text-sm text-muted-foreground px-2 py-1.5">
-                        No available labels
+                        {t`No available labels`}
                       </div>
                     )}
                   </div>
@@ -470,7 +479,7 @@ export default function Page() {
                 setDialogMode("edit");
                 setIsDialogOpen(true);
               }}
-              title="Edit"
+              title={t`Edit`}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -478,7 +487,7 @@ export default function Page() {
               variant="ghost-destructive"
               size="icon"
               onClick={async () => await handleDeleteSupplier(supplier.id)}
-              title="Delete"
+              title={t`Delete`}
             >
               <Trash2 className="h-4 w-4" />
             </AsyncButton>
@@ -534,8 +543,8 @@ export default function Page() {
 
   return (
     <PageTemplate
-      breadcrumbs={[{ label: "Peppol" }, { label: "Suppliers" }]}
-      description="View and manage your suppliers (supporting data)."
+      breadcrumbs={[{ label: "Peppol" }, { label: t`Suppliers` }]}
+      description={t`View and manage your suppliers (supporting data).`}
       buttons={[
         <Dialog
           key="upsert-supplier-dialog"
@@ -550,23 +559,23 @@ export default function Page() {
                 setEditingSupplier(null);
               }}
             >
-              Create Supplier
+              {t`Create Supplier`}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>
-                {dialogMode === "create" ? "Create New Supplier" : "Edit Supplier"}
+                {dialogMode === "create" ? t`Create New Supplier` : t`Edit Supplier`}
               </DialogTitle>
               <DialogDescription>
                 {dialogMode === "create"
-                  ? "Create a new supplier with the details below."
-                  : "Update the supplier details below."}
+                  ? t`Create a new supplier with the details below.`
+                  : t`Update the supplier details below.`}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
+                <Label htmlFor="name">{t`Name *`}</Label>
                 <Input
                   id="name"
                   value={formData.name}
@@ -575,37 +584,37 @@ export default function Page() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="externalId">External ID</Label>
+                <Label htmlFor="externalId">{t`External ID`}</Label>
                 <Input
                   id="externalId"
                   value={formData.externalId || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, externalId: e.target.value || null })
                   }
-                  placeholder="Optional external identifier"
+                  placeholder={t`Optional external identifier`}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vatNumber">VAT Number</Label>
+                <Label htmlFor="vatNumber">{t`VAT Number`}</Label>
                 <Input
                   id="vatNumber"
                   value={formData.vatNumber || ""}
                   onChange={(e) =>
                     setFormData({ ...formData, vatNumber: e.target.value || null })
                   }
-                  placeholder="Optional VAT number"
+                  placeholder={t`Optional VAT number`}
                 />
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Peppol Addresses</Label>
+                  <Label>{t`Peppol Addresses`}</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={addPeppolAddress}
                   >
-                    Add Address
+                    {t`Add Address`}
                   </Button>
                 </div>
                 <div className="space-y-2">
@@ -614,7 +623,7 @@ export default function Page() {
                       <Input
                         value={address}
                         onChange={(e) => updatePeppolAddress(index, e.target.value)}
-                        placeholder="e.g. 0208:1012081766"
+                        placeholder={t`e.g. 0208:1012081766`}
                       />
                       <Button
                         type="button"
@@ -628,7 +637,7 @@ export default function Page() {
                   ))}
                   {formData.peppolAddresses.length === 0 && (
                     <p className="text-sm text-muted-foreground">
-                      No Peppol addresses added. Click "Add Address" to add one.
+                      {t`No Peppol addresses added. Click "Add Address" to add one.`}
                     </p>
                   )}
                 </div>
@@ -643,10 +652,10 @@ export default function Page() {
                     setEditingSupplier(null);
                   }}
                 >
-                  Cancel
+                  {t`Cancel`}
                 </Button>
                 <AsyncButton type="submit" onClick={handleUpsertSupplier}>
-                  {dialogMode === "edit" ? "Save Changes" : "Create Supplier"}
+                  {dialogMode === "edit" ? t`Save Changes` : t`Create Supplier`}
                 </AsyncButton>
               </div>
             </div>
@@ -663,7 +672,7 @@ export default function Page() {
           <>
             <DataTableToolbar
               table={table}
-              searchPlaceholder="Search suppliers..."
+              searchPlaceholder={t`Search suppliers...`}
               enableGlobalSearch
               filterColumns={filterConfigs}
             />
@@ -675,4 +684,3 @@ export default function Page() {
     </PageTemplate>
   );
 }
-

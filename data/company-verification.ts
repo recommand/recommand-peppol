@@ -2,11 +2,12 @@ import { companies, companyVerificationLog } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { getEnterpriseData } from "./cbe-public-search/client";
+import { requiresArratechKycReview } from "./at/kyc";
 import { UserFacingError } from "@peppol/utils/util";
 import { getCompany, verifyCompany, type Company } from "./companies";
 import { getTeamExtension } from "./teams";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
-import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./phoss-smp";
+import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
@@ -23,6 +24,12 @@ const OPEN_VERIFICATION_STATUSES = ["opened", "idVerificationRequested", "inRevi
 const FINAL_VERIFICATION_STATUSES = ["verified", "rejected", "error"] as const;
 const VERIFICATION_REVOKED_MESSAGE =
   "Verification session revoked because the company enterprise number or VAT number changed.";
+
+export function isFinalVerificationStatus(
+  status: CompanyVerificationStatus
+): status is CompanyVerificationFinalStatus {
+  return (FINAL_VERIFICATION_STATUSES as readonly string[]).includes(status);
+}
 
 export function namesMatch(a: string, b: string): boolean {
   const partsA = a.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -117,9 +124,9 @@ export async function finalizeCompanyVerification({
   if (!existingLog) {
     throw new UserFacingError("Company verification log not found");
   }
-  if ((FINAL_VERIFICATION_STATUSES as readonly string[]).includes(existingLog.status)) {
+  if (isFinalVerificationStatus(existingLog.status)) {
     return {
-      status: existingLog.status as CompanyVerificationFinalStatus,
+      status: existingLog.status,
       errorMessage: existingLog.errorMessage,
     };
   }
@@ -134,7 +141,13 @@ export async function finalizeCompanyVerification({
     isSmpRecipient: company.isSmpRecipient,
     verificationRequirements,
   };
-  const wasRegistered = shouldRegisterWithSmp({ ...smpStateBase, isVerified: company.isVerified });
+  const wasRegistered =
+    shouldRegisterWithSmp({ ...smpStateBase, isVerified: company.isVerified }) ||
+    // A session waiting on Arratech's KYC already registered the participant, so
+    // a refusal has to take it back off their SMP.
+    (existingLog.status === "inReview" &&
+      company.smpProvider === "at-shared-smp-fr" &&
+      shouldRegisterWithSmp({ ...smpStateBase, isVerified: true }));
   const shouldBeRegistered = shouldRegisterWithSmp({ ...smpStateBase, isVerified });
   const smpTransition =
     !wasRegistered && shouldBeRegistered
@@ -256,6 +269,10 @@ export async function createCompanyVerificationLog({
       companyId,
       companyName: company.name,
       enterpriseNumber: company.enterpriseNumber,
+      address: company.address,
+      postalCode: company.postalCode,
+      city: company.city,
+      country: company.country,
     })
     .returning()
     .then((rows) => rows[0]);
@@ -269,10 +286,18 @@ export async function submitIdentityForm(
   log: CompanyVerificationLog,
   company: Company,
   firstName: string,
-  lastName: string
+  lastName: string,
+  mandateAccepted: boolean
 ): Promise<string> {
   if (log.status !== "opened") {
     throw new UserFacingError("This verification has already been submitted.");
+  }
+
+  // Companies filed with Arratech sign a mandate, and their identity check is
+  // what signs it, so it has to be accepted before we hand over to Didit.
+  const mandateRequired = await requiresArratechKycReview(company);
+  if (mandateRequired && !mandateAccepted) {
+    throw new UserFacingError("The mandate has to be signed before the identity check can start.");
   }
 
   let effectiveFirstName = firstName;
@@ -316,6 +341,7 @@ export async function submitIdentityForm(
       firstName: effectiveFirstName,
       lastName: effectiveLastName,
       status: "idVerificationRequested",
+      mandateAcceptedAt: mandateRequired ? new Date() : null,
     })
     .where(eq(companyVerificationLog.id, companyVerificationLogId))
     .returning()

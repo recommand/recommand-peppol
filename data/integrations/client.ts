@@ -10,6 +10,7 @@ import { getTeamExtension, isPlayground } from "@peppol/data/teams";
 import { canUseIntegrations } from "@peppol/utils/plan-validation";
 import { IntegrationFailureNotification } from "@peppol/emails/integration-failure-notification";
 import { log } from "@recommand/lib/logger";
+import { getTeamNotificationT } from "@peppol/data/notification-language";
 
 function flattenFieldsToObject(fields: IntegrationConfigurationField[]): Record<string, unknown> {
     return fields.reduce((acc, field) => {
@@ -52,12 +53,14 @@ async function sendFailureEmailToTeam({
             return;
         }
 
+        const t = await getTeamNotificationT(integration.teamId);
         const company = await getCompany(integration.teamId, integration.companyId);
-        const companyName = company?.name || "Unknown Company";
+        const companyName = company?.name || t`Unknown company`;
 
         const integrationName = integration.manifest.name;
-        const subject = `Integration Failure: ${integrationName} for ${companyName}`;
+        const subject = t`Integration failure: ${integrationName} for ${companyName}`;
         const email = IntegrationFailureNotification({
+            t,
             integrationName,
             companyName,
             event,

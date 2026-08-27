@@ -32,6 +32,7 @@ import { defaultLabelFormData } from "../../../types/label";
 import { DataTableToolbar } from "@core/components/data-table/toolbar";
 import { DataTablePagination } from "@core/components/data-table/pagination";
 import { AsyncButton } from "@core/components/async-button";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Labels>("v1");
 
@@ -49,14 +50,16 @@ const handleApiResponse = async (
   return json;
 };
 
-const createColumn = (key: keyof Label, title: string): ColumnDef<Label> => ({
+const createColumn = (key: keyof Label, title: string, emptyValue: string): ColumnDef<Label> => ({
   accessorKey: key,
   header: ({ column }) => <ColumnHeader column={column} title={title} />,
-  cell: ({ row }) => (row.getValue(key) as string) ?? "N/A",
+  meta: { label: title },
+  cell: ({ row }) => (row.getValue(key) as string) ?? emptyValue,
   enableGlobalFilter: true,
 });
 
 export default function Page() {
+  const { t } = useTranslation();
   const {
     columnVisibility,
     setColumnVisibility,
@@ -92,14 +95,14 @@ export default function Page() {
 
       if (!json.success || !Array.isArray(json.labels)) {
         console.error("Invalid API response format:", json);
-        toast.error("Failed to load labels");
+        toast.error(t`Failed to load labels`);
         setLabels([]);
       } else {
         setLabels(json.labels);
       }
     } catch (error) {
       console.error("Error fetching labels:", error);
-      toast.error("Failed to load labels");
+      toast.error(t`Failed to load labels`);
       setLabels([]);
     } finally {
       setIsLoading(false);
@@ -112,7 +115,7 @@ export default function Page() {
 
   const handleLabelSubmit = async () => {
     if (!activeTeam?.id) {
-      toast.error("No active team selected");
+      toast.error(t`No active team selected`);
       return;
     }
 
@@ -125,7 +128,7 @@ export default function Page() {
 
         const json = await handleApiResponse(
           response,
-          "Label created successfully"
+          t`Label created successfully`
         );
         setLabels((prev) => [...prev, json.label]);
       } else if (editingLabel) {
@@ -139,7 +142,7 @@ export default function Page() {
 
         const json = await handleApiResponse(
           response,
-          "Label updated successfully"
+          t`Label updated successfully`
         );
         setLabels((prev) =>
           prev.map((label) =>
@@ -166,7 +169,7 @@ export default function Page() {
           labelId: id,
         },
       });
-      await handleApiResponse(response, "Label deleted successfully");
+      await handleApiResponse(response, t`Label deleted successfully`);
       fetchLabels();
     } catch (error) {
       console.error("Error deleting label:", error);
@@ -187,7 +190,8 @@ export default function Page() {
   const columns: ColumnDef<Label>[] = [
     {
       accessorKey: "id",
-      header: ({ column }) => <ColumnHeader column={column} title="ID" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`ID`} />,
+      meta: { label: t`ID` },
       cell: ({ row }) => {
         const id = row.getValue("id") as string;
         return (
@@ -203,7 +207,7 @@ export default function Page() {
               size="icon"
               onClick={() => {
                 navigator.clipboard.writeText(id);
-                toast.success("Label ID copied to clipboard");
+                toast.success(t`Label ID copied to clipboard`);
               }}
             >
               <Copy className="h-4 w-4" />
@@ -215,12 +219,14 @@ export default function Page() {
     },
     {
       accessorKey: "name",
-      header: ({ column }) => <ColumnHeader column={column} title="Name" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Name`} />,
+      meta: { label: t`Name` },
       enableGlobalFilter: true,
     },
     {
       accessorKey: "colorHex",
-      header: ({ column }) => <ColumnHeader column={column} title="Color" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Color`} />,
+      meta: { label: t`Color` },
       cell: ({ row }) => {
         const colorHex = row.getValue("colorHex") as string;
         return (
@@ -235,7 +241,7 @@ export default function Page() {
       },
       enableGlobalFilter: true,
     },
-    createColumn("externalId", "External ID"),
+    createColumn("externalId", t`External ID`, t`N/A`),
     {
       id: "actions",
       header: "",
@@ -250,7 +256,7 @@ export default function Page() {
               variant="ghost"
               size="icon"
               onClick={() => openEditDialog(row.original)}
-              title="Edit"
+              title={t`Edit`}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -258,7 +264,7 @@ export default function Page() {
               variant="ghost-destructive"
               size="icon"
               onClick={async () => await handleDeleteLabel(id)}
-              title="Delete"
+              title={t`Delete`}
             >
               <Trash2 className="h-4 w-4" />
             </AsyncButton>
@@ -289,8 +295,8 @@ export default function Page() {
 
   return (
     <PageTemplate
-      breadcrumbs={[{ label: "Peppol" }, { label: "Labels" }]}
-      description="Manage labels for organizing and categorizing your data."
+      breadcrumbs={[{ label: "Peppol" }, { label: t`Labels` }]}
+      description={t`Manage labels for organizing and categorizing your data.`}
       buttons={[
         <Dialog
           key="create-label-dialog"
@@ -305,13 +311,13 @@ export default function Page() {
                 setEditingLabel(null);
               }}
             >
-              Create Label
+              {t`Create Label`}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>
-                {dialogMode === "create" ? "Create New Label" : "Edit Label"}
+                {dialogMode === "create" ? t`Create New Label` : t`Edit Label`}
               </DialogTitle>
             </DialogHeader>
             <LabelForm

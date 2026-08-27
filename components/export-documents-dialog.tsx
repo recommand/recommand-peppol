@@ -18,6 +18,7 @@ import type { TransmittedDocuments } from "@peppol/api/documents";
 import { toast } from "@core/components/ui/sonner";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { useActiveTeam } from "@core/hooks/user";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<TransmittedDocuments>("peppol");
 
@@ -30,6 +31,7 @@ export function ExportDocumentsDialog({
     open,
     onOpenChange,
 }: ExportDocumentsDialogProps) {
+    const { t } = useTranslation();
     const activeTeam = useActiveTeam();
     const [isExporting, setIsExporting] = useState(false);
     const [startDateTime, setStartDateTime] = useState("");
@@ -78,15 +80,15 @@ export function ExportDocumentsDialog({
         const newErrors: typeof errors = {};
 
         if (!startDateTime) {
-            newErrors.startDateTime = "Start datetime is required";
+            newErrors.startDateTime = t`Start datetime is required`;
         }
 
         if (!endDateTime) {
-            newErrors.endDateTime = "End datetime is required";
+            newErrors.endDateTime = t`End datetime is required`;
         }
 
         if (!includeIncoming && !includeOutgoing) {
-            newErrors.general = "At least one direction (incoming or outgoing) must be selected";
+            newErrors.general = t`At least one direction (incoming or outgoing) must be selected`;
         }
 
         if (startDateTime && endDateTime) {
@@ -94,12 +96,12 @@ export function ExportDocumentsDialog({
             const end = new Date(endDateTime);
 
             if (end <= start) {
-                newErrors.endDateTime = "End datetime must be after start datetime";
+                newErrors.endDateTime = t`End datetime must be after start datetime`;
             } else {
                 const maxRange = 31 * 24 * 60 * 60 * 1000;
                 const range = end.getTime() - start.getTime();
                 if (range > maxRange) {
-                    newErrors.endDateTime = "Date range must not exceed 1 month (31 days)";
+                    newErrors.endDateTime = t`Date range must not exceed 1 month (31 days)`;
                 }
             }
         }
@@ -162,7 +164,7 @@ export function ExportDocumentsDialog({
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
 
-            toast.success("Documents exported successfully");
+            toast.success(t`Documents exported successfully`);
             onOpenChange(false);
 
             setStartDateTime("");
@@ -172,8 +174,8 @@ export function ExportDocumentsDialog({
             setIncludeOutgoing(true);
         } catch (error) {
             console.error("Failed to export documents:", error);
-            setErrors({ general: "Failed to export documents. Please try again." });
-            toast.error("Failed to export documents");
+            setErrors({ general: t`Failed to export documents. Please try again.` });
+            toast.error(t`Failed to export documents`);
         } finally {
             setIsExporting(false);
         }
@@ -183,15 +185,15 @@ export function ExportDocumentsDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Export Documents</DialogTitle>
+                    <DialogTitle>{t`Export Documents`}</DialogTitle>
                     <DialogDescription>
-                        Export all sent/received documents within a date range (max 1 month) as a ZIP archive.
+                        {t`Export all sent/received documents within a date range (max 1 month) as a ZIP archive.`}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <Label htmlFor="startDateTime">Start datetime (inclusive) *</Label>
+                            <Label htmlFor="startDateTime">{t`Start datetime (inclusive) *`}</Label>
                             <div className="flex-1" />
                             <Button
                                 type="button"
@@ -204,7 +206,7 @@ export function ExportDocumentsDialog({
                                 }}
                                 className="h-7 text-xs"
                             >
-                                Last month
+                                {t`Last month`}
                             </Button>
                             <Button
                                 type="button"
@@ -219,7 +221,7 @@ export function ExportDocumentsDialog({
                                 }}
                                 className="h-7 text-xs"
                             >
-                                This month
+                                {t`This month`}
                             </Button>
                         </div>
                         <Input
@@ -236,7 +238,7 @@ export function ExportDocumentsDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="endDateTime">End datetime (exclusive) *</Label>
+                        <Label htmlFor="endDateTime">{t`End datetime (exclusive) *`}</Label>
                         <Input
                             id="endDateTime"
                             type="datetime-local"
@@ -251,7 +253,7 @@ export function ExportDocumentsDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Document direction</Label>
+                        <Label>{t`Document direction`}</Label>
                         <div className="space-y-2">
                             <div className="flex items-center space-x-2">
                                 <Checkbox
@@ -261,7 +263,7 @@ export function ExportDocumentsDialog({
                                     disabled={isExporting}
                                 />
                                 <Label htmlFor="includeIncoming" className="font-normal cursor-pointer">
-                                    Include incoming documents
+                                    {t`Include incoming documents`}
                                 </Label>
                             </div>
                             <div className="flex items-center space-x-2">
@@ -272,17 +274,17 @@ export function ExportDocumentsDialog({
                                     disabled={isExporting}
                                 />
                                 <Label htmlFor="includeOutgoing" className="font-normal cursor-pointer">
-                                    Include outgoing documents
+                                    {t`Include outgoing documents`}
                                 </Label>
                             </div>
                         </div>
                         {!includeIncoming && !includeOutgoing && (
-                            <p className="text-sm text-destructive">At least one direction must be selected</p>
+                            <p className="text-sm text-destructive">{t`At least one direction must be selected`}</p>
                         )}
                     </div>
 
                     <div className="space-y-2">
-                        <Label>Output type *</Label>
+                        <Label>{t`Output type *`}</Label>
                         <RadioGroup
                             value={outputType}
                             onValueChange={(value) => setOutputType(value as "flat" | "nested")}
@@ -291,13 +293,13 @@ export function ExportDocumentsDialog({
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="flat" id="flat" />
                                 <Label htmlFor="flat" className="font-normal cursor-pointer">
-                                    Flat UBLs (all XMLs in root)
+                                    {t`Flat UBLs (all XMLs in root)`}
                                 </Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="nested" id="nested" />
                                 <Label htmlFor="nested" className="font-normal cursor-pointer">
-                                    Nested structure (document packages)
+                                    {t`Nested structure (document packages)`}
                                 </Label>
                             </div>
                         </RadioGroup>
@@ -313,16 +315,16 @@ export function ExportDocumentsDialog({
                         onClick={() => onOpenChange(false)}
                         disabled={isExporting}
                     >
-                        Cancel
+                        {t`Cancel`}
                     </Button>
                     <Button onClick={handleExport} disabled={isExporting}>
                         {isExporting ? (
                             <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Exporting...
+                                {t`Exporting...`}
                             </>
                         ) : (
-                            "Export"
+                            t`Export`
                         )}
                     </Button>
                 </DialogFooter>
@@ -330,4 +332,3 @@ export function ExportDocumentsDialog({
         </Dialog>
     );
 }
-

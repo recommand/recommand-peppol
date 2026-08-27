@@ -7,6 +7,7 @@ import {
     SelectValue,
 } from "@core/components/ui/select";
 import type { IntegrationConfigurationField } from "@peppol/types/integration";
+import { useTranslation } from "@core/hooks/use-translation";
 
 export default function BooleanField({
     field,
@@ -23,6 +24,7 @@ export default function BooleanField({
     title: string;
     description: string;
 }) {
+    const { t } = useTranslation();
     const getSelectValue = (): string => {
         if (value === undefined) return "not-specified";
         return value ? "true" : "false";
@@ -46,12 +48,12 @@ export default function BooleanField({
             </Label>
             <Select value={getSelectValue()} onValueChange={handleValueChange}>
                 <SelectTrigger id={field.id} className="w-full">
-                    <SelectValue placeholder="Not specified" />
+                    <SelectValue placeholder={t`Not specified`} />
                 </SelectTrigger>
                 <SelectContent>
-                    {!required && <SelectItem value="not-specified">Not specified</SelectItem>}
-                    <SelectItem value="true">True</SelectItem>
-                    <SelectItem value="false">False</SelectItem>
+                    {!required && <SelectItem value="not-specified">{t`Not specified`}</SelectItem>}
+                    <SelectItem value="true">{t`True`}</SelectItem>
+                    <SelectItem value="false">{t`False`}</SelectItem>
                 </SelectContent>
             </Select>
             {description && (
@@ -60,4 +62,3 @@ export default function BooleanField({
         </div>
     );
 }
-

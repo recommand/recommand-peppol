@@ -4,6 +4,7 @@ import { Button } from "@core/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import type { PaymentMeans } from "@peppol/utils/parsing/invoice/schemas";
 import { Card } from "@core/components/ui/card";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface PaymentMeansFormProps {
   paymentMeans: PaymentMeans[];
@@ -11,6 +12,7 @@ interface PaymentMeansFormProps {
 }
 
 export function PaymentMeansForm({ paymentMeans, onChange }: PaymentMeansFormProps) {
+  const { t } = useTranslation();
   const addPaymentMeans = () => {
     onChange([
       ...paymentMeans,
@@ -40,7 +42,7 @@ export function PaymentMeansForm({ paymentMeans, onChange }: PaymentMeansFormPro
             <div className="flex items-start justify-between">
               <div className="flex-1 space-y-4">
                 <div>
-                  <Label htmlFor={`iban-${index}`}>IBAN *</Label>
+                  <Label htmlFor={`iban-${index}`}>{t`IBAN *`}</Label>
                   <Input
                     id={`iban-${index}`}
                     value={payment.iban}
@@ -50,12 +52,12 @@ export function PaymentMeansForm({ paymentMeans, onChange }: PaymentMeansFormPro
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`reference-${index}`}>Payment Reference</Label>
+                  <Label htmlFor={`reference-${index}`}>{t`Payment Reference`}</Label>
                   <Input
                     id={`reference-${index}`}
                     value={payment.reference}
                     onChange={(e) => updatePaymentMeans(index, "reference", e.target.value)}
-                    placeholder="Invoice number or reference"
+                    placeholder={t`Invoice number or reference`}
                   />
                 </div>
               </div>
@@ -75,7 +77,7 @@ export function PaymentMeansForm({ paymentMeans, onChange }: PaymentMeansFormPro
 
       <Button type="button" variant="outline" onClick={addPaymentMeans}>
         <Plus className="mr-2 h-4 w-4" />
-        Add Payment Method
+        {t`Add Payment Method`}
       </Button>
     </div>
   );

@@ -7,8 +7,10 @@ import type { BillingProfileData } from "@peppol/api/billing-profile";
 import PlaygroundOption from "./playground-option";
 import { CreateTeamButton } from "@core/components/create-team-button";
 import { AsyncButton } from "@core/components/async-button";
+import { useTranslation } from "@core/hooks/use-translation";
 
 export default function BillingOnboarding({ onComplete }: { onComplete: () => Promise<void> }) {
+    const { t } = useTranslation();
     const [profileForm, setProfileForm] = useState<BillingProfileFormData>(DEFAULT_BILLING_PROFILE_FORM_DATA);
     const [billingProfile, setBillingProfile] = useState<BillingProfileData | null>(null);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
@@ -51,7 +53,7 @@ export default function BillingOnboarding({ onComplete }: { onComplete: () => Pr
 
     if (!activeTeam?.id) {
         return <div className="text-center space-y-4">
-            <p>You must be in a team to complete this step</p>
+            <p>{t`You must be in a team to complete this step`}</p>
             <CreateTeamButton />
         </div>;
     }
@@ -64,7 +66,7 @@ export default function BillingOnboarding({ onComplete }: { onComplete: () => Pr
         {billingProfile && !billingProfile.isMandateValidated && (
             <div className="flex items-center gap-2 pb-4">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Validating payment mandate...
+                {t`Validating payment mandate...`}
             </div>
         )}
         <div className="flex justify-end">
@@ -82,12 +84,12 @@ export default function BillingOnboarding({ onComplete }: { onComplete: () => Pr
                     // Don't call onComplete here, it should only be called when payment has been set up
                 }}
             >
-                Setup Payment Method
+                {t`Setup Payment Method`}
             </AsyncButton>
         </div>
         <PlaygroundOption
-            buttonText="Skip Billing"
-            description="Skip billing setup by creating a playground to test your Peppol API integrations without billing requirements, or switch to another team."
+            buttonText={t`Skip Billing`}
+            description={t`Skip billing setup by creating a playground to test your Peppol API integrations without billing requirements, or switch to another team.`}
         />
     </div>;
 }

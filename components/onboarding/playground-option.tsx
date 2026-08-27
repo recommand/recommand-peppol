@@ -8,6 +8,7 @@ import { ToyBrick, Users, ChevronRight } from "lucide-react";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { useUserStore } from "@core/lib/user-store";
 import { createPlayground } from "@peppol/lib/client/playgrounds";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface PlaygroundOptionProps {
   /** Optional custom text for the button */
@@ -17,9 +18,12 @@ interface PlaygroundOptionProps {
 }
 
 export default function PlaygroundOption({ 
-  buttonText = "Switch Team or Create Playground", 
-  description = "Skip the current setup by switching to another team or creating a playground to test your Peppol API integrations without billing requirements." 
+  buttonText,
+  description
 }: PlaygroundOptionProps) {
+  const { t } = useTranslation();
+  const resolvedButtonText = buttonText ?? t`Switch Team or Create Playground`;
+  const resolvedDescription = description ?? t`Skip the current setup by switching to another team or creating a playground to test your Peppol API integrations without billing requirements.`;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [playgroundName, setPlaygroundName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -35,7 +39,7 @@ export default function PlaygroundOption({
     if (isCreating) return;
 
     if (!playgroundName.trim()) {
-      toast.error("Please enter a name for the playground");
+      toast.error(t`Please enter a name for the playground`);
       return;
     }
 
@@ -54,9 +58,9 @@ export default function PlaygroundOption({
 
       setIsDialogOpen(false);
       setPlaygroundName("");
-      toast.success("Playground created successfully");
+      toast.success(t`Playground created successfully`);
     } catch (error) {
-      toast.error("Failed to create playground");
+      toast.error(t`Failed to create playground`);
       console.error(error);
     } finally {
       setIsCreating(false);
@@ -66,7 +70,7 @@ export default function PlaygroundOption({
   const handleSwitchTeam = (teamId: string) => {
     setActiveTeam(teamId);
     setIsDialogOpen(false);
-    toast.success("Switched team successfully");
+    toast.success(t`Switched team successfully`);
   };
 
   return (
@@ -78,9 +82,9 @@ export default function PlaygroundOption({
               <ToyBrick className="w-4 h-4 text-muted-foreground" />
             </div>
             <div className="text-center space-y-2">
-              <h4 className="text-sm font-medium">Skip Setup with Playground</h4>
+              <h4 className="text-sm font-medium">{t`Skip Setup with Playground`}</h4>
               <p className="text-sm text-muted-foreground max-w-md text-center text-balance">
-                Create a playground to test integrations without billing requirements, or switch to an existing team.
+                {t`Create a playground to test integrations without billing requirements, or switch to an existing team.`}
               </p>
             </div>
             <Button 
@@ -90,7 +94,7 @@ export default function PlaygroundOption({
               size="sm"
             >
               <Users className="w-3 h-3" />
-              {buttonText}
+              {resolvedButtonText}
             </Button>
           </div>
         </div>
@@ -99,9 +103,9 @@ export default function PlaygroundOption({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Switch Team or Create Playground</DialogTitle>
+            <DialogTitle>{t`Switch Team or Create Playground`}</DialogTitle>
             <DialogDescription>
-              {description}
+              {resolvedDescription}
             </DialogDescription>
           </DialogHeader>
 
@@ -109,7 +113,7 @@ export default function PlaygroundOption({
             {/* Existing Teams Section */}
             {otherTeams.length > 0 && (
               <div className="grid gap-2">
-                <Label className="text-sm font-medium">Switch to existing team</Label>
+                <Label className="text-sm font-medium">{t`Switch to existing team`}</Label>
                 <div className="space-y-2">
                   {otherTeams.filter((team: any) => team.id !== activeTeam?.id && (team.isMember === true || team.isMember === undefined)).map((team) => (
                     <Button
@@ -133,10 +137,10 @@ export default function PlaygroundOption({
 
             {/* Create Playground Section */}
             <div className="grid gap-2">
-              <Label htmlFor="playground-name">Create new playground</Label>
+              <Label htmlFor="playground-name">{t`Create new playground`}</Label>
               <Input
                 id="playground-name"
-                placeholder="Playground name"
+                placeholder={t`Playground name`}
                 value={playgroundName}
                 onChange={(e) => setPlaygroundName(e.target.value)}
                 onKeyDown={(e) => {
@@ -150,13 +154,13 @@ export default function PlaygroundOption({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
+              {t`Cancel`}
             </Button>
             <Button 
               onClick={handleCreatePlayground} 
               disabled={isCreating || !playgroundName.trim()}
             >
-              {isCreating ? "Creating..." : "Create Playground"}
+              {isCreating ? t`Creating...` : t`Create Playground`}
             </Button>
           </DialogFooter>
         </DialogContent>

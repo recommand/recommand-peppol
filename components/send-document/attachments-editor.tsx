@@ -6,6 +6,7 @@ import { ScrollArea } from "@core/components/ui/scroll-area";
 import { Paperclip, Trash2 } from "lucide-react";
 import { toast } from "@core/components/ui/sonner";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface AttachmentsEditorProps {
   attachments: Attachment[];
@@ -16,6 +17,7 @@ export function AttachmentsEditor({
   attachments,
   onChange,
 }: AttachmentsEditorProps) {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const allowedExtensions = ["csv", "pdf", "png", "jpg", "jpeg", "xlsx", "ods"];
 
@@ -29,7 +31,7 @@ export function AttachmentsEditor({
     const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
     if (!allowedExtensions.includes(extension)) {
       toast.error(
-        "Unsupported file type. Allowed types: CSV, PDF, PNG, JPG, XLSX, ODS."
+        t`Unsupported file type. Allowed types: CSV, PDF, PNG, JPG, XLSX, ODS.`
       );
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -81,8 +83,7 @@ export function AttachmentsEditor({
     <div className="space-y-4">
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground">
-          Optionally attach supporting documents such as PDFs or images. Files
-          are embedded in the Peppol document.
+          {t`Optionally attach supporting documents such as PDFs or images. Files are embedded in the Peppol document.`}
         </p>
         <div>
           <Input
@@ -99,14 +100,14 @@ export function AttachmentsEditor({
             onClick={() => fileInputRef.current?.click()}
           >
             <Paperclip className="mr-2 h-4 w-4" />
-            Upload file
+            {t`Upload file`}
           </Button>
         </div>
       </div>
 
       {(!attachments || attachments.length === 0) && (
         <p className="text-xs text-muted-foreground">
-          No attachments added yet.
+          {t`No attachments added yet.`}
         </p>
       )}
 
@@ -120,7 +121,7 @@ export function AttachmentsEditor({
                     <Paperclip className="h-4 w-4 text-muted-foreground" />
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">
-                        {attachment.filename || `Attachment ${index + 1}`}
+                        {attachment.filename || t`Attachment ${index + 1}`}
                       </span>
                       {attachment.description && (
                         <span className="text-xs text-muted-foreground">

@@ -1,6 +1,8 @@
 import { getCompanyById } from "@peppol/data/companies";
 import { getCompanyVerificationLog } from "@peppol/data/company-verification";
 import { getEnterpriseData } from "@peppol/data/cbe-public-search/client";
+import { requiresArratechKycReview } from "@peppol/data/at/kyc";
+import { getMandateDocument } from "@peppol/data/at/mandate";
 import { isPlayground } from "@peppol/data/teams";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -41,6 +43,7 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
 
         const teamIsPlayground = await isPlayground(company.teamId);
         const isRepresentativeSelectionRequired = !teamIsPlayground && company.country === "BE";
+        const isMandateRequired = await requiresArratechKycReview(company);
 
         let representatives: { firstName: string; lastName: string; function: string }[] = [];
         if (isRepresentativeSelectionRequired) {
@@ -77,6 +80,12 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
             isRepresentativeSelectionRequired,
             representatives,
             isPlayground: teamIsPlayground,
+            isMandateRequired,
+            // The signatory reads the mandate under the name the document
+            // itself carries, which differs per jurisdiction.
+            mandateTitle: isMandateRequired
+                ? getMandateDocument(company.country).title
+                : null,
         }));
     } catch (error) {
         console.error(error);

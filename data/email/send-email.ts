@@ -1,53 +1,17 @@
 import { sendEmail } from "@core/lib/email";
 import { Attachment } from "postmark";
-import type { DocumentType } from "@peppol/utils/document-types";
+import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import {
   getDocumentFilename,
   type ParsedDocument,
 } from "@peppol/utils/document-filename";
+import { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
+import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 
-export function getDocumentTypeLabel(type: DocumentType): string {
-  switch (type) {
-    case "invoice":
-      return "Invoice";
-    case "creditNote":
-      return "Credit Note";
-    case "selfBillingInvoice":
-      return "Self Billing Invoice";
-    case "selfBillingCreditNote":
-      return "Self Billing Credit Note";
-    case "messageLevelResponse":
-      return "Message Level Response";
-    default:
-      return "Document";
-  }
-}
-
-export function extractDocumentAttachments(
-  parsedDocument: ParsedDocument | null
-): Attachment[] {
-  const attachments: Attachment[] = [];
-  if (
-    parsedDocument &&
-    "attachments" in parsedDocument &&
-    parsedDocument.attachments
-  ) {
-    for (const attachment of parsedDocument.attachments) {
-      if (attachment.embeddedDocument) {
-        attachments.push({
-          Content: attachment.embeddedDocument,
-          ContentID: null,
-          ContentType: attachment.mimeCode,
-          Name: attachment.filename,
-        });
-      }
-    }
-  }
-  return attachments;
-}
+export { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
 
 export async function sendDocumentEmail(options: {
-  type: DocumentType;
+  type: StoredDocumentType;
   parsedDocument: ParsedDocument | null;
   xmlDocument: string | null;
   to: string;
@@ -55,43 +19,36 @@ export async function sendDocumentEmail(options: {
   htmlBody?: string;
   isPlayground?: boolean;
 }) {
-  let senderName = "";
+  const documentType = getDocumentType(options.type);
+  const documentTypeTitle = documentType?.translatableTitle ?? "Document";
   const filename = getDocumentFilename(options.type, options.parsedDocument);
-  let subject = options.subject;
-  let htmlBody = options.htmlBody;
 
-  if (!subject) {
-    const documentTypeLabel = getDocumentTypeLabel(options.type);
-    if (options.parsedDocument && "invoiceNumber" in options.parsedDocument) {
-      subject = `${documentTypeLabel} ${options.parsedDocument.invoiceNumber}`;
-      senderName = options.parsedDocument.seller.name;
-    } else if (
-      options.parsedDocument &&
-      "creditNoteNumber" in options.parsedDocument
-    ) {
-      subject = `${documentTypeLabel} ${options.parsedDocument.creditNoteNumber}`;
-      senderName = options.parsedDocument.seller.name;
-    } else {
-      subject = documentTypeLabel;
-    }
-  }
+  // Who a document is from and to, and what it is numbered, is the document
+  // type's own business: a report carries an invoice number as well, but it
+  // names the document it reports on, and self-billing reverses the two
+  // parties. Only types that can be delivered by email name an email sender.
+  const details =
+    options.parsedDocument && documentType?.email?.isEmailDeliverySupported
+      ? documentType.email.extractDocumentDetails(options.parsedDocument)
+      : undefined;
+  const senderName = details?.senderName ?? "";
 
-  if (!htmlBody) {
-    const documentTypeLabel = getDocumentTypeLabel(options.type).toLowerCase();
-    if (
-      options.parsedDocument &&
-      "buyer" in options.parsedDocument &&
-      options.parsedDocument.buyer?.name
-    ) {
-      htmlBody = `Dear ${options.parsedDocument.buyer.name}, you can find your ${documentTypeLabel} attached.`;
-    } else {
-      htmlBody = `Dear, you can find your ${documentTypeLabel} attached.`;
-    }
-  }
+  const subject =
+    options.subject ??
+    (details?.documentNumber
+      ? `${documentTypeTitle} ${details.documentNumber}`
+      : documentTypeTitle);
 
-  if (options.isPlayground) {
-    subject = `[PLAYGROUND/TEST] ${subject}`;
-  }
+  const documentTypeTitleLowercase = documentTypeTitle.toLowerCase();
+  const htmlBody =
+    options.htmlBody ??
+    (details?.receiverName
+      ? `Dear ${details.receiverName}, you can find your ${documentTypeTitleLowercase} attached.`
+      : `Dear, you can find your ${documentTypeTitleLowercase} attached.`);
+
+  const finalSubject = options.isPlayground
+    ? `[PLAYGROUND/TEST] ${subject}`
+    : subject;
 
   const attachments = extractDocumentAttachments(options.parsedDocument);
 
@@ -110,7 +67,7 @@ export async function sendDocumentEmail(options: {
       ? `${senderName} <noreply-documents@recommand.eu>`
       : "noreply-documents@recommand.eu",
     to: options.to,
-    subject: subject,
+    subject: finalSubject,
     email: htmlBody,
     attachments: attachments,
   });

@@ -14,13 +14,9 @@ import type {
   AuthenticatedTeamContext,
   AuthenticatedUserContext,
 } from "@core/lib/auth-middleware";
+import { documentTypeSchema } from "@peppol/utils/parsing/send-document";
+import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import {
-  DocumentType,
-  documentTypeSchema,
-} from "@peppol/utils/parsing/send-document";
-import type { SupportedDocumentType } from "@peppol/utils/document-types";
-import {
-  extractDocumentNumberForType,
   extractLastUsedIban,
   incrementDocumentNumber,
 } from "@peppol/utils/document-defaults";
@@ -49,19 +45,13 @@ const _getDocumentDefaults = server.get(
     try {
       const { documentType } = c.req.valid("query");
 
-      const supportedType: SupportedDocumentType | null = (() => {
-        if (documentType === DocumentType.INVOICE) return "invoice";
-        if (documentType === DocumentType.CREDIT_NOTE) return "creditNote";
-        if (documentType === DocumentType.SELF_BILLING_INVOICE)
-          return "selfBillingInvoice";
-        if (documentType === DocumentType.SELF_BILLING_CREDIT_NOTE)
-          return "selfBillingCreditNote";
-        if (documentType === DocumentType.MESSAGE_LEVEL_RESPONSE)
-          return "messageLevelResponse";
-        return null;
-      })();
+      // Defaults only mean something for a document the caller numbers and gets
+      // paid for themselves, which is what a billing document is. The other
+      // types either carry no number of their own or name one belonging to the
+      // document they respond to.
+      const type = getDocumentType(documentType);
 
-      if (!supportedType) {
+      if (type?.class !== "billing") {
         return c.json(
           actionSuccess({
             documentNumber: null,
@@ -82,7 +72,7 @@ const _getDocumentDefaults = server.get(
             eq(transmittedDocuments.teamId, c.var.team.id),
             eq(transmittedDocuments.companyId, c.var.company.id),
             eq(transmittedDocuments.direction, "outgoing"),
-            eq(transmittedDocuments.type, supportedType)
+            eq(transmittedDocuments.type, type.key)
           )
         )
         .orderBy(desc(transmittedDocuments.createdAt))
@@ -99,10 +89,9 @@ const _getDocumentDefaults = server.get(
         );
       }
 
-      const lastNumber = extractDocumentNumberForType(
-        last.parsed,
-        supportedType
-      );
+      const lastNumber = last.parsed
+        ? type.extractDocumentNumber(last.parsed)
+        : null;
       const suggestedNumber = lastNumber
         ? incrementDocumentNumber(lastNumber)
         : null;

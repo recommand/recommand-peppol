@@ -1,38 +1,24 @@
-import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
-import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
-import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
-import type { SelfBillingCreditNote } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
-import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
-import type { DocumentType } from "@peppol/utils/document-types";
+import { getDocumentType } from "@peppol/utils/type-repository/document-types";
+import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/keys";
+import type { ParsedDocument } from "@peppol/utils/type-repository/document-types/parsed";
 
-export type ParsedDocument =
-  | Invoice
-  | CreditNote
-  | SelfBillingInvoice
-  | SelfBillingCreditNote
-  | MessageLevelResponse;
+export type { ParsedDocument };
 
+/**
+ * The base filename a document is offered under, taken from the document type
+ * that produced it. Naming a document is the registry's job: deriving it from
+ * the parsed document's shape instead would confuse a report with the document
+ * it reports on, since both carry an invoice number.
+ */
 export function getDocumentFilename(
-  type: DocumentType,
+  type: StoredDocumentType,
   parsedDocument: ParsedDocument | null
 ): string {
   if (!parsedDocument) {
     return "document";
   }
 
-  if ("invoiceNumber" in parsedDocument) {
-    return type === "selfBillingInvoice"
-      ? `self-billing-invoice-${parsedDocument.invoiceNumber}`
-      : `invoice-${parsedDocument.invoiceNumber}`;
-  }
-
-  if ("creditNoteNumber" in parsedDocument) {
-    return type === "selfBillingCreditNote"
-      ? `self-billing-credit-note-${parsedDocument.creditNoteNumber}`
-      : `credit-note-${parsedDocument.creditNoteNumber}`;
-  }
-
-  return "document";
+  return getDocumentType(type)?.generateFilename(parsedDocument) ?? "document";
 }
 
 export function ensureFileExtension(

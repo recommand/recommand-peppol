@@ -1,6 +1,6 @@
 {
   "id": "a82a6d25-1a95-4483-b191-e47167b5c4e8",
-  "prevId": "7d786c61-f2b7-4ed7-aeb3-de421c2407bd",
+  "prevId": "04bd64ce-27fb-4010-ad47-77b76ac5215d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -350,6 +350,22 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "access_point_provider": {
+          "name": "access_point_provider",
+          "type": "peppol_access_point_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-ap1'"
+        },
+        "smp_provider": {
+          "name": "smp_provider",
+          "type": "peppol_smp_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-smp1'"
         },
         "is_verified": {
           "name": "is_verified",
@@ -758,9 +774,40 @@
           "primaryKey": false,
           "notNull": false
         },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "peppol_valid_country_codes",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "verification_proof_reference": {
           "name": "verification_proof_reference",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mandate_accepted_at": {
+          "name": "mandate_accepted_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -2240,6 +2287,22 @@
           "primaryKey": false,
           "notNull": true
         },
+        "access_point_provider": {
+          "name": "access_point_provider",
+          "type": "peppol_access_point_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-ap1'"
+        },
+        "smp_provider": {
+          "name": "smp_provider",
+          "type": "peppol_smp_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-smp1'"
+        },
         "xml": {
           "name": "xml",
           "type": "text",
@@ -2261,6 +2324,22 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'db'"
+        },
+        "original_payload_location": {
+          "name": "original_payload_location",
+          "type": "peppol_payload_location",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "original_payload_container_format": {
+          "name": "original_payload_container_format",
+          "type": "peppol_original_payload_container_format",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
         },
         "s3_key_prefix": {
           "name": "s3_key_prefix",
@@ -2363,6 +2442,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "ap_transaction_id": {
+          "name": "ap_transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_reference_id": {
+          "name": "external_reference_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "read_at": {
           "name": "read_at",
           "type": "timestamp",
@@ -2408,6 +2499,22 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "peppol_transmitted_documents_ap_transaction_id_idx": {
+          "name": "peppol_transmitted_documents_ap_transaction_id_idx",
+          "columns": [
+            {
+              "expression": "ap_transaction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"peppol_transmitted_documents\".\"ap_transaction_id\" is not null",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -2527,6 +2634,22 @@
     }
   },
   "enums": {
+    "public.peppol_access_point_provider": {
+      "name": "peppol_access_point_provider",
+      "schema": "public",
+      "values": [
+        "recommand-ap1",
+        "at-shared-ap"
+      ]
+    },
+    "public.peppol_original_payload_container_format": {
+      "name": "peppol_original_payload_container_format",
+      "schema": "public",
+      "values": [
+        "none",
+        "pdf"
+      ]
+    },
     "public.peppol_payload_location": {
       "name": "peppol_payload_location",
       "schema": "public",
@@ -2560,6 +2683,14 @@
         "suspended"
       ]
     },
+    "public.peppol_smp_provider": {
+      "name": "peppol_smp_provider",
+      "schema": "public",
+      "values": [
+        "recommand-smp1",
+        "at-shared-smp"
+      ]
+    },
     "public.peppol_supported_document_type": {
       "name": "peppol_supported_document_type",
       "schema": "public",
@@ -2569,6 +2700,9 @@
         "selfBillingInvoice",
         "selfBillingCreditNote",
         "messageLevelResponse",
+        "frenchInvoicingCdar",
+        "frenchB2CSalesReport",
+        "frenchB2CPaymentReport",
         "unknown"
       ]
     },
@@ -2585,7 +2719,8 @@
       "schema": "public",
       "values": [
         "peppol",
-        "email"
+        "email",
+        "reporting"
       ]
     },
     "public.peppol_valid_country_codes": {

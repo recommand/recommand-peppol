@@ -1,0 +1,3 @@
+CREATE TYPE "public"."peppol_original_payload_container_format" AS ENUM('none', 'pdf');--> statement-breakpoint
+ALTER TABLE "peppol_transmitted_documents" ADD COLUMN "original_payload_location" "peppol_payload_location" DEFAULT 'none' NOT NULL;--> statement-breakpoint
+ALTER TABLE "peppol_transmitted_documents" ADD COLUMN "original_payload_container_format" "peppol_original_payload_container_format" DEFAULT 'none' NOT NULL;

@@ -33,6 +33,7 @@ import {
 } from "@core/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { PartyForm } from "./party-form";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<SendDocumentAPI>("peppol");
 const customersClient = rc<Customers>("v1");
@@ -54,6 +55,7 @@ export function DocumentForm({
   onCompanyChange,
   mode,
 }: DocumentFormProps) {
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const lastAutoPdfFilenameRef = useRef<string | null>(null);
@@ -218,8 +220,8 @@ export function DocumentForm({
   }, [formData.documentType, type]);
 
   const counterpartyLabel = useMemo(() => {
-    return counterpartyKey === "seller" ? "Seller details" : "Buyer details";
-  }, [counterpartyKey]);
+    return counterpartyKey === "seller" ? t`Seller details` : t`Buyer details`;
+  }, [counterpartyKey, t]);
 
   const counterpartyParty: Party | undefined = useMemo(() => {
     if (!counterpartyKey) return undefined;
@@ -325,7 +327,7 @@ export function DocumentForm({
     e.preventDefault();
 
     if (!selectedCompanyId) {
-      toast.error("Please select a company");
+      toast.error(t`Please select a company`);
       return;
     }
 
@@ -344,14 +346,14 @@ export function DocumentForm({
 
     if (!hasRecipient && !hasEmailRecipients) {
       toast.error(
-        "Please enter a recipient Peppol ID or configure email delivery"
+        t`Please enter a recipient Peppol ID or configure email delivery`
       );
       return;
     }
 
     if (!hasRecipient && !isBillingType) {
       toast.error(
-        "Email-only delivery is only supported for (self-billing) invoices and credit notes"
+        t`Email-only delivery is only supported for (self-billing) invoices and credit notes`
       );
       return;
     }
@@ -376,13 +378,13 @@ export function DocumentForm({
       } else {
         toast.success(
           <div className="flex flex-col gap-1">
-            <p className="font-semibold">Document sent successfully!</p>
+            <p className="font-semibold">{t`Document sent successfully!`}</p>
             {json.sentOverPeppol && (
-              <p className="text-xs">✓ Sent over Peppol network</p>
+              <p className="text-xs">{t`✓ Sent over Peppol network`}</p>
             )}
             {json.sentOverEmail && (
               <p className="text-xs">
-                ✓ Sent to {json.emailRecipients?.join(", ")}
+                {t`✓ Sent to ${json.emailRecipients?.join(", ")}`}
               </p>
             )}
           </div>
@@ -393,7 +395,7 @@ export function DocumentForm({
       }
     } catch (error) {
       console.error("Error sending document:", error);
-      toast.error("Failed to send document");
+      toast.error(t`Failed to send document`);
     } finally {
       setIsSubmitting(false);
     }
@@ -403,7 +405,7 @@ export function DocumentForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
         <div>
-          <Label htmlFor="company">Sending Company *</Label>
+          <Label htmlFor="company">{t`Sending Company *`}</Label>
           <CompanySelector
             value={selectedCompanyId}
             onChange={onCompanyChange}
@@ -413,7 +415,7 @@ export function DocumentForm({
         <Card className="p-4">
           <div className="space-y-4">
             <div>
-              <Label htmlFor="customer">Customer</Label>
+              <Label htmlFor="customer">{t`Customer`}</Label>
               <Combobox
                 value={selectedCustomerId}
                 onValueChange={setSelectedCustomerId}
@@ -421,15 +423,15 @@ export function DocumentForm({
                   value: c.id,
                   label: c.vatNumber ? `${c.name} - ${c.vatNumber}` : c.name,
                 }))}
-                placeholder="Select a customer..."
-                searchPlaceholder="Search customers..."
-                emptyText="No customers found."
+                placeholder={t`Select a customer...`}
+                searchPlaceholder={t`Search customers...`}
+                emptyText={t`No customers found.`}
                 disabled={!activeTeam?.id}
               />
             </div>
 
             <div>
-              <Label htmlFor="recipient">Recipient Peppol ID</Label>
+              <Label htmlFor="recipient">{t`Recipient Peppol ID`}</Label>
               <RecipientSelector
                 value={formData.recipient || ""}
                 onChange={handleRecipientChange}
@@ -473,11 +475,10 @@ export function DocumentForm({
               <div className="flex items-center justify-between gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="pdf-generation-enabled">
-                    Include generated PDF
+                    {t`Include generated PDF`}
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Generates a PDF of the document and embeds it as an
-                    attachment.
+                    {t`Generates a PDF of the document and embeds it as an attachment.`}
                   </p>
                 </div>
                 <Switch
@@ -489,7 +490,7 @@ export function DocumentForm({
 
               {mode === "developer" && formData.pdfGeneration?.enabled && (
                 <div className="space-y-2">
-                  <Label htmlFor="pdf-generation-filename">PDF filename</Label>
+                  <Label htmlFor="pdf-generation-filename">{t`PDF filename`}</Label>
                   <Input
                     id="pdf-generation-filename"
                     value={formData.pdfGeneration.filename ?? ""}
@@ -552,18 +553,18 @@ export function DocumentForm({
           variant="outline"
           onClick={() => navigate("/transmitted-documents")}
         >
-          Cancel
+          {t`Cancel`}
         </Button>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending...
+              {t`Sending...`}
             </>
           ) : (
             <>
               <Send className="mr-2 h-4 w-4" />
-              Send Document
+              {t`Send Document`}
             </>
           )}
         </Button>

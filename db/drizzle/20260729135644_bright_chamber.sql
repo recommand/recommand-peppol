@@ -1,0 +1,1 @@
+ALTER TABLE "company_verification_log" ADD COLUMN "mandate_accepted_at" timestamp with time zone;

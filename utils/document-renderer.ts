@@ -1,12 +1,25 @@
 import type { PublicTransmittedDocument } from "@peppol/data/transmitted-documents";
 import { BILLING_DOCUMENT_TEMPLATE } from "@peppol/templates/billing-document";
+import { FRANCE_CDAR_TEMPLATE } from "@peppol/templates/france-cdar";
 import { MESSAGE_LEVEL_RESPONSE_TEMPLATE } from "@peppol/templates/message-level-response";
 import { PAYMENT_MEANS } from "@peppol/utils/payment-means";
 import { getUnitCodeName } from "@peppol/utils/unit-codes";
+import type {
+  FranceCdar,
+  FranceCdarCollectedAmount,
+  FranceCdarRoleCode,
+  FranceCdarStatusCode,
+} from "@peppol/utils/parsing/france-cdar/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
+import type { FrenchB2BiReport } from "@peppol/utils/parsing/b2bi-reporting/france";
+import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
+import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/types";
+import { FRANCE_B2BI_REPORT_TEMPLATE } from "@peppol/templates/france-b2bi-report";
+import { FRANCE_B2C_REPORT_TEMPLATE } from "@peppol/templates/france-b2c-report";
+import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
 import { Decimal } from "decimal.js";
 
-type ParsedBillingDocument =
+export type ParsedBillingDocument =
   | import("@peppol/utils/parsing/invoice/schemas").Invoice
   | import("@peppol/utils/parsing/creditnote/schemas").CreditNote
   | import("@peppol/utils/parsing/self-billing-invoice/schemas").SelfBillingInvoice
@@ -104,7 +117,154 @@ type MessageLevelResponseTemplateData = {
   isAcknowledgement: boolean;
 };
 
-const RECOMMAND_RENDER_ENDPOINT = "https://render.recommand.dev";
+type FranceCdarTemplateData = {
+  documentId: string;
+  documentType: string;
+  documentTypeLabel: string;
+  responseId: string;
+  issueDate: string;
+  businessProcess: string;
+  phase: string;
+  phaseLabel: string;
+  senderRole: string;
+  senderRoleLabel: string;
+  issuerRole: string;
+  issuerRoleLabel: string;
+  issuerLegalId?: string;
+  issuerLegalIdScheme?: string;
+  recipientRole: string;
+  recipientRoleLabel: string;
+  recipientLegalId?: string;
+  recipientLegalIdScheme?: string;
+  recipientElectronicAddress?: string;
+  recipientElectronicAddressScheme?: string;
+  statusCode: string;
+  statusCodeLabel: string;
+  invoiceId: string;
+  invoiceIssueDate?: string;
+  sellerLegalId?: string;
+  sellerLegalIdScheme?: string;
+  reasonCode?: string;
+  reason?: string;
+  reasonNote?: string;
+  hasReason: boolean;
+  collectedAmounts?: FranceCdarCollectedAmount[];
+  hasCollectedAmounts: boolean;
+  isPositive: boolean;
+  isNegative: boolean;
+  isWarning: boolean;
+  isInfo: boolean;
+};
+
+type FranceB2CReportVatSubtotal = {
+  percentage: string;
+  taxableAmount?: string;
+  taxAmount?: string;
+  amount?: string;
+  currency?: string;
+};
+
+type FranceB2CReportTemplateData = {
+  documentId: string;
+  documentType: string;
+  documentTypeLabel: string;
+  reference: string;
+  reportTypeLabel: string;
+  dateLabel: string;
+  date: string;
+  actionLabel: string;
+  isSubmission: boolean;
+  isCorrection: boolean;
+  isCancellation: boolean;
+  isSales: boolean;
+  isPayments: boolean;
+  currency: string;
+  categoryLabel?: string;
+  transactionCount?: number;
+  taxExclusiveAmount?: string;
+  taxAmount?: string;
+  salesVatBreakdown: FranceB2CReportVatSubtotal[];
+  paymentVatBreakdown: FranceB2CReportVatSubtotal[];
+};
+
+type FranceB2BiReportVatSubtotal = {
+  percentage: string;
+  currency: string;
+  taxableAmount?: string;
+  taxAmount?: string;
+  amount?: string;
+  category?: string;
+  exemptionReason?: string;
+};
+
+type FranceB2BiReportTemplateData = {
+  documentId: string;
+  documentType: string;
+  documentTypeLabel: string;
+  reference: string;
+  reportTypeLabel: string;
+  dateLabel: string;
+  date: string;
+  actionLabel: string;
+  isSubmission: boolean;
+  isCorrection: boolean;
+  isCancellation: boolean;
+  isInvoice: boolean;
+  isPayment: boolean;
+  currency: string;
+  documentKindLabel?: string;
+  documentNumber?: string;
+  invoiceNumber?: string;
+  issueDate: string;
+  dueDate?: string;
+  buyerScheme?: string;
+  buyerCompanyId?: string;
+  buyerVatNumber?: string;
+  buyerCountry?: string;
+  taxExclusiveAmount?: string;
+  taxAmount?: string;
+  invoiceVatBreakdown: FranceB2BiReportVatSubtotal[];
+  paymentVatBreakdown: FranceB2BiReportVatSubtotal[];
+};
+
+const FRANCE_B2C_REPORT_ACTION_LABELS: Record<FrenchB2CReport["action"], string> = {
+  submit: "Submission",
+  correct: "Correction",
+  cancel: "Cancellation",
+};
+
+const FRANCE_CDAR_STATUS_LABELS: Record<FranceCdarStatusCode, string> = {
+  "200": "Submitted",
+  "201": "Issued",
+  "202": "Received",
+  "203": "Made available",
+  "204": "In hand",
+  "205": "Approved",
+  "206": "Partially approved",
+  "207": "In dispute",
+  "208": "Suspended",
+  "209": "Completed",
+  "210": "Refused",
+  "211": "Payment sent",
+  "212": "Payment received",
+  "213": "Rejected",
+  "214": "Endorsed",
+  "501": "Inadmissible",
+};
+
+const FRANCE_CDAR_ROLE_LABELS: Record<FranceCdarRoleCode, string> = {
+  BY: "Buyer",
+  AB: "Buyer's agent or representative",
+  DL: "Factor",
+  SE: "Seller",
+  SR: "Seller's agent",
+  WK: "Platform or dematerialisation operator",
+  DFH: "French public invoicing portal (PPF)",
+  PE: "Payee",
+  PR: "Payer",
+  II: "Invoicer",
+  IV: "Invoicee",
+};
 
 function reverseAmountSign(value: string): string {
   const trimmedValue = value.trim();
@@ -130,31 +290,26 @@ function forcePositiveAmountSign(value: string): string {
   return `+${trimmedValue}`;
 }
 
-function getDocumentTypeLabel(type: PublicTransmittedDocument["type"]): string {
-  switch (type) {
-    case "invoice":
-      return "Invoice";
-    case "creditNote":
-      return "Credit note";
-    case "selfBillingInvoice":
-      return "Self-billing invoice";
-    case "selfBillingCreditNote":
-      return "Self-billing credit note";
-    case "messageLevelResponse":
-      return "Message Level Response";
-    default:
-      return "Document";
-  }
-}
+/**
+ * Everything a layout needs beyond the parsed document itself. Every builder below
+ * takes one of these rather than a stored row, so callers that hold a parsed
+ * document (the type repository) can render without inventing a row.
+ */
+type DocumentRenderContext = {
+  documentId: string;
+  type: PublicTransmittedDocument["type"];
+  documentTypeTitle: string;
+};
 
-function buildTemplateData(document: PublicTransmittedDocument): BillingTemplateData {
-  const parsed = document.parsed as ParsedBillingDocument;
-
+function buildTemplateData(
+  parsed: ParsedBillingDocument,
+  context: DocumentRenderContext,
+): BillingTemplateData {
   const isInvoice =
-    document.type === "invoice" || document.type === "selfBillingInvoice";
+    context.type === "invoice" || context.type === "selfBillingInvoice";
   const isCreditNote =
-    document.type === "creditNote" ||
-    document.type === "selfBillingCreditNote";
+    context.type === "creditNote" ||
+    context.type === "selfBillingCreditNote";
 
   const documentNumber =
     (isInvoice && (parsed as any)?.invoiceNumber) ||
@@ -305,9 +460,9 @@ function buildTemplateData(document: PublicTransmittedDocument): BillingTemplate
     : null;
 
   return {
-    documentId: document.id,
-    documentType: document.type,
-    documentTypeLabel: getDocumentTypeLabel(document.type),
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: context.documentTypeTitle,
     documentNumber,
     issueDate,
     dueDate,
@@ -324,14 +479,9 @@ function buildTemplateData(document: PublicTransmittedDocument): BillingTemplate
 }
 
 function buildMessageLevelResponseTemplateData(
-  document: PublicTransmittedDocument,
+  parsed: MessageLevelResponse,
+  context: DocumentRenderContext,
 ): MessageLevelResponseTemplateData {
-  const parsed = document.parsed as MessageLevelResponse;
-
-  if (!parsed) {
-    throw new Error("Message Level Response document missing parsed data");
-  }
-
   const getResponseCodeLabel = (code: string): string => {
     switch (code) {
       case "AB":
@@ -346,9 +496,9 @@ function buildMessageLevelResponseTemplateData(
   };
 
   return {
-    documentId: document.id,
-    documentType: document.type,
-    documentTypeLabel: getDocumentTypeLabel(document.type),
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: context.documentTypeTitle,
     responseId: parsed.id,
     issueDate: parsed.issueDate,
     responseCode: parsed.responseCode,
@@ -360,84 +510,305 @@ function buildMessageLevelResponseTemplateData(
   };
 }
 
-async function callTailwindPdfGenerator(
-  templateHtml: string,
-  data: BillingTemplateData | MessageLevelResponseTemplateData,
-  options: { preview: boolean },
-): Promise<string | Buffer> {
-  const body = JSON.stringify({ html: templateHtml, data });
+function buildFranceCdarTemplateData(
+  parsed: FranceCdar,
+  context: DocumentRenderContext,
+): FranceCdarTemplateData {
+  const isNegative = parsed.statusCode === "210"
+    || parsed.statusCode === "213"
+    || parsed.statusCode === "501";
+  const isWarning = parsed.statusCode === "206"
+    || parsed.statusCode === "207"
+    || parsed.statusCode === "208";
+  const isPositive = parsed.statusCode === "205"
+    || parsed.statusCode === "209"
+    || parsed.statusCode === "211"
+    || parsed.statusCode === "212"
+    || parsed.statusCode === "214";
+  const isInfo = !isNegative && !isWarning && !isPositive;
 
-  const url = options.preview
-    ? `${RECOMMAND_RENDER_ENDPOINT}/?preview=true`
-    : RECOMMAND_RENDER_ENDPOINT;
+  return {
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: context.documentTypeTitle,
+    responseId: parsed.id,
+    issueDate: parsed.issueDate,
+    businessProcess: parsed.businessProcess,
+    phase: parsed.phase,
+    phaseLabel: parsed.phase === "305" ? "Transmission" : "Processing",
+    senderRole: parsed.senderRole,
+    senderRoleLabel: FRANCE_CDAR_ROLE_LABELS[parsed.senderRole],
+    issuerRole: parsed.issuerRole,
+    issuerRoleLabel: FRANCE_CDAR_ROLE_LABELS[parsed.issuerRole],
+    issuerLegalId: parsed.issuerLegalId,
+    issuerLegalIdScheme: parsed.issuerLegalIdScheme,
+    recipientRole: parsed.recipientRole,
+    recipientRoleLabel: FRANCE_CDAR_ROLE_LABELS[parsed.recipientRole],
+    recipientLegalId: parsed.recipientLegalId,
+    recipientLegalIdScheme: parsed.recipientLegalIdScheme,
+    recipientElectronicAddress: parsed.recipientElectronicAddress,
+    recipientElectronicAddressScheme:
+      parsed.recipientElectronicAddressScheme,
+    statusCode: parsed.statusCode,
+    statusCodeLabel: FRANCE_CDAR_STATUS_LABELS[parsed.statusCode] ?? parsed.statusCode,
+    invoiceId: parsed.invoiceId,
+    invoiceIssueDate: parsed.invoiceIssueDate,
+    sellerLegalId: parsed.sellerLegalId,
+    sellerLegalIdScheme: parsed.sellerLegalIdScheme,
+    reasonCode: parsed.reasonCode,
+    reason: parsed.reason,
+    reasonNote: parsed.reasonNote,
+    hasReason: Boolean(parsed.reasonCode || parsed.reason || parsed.reasonNote),
+    collectedAmounts: parsed.collectedAmounts,
+    hasCollectedAmounts: Boolean(parsed.collectedAmounts?.length),
+    isPositive,
+    isNegative,
+    isWarning,
+    isInfo,
+  };
+}
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body,
+export function buildFranceB2CReportTemplateData(
+  parsed: FrenchB2CReport,
+  context: DocumentRenderContext,
+): FranceB2CReportTemplateData {
+  const isSales = parsed.type === "sales";
+  const currency = isSales ? parsed.currency : "EUR";
+
+  return {
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: context.documentTypeTitle,
+    reference: parsed.reference,
+    reportTypeLabel: isSales ? "Daily sales" : "Daily payments received",
+    dateLabel: isSales ? "Sales date" : "Payment date",
+    date: parsed.date,
+    actionLabel: FRANCE_B2C_REPORT_ACTION_LABELS[parsed.action],
+    isSubmission: parsed.action === "submit",
+    isCorrection: parsed.action === "correct",
+    isCancellation: parsed.action === "cancel",
+    isSales,
+    isPayments: !isSales,
+    currency,
+    categoryLabel: isSales
+      ? parsed.category === "goods"
+        ? "Taxable goods"
+        : "Taxable services"
+      : undefined,
+    transactionCount: isSales ? parsed.transactionCount : undefined,
+    taxExclusiveAmount: isSales ? parsed.taxExclusiveAmount : undefined,
+    taxAmount: isSales ? parsed.taxAmount : undefined,
+    // The template renders one table per report type, so each breakdown is only
+    // populated for the type it belongs to.
+    salesVatBreakdown: isSales
+      ? parsed.vatBreakdown.map((subtotal) => ({ ...subtotal, currency }))
+      : [],
+    paymentVatBreakdown: isSales ? [] : parsed.vatBreakdown,
+  };
+}
+
+export function buildFranceB2BiReportTemplateData(
+  parsed: FrenchB2BiReport,
+  context: DocumentRenderContext,
+): FranceB2BiReportTemplateData {
+  const isInvoice = parsed.type === "invoice";
+  const currency = parsed.currency;
+
+  return {
+    documentId: context.documentId,
+    documentType: context.type,
+    documentTypeLabel: context.documentTypeTitle,
+    reference: parsed.reference,
+    reportTypeLabel: isInvoice
+      ? "Cross-border invoice"
+      : "Cross-border payment received",
+    dateLabel: isInvoice ? "Issue date" : "Payment date",
+    date: isInvoice ? parsed.issueDate : parsed.date,
+    actionLabel: FRANCE_B2C_REPORT_ACTION_LABELS[parsed.action],
+    isSubmission: parsed.action === "submit",
+    isCorrection: parsed.action === "correct",
+    isCancellation: parsed.action === "cancel",
+    isInvoice,
+    isPayment: !isInvoice,
+    currency,
+    issueDate: parsed.issueDate,
+    documentKindLabel: isInvoice
+      ? parsed.documentType === "creditNote"
+        ? "Credit note"
+        : "Invoice"
+      : undefined,
+    documentNumber: isInvoice ? parsed.documentNumber : undefined,
+    invoiceNumber: isInvoice ? undefined : parsed.invoiceNumber,
+    dueDate: (isInvoice && parsed.dueDate) || undefined,
+    buyerScheme: isInvoice ? parsed.buyer.enterpriseNumberScheme : undefined,
+    buyerCompanyId: isInvoice ? parsed.buyer.enterpriseNumber : undefined,
+    buyerVatNumber: (isInvoice && parsed.buyer.vatNumber) || undefined,
+    buyerCountry: isInvoice ? parsed.buyer.country : undefined,
+    taxExclusiveAmount: isInvoice ? parsed.taxExclusiveAmount : undefined,
+    taxAmount: isInvoice ? parsed.taxAmount : undefined,
+    // The template renders one table per report type, so each breakdown is only
+    // populated for the type it belongs to.
+    invoiceVatBreakdown: isInvoice
+      ? parsed.vatBreakdown.map((subtotal) => ({
+          percentage: subtotal.percentage,
+          taxableAmount: subtotal.taxableAmount,
+          taxAmount: subtotal.taxAmount,
+          category: subtotal.category,
+          exemptionReason:
+            subtotal.exemptionReason ?? subtotal.exemptionReasonCode ?? undefined,
+          currency,
+        }))
+      : [],
+    paymentVatBreakdown: isInvoice
+      ? []
+      : parsed.vatBreakdown.map((subtotal) => ({
+          percentage: subtotal.percentage,
+          amount: subtotal.amount,
+          currency,
+        })),
+  };
+}
+
+/**
+ * Whether a document has a layout to render to HTML or PDF. Callers that render
+ * opportunistically (notification attachments, exports) should check this first.
+ */
+export function isRenderableDocumentType(type: StoredDocumentType): boolean {
+  return type !== "unknown";
+}
+
+/**
+ * Renders a billing document straight from its parsed form, for callers that
+ * hold a document rather than a stored row (the type repository). The
+ * transmitted-document entry points below wrap this.
+ */
+export async function renderBillingDocument<F extends "html" | "pdf">(
+  parsed: ParsedBillingDocument,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    BILLING_DOCUMENT_TEMPLATE,
+    buildTemplateData(parsed, context),
+    options,
+  );
+}
+
+/**
+ * Renders a Message Level Response from its parsed form. The counterpart of
+ * renderBillingDocument for the MLR layout.
+ */
+export async function renderMessageLevelResponse<F extends "html" | "pdf">(
+  parsed: MessageLevelResponse,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    MESSAGE_LEVEL_RESPONSE_TEMPLATE,
+    buildMessageLevelResponseTemplateData(parsed, context),
+    options,
+  );
+}
+
+/** Renders a French Invoicing CDAR from its parsed form. */
+export async function renderFranceCdar<F extends "html" | "pdf">(
+  parsed: FranceCdar,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    FRANCE_CDAR_TEMPLATE,
+    buildFranceCdarTemplateData(parsed, context),
+    options,
+  );
+}
+
+/**
+ * Renders a French B2C sales or payment report from its parsed form. The report
+ * type comes from the document itself; `context.type` only picks the heading.
+ */
+export async function renderFranceB2CReport<F extends "html" | "pdf">(
+  parsed: FrenchB2CReport,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    FRANCE_B2C_REPORT_TEMPLATE,
+    buildFranceB2CReportTemplateData(parsed, context),
+    options,
+  );
+}
+
+export async function renderFranceB2BiReport<F extends "html" | "pdf">(
+  parsed: FrenchB2BiReport,
+  options: { format: F; pdfa?: boolean },
+  context: DocumentRenderContext,
+): Promise<F extends "pdf" ? Buffer : string> {
+  return renderTemplate(
+    FRANCE_B2BI_REPORT_TEMPLATE,
+    buildFranceB2BiReportTemplateData(parsed, context),
+    options,
+  );
+}
+
+/**
+ * The one place the format option is turned into renderTailwindTemplate's flags,
+ * so every layout treats `pdfa` and the preview flag identically.
+ */
+async function renderTemplate<F extends "html" | "pdf">(
+  template: string,
+  data: object,
+  options: { format: F; pdfa?: boolean },
+): Promise<F extends "pdf" ? Buffer : string> {
+  const isPdf = options.format === "pdf";
+  const rendered = await renderTailwindTemplate(template, data, {
+    preview: !isPdf,
+    pdfa: isPdf ? options.pdfa : undefined,
   });
+  return (isPdf ? rendered : rendered.toString()) as F extends "pdf"
+    ? Buffer
+    : string;
+}
 
-  if (!response.ok) {
-    throw new Error("Failed to generate document using Tailwind PDF generator");
+/**
+ * Renders a stored row by unwrapping it into the parsed-form renderer its type
+ * belongs to. The layout selection lives here only; every layout is reachable
+ * without a row through the exported functions above.
+ */
+async function renderStoredDocument<F extends "html" | "pdf">(
+  document: PublicTransmittedDocument,
+  options: { format: F; pdfa?: boolean },
+): Promise<F extends "pdf" ? Buffer : string> {
+  const { getDocumentType } = await import(
+    "@peppol/utils/type-repository/document-types"
+  );
+  const documentType = getDocumentType(document.type);
+  if (!documentType) {
+    throw new Error(`Document type ${document.type} cannot be rendered`);
   }
-
-  if (options.preview) {
-    return await response.text();
+  if (!document.parsed && documentType.class !== "billing") {
+    const label = documentType.class === "reporting"
+      ? "French report"
+      : documentType.translatableTitle;
+    throw new Error(`${label} document missing parsed data`);
   }
-
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  return documentType.render(document.parsed as never, options, {
+    documentId: document.id,
+  });
 }
 
 export async function renderDocumentHtml(
   document: PublicTransmittedDocument,
 ): Promise<string> {
-  if (document.type === "unknown") {
-    throw new Error("Unknown document type");
-  }
-  if (document.type === "messageLevelResponse") {
-    const data = buildMessageLevelResponseTemplateData(document);
-    const html = await callTailwindPdfGenerator(
-      MESSAGE_LEVEL_RESPONSE_TEMPLATE,
-      data,
-      { preview: true },
-    );
-    return html.toString();
-  }
-
-  const data = buildTemplateData(document);
-  const html = await callTailwindPdfGenerator(
-    BILLING_DOCUMENT_TEMPLATE,
-    data,
-    { preview: true },
-  );
-  return html.toString();
+  return renderStoredDocument(document, { format: "html" });
 }
 
 export async function renderDocumentPdf(
   document: PublicTransmittedDocument,
+  options: { pdfa?: boolean } = {},
 ): Promise<Buffer> {
-  if (document.type === "unknown") {
-    throw new Error("Unknown document type");
-  }
-  if (document.type === "messageLevelResponse") {
-    const data = buildMessageLevelResponseTemplateData(document);
-    const pdf = await callTailwindPdfGenerator(
-      MESSAGE_LEVEL_RESPONSE_TEMPLATE,
-      data,
-      { preview: false },
-    );
-    return pdf as Buffer;
-  }
-
-  const data = buildTemplateData(document);
-  const pdf = await callTailwindPdfGenerator(
-    BILLING_DOCUMENT_TEMPLATE,
-    data,
-    { preview: false },
-  );
-  return pdf as Buffer;
+  return renderStoredDocument(document, {
+    format: "pdf",
+    pdfa: options.pdfa,
+  });
 }
-

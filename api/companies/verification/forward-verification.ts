@@ -7,6 +7,8 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { sendEmail } from "@core/lib/email";
 import { VerificationForwardingEmail, subject } from "@peppol/emails/verification-forwarding-email";
+import { withTranslation } from "@core/lib/translation-middleware";
+import type { TranslationFunction } from "@core/lib/translations";
 import React from "react";
 
 const server = new Server();
@@ -21,13 +23,16 @@ const forwardVerificationJsonBodySchema = z.object({
     requesterEmail: z.string().email(),
 });
 
-type ForwardVerificationContext = Context<Record<string, never>, string, { in: { param: z.input<typeof forwardVerificationParamSchema>, json: z.input<typeof forwardVerificationJsonBodySchema> }, out: { param: z.infer<typeof forwardVerificationParamSchema>, json: z.infer<typeof forwardVerificationJsonBodySchema> } }>;
+type ForwardVerificationContext = Context<{ Variables: { t: TranslationFunction; language: string } }, string, { in: { param: z.input<typeof forwardVerificationParamSchema>, json: z.input<typeof forwardVerificationJsonBodySchema> }, out: { param: z.infer<typeof forwardVerificationParamSchema>, json: z.infer<typeof forwardVerificationJsonBodySchema> } }>;
 
 const _forwardVerification = server.post(
     "/companies/verification/:companyVerificationLogId/forward",
     describeRoute({ hide: true }),
     zodValidator("param", forwardVerificationParamSchema),
     zodValidator("json", forwardVerificationJsonBodySchema),
+    // Public route: the forwarding colleague works at the same company as the
+    // sender, so the sender's browser language is the best guess available.
+    withTranslation(),
     _forwardVerificationImplementation,
 );
 
@@ -53,11 +58,12 @@ async function _forwardVerificationImplementation(c: ForwardVerificationContext)
         const companyName = verificationLog.companyName ?? "your company";
         const verificationLink = `${baseUrl}/company-verification/${companyVerificationLogId}/verify`;
 
+        const t = c.get("t");
         await sendEmail({
             to: email,
             cc: requesterEmail,
-            subject: subject({ companyName }),
-            email: React.createElement(VerificationForwardingEmail, { companyName, verificationLink, requesterName, requesterEmail }),
+            subject: subject({ companyName, t }),
+            email: React.createElement(VerificationForwardingEmail, { companyName, verificationLink, requesterName, requesterEmail, t }),
         });
 
         return c.json(actionSuccess({}));

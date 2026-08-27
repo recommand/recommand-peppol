@@ -7,15 +7,7 @@ import { Step3Usage } from "./step-3-usage";
 import { Step4Create } from "./step-4-create";
 import { Step5Identifiers } from "./step-5-identifiers";
 import { Step6Verification } from "./step-6-verification";
-
-// Step 4 is a hidden transition step (company creation), not counted in progress
-const DISPLAY_STEP_TITLES: Record<number, string> = {
-    1: "Country & VAT",
-    2: "Company information",
-    3: "Sending & receiving",
-    5: "Peppol addresses",
-    6: "Verification",
-};
+import { useTranslation } from "@core/hooks/use-translation";
 
 type CreateCompanyWizardProps = {
     teamId: string;
@@ -26,6 +18,14 @@ type CreateCompanyWizardProps = {
 };
 
 export function CreateCompanyWizard({ teamId, verificationRequirements, initialData, onComplete, onCancel }: CreateCompanyWizardProps) {
+    const { t } = useTranslation();
+    const displayStepTitles: Record<number, string> = {
+        1: t`Country & VAT`,
+        2: t`Company information`,
+        3: t`Sending & receiving`,
+        5: t`Peppol addresses`,
+        6: t`Verification`,
+    };
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState<CompanyFormData>({
         ...defaultCompanyFormData,
@@ -58,8 +58,8 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
             {step !== 4 && (
                 <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                        <p className="text-xs text-muted-foreground">Step {displayStep} of {totalDisplaySteps}</p>
-                        <p className="text-xs text-muted-foreground">{DISPLAY_STEP_TITLES[step]}</p>
+                        <p className="text-xs text-muted-foreground">{t`Step ${displayStep} of ${totalDisplaySteps}`}</p>
+                        <p className="text-xs text-muted-foreground">{displayStepTitles[step]}</p>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                         <div

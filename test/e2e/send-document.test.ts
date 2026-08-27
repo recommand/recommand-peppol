@@ -13,7 +13,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 // Process management only. The API contract below is asserted purely over
 // HTTP, without importing anything from the package under test.
-import { ensureServerRunning, stopDevServer } from "../utils/dev-server";
+import { ensureServerRunning } from "../utils/dev-server";
 import { SKIP_E2E } from "../utils/skip-e2e";
 import {
   BARE_RECIPIENT,
@@ -28,11 +28,14 @@ import {
   UNREACHABLE_RECIPIENT,
   apiIsAnswering,
   assertPlaygroundTeam,
+  createCompany,
+  deleteCompany,
   getCompany,
   getDocument,
   normaliseRecipient,
   requireConfig,
   sendDocument,
+  sendPathFor,
   type ApiResponse,
 } from "./helpers";
 import {
@@ -41,6 +44,7 @@ import {
   DOC_TYPE_ID,
   PROCESS_ID,
   creditNoteDocument,
+  frenchInvoiceDocument,
   invalidInvoiceXmlDocument,
   invoiceDocument,
   invoiceXmlDocument,
@@ -64,7 +68,7 @@ const ERROR = {
   recipientOrEmail:
     "Either recipient (for Peppol) or email.to (for email delivery) must be provided.",
   pdfMessageLevelResponse:
-    "PDF generation is not supported for message level responses.",
+    "PDF generation is not supported for messageLevelResponse.",
   pdfXml: "PDF generation is not supported for raw XML documents.",
   peppolFailed: `Failed to send document over Peppol network. ${SIMULATED_PEPPOL_FAILURE}`,
   peppolAndEmailFailed: `Failed to send document over Peppol network and email. ${SIMULATED_PEPPOL_FAILURE} `,
@@ -72,18 +76,11 @@ const ERROR = {
     "Document type could not be detected automatically from your XML document. Please provide the doctypeId manually.",
   processIdNotDetected:
     "Failed to detect process id. Please provide the processId manually.",
+  processIdNotSupported: "Process identifier is not supported for invoice.",
+  franceNotSetUp:
+    "This company is not set up for French regulated document flows. Please contact support@recommand.eu.",
   validationFailed:
-    "Document validation failed. Please ensure your document complies with EN16931 and PEPPOL BIS 3.0 requirements.",
-  invalidInvoice:
-    "Invalid invoice data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
-  invalidCreditNote:
-    "Invalid credit note data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
-  invalidSelfBillingInvoice:
-    "Invalid self billing invoice data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
-  invalidSelfBillingCreditNote:
-    "Invalid self billing credit note data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
-  invalidMessageLevelResponse:
-    "Invalid message level response data provided. The document you provided does not correspond to the required json object as laid out by our api reference. If unsure, don't hesitate to contact support@recommand.eu",
+    "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
   unauthorized: "Unauthorized",
   companyNotFound: "Company not found",
 } as const;
@@ -346,11 +343,18 @@ let company: any;
 
 // Generous timeouts: the hook may have to boot the dev server, and hooks are
 // subject to the (5 second) test timeout unless one is given explicitly.
+//
+// Nothing here stops the server. Bun runs the preloaded `test/setup.ts` hooks
+// once around the whole run, while these hooks run around this file only, and
+// the order Bun picks up test files is filesystem order. Stopping the server
+// here would kill it halfway through a run that still has files left which
+// talk to the API.
 beforeAll(async () => {
   if (SKIP_E2E) return;
   requireConfig();
-  // Starts a dev server if nothing is listening yet, like the unit test setup,
-  // and waits until the company these tests send from can be looked up.
+  // Waits until the company these tests send from can be looked up. The server
+  // itself was already started by the preloaded setup; this is idempotent and
+  // starts one only if that did not happen.
   await ensureServerRunning(HOST, apiIsAnswering);
   await assertPlaygroundTeam();
 
@@ -359,12 +363,6 @@ beforeAll(async () => {
   expect(response.body.company?.id).toBe(COMPANY_ID);
   company = response.body.company;
 }, 180_000);
-
-afterAll(async () => {
-  if (SKIP_E2E) return;
-  // Only stops the server if this run was the one that started it.
-  await stopDevServer();
-}, 30_000);
 
 e2eDescribe("send document: every parameter combination", () => {
   for (const variant of DOCUMENT_VARIANTS) {
@@ -568,30 +566,38 @@ e2eDescribe("send document: request validation", () => {
 });
 
 e2eDescribe("send document: document does not match the document type", () => {
-  const cases: [string, unknown, string, string][] = [
-    ["invoice", creditNoteDocument(), "invoice", ERROR.invalidInvoice],
-    ["creditNote", invoiceDocument(), "creditNote", ERROR.invalidCreditNote],
+  // The request schema binds `document` to the schema of the `documentType` that
+  // was asked for, so a mismatched document never reaches the sending pipeline:
+  // the validator refuses it and names the fields the requested type is missing.
+  const cases: [string, unknown, string, string[]][] = [
+    ["invoice", creditNoteDocument(), "invoice", ["document.invoiceNumber"]],
+    [
+      "creditNote",
+      invoiceDocument(),
+      "creditNote",
+      ["document.creditNoteNumber"],
+    ],
     [
       "selfBillingInvoice",
       invoiceDocument({ seller: undefined }),
       "selfBillingInvoice",
-      ERROR.invalidSelfBillingInvoice,
+      ["document.seller"],
     ],
     [
       "selfBillingCreditNote",
       creditNoteDocument({ seller: undefined }),
       "selfBillingCreditNote",
-      ERROR.invalidSelfBillingCreditNote,
+      ["document.seller"],
     ],
     [
       "messageLevelResponse",
       invoiceDocument(),
       "messageLevelResponse",
-      ERROR.invalidMessageLevelResponse,
+      ["document.responseCode", "document.envelopeId"],
     ],
   ];
 
-  for (const [name, document, documentType, message] of cases) {
+  for (const [name, document, documentType, fields] of cases) {
     test(
       `${name} rejects a mismatched document`,
       async () => {
@@ -600,7 +606,19 @@ e2eDescribe("send document: document does not match the document type", () => {
           documentType,
           document,
         });
-        expectFailure(response, 400, message);
+
+        expect(response.status).toBe(400);
+        expect(response.body.success).toBeUndefined();
+        expect(Array.isArray(response.body.invalidInputDetails)).toBe(true);
+        for (const field of fields) {
+          expect(response.body.errors[field]).toBeDefined();
+        }
+        // The document type itself was accepted: only the document is at fault.
+        expect(
+          Object.keys(response.body.errors).filter(
+            (field) => !field.startsWith("document.")
+          )
+        ).toEqual([]);
       },
       TIMEOUT
     );
@@ -655,6 +673,25 @@ e2eDescribe("send document: raw XML", () => {
       expect(stored.body.document.docTypeId).toBe(UNKNOWN_DOC_TYPE_ID);
       expect(stored.body.document.processId).toBe(CUSTOM_PROCESS_ID);
       expect(stored.body.document.type).toBe("unknown");
+    },
+    TIMEOUT
+  );
+
+  test(
+    "an explicit doctypeId decides how raw XML is stored",
+    async () => {
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "xml",
+        document: invoiceXmlDocument(),
+        doctypeId: DOC_TYPE_ID.selfBillingInvoice,
+      });
+      expect(response.status).toBe(200);
+
+      const stored = await getDocument(response.body.id);
+      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.selfBillingInvoice);
+      expect(stored.body.document.type).toBe("selfBillingInvoice");
+      expect(stored.body.document.processId).toBe(PROCESS_ID.selfBilling);
     },
     TIMEOUT
   );
@@ -1135,9 +1172,13 @@ e2eDescribe("send document: provided totals", () => {
   );
 });
 
-e2eDescribe("send document: doctypeId and processId on non-XML documents", () => {
+// Unlike raw XML, where both identifiers only describe the transmission, here
+// they decide what gets generated: the doctypeId picks the syntax the document
+// is written in and the processId becomes its profile identifier. A processId
+// the chosen doctypeId does not support is therefore refused outright.
+e2eDescribe("send document: doctypeId and processId on JSON documents", () => {
   test(
-    "processId overrides the detected process",
+    "rejects a processId the document type does not support",
     async () => {
       const response = await sendDocument({
         recipient: RECIPIENT,
@@ -1145,48 +1186,158 @@ e2eDescribe("send document: doctypeId and processId on non-XML documents", () =>
         document: invoiceDocument(),
         processId: CUSTOM_PROCESS_ID,
       });
+      expectFailure(response, 400, ERROR.processIdNotSupported);
+    },
+    TIMEOUT
+  );
+
+  test(
+    "accepts a processId the document type does support",
+    async () => {
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: invoiceDocument(),
+        processId: PROCESS_ID.billing,
+      });
       expect(response.status).toBe(200);
 
       const stored = await getDocument(response.body.id);
-      expect(stored.body.document.processId).toBe(CUSTOM_PROCESS_ID);
+      expect(stored.body.document.processId).toBe(PROCESS_ID.billing);
       expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.invoice);
     },
     TIMEOUT
   );
 
   test(
-    "doctypeId is ignored",
+    "an explicit doctypeId decides which syntax is generated",
     async () => {
       const response = await sendDocument({
         recipient: RECIPIENT,
         documentType: "invoice",
         document: invoiceDocument(),
-        doctypeId: DOC_TYPE_ID.messageLevelResponse,
+        doctypeId: DOC_TYPE_ID.ciiInvoice,
       });
       expect(response.status).toBe(200);
 
       const stored = await getDocument(response.body.id);
-      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.invoice);
+      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.ciiInvoice);
       expect(stored.body.document.processId).toBe(PROCESS_ID.billing);
     },
     TIMEOUT
   );
 
   test(
-    "an explicit doctypeId decides how raw XML is stored",
+    "a processId is checked against the doctypeId that was given, not the default",
     async () => {
+      // The default UBL BIS 3 doctype for an invoice carries the French
+      // regulated process, and so do the two France CII doctypes — but the
+      // plain EN 16931 CII D22B one asked for here carries billing:01 alone,
+      // so the same processId is refused against it.
       const response = await sendDocument({
         recipient: RECIPIENT,
-        documentType: "xml",
-        document: invoiceXmlDocument(),
-        doctypeId: DOC_TYPE_ID.selfBillingInvoice,
+        documentType: "invoice",
+        document: invoiceDocument(),
+        doctypeId: DOC_TYPE_ID.ciiInvoice,
+        processId: PROCESS_ID.franceRegulated,
       });
+      expectFailure(response, 400, ERROR.processIdNotSupported);
+    },
+    TIMEOUT
+  );
+
+  test(
+    "refuses the French regulated flows for a company outside them",
+    async () => {
+      // The doctype and the processId are both in order here: this is the very
+      // processId the plain CII doctype refuses above, and the French one lists
+      // it. What is refused is the company. French regulated documents are only
+      // sent for a company registered in France, and outside the playground only
+      // over the French access point — which the company this suite is
+      // configured with is not, so the send never reaches the document.
+      const response = await sendDocument({
+        recipient: RECIPIENT,
+        documentType: "invoice",
+        document: frenchInvoiceDocument(),
+        doctypeId: DOC_TYPE_ID.franceCiusCiiInvoice,
+        processId: PROCESS_ID.franceRegulated,
+      });
+      expectFailure(response, 400, ERROR.franceNotSetUp);
+    },
+    TIMEOUT
+  );
+});
+
+// The SIREN of the seller the French documents in this suite are sold by, so
+// the company that sends them and the seller inside them are one business.
+const FRENCH_SIREN = "303265045";
+
+e2eDescribe("send document: a French company", () => {
+  // The company this suite is configured with is not French, so the block above
+  // only gets as far as the refusal. A French company is what the regulated
+  // flows are for, so this block creates one for the duration of its tests and
+  // deletes it again: creating it in France is what puts it on the French
+  // access point, which is the other half of what the flows require.
+  let frenchCompanyId = "";
+
+  beforeAll(async () => {
+    if (SKIP_E2E) return;
+    const response = await createCompany({
+      name: "Recommand E2E Vendeur",
+      address: "1 rue du Vendeur",
+      postalCode: "75001",
+      city: "Paris",
+      country: "FR",
+      enterpriseNumber: FRENCH_SIREN,
+    });
+    if (response.status !== 200 || !response.body?.company?.id) {
+      throw new Error(
+        `Could not create the French company these tests send from. ` +
+          `POST /api/peppol/companies returned ${response.status}: ${JSON.stringify(response.body)}`
+      );
+    }
+    expect(response.body.company.country).toBe("FR");
+    frenchCompanyId = response.body.company.id;
+  }, TIMEOUT);
+
+  // Left behind, a company keeps answering on the network for documents nobody
+  // is reading, so it goes even if the tests failed.
+  afterAll(async () => {
+    if (!frenchCompanyId) return;
+    const response = await deleteCompany(frenchCompanyId);
+    if (response.status !== 200) {
+      console.error(
+        `Failed to delete the French company ${frenchCompanyId}: ` +
+          `${response.status}: ${JSON.stringify(response.body)}`
+      );
+    }
+  }, TIMEOUT);
+
+  test(
+    "accepts the French regulated process on the French CII doctype",
+    async () => {
+      // The case the configured company is refused for, sent by a company that
+      // is set up for it: the document is generated as a French CIUS CII
+      // invoice and travels over the regulated process.
+      const response = await sendDocument(
+        {
+          recipient: RECIPIENT,
+          documentType: "invoice",
+          document: frenchInvoiceDocument(),
+          doctypeId: DOC_TYPE_ID.franceCiusCiiInvoice,
+          processId: PROCESS_ID.franceRegulated,
+        },
+        { path: sendPathFor(frenchCompanyId) }
+      );
       expect(response.status).toBe(200);
 
       const stored = await getDocument(response.body.id);
-      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.selfBillingInvoice);
-      expect(stored.body.document.type).toBe("selfBillingInvoice");
-      expect(stored.body.document.processId).toBe(PROCESS_ID.selfBilling);
+      expect(stored.body.document.companyId).toBe(frenchCompanyId);
+      expect(stored.body.document.docTypeId).toBe(
+        DOC_TYPE_ID.franceCiusCiiInvoice
+      );
+      expect(stored.body.document.processId).toBe(PROCESS_ID.franceRegulated);
+      expect(stored.body.document.type).toBe("invoice");
     },
     TIMEOUT
   );

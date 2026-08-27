@@ -1,7 +1,8 @@
 import { expect } from "bun:test";
 import { validateXmlDocument } from "../../data/validation/client";
-import type { DocumentType } from "@peppol/utils/document-types";
+import type { DocumentTypeKey } from "@peppol/utils/type-repository/document-types/types";
 import { SKIP_E2E } from "./skip-e2e";
+import { getTestHost } from "./dev-server";
 
 export async function validateXml(xml: string, testName: string): Promise<void> {
   const validation = await validateXmlDocument(xml);
@@ -17,18 +18,20 @@ export async function validateXml(xml: string, testName: string): Promise<void> 
 
 export async function sendDocumentViaAPI(
   document: unknown,
-  documentType: DocumentType,
+  documentType: DocumentTypeKey,
   recipientAddress: string = "0208:0598726857"
 ): Promise<void> {
   if (SKIP_E2E) {
     return;
   }
 
-  const host = process.env.ETE_UNIT_TEST_HOST;
+  // Same host the preloaded setup started the server on, so this does not go
+  // looking somewhere else when ETE_UNIT_TEST_HOST is left at its default.
+  const host = getTestHost();
   const companyId = process.env.ETE_UNIT_TEST_COMPANY_ID;
   const jwt = process.env.ETE_UNIT_TEST_JWT;
 
-  if (!host || !companyId || !jwt) {
+  if (!companyId || !jwt) {
     return;
   }
 
@@ -59,4 +62,3 @@ export async function sendDocumentViaAPI(
   expect(responseData.sentOverPeppol).toBe(true);
   expect(responseData.sentOverEmail).toBe(false);
 }
-

@@ -17,70 +17,72 @@ import SubscriptionOnboarding from "@peppol/components/onboarding/subscription";
 import CompanyOnboarding from "@peppol/components/onboarding/company";
 import AddPlayground from "./add-playground";
 import PlaygroundUI from "./playground-ui";
+import { useTranslation } from "@core/hooks/use-translation";
 
 export default function Main({ children }: { children: React.ReactNode }) {
   const { registerMenuItem } = useMenuItemActions();
   const { registerOnboardingStep } = useOnboardingActions();
+  const { t } = useTranslation();
 
   useEffect(() => {
     registerMenuItem({
       id: "main.send",
-      title: "Send document",
+      title: t`Send document`,
       icon: Send,
       href: "/send-document",
     });
 
     registerMenuItem({
       id: "main.history",
-      title: "Sent and received",
+      title: t`Sent and received`,
       icon: History,
       href: "/transmitted-documents",
     });
 
     registerMenuItem({
       id: "main.companies",
-      title: "Companies",
+      title: t`Companies`,
       icon: Building,
       href: "/companies",
     });
 
     registerMenuItem({
       id: "main.labels",
-      title: "Labels",
+      title: t`Labels`,
       icon: Tag,
       href: "/labels",
     });
 
     registerMenuItem({
       id: "main.supporting-data",
-      title: "Supporting data",
+      title: t`Supporting data`,
       icon: Database,
     });
 
     registerMenuItem({
       id: "main.supporting-data.suppliers",
-      title: "Suppliers",
+      title: t`Suppliers`,
       icon: Truck,
       href: "/suppliers",
     });
 
     registerMenuItem({
       id: "main.supporting-data.customers",
-      title: "Customers",
+      title: t`Customers`,
       icon: Users,
       href: "/customers",
     });
 
     registerMenuItem({
       id: "user.billing.subscription",
-      title: "Subscription",
+      title: t`Subscription`,
       icon: CreditCard,
       href: "/billing/subscription",
     });
 
     registerMenuItem({
       id: "user.api.webhooks",
-      title: "Webhooks and rules",
+      title: t`Webhooks and rules`,
       icon: Webhook,
       href: "/webhooks",
     });
@@ -88,9 +90,8 @@ export default function Main({ children }: { children: React.ReactNode }) {
     registerOnboardingStep({
       id: "peppol.subscription",
       scope: "team",
-      title: "Pick a plan",
-      description:
-        "We offer a variety of plans, pick one that suits your needs.",
+      title: t`Pick a plan`,
+      description: t`We offer a variety of plans, pick one that suits your needs.`,
       render: ({ onComplete }) => {
         return <SubscriptionOnboarding onComplete={onComplete} />;
       },
@@ -99,8 +100,8 @@ export default function Main({ children }: { children: React.ReactNode }) {
     registerOnboardingStep({
       id: "peppol.billing",
       scope: "team",
-      title: "Create a billing profile",
-      description: "A billing profile is required to get started.",
+      title: t`Create a billing profile`,
+      description: t`A billing profile is required to get started.`,
       render: ({ onComplete }) => {
         return <BillingOnboarding onComplete={onComplete} />;
       },
@@ -109,13 +110,13 @@ export default function Main({ children }: { children: React.ReactNode }) {
     registerOnboardingStep({
       id: "peppol.company",
       scope: "team",
-      title: "Set up your first company",
-      description: "Companies are the legal entities you send or receive Peppol documents for.",
+      title: t`Set up your first company`,
+      description: t`Companies are the legal entities you send or receive Peppol documents for.`,
       render: ({ onComplete }) => {
         return <CompanyOnboarding onComplete={onComplete} />;
       },
     });
-  }, [registerMenuItem]);
+  }, [registerMenuItem, registerOnboardingStep, t]);
 
   return (
     <>

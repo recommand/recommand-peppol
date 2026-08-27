@@ -4,6 +4,7 @@ import { Label } from "@core/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@core/components/ui/select";
 import type { Company } from "../types/company";
 import type { WebhookFormData } from "../types/webhook";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface WebhookFormProps {
   formData: WebhookFormData;
@@ -21,10 +22,11 @@ export const WebhookForm = ({
   onSubmit, 
   onCancel, 
   isEditing 
-}: WebhookFormProps) => (
-  <form onSubmit={onSubmit} className="space-y-4">
+}: WebhookFormProps) => {
+  const { t } = useTranslation();
+  return <form onSubmit={onSubmit} className="space-y-4">
     <div className="space-y-2">
-      <Label htmlFor="url">Webhook URL</Label>
+      <Label htmlFor="url">{t`Webhook URL`}</Label>
       <Input
         id="url"
         type="url"
@@ -35,16 +37,16 @@ export const WebhookForm = ({
       />
     </div>
     <div className="space-y-2">
-      <Label htmlFor="companyId">Company (Optional)</Label>
+      <Label htmlFor="companyId">{t`Company (Optional)`}</Label>
       <Select
         value={formData.companyId ?? "all"}
         onValueChange={(value) => onChange({ ...formData, companyId: value === "all" ? null : value })}
       >
         <SelectTrigger>
-          <SelectValue placeholder="Select a company" />
+          <SelectValue placeholder={t`Select a company`} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All companies</SelectItem>
+          <SelectItem value="all">{t`All companies`}</SelectItem>
           {companies.map((company) => (
             <SelectItem key={company.id} value={company.id}>
               {company.name}
@@ -55,11 +57,11 @@ export const WebhookForm = ({
     </div>
     <div className="flex justify-end gap-2">
       <Button type="button" variant="outline" onClick={onCancel}>
-        Cancel
+        {t`Cancel`}
       </Button>
       <Button type="submit">
-        {isEditing ? 'Update' : 'Create'}
+        {isEditing ? t`Update` : t`Create`}
       </Button>
     </div>
-  </form>
-); 
+  </form>;
+};

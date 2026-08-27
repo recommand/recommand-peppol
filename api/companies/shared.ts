@@ -1,4 +1,5 @@
 import z from "zod";
+import type { Company } from "@peppol/data/companies";
 
 export const companyResponse = z.object({
     id: z.string(),
@@ -18,3 +19,13 @@ export const companyResponse = z.object({
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
 });
+
+export function toCompanyResponse(company: Company) {
+    const {
+        accessPointProvider: _accessPointProvider,
+        smpProvider: _smpProvider,
+        ...publicCompany
+    } = company;
+
+    return publicCompany;
+}

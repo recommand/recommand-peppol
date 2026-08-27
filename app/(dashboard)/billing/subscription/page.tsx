@@ -1,7 +1,7 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
 import type { Subscription } from "api/subscription";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@core/components/ui/button";
 import {
   Card,
@@ -74,11 +74,18 @@ import {
   TableHeader,
   TableRow,
 } from "@core/components/ui/table";
+import { useTranslation } from "@core/hooks/use-translation";
+import { createRegionNames, regionDisplayName } from "@core/lib/regions";
 
 const subscriptionClient = rc<Subscription>("v1");
 const billingProfileClient = rc<BillingProfile>("v1");
 
 export default function Page() {
+  const { t, language } = useTranslation();
+  const regionNames = useMemo(
+    () => createRegionNames(language),
+    [language]
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [currentSubscription, setCurrentSubscription] =
     useState<SubscriptionType | null>(null);
@@ -151,7 +158,7 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Error fetching subscription:", error);
-      toast.error("Failed to load subscription");
+      toast.error(t`Failed to load subscription`);
     } finally {
       setIsLoading(false);
     }
@@ -173,7 +180,7 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Error fetching current usage:", error);
-      toast.error("Failed to load current usage");
+      toast.error(t`Failed to load current usage`);
     }
   };
 
@@ -225,7 +232,7 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Error fetching billing events:", error);
-      toast.error("Failed to load billing events");
+      toast.error(t`Failed to load billing events`);
     } finally {
       setIsLoadingEvents(false);
     }
@@ -253,9 +260,9 @@ export default function Page() {
 
       const data = await response.json();
       fetchSubscription();
-      toast.success("Subscription cancelled successfully");
+      toast.success(t`Subscription cancelled successfully`);
     } catch (error) {
-      toast.error("Failed to cancel subscription");
+      toast.error(t`Failed to cancel subscription`);
     }
   };
 
@@ -272,9 +279,9 @@ export default function Page() {
     return (
       <PageTemplate
         breadcrumbs={[
-          { label: "Team Settings" },
-          { label: "Billing" },
-          { label: "Subscription" },
+          { label: t`Team Settings` },
+          { label: t`Billing` },
+          { label: t`Subscription` },
         ]}
       >
         <div className="flex items-center justify-center py-8">
@@ -288,17 +295,16 @@ export default function Page() {
     return (
       <PageTemplate
         breadcrumbs={[
-          { label: "Team Settings" },
-          { label: "Billing" },
-          { label: "Subscription" },
+          { label: t`Team Settings` },
+          { label: t`Billing` },
+          { label: t`Subscription` },
         ]}
       >
         <div className="flex items-center justify-center py-8 text-center">
           <p className="text-muted-foreground">
-            This is a playground environment. Playground usage is entirely free
-            of charge.
+            {t`This is a playground environment. Playground usage is entirely free of charge.`}
             <br />
-            Switch to a production team to manage your subscription.
+            {t`Switch to a production team to manage your subscription.`}
           </p>
         </div>
       </PageTemplate>
@@ -308,11 +314,11 @@ export default function Page() {
   return (
     <PageTemplate
       breadcrumbs={[
-        { label: "Team Settings" },
-        { label: "Billing" },
-        { label: "Subscription" },
+        { label: t`Team Settings` },
+        { label: t`Billing` },
+        { label: t`Subscription` },
       ]}
-      description="Manage your subscription plan and billing information"
+      description={t`Manage your subscription plan and billing information`}
     >
       <div className="space-y-6">
         <div className="grid gap-6 md:grid-cols-2 items-start">
@@ -324,15 +330,15 @@ export default function Page() {
                     <div>
                       <CardTitle className="text-xl flex items-center gap-2">
                         {/* <Shield className="h-5 w-5 text-primary" /> */}
-                        {currentSubscription.planName} Plan
+                        {t`${t(currentSubscription.planName)} Plan`}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        Active subscription with full access
+                        {t`Active subscription with full access`}
                       </CardDescription>
                     </div>
                     <Badge variant="success">
                       <CheckCircle className="h-3 w-3 mr-1" />
-                      Active
+                      {t`Active`}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -344,13 +350,13 @@ export default function Page() {
                         <div className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm font-medium">
-                            Document Usage
+                            {t`Document Usage`}
                           </span>
                         </div>
                         <span className="text-sm text-muted-foreground">
                           {currentSubscription.billingConfig
                             .includedMonthlyDocuments === 0
-                            ? `${currentUsage} documents`
+                            ? t`${currentUsage} documents`
                             : `${currentUsage} / ${currentSubscription.billingConfig.includedMonthlyDocuments}`}
                         </span>
                       </div>
@@ -371,18 +377,14 @@ export default function Page() {
                               .includedMonthlyDocuments -
                               currentUsage >
                               0
-                              ? `${currentSubscription.billingConfig.includedMonthlyDocuments - currentUsage} documents remaining this month`
-                              : `${currentUsage - currentSubscription.billingConfig.includedMonthlyDocuments} documents over limit`}
+                              ? t`${currentSubscription.billingConfig.includedMonthlyDocuments - currentUsage} documents remaining this month`
+                              : t`${currentUsage - currentSubscription.billingConfig.includedMonthlyDocuments} documents over limit`}
                           </p>
                         </>
                       ) : (
                         <div className="p-3 bg-muted/50 rounded-lg">
                           <p className="text-xs text-muted-foreground">
-                            Unlimited usage - pay per document transmitted (€
-                            {currentSubscription.billingConfig.documentOveragePrice.toFixed(
-                              2
-                            )}{" "}
-                            each)
+                            {t`Unlimited usage - pay per document transmitted (€${currentSubscription.billingConfig.documentOveragePrice.toFixed(2)} each)`}
                           </p>
                         </div>
                       )}
@@ -398,12 +400,12 @@ export default function Page() {
                         <div className="flex items-center gap-2 text-sm font-medium mb-1">
                           <CreditCard className="h-4 w-4 text-muted-foreground" />
                           {currentSubscription.billingConfig.basePrice === 0
-                            ? "Pricing Model"
-                            : "Monthly Price"}
+                            ? t`Pricing Model`
+                            : t`Monthly Price`}
                         </div>
                         {currentSubscription.billingConfig.basePrice === 0 ? (
                           <p className="text-sm text-muted-foreground">
-                            Volume-based
+                            {t`Volume-based`}
                           </p>
                         ) : (
                           <p className="text-2xl font-bold text-primary">
@@ -417,24 +419,24 @@ export default function Page() {
                       <div>
                         <div className="flex items-center gap-2 text-sm font-medium mb-1">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          Start Date
+                          {t`Start Date`}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {new Date(
                             currentSubscription.startDate
-                          ).toLocaleDateString()}
+                          ).toLocaleDateString(language)}
                         </p>
                       </div>
                       {currentSubscription.endDate && (
                         <div>
                           <div className="flex items-center gap-2 text-sm font-medium mb-1">
                             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                            End Date
+                            {t`End Date`}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {new Date(
                               currentSubscription.endDate
-                            ).toLocaleDateString()}
+                            ).toLocaleDateString(language)}
                           </p>
                         </div>
                       )}
@@ -443,7 +445,7 @@ export default function Page() {
                       <div>
                         <div className="flex items-center gap-2 text-sm font-medium mb-1">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          Included Documents
+                          {t`Included Documents`}
                         </div>
                         {currentSubscription.billingConfig
                           .includedMonthlyDocuments === 0 ? (
@@ -455,7 +457,7 @@ export default function Page() {
                                 .includedMonthlyDocuments
                             }
                             <span className="text-sm font-normal text-muted-foreground ml-1">
-                              per month
+                              {t`per month`}
                             </span>
                           </p>
                         )}
@@ -465,15 +467,15 @@ export default function Page() {
                           <TrendingUp className="h-4 w-4 text-muted-foreground" />
                           {currentSubscription.billingConfig
                             .includedMonthlyDocuments === 0
-                            ? "Price per Document"
-                            : "Overage Rate"}
+                            ? t`Price per Document`
+                            : t`Overage Rate`}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           €
                           {currentSubscription.billingConfig.documentOveragePrice.toFixed(
                             2
                           )}{" "}
-                          per document
+                          {t`per document`}
                         </p>
                       </div>
                     </div>
@@ -484,27 +486,27 @@ export default function Page() {
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive">
                         <XCircle className="h-4 w-4" />
-                        Cancel Subscription
+                        {t`Cancel Subscription`}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                           <AlertTriangle className="h-5 w-5 text-destructive" />
-                          Cancel Subscription?
+                          {t`Cancel Subscription?`}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          You will lose access to your current plan features at the end of the current month.
+                          {t`You will lose access to your current plan features at the end of the current month.`}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+                        <AlertDialogCancel>{t`Keep Subscription`}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={handleCancelSubscription}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                           <CheckCircle className="h-4 w-4" />
-                          Yes, Cancel Subscription
+                          {t`Yes, Cancel Subscription`}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -518,11 +520,10 @@ export default function Page() {
                     <CreditCard className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <CardTitle className="text-xl">
-                    No Active Subscription
+                    {t`No Active Subscription`}
                   </CardTitle>
                   <CardDescription className="text-base">
-                    Choose a plan below to get started with Peppol document
-                    transmission
+                    {t`Choose a plan below to get started with Peppol document transmission`}
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -533,15 +534,15 @@ export default function Page() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-xl flex items-center gap-2">
-                        {futureSubscription.planName} Plan
+                        {t`${t(futureSubscription.planName)} Plan`}
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        Scheduled subscription change
+                        {t`Scheduled subscription change`}
                       </CardDescription>
                     </div>
                     <Badge variant="secondary">
                       <Calendar className="h-3 w-3 mr-1" />
-                      Scheduled
+                      {t`Scheduled`}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -552,12 +553,12 @@ export default function Page() {
                         <div className="flex items-center gap-2 text-sm font-medium mb-1">
                           <CreditCard className="h-4 w-4 text-muted-foreground" />
                           {futureSubscription.billingConfig.basePrice === 0
-                            ? "Pricing Model"
-                            : "Monthly Price"}
+                            ? t`Pricing Model`
+                            : t`Monthly Price`}
                         </div>
                         {futureSubscription.billingConfig.basePrice === 0 ? (
                           <p className="text-sm text-muted-foreground">
-                            Volume-based
+                            {t`Volume-based`}
                           </p>
                         ) : (
                           <p className="text-2xl font-bold text-primary">
@@ -571,12 +572,12 @@ export default function Page() {
                       <div>
                         <div className="flex items-center gap-2 text-sm font-medium mb-1">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          Start Date
+                          {t`Start Date`}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {new Date(
                             futureSubscription.startDate
-                          ).toLocaleDateString()}
+                          ).toLocaleDateString(language)}
                         </p>
                       </div>
                     </div>
@@ -584,7 +585,7 @@ export default function Page() {
                       <div>
                         <div className="flex items-center gap-2 text-sm font-medium mb-1">
                           <FileText className="h-4 w-4 text-muted-foreground" />
-                          Included Documents
+                          {t`Included Documents`}
                         </div>
                         {futureSubscription.billingConfig
                           .includedMonthlyDocuments === 0 ? (
@@ -596,7 +597,7 @@ export default function Page() {
                                 .includedMonthlyDocuments
                             }
                             <span className="text-sm font-normal text-muted-foreground ml-1">
-                              per month
+                              {t`per month`}
                             </span>
                           </p>
                         )}
@@ -606,15 +607,15 @@ export default function Page() {
                           <TrendingUp className="h-4 w-4 text-muted-foreground" />
                           {futureSubscription.billingConfig
                             .includedMonthlyDocuments === 0
-                            ? "Price per Document"
-                            : "Overage Rate"}
+                            ? t`Price per Document`
+                            : t`Overage Rate`}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           €
                           {futureSubscription.billingConfig.documentOveragePrice.toFixed(
                             2
                           )}{" "}
-                          per document
+                          {t`per document`}
                         </p>
                       </div>
                     </div>
@@ -626,10 +627,10 @@ export default function Page() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Receipt className="h-4 w-4" />
-                  Billing History
+                  {t`Billing History`}
                 </CardTitle>
                 <CardDescription>
-                  Overview of all invoices and billing events
+                  {t`Overview of all invoices and billing events`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -640,21 +641,21 @@ export default function Page() {
                 ) : billingEvents.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-sm text-muted-foreground">
-                      No billing events found
+                      {t`No billing events found`}
                     </p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Invoice #</TableHead>
-                        <TableHead>Billing Date</TableHead>
-                        <TableHead>Period</TableHead>
-                        <TableHead>Documents</TableHead>
-                        <TableHead>Amount (excl. VAT)</TableHead>
-                        <TableHead>VAT</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Payment Status</TableHead>
+                        <TableHead>{t`Invoice #`}</TableHead>
+                        <TableHead>{t`Billing Date`}</TableHead>
+                        <TableHead>{t`Period`}</TableHead>
+                        <TableHead>{t`Documents`}</TableHead>
+                        <TableHead>{t`Amount (excl. VAT)`}</TableHead>
+                        <TableHead>{t`VAT`}</TableHead>
+                        <TableHead>{t`Total`}</TableHead>
+                        <TableHead>{t`Payment Status`}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -665,7 +666,7 @@ export default function Page() {
                               <a
                                 href={`/api/v1/${activeTeam.id}/subscription/billing-events/${event.id}/download?generatePdf=when_no_pdf_attachment`}
                                 className="text-primary hover:underline flex items-center gap-1.5 font-medium"
-                                title="Download invoice (UBL/PDF)"
+                                title={t`Download invoice (UBL/PDF)`}
                                 download
                               >
                                 <Download className="h-3.5 w-3.5" />
@@ -678,22 +679,22 @@ export default function Page() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {event.billingDate.toLocaleDateString()}
+                            {event.billingDate.toLocaleDateString(language)}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {event.billingPeriodStart.toLocaleDateString("en-US", { timeZone: "UTC" })} -{" "}
-                            {event.billingPeriodEnd.toLocaleDateString("en-US", { timeZone: "UTC" })}
+                            {event.billingPeriodStart.toLocaleDateString(language, { timeZone: "UTC" })} -{" "}
+                            {event.billingPeriodEnd.toLocaleDateString(language, { timeZone: "UTC" })}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <span className="text-sm">
-                                {parseFloat(event.usedQty).toLocaleString()} total
+                                {t`${parseFloat(event.usedQty).toLocaleString(language)} total`}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                {parseFloat(event.usedQtyIncoming).toLocaleString()}{" "}
-                                incoming,{" "}
-                                {parseFloat(event.usedQtyOutgoing).toLocaleString()}{" "}
-                                outgoing
+                                {parseFloat(event.usedQtyIncoming).toLocaleString(language)}{" "}
+                                {t`incoming`},{" "}
+                                {parseFloat(event.usedQtyOutgoing).toLocaleString(language)}{" "}
+                                {t`outgoing`}
                               </span>
                             </div>
                           </TableCell>
@@ -735,8 +736,21 @@ export default function Page() {
                               {event.paymentStatus === "none" && (
                                 <AlertTriangle className="h-3 w-3 mr-1" />
                               )}
-                              {event.paymentStatus.charAt(0).toUpperCase() +
-                                event.paymentStatus.slice(1)}
+                              {event.paymentStatus === "paid"
+                                ? t`Paid`
+                                : event.paymentStatus === "pending"
+                                  ? t`Pending`
+                                  : event.paymentStatus === "open"
+                                    ? t`Open`
+                                    : event.paymentStatus === "failed"
+                                      ? t`Failed`
+                                      : event.paymentStatus === "expired"
+                                        ? t`Expired`
+                                        : event.paymentStatus === "canceled"
+                                          ? t`Canceled`
+                                          : event.paymentStatus === "none"
+                                            ? t`None`
+                                            : event.paymentStatus}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -755,10 +769,10 @@ export default function Page() {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <CreditCard className="h-4 w-4" />
-                      Billing Profile
+                      {t`Billing Profile`}
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      Your billing information for invoices
+                      {t`Your billing information`}
                     </CardDescription>
                   </div>
                   {billingProfile && (
@@ -772,12 +786,12 @@ export default function Page() {
                       {billingProfile.isMandateValidated ? (
                         <>
                           <Check className="h-3 w-3 mr-1" />
-                          Verified
+                          {t`Verified`}
                         </>
                       ) : (
                         <>
                           <AlertTriangle className="h-3 w-3 mr-1" />
-                          Pending
+                          {t`Pending`}
                         </>
                       )}
                     </Badge>
@@ -789,7 +803,7 @@ export default function Page() {
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-sm font-medium text-foreground mb-1">
-                        Company Name
+                        {t`Company Name`}
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {billingProfile.companyName}
@@ -797,32 +811,32 @@ export default function Page() {
                     </div>
                     <div>
                       <h3 className="text-sm font-medium text-foreground mb-1">
-                        Address
+                        {t`Address`}
                       </h3>
                       <p className="text-sm text-muted-foreground">
                         {billingProfile.address}
                         <br />
                         {billingProfile.postalCode} {billingProfile.city}
                         <br />
-                        {billingProfile.country}
+                        {regionDisplayName(regionNames, billingProfile.country, billingProfile.country)}
                       </p>
                     </div>
                     <div>
-                      <h3 className="text-sm font-medium text-foreground mb-1">Billing Email</h3>
+                      <h3 className="text-sm font-medium text-foreground mb-1">{t`Billing Email`}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {billingProfile.billingEmail || "Not set"}
+                        {billingProfile.billingEmail || t`Not set`}
                       </p>
                     </div>
                     <div>
-                      <h3 className="text-sm font-medium text-foreground mb-1">Billing Peppol Address</h3>
+                      <h3 className="text-sm font-medium text-foreground mb-1">{t`Billing Peppol Address`}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {billingProfile.billingPeppolAddress || "Not set"}
+                        {billingProfile.billingPeppolAddress || t`Not set`}
                       </p>
                     </div>
                     {billingProfile.vatNumber && (
                       <div>
                         <h3 className="text-sm font-medium text-foreground mb-1">
-                          VAT Number
+                          {t`VAT Number`}
                         </h3>
                         <p className="text-sm text-muted-foreground font-mono">
                           {billingProfile.vatNumber}
@@ -840,15 +854,15 @@ export default function Page() {
                       )}
                       <div className="flex-1">
                         <p className="text-sm font-medium">
-                          Payment Mandate{" "}
+                          {t`Payment Mandate`}{" "}
                           {billingProfile.isMandateValidated
-                            ? "Verified"
-                            : "Pending"}
+                            ? t`Verified`
+                            : t`Pending`}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {billingProfile.isMandateValidated
-                            ? "Your payment method is set up and ready for billing."
-                            : "Complete payment setup to activate your subscription."}
+                            ? t`Your payment method is set up and ready for billing.`
+                            : t`Complete payment setup to activate your subscription.`}
                         </p>
                       </div>
                       {activeTeam?.id && (
@@ -858,7 +872,7 @@ export default function Page() {
                           onClick={() => updatePaymentMethod(activeTeam.id)}
                         >
                           <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                          {billingProfile.isMandateValidated ? "Update Payment Method" : "Set Up Payment Method"}
+                          {billingProfile.isMandateValidated ? t`Update Payment Method` : t`Set Up Payment Method`}
                         </Button>
                       )}
                     </div>
@@ -869,10 +883,10 @@ export default function Page() {
                       <CreditCard className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      No billing profile set up yet.
+                      {t`No billing profile set up yet.`}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Set up your billing profile to manage subscriptions.
+                      {t`Set up your billing profile to manage subscriptions.`}
                     </p>
                   </div>
                 )}
@@ -895,19 +909,19 @@ export default function Page() {
                       {((billingProfile && billingProfile.isMandateValidated) ||
                         !billingProfile) && <Pencil className="h-4 w-4 mr-2" />}
                       {billingProfile
-                        ? "Edit Billing Profile"
-                        : "Set Up Billing Profile"}
+                        ? t`Edit Billing Profile`
+                        : t`Set Up Billing Profile`}
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>
                         {billingProfile
-                          ? "Edit Billing Profile"
-                          : "Set Up Billing Profile"}
+                          ? t`Edit Billing Profile`
+                          : t`Set Up Billing Profile`}
                       </DialogTitle>
                       <DialogDescription>
-                        Update your billing information for invoices
+                        {t`Update your billing information`}
                       </DialogDescription>
                     </DialogHeader>
                     <BillingProfileForm

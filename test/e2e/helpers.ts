@@ -8,9 +8,10 @@
  * spelled out here and in the test file.
  */
 
-export const HOST = (
-  process.env.ETE_UNIT_TEST_HOST ?? "http://localhost:3000"
-).replace(/\/+$/, "");
+import { getTestHost } from "../utils/dev-server";
+
+/** The same host the dev server helper starts and waits for. */
+export const HOST = getTestHost();
 export const COMPANY_ID = process.env.ETE_UNIT_TEST_COMPANY_ID ?? "";
 export const TOKEN = process.env.ETE_UNIT_TEST_JWT ?? "";
 
@@ -82,6 +83,19 @@ export function sendDocument(
 
 export function getDocument(documentId: string): Promise<ApiResponse> {
   return api(`/api/peppol/documents/${documentId}`);
+}
+
+/** The send route of a company other than the one the suite is configured with. */
+export function sendPathFor(companyId: string): string {
+  return `/api/peppol/${companyId}/send`;
+}
+
+export function createCompany(company: unknown): Promise<ApiResponse> {
+  return api("/api/peppol/companies", { method: "POST", body: company });
+}
+
+export function deleteCompany(companyId: string): Promise<ApiResponse> {
+  return api(`/api/peppol/companies/${companyId}`, { method: "DELETE" });
 }
 
 export function getCompany(): Promise<ApiResponse> {

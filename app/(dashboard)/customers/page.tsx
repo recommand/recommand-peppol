@@ -1,6 +1,6 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { DataTable } from "@core/components/data-table";
 import {
   type ColumnDef,
@@ -15,7 +15,6 @@ import { toast } from "@core/components/ui/sonner";
 import { useActiveTeam } from "@core/hooks/user";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { ColumnHeader } from "@core/components/data-table/column-header";
-import { format } from "date-fns";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import type { Customers } from "@peppol/api/customers";
 import { DataTablePagination } from "@core/components/data-table/pagination";
@@ -42,6 +41,8 @@ import {
   SelectValue,
 } from "@core/components/ui/select";
 import { COUNTRIES } from "@peppol/utils/countries";
+import { useTranslation } from "@core/hooks/use-translation";
+import { createRegionNames, regionDisplayName, sortByRegionDisplayName } from "@core/lib/regions";
 
 const client = rc<Customers>("v1");
 
@@ -93,6 +94,15 @@ const defaultCustomerFormData: CustomerFormData = {
 };
 
 export default function Page() {
+  const { t, language } = useTranslation();
+  const regionNames = useMemo(
+    () => createRegionNames(language),
+    [language]
+  );
+  const countryOptions = useMemo(
+    () => sortByRegionDisplayName(COUNTRIES, regionNames),
+    [regionNames]
+  );
   const {
     page,
     setPage,
@@ -140,7 +150,7 @@ export default function Page() {
       const json = await response.json();
 
       if (!json.success) {
-        toast.error("Failed to load customers");
+        toast.error(t`Failed to load customers`);
         setCustomers([]);
         setTotal(0);
       } else {
@@ -158,7 +168,7 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Error fetching customers:", error);
-      toast.error("Failed to load customers");
+      toast.error(t`Failed to load customers`);
       setCustomers([]);
       setTotal(0);
     } finally {
@@ -221,8 +231,8 @@ export default function Page() {
 
       toast.success(
         dialogMode === "create"
-          ? "Customer created successfully"
-          : "Customer updated successfully"
+          ? t`Customer created successfully`
+          : t`Customer updated successfully`
       );
       setIsDialogOpen(false);
       setFormData(defaultCustomerFormData);
@@ -232,14 +242,14 @@ export default function Page() {
       fetchCustomers();
     } catch (error) {
       console.error("Error upserting customer:", error);
-      toast.error("Failed to save customer");
+      toast.error(t`Failed to save customer`);
     }
   };
 
   const handleDeleteCustomer = async (customer: Customer) => {
     if (!activeTeam?.id) return;
     const confirmed = window.confirm(
-      `Are you sure you want to delete customer "${customer.name}"?`
+      t`Are you sure you want to delete customer "${customer.name}"?`
     );
     if (!confirmed) return;
 
@@ -253,19 +263,20 @@ export default function Page() {
       if (!json.success) {
         throw new Error(stringifyActionFailure(json.errors));
       }
-      toast.success("Customer deleted successfully");
+      toast.success(t`Customer deleted successfully`);
       setIsLoading(true);
       fetchCustomers();
     } catch (error) {
       console.error("Error deleting customer:", error);
-      toast.error("Failed to delete customer");
+      toast.error(t`Failed to delete customer`);
     }
   };
 
   const columns: ColumnDef<Customer>[] = [
     {
       accessorKey: "name",
-      header: ({ column }) => <ColumnHeader column={column} title="Name" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Name`} />,
+      meta: { label: t`Name` },
       cell: ({ row }) => {
         const name = row.getValue("name") as string;
         return <span>{name}</span>;
@@ -275,8 +286,9 @@ export default function Page() {
     {
       accessorKey: "vatNumber",
       header: ({ column }) => (
-        <ColumnHeader column={column} title="VAT Number" />
+        <ColumnHeader column={column} title={t`VAT Number`} />
       ),
+      meta: { label: t`VAT Number` },
       cell: ({ row }) => {
         const vatNumber = row.getValue("vatNumber") as string | null;
         return vatNumber ? (
@@ -290,8 +302,9 @@ export default function Page() {
     {
       accessorKey: "peppolAddresses",
       header: ({ column }) => (
-        <ColumnHeader column={column} title="Peppol Addresses" />
+        <ColumnHeader column={column} title={t`Peppol Addresses`} />
       ),
+      meta: { label: t`Peppol Addresses` },
       cell: ({ row }) => {
         const peppolAddresses = row.getValue("peppolAddresses") as string[];
         return (
@@ -312,7 +325,8 @@ export default function Page() {
     },
     {
       accessorKey: "city",
-      header: ({ column }) => <ColumnHeader column={column} title="City" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`City`} />,
+      meta: { label: t`City` },
       cell: ({ row }) => {
         const city = row.getValue("city") as string;
         return city ? (
@@ -325,11 +339,12 @@ export default function Page() {
     },
     {
       accessorKey: "country",
-      header: ({ column }) => <ColumnHeader column={column} title="Country" />,
+      header: ({ column }) => <ColumnHeader column={column} title={t`Country`} />,
+      meta: { label: t`Country` },
       cell: ({ row }) => {
         const country = row.getValue("country") as string;
         return country ? (
-          <span>{country}</span>
+          <span>{regionDisplayName(regionNames, country, country)}</span>
         ) : (
           <span className="text-muted-foreground">-</span>
         );
@@ -339,11 +354,15 @@ export default function Page() {
     {
       accessorKey: "createdAt",
       header: ({ column }) => (
-        <ColumnHeader column={column} title="Created At" />
+        <ColumnHeader column={column} title={t`Created At`} />
       ),
+      meta: { label: t`Created At` },
       cell: ({ row }) => {
         const date = row.getValue("createdAt") as string;
-        return format(new Date(date), "PPpp");
+        return new Date(date).toLocaleString(language, {
+          dateStyle: "medium",
+          timeStyle: "medium",
+        });
       },
       enableGlobalFilter: true,
     },
@@ -377,7 +396,7 @@ export default function Page() {
                 });
                 setIsDialogOpen(true);
               }}
-              title="Edit"
+              title={t`Edit`}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -385,7 +404,7 @@ export default function Page() {
               variant="ghost-destructive"
               size="icon"
               onClick={async () => await handleDeleteCustomer(customer)}
-              title="Delete"
+              title={t`Delete`}
             >
               <Trash2 className="h-4 w-4" />
             </AsyncButton>
@@ -421,8 +440,8 @@ export default function Page() {
 
   return (
     <PageTemplate
-      breadcrumbs={[{ label: "Peppol" }, { label: "Customers" }]}
-      description="View and manage your customers (supporting data)."
+      breadcrumbs={[{ label: "Peppol" }, { label: t`Customers` }]}
+      description={t`View and manage your customers (supporting data).`}
       buttons={[
         <Dialog
           key="upsert-customer-dialog"
@@ -437,26 +456,26 @@ export default function Page() {
                 setEditingCustomer(null);
               }}
             >
-              Create Customer
+              {t`Create Customer`}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
               <DialogTitle>
                 {dialogMode === "create"
-                  ? "Create New Customer"
-                  : "Edit Customer"}
+                  ? t`Create New Customer`
+                  : t`Edit Customer`}
               </DialogTitle>
               <DialogDescription>
                 {dialogMode === "create"
-                  ? "Create a new customer with the details below."
-                  : "Update the customer details below."}
+                  ? t`Create a new customer with the details below.`
+                  : t`Update the customer details below.`}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
+                  <Label htmlFor="name">{t`Name *`}</Label>
                   <Input
                     id="name"
                     value={formData.name}
@@ -467,7 +486,7 @@ export default function Page() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="externalId">External ID</Label>
+                  <Label htmlFor="externalId">{t`External ID`}</Label>
                   <Input
                     id="externalId"
                     value={formData.externalId || ""}
@@ -477,14 +496,14 @@ export default function Page() {
                         externalId: e.target.value || null,
                       })
                     }
-                    placeholder="Optional external identifier"
+                    placeholder={t`Optional external identifier`}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="vatNumber">VAT Number</Label>
+                  <Label htmlFor="vatNumber">{t`VAT Number`}</Label>
                   <Input
                     id="vatNumber"
                     value={formData.vatNumber || ""}
@@ -498,7 +517,7 @@ export default function Page() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="enterpriseNumber">Enterprise Number</Label>
+                  <Label htmlFor="enterpriseNumber">{t`Enterprise Number`}</Label>
                   <Input
                     id="enterpriseNumber"
                     value={formData.enterpriseNumber || ""}
@@ -515,7 +534,7 @@ export default function Page() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t`Email`}</Label>
                   <Input
                     id="email"
                     value={formData.email || ""}
@@ -529,7 +548,7 @@ export default function Page() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="phone">{t`Phone`}</Label>
                   <Input
                     id="phone"
                     value={formData.phone || ""}
@@ -545,33 +564,33 @@ export default function Page() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Address *</Label>
+                <Label htmlFor="address">{t`Address *`}</Label>
                 <Input
                   id="address"
                   value={formData.address}
                   onChange={(e) =>
                     setFormData({ ...formData, address: e.target.value })
                   }
-                  placeholder="Main Street 123"
+                  placeholder={t`Main Street 123`}
                   required
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
+                  <Label htmlFor="city">{t`City *`}</Label>
                   <Input
                     id="city"
                     value={formData.city}
                     onChange={(e) =>
                       setFormData({ ...formData, city: e.target.value })
                     }
-                    placeholder="Brussels"
+                    placeholder={t`Brussels`}
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="postalCode">Postal Code *</Label>
+                  <Label htmlFor="postalCode">{t`Postal Code *`}</Label>
                   <Input
                     id="postalCode"
                     value={formData.postalCode}
@@ -583,7 +602,7 @@ export default function Page() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="country">Country *</Label>
+                  <Label htmlFor="country">{t`Country *`}</Label>
                   <Select
                     value={formData.country}
                     onValueChange={(value) =>
@@ -591,12 +610,12 @@ export default function Page() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select country" />
+                      <SelectValue placeholder={t`Select country`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {COUNTRIES.map((country) => (
+                      {countryOptions.map((country) => (
                         <SelectItem key={country.code} value={country.code}>
-                          {country.flag} {country.name}
+                          {country.flag} {regionDisplayName(regionNames, country.code, country.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -606,19 +625,19 @@ export default function Page() {
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Peppol IDs</Label>
+                  <Label>{t`Peppol IDs`}</Label>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={addPeppolAddress}
                   >
-                    Add
+                    {t`Add`}
                   </Button>
                 </div>
                 {formData.peppolAddresses.length === 0 ? (
                   <div className="text-sm text-muted-foreground">
-                    No Peppol IDs added yet.
+                    {t`No Peppol IDs added yet.`}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -636,7 +655,7 @@ export default function Page() {
                           variant="outline"
                           onClick={() => removePeppolAddress(idx)}
                         >
-                          Remove
+                          {t`Remove`}
                         </Button>
                       </div>
                     ))}
@@ -650,10 +669,10 @@ export default function Page() {
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                 >
-                  Cancel
+                  {t`Cancel`}
                 </Button>
                 <AsyncButton onClick={handleUpsertCustomer}>
-                  {dialogMode === "create" ? "Create Customer" : "Save Changes"}
+                  {dialogMode === "create" ? t`Create Customer` : t`Save Changes`}
                 </AsyncButton>
               </div>
             </div>
@@ -670,7 +689,7 @@ export default function Page() {
           <>
             <DataTableToolbar
               table={table}
-              searchPlaceholder="Search customers..."
+              searchPlaceholder={t`Search customers...`}
               enableGlobalSearch
               filterColumns={filterConfigs}
             />

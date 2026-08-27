@@ -43,27 +43,3 @@ export function extractLastUsedIban(parsed: unknown): string | null {
   }
   return null;
 }
-
-export function extractDocumentNumberForType(
-  parsed: unknown,
-  type:
-    | "invoice"
-    | "creditNote"
-    | "selfBillingInvoice"
-    | "selfBillingCreditNote"
-    | "messageLevelResponse"
-    | "unknown"
-): string | null {
-  const anyParsed = parsed as any;
-  if (!anyParsed || typeof anyParsed !== "object") return null;
-
-  if (type === "invoice" || type === "selfBillingInvoice") {
-    const n = anyParsed?.invoiceNumber;
-    return typeof n === "string" && n.trim() ? n.trim() : null;
-  }
-  if (type === "creditNote" || type === "selfBillingCreditNote") {
-    const n = anyParsed?.creditNoteNumber;
-    return typeof n === "string" && n.trim() ? n.trim() : null;
-  }
-  return null;
-}

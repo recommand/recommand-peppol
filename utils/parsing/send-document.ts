@@ -1,10 +1,11 @@
 import { z } from "zod";
 import "zod-openapi/extend";
-import { sendInvoiceSchema } from "./invoice/schemas";
-import { sendCreditNoteSchema } from "./creditnote/schemas";
-import { sendSelfBillingInvoiceSchema } from "./self-billing-invoice/schemas";
-import { sendSelfBillingCreditNoteSchema } from "./self-billing-creditnote/schemas";
-import { sendMessageLevelResponseSchema } from "./message-level-response/schemas";
+import { creditNoteDocumentType } from "@peppol/utils/type-repository/document-types/creditNote";
+import { frenchInvoicingCdarDocumentType } from "@peppol/utils/type-repository/document-types/frenchInvoicingCdar";
+import { invoiceDocumentType } from "@peppol/utils/type-repository/document-types/invoice";
+import { messageLevelResponseDocumentType } from "@peppol/utils/type-repository/document-types/messageLevelResponse";
+import { selfBillingCreditNoteDocumentType } from "@peppol/utils/type-repository/document-types/selfBillingCreditNote";
+import { selfBillingInvoiceDocumentType } from "@peppol/utils/type-repository/document-types/selfBillingInvoice";
 
 export const DocumentType = {
   INVOICE: "invoice",
@@ -12,6 +13,7 @@ export const DocumentType = {
   SELF_BILLING_INVOICE: "selfBillingInvoice",
   SELF_BILLING_CREDIT_NOTE: "selfBillingCreditNote",
   MESSAGE_LEVEL_RESPONSE: "messageLevelResponse",
+  FRENCH_INVOICING_CDAR: "frenchInvoicingCdar",
   XML: "xml",
 } as const;
 
@@ -22,6 +24,7 @@ export const documentTypeSchema = z
     DocumentType.SELF_BILLING_INVOICE,
     DocumentType.SELF_BILLING_CREDIT_NOTE,
     DocumentType.MESSAGE_LEVEL_RESPONSE,
+    DocumentType.FRENCH_INVOICING_CDAR,
     DocumentType.XML,
   ])
   .openapi({
@@ -31,7 +34,81 @@ export const documentTypeSchema = z
 
 export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
 
-export const sendDocumentSchema = z.object({
+const sendXmlSchema = z.string().openapi({
+  ref: "XML",
+  title: "XML",
+  description: "XML document as a string",
+});
+
+/**
+ * What each document type the send API accepts is called and how its payload is
+ * parsed, taken from the document type registry so a request is validated
+ * against the very schema the sending pipeline will preprocess it with. Raw XML
+ * has no registry entry: it is passed through rather than parsed as a document.
+ *
+ * `translatableTitle` doubles as the OpenAPI title of the request variant, which
+ * is what API reference tools label a `oneOf` entry by; without one they fall
+ * back to the bare type ("object").
+ *
+ * Entries are imported one by one on purpose. The registry index types them as
+ * `AnyDocumentType`, which widens every schema to `z.ZodSchema` and would silently
+ * turn the parsed document into `any`.
+ */
+const documentRequestTypes = {
+  [DocumentType.INVOICE]: invoiceDocumentType,
+  [DocumentType.CREDIT_NOTE]: creditNoteDocumentType,
+  [DocumentType.SELF_BILLING_INVOICE]: selfBillingInvoiceDocumentType,
+  [DocumentType.SELF_BILLING_CREDIT_NOTE]: selfBillingCreditNoteDocumentType,
+  [DocumentType.MESSAGE_LEVEL_RESPONSE]: messageLevelResponseDocumentType,
+  [DocumentType.FRENCH_INVOICING_CDAR]: frenchInvoicingCdarDocumentType,
+  [DocumentType.XML]: { sendSchema: sendXmlSchema, translatableTitle: "XML" },
+} as const satisfies Record<
+  DocumentType,
+  { sendSchema: z.ZodTypeAny; translatableTitle: string }
+>;
+
+type DocumentRequestVariant<
+  Base extends z.ZodRawShape,
+  T extends DocumentType,
+> = T extends DocumentType
+  ? z.ZodObject<
+      Base & {
+        documentType: z.ZodLiteral<T>;
+        document: (typeof documentRequestTypes)[T]["sendSchema"];
+      }
+    >
+  : never;
+
+/**
+ * Pairs `base` with one variant per document type, discriminated on
+ * `documentType`. Zod then validates the document against the single schema the
+ * caller asked for, and the OpenAPI spec documents which body belongs to which
+ * document type.
+ */
+export function documentRequestSchema<
+  Base extends z.ZodRawShape,
+  Types extends readonly DocumentType[],
+>(base: Base, types: Types) {
+  const variants = types.map((type) =>
+    z
+      .object({
+        ...base,
+        documentType: z.literal(type).openapi({
+          description: "The type of document.",
+          example: type,
+        }),
+        document: documentRequestTypes[type].sendSchema,
+      })
+      .openapi({ title: documentRequestTypes[type].translatableTitle }),
+  ) as unknown as [
+    DocumentRequestVariant<Base, Types[number]>,
+    ...DocumentRequestVariant<Base, Types[number]>[],
+  ];
+
+  return z.discriminatedUnion("documentType", variants);
+}
+
+export const sendDocumentBaseShape = {
   recipient: z.string().nullable().openapi({
     description:
       "The Peppol address of the recipient. If null, the document will be sent via email only (requires `email.to`).",
@@ -88,32 +165,24 @@ export const sendDocumentSchema = z.object({
     .openapi({
       ref: "PDFGeneration",
       description:
-        "Optionally generate a PDF of the document and include it as an embedded attachment (also included in email attachments when email sending is enabled). Not supported for message level responses or raw XML documents.",
+        "Optionally generate a PDF of the document and include it as an embedded attachment (also included in email attachments when email sending is enabled). Not supported for message level responses, French Invoicing CDAR messages, or raw XML documents.",
     }),
-  documentType: documentTypeSchema,
-  document: z.union([
-    sendInvoiceSchema,
-    sendCreditNoteSchema,
-    sendSelfBillingInvoiceSchema,
-    sendSelfBillingCreditNoteSchema,
-    sendMessageLevelResponseSchema,
-    z.string().openapi({
-      ref: "XML",
-      title: "XML",
-      description: "XML document as a string",
-    }),
-  ]),
   doctypeId: z.string().optional().openapi({
     description:
-      'The document type identifier. Not required, only used when documentType is "xml". For supported document types, the doctypeId can be detected automatically from your XML document, if that\'s not the case you can provide it manually.',
+      "The document type identifier. For JSON documents it is selected automatically: the recipient is looked up and the document is sent as the first format, in our order of preference, the recipient is registered to receive it in, falling back to the standard Peppol BIS 3 UBL document type for the selected documentType. For raw XML documents it can be detected automatically where supported.",
     example:
       "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
   }),
   processId: z.string().optional().openapi({
     description:
-      'The process identifier. Not required, only used when documentType is "xml". For supported document types, the processId can be detected automatically from your XML document, if that\'s not the case you can provide it manually.',
+      "Optional process identifier override. It is detected automatically for supported JSON and XML document types. For JSON documents the process the recipient is registered for is preferred, as far as the document itself leaves the choice open.",
     example: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
   }),
-});
+} as const;
+
+export const sendDocumentSchema = documentRequestSchema(
+  sendDocumentBaseShape,
+  documentTypeSchema.options,
+);
 
 export type SendDocument = z.infer<typeof sendDocumentSchema>;

@@ -3,6 +3,9 @@ import { renderDocumentPdf } from "@peppol/utils/document-renderer";
 import type { PublicTransmittedDocumentWithLabels } from "@peppol/data/transmitted-documents";
 import {
   hydrateDocumentParsedAttachments,
+  originalPayloadFilename,
+  originalPayloadFilenameWithBase,
+  resolveDocumentOriginalPayload,
   resolveDocumentXml,
   resolveDocumentXmlAndAttachments,
 } from "@peppol/data/offload/storage";
@@ -38,14 +41,32 @@ export async function buildDocumentsArchive(
       return;
     }
 
-    const { xml, attachments } = await resolveDocumentXmlAndAttachments(document);
+    const [{ xml, attachments }, originalPayload] = await Promise.all([
+      resolveDocumentXmlAndAttachments(document),
+      resolveDocumentOriginalPayload(document),
+    ]);
 
     const parsed = hydrateDocumentParsedAttachments(document.parsed, attachments);
-    const { xml: _xml, ...documentMetadata } = { ...document, parsed };
+    const {
+      xml: _xml,
+      xmlLocation,
+      attachmentsLocation,
+      originalPayloadLocation,
+      originalPayloadContainerFormat,
+      s3KeyPrefix,
+      ...documentMetadata
+    } = { ...document, parsed };
     folder.file("document.json", JSON.stringify(documentMetadata, null, 2));
 
     if (xml) {
       folder.file("document.xml", xml);
+    }
+
+    if (originalPayload) {
+      folder.file(
+        originalPayloadFilename(document.originalPayloadContainerFormat),
+        originalPayload
+      );
     }
 
     let hasPdfAttachment = false;

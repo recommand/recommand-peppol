@@ -16,7 +16,6 @@ import { useActiveTeam } from "@core/hooks/user";
 import { Trash2, Loader2, Copy, ArrowDown, ArrowUp, FolderArchive, Tag, CheckCheck, Mail, MailOpen, Download } from "lucide-react";
 import { useIsPlayground } from "@peppol/lib/client/playgrounds";
 import { ColumnHeader } from "@core/components/data-table/column-header";
-import { format } from "date-fns";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import type { TransmittedDocumentWithoutBody } from "@peppol/data/transmitted-documents";
 import type { TransmittedDocuments } from "@peppol/api/documents";
@@ -41,18 +40,25 @@ import type { Label } from "@peppol/types/label";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { ExportDocumentsDialog } from "@peppol/components/export-documents-dialog";
-import type { SupportedDocumentType } from "@peppol/utils/document-types";
+import {
+  isReportingDocumentTypeKey,
+  type ParsedOrUnknownDocumentType,
+} from "@peppol/utils/type-repository/document-types/keys";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
 import type { SelfBillingCreditNote } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
 import { Checkbox } from "@core/components/ui/checkbox";
+import { useTranslation } from "@core/hooks/use-translation";
+import { getDocumentTypeLabel } from "@peppol/lib/client/document-type-labels";
+import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/document-types/keys";
 
 const client = rc<TransmittedDocuments>("peppol");
 const companiesClient = rc<Companies>("peppol");
 const labelsClient = rc<Labels>("v1");
 
 export default function Page() {
+  const { t, language } = useTranslation();
   const {
     page,
     limit,
@@ -109,7 +115,7 @@ export default function Page() {
       const json = await response.json();
 
       if (!json.success || !Array.isArray(json.companies)) {
-        toast.error("Failed to load companies");
+        toast.error(t`Failed to load companies`);
         setCompanies([]);
       } else {
         setCompanies(
@@ -120,7 +126,7 @@ export default function Page() {
         );
       }
     } catch (error) {
-      toast.error("Failed to load companies");
+      toast.error(t`Failed to load companies`);
       setCompanies([]);
     }
   }, [activeTeam?.id]);
@@ -157,7 +163,7 @@ export default function Page() {
           labelId: filteredLabelIds.length > 0 ? filteredLabelIds : undefined,
           direction: ((filteredDirectionValues.length === 0 || filteredDirectionValues.length > 1) ? undefined : filteredDirectionValues[0]) as "incoming" | "outgoing", // When no or all options are selected, don't filter on direction
           search: globalFilter || undefined, // Add the global search term to the query
-          type: ((filteredTypeValues.length === 0 || filteredTypeValues.length > 1) ? undefined : filteredTypeValues[0]) as SupportedDocumentType, // When no or all options are selected, don't filter on type
+          type: ((filteredTypeValues.length === 0 || filteredTypeValues.length > 1) ? undefined : filteredTypeValues[0]) as ParsedOrUnknownDocumentType, // When no or all options are selected, don't filter on type
           isUnread: ((filteredIsUnreadValues.length === 0 || filteredIsUnreadValues.length > 1) ? undefined : filteredIsUnreadValues[0]) as "true" | "false" | undefined,
           excludeAttachments: true,
         },
@@ -166,7 +172,7 @@ export default function Page() {
 
       if (!json.success) {
         console.error("Invalid API response format:", json);
-        toast.error("Failed to load documents");
+        toast.error(t`Failed to load documents`);
         setDocuments([]);
       } else {
         setDocuments(
@@ -182,7 +188,7 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Error fetching documents:", error);
-      toast.error("Failed to load documents");
+      toast.error(t`Failed to load documents`);
       setDocuments([]);
     } finally {
       setIsLoading(false);
@@ -202,14 +208,14 @@ export default function Page() {
       const json = await response.json();
 
       if (!json.success || !Array.isArray(json.labels)) {
-        toast.error("Failed to load labels");
+        toast.error(t`Failed to load labels`);
         setLabels([]);
       } else {
         setLabels(json.labels);
       }
     } catch (error) {
       console.error("Error fetching labels:", error);
-      toast.error("Failed to load labels");
+      toast.error(t`Failed to load labels`);
       setLabels([]);
     }
   }, [activeTeam?.id]);
@@ -300,7 +306,7 @@ export default function Page() {
   const downloadResponseBlob = useCallback(async (response: Response, fallbackFilename: string) => {
     if (!response.ok) {
       const json = await response.json() as { errors?: { [key: string]: string[] | undefined } };
-      throw new Error(json.errors ? stringifyActionFailure(json.errors) : "Request failed");
+      throw new Error(json.errors ? stringifyActionFailure(json.errors) : t`Request failed`);
     }
 
     const blob = await response.blob();
@@ -317,7 +323,7 @@ export default function Page() {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-  }, []);
+  }, [t]);
 
   const handleDeleteDocument = useCallback(async (id: string) => {
     if (!activeTeam?.id) return;
@@ -335,12 +341,12 @@ export default function Page() {
       if (!json.success) {
         throw new Error(stringifyActionFailure(json.errors));
       }
-      toast.success("Document deleted successfully");
+      toast.success(t`Document deleted successfully`);
       fetchDocuments();
     } catch (error) {
-      toast.error("Failed to delete document");
+      toast.error(t`Failed to delete document`);
     }
-  }, [activeTeam?.id, fetchDocuments]);
+  }, [activeTeam?.id, fetchDocuments, t]);
 
   const handleDeleteAllDocuments = useCallback(async () => {
     if (!activeTeam?.id || !isPlayground) return;
@@ -354,14 +360,14 @@ export default function Page() {
       if (!json.success) {
         throw new Error(stringifyActionFailure(json.errors));
       }
-      toast.success("All documents deleted successfully");
+      toast.success(t`All documents deleted successfully`);
       fetchDocuments();
     } catch (error) {
-      toast.error("Failed to delete all documents");
+      toast.error(t`Failed to delete all documents`);
     } finally {
       setIsDeletingAll(false);
     }
-  }, [activeTeam?.id, isPlayground, fetchDocuments]);
+  }, [activeTeam?.id, isPlayground, fetchDocuments, t]);
 
   const handleToggleMarkAsRead = useCallback(async (id: string, currentReadAt: Date | null) => {
     if (!activeTeam?.id) return;
@@ -394,7 +400,7 @@ export default function Page() {
       if (!json.success) {
         throw new Error(stringifyActionFailure(json.errors));
       }
-      toast.success(newReadStatus ? "Document marked as read" : "Document marked as unread");
+      toast.success(newReadStatus ? t`Document marked as read` : t`Document marked as unread`);
       fetchDocuments();
     } catch (error) {
       setDocuments((prev) =>
@@ -407,9 +413,9 @@ export default function Page() {
             : doc
         )
       );
-      toast.error("Failed to update document read status");
+      toast.error(t`Failed to update document read status`);
     }
-  }, [activeTeam?.id, fetchDocuments]);
+  }, [activeTeam?.id, fetchDocuments, t]);
 
   const handleDownloadDocument = useCallback(async (id: string) => {
     if (!activeTeam?.id) return;
@@ -426,11 +432,11 @@ export default function Page() {
       });
       await downloadResponseBlob(response, `${id}.zip`);
 
-      toast.success("Document downloaded successfully");
+      toast.success(t`Document downloaded successfully`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to download document");
+      toast.error(error instanceof Error ? error.message : t`Failed to download document`);
     }
-  }, [activeTeam?.id, downloadResponseBlob]);
+  }, [activeTeam?.id, downloadResponseBlob, t]);
 
   const handleAssignLabel = useCallback(async (documentId: string, labelId: string) => {
     if (!activeTeam?.id) return;
@@ -477,9 +483,9 @@ export default function Page() {
             : doc
         )
       );
-      toast.error("Failed to assign label");
+      toast.error(t`Failed to assign label`);
     }
-  }, [activeTeam?.id, documents, labels]);
+  }, [activeTeam?.id, documents, labels, t]);
 
   const handleUnassignLabel = useCallback(async (documentId: string, labelId: string) => {
     if (!activeTeam?.id) return;
@@ -527,9 +533,9 @@ export default function Page() {
           )
         );
       }
-      toast.error("Failed to unassign label");
+      toast.error(t`Failed to unassign label`);
     }
-  }, [activeTeam?.id, documents, labels]);
+  }, [activeTeam?.id, documents, labels, t]);
 
   const handleBulkMarkAsRead = useCallback(async () => {
     if (!activeTeam?.id || selectedDocumentIds.length === 0) return;
@@ -566,7 +572,7 @@ export default function Page() {
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success(`${selectedDocumentIds.length} documents marked as read`);
+      toast.success(t`${selectedDocumentIds.length} documents marked as read`);
       fetchDocuments();
     } catch (error) {
       setDocuments((prev) =>
@@ -579,11 +585,11 @@ export default function Page() {
             : document
         )
       );
-      toast.error(error instanceof Error ? error.message : "Failed to mark documents as read");
+      toast.error(error instanceof Error ? error.message : t`Failed to mark documents as read`);
     } finally {
       setIsBulkMarkingAsRead(false);
     }
-  }, [activeTeam?.id, documents, selectedDocumentIds, fetchDocuments]);
+  }, [activeTeam?.id, documents, selectedDocumentIds, fetchDocuments, t]);
 
   const handleBulkAssignLabel = useCallback(async (labelId: string) => {
     if (!activeTeam?.id || selectedDocumentIds.length === 0) return;
@@ -591,7 +597,7 @@ export default function Page() {
     const label = labels.find((entry) => entry.id === labelId);
 
     if (!label) {
-      toast.error("Label not found");
+      toast.error(t`Label not found`);
       return;
     }
 
@@ -637,7 +643,7 @@ export default function Page() {
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success(`Label added to ${selectedDocumentIds.length} documents`);
+      toast.success(t`Label added to ${selectedDocumentIds.length} documents`);
       fetchDocuments();
     } catch (error) {
       setDocuments((prev) =>
@@ -650,11 +656,11 @@ export default function Page() {
             : document
         )
       );
-      toast.error(error instanceof Error ? error.message : "Failed to assign label");
+      toast.error(error instanceof Error ? error.message : t`Failed to assign label`);
     } finally {
       setBulkAssigningLabelId(null);
     }
-  }, [activeTeam?.id, documents, labels, selectedDocumentIds, fetchDocuments]);
+  }, [activeTeam?.id, documents, labels, selectedDocumentIds, fetchDocuments, t]);
 
   const handleBulkExport = useCallback(async (outputType: "flat" | "nested") => {
     if (!activeTeam?.id || selectedDocumentIds.length === 0) return;
@@ -672,13 +678,13 @@ export default function Page() {
       });
 
       await downloadResponseBlob(response, "documents-selection.zip");
-      toast.success("Documents exported successfully");
+      toast.success(t`Documents exported successfully`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to export documents");
+      toast.error(error instanceof Error ? error.message : t`Failed to export documents`);
     } finally {
       setIsBulkExporting(false);
     }
-  }, [activeTeam?.id, selectedDocumentIds, downloadResponseBlob]);
+  }, [activeTeam?.id, selectedDocumentIds, downloadResponseBlob, t]);
 
   const handleBulkDelete = useCallback(async () => {
     if (!activeTeam?.id || selectedDocumentIds.length === 0) return;
@@ -698,15 +704,15 @@ export default function Page() {
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success(`${selectedDocumentIds.length} documents deleted`);
+      toast.success(t`${selectedDocumentIds.length} documents deleted`);
       fetchDocuments();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete documents");
+      toast.error(error instanceof Error ? error.message : t`Failed to delete documents`);
       throw error;
     } finally {
       setIsBulkDeleting(false);
     }
-  }, [activeTeam?.id, selectedDocumentIds, fetchDocuments]);
+  }, [activeTeam?.id, selectedDocumentIds, fetchDocuments, t]);
 
   const columns = useMemo<ColumnDef<TransmittedDocumentWithoutBody>[]>(() => [
     {
@@ -718,7 +724,7 @@ export default function Page() {
             (table.getIsSomePageRowsSelected() && "indeterminate")
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all rows"
+          aria-label={t`Select all rows`}
         />
       ),
       cell: ({ row, table }) => (
@@ -732,7 +738,7 @@ export default function Page() {
             table.getRowModel().rows.map((visibleRow) => visibleRow.id),
             !!value
           )}
-          aria-label="Select row"
+          aria-label={t`Select row`}
         />
       ),
       enableSorting: false,
@@ -742,8 +748,8 @@ export default function Page() {
     },
     {
       accessorKey: "id",
-      header: ({ column }) => <ColumnHeader column={column} title="ID" />,
-      meta: { label: "ID" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`ID`} />,
+      meta: { label: t`ID` },
       cell: ({ row }) => {
         const id = row.getValue("id") as string;
         return (
@@ -759,7 +765,7 @@ export default function Page() {
               size="icon"
               onClick={() => {
                 navigator.clipboard.writeText(id);
-                toast.success("Document ID copied to clipboard");
+                toast.success(t`Document ID copied to clipboard`);
               }}
             >
               <Copy className="h-4 w-4" />
@@ -771,8 +777,8 @@ export default function Page() {
     },
     {
       accessorKey: "companyId",
-      header: ({ column }) => <ColumnHeader column={column} title="Company" />,
-      meta: { label: "Company" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Company`} />,
+      meta: { label: t`Company` },
       cell: ({ row }) => {
         const companyId = row.original.companyId;
         return companiesById.get(companyId) ?? companyId;
@@ -782,8 +788,8 @@ export default function Page() {
     },
     {
       accessorKey: "type",
-      header: ({ column }) => <ColumnHeader column={column} title="Type" />,
-      meta: { label: "Type" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Type`} />,
+      meta: { label: t`Type` },
       cell: ({ row }) => {
         const document = row.original;
         const type = row.getValue("type") as string;
@@ -800,8 +806,8 @@ export default function Page() {
         if (!parsed) return null;
         return (parsed as any)?.invoiceNumber ?? (parsed as any)?.creditNoteNumber ?? null;
       },
-      header: ({ column }) => <ColumnHeader column={column} title="Document Number" />,
-      meta: { label: "Document Number" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Document Number`} />,
+      meta: { label: t`Document Number` },
       cell: ({ row }) => {
         const parsed = row.original.parsed;
         const documentNumber = parsed ? ((parsed as any)?.invoiceNumber ?? (parsed as any)?.creditNoteNumber ?? null) : null;
@@ -820,8 +826,8 @@ export default function Page() {
     },
     {
       accessorKey: "senderId",
-      header: ({ column }) => <ColumnHeader column={column} title="Sender" />,
-      meta: { label: "Sender" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Sender`} />,
+      meta: { label: t`Sender` },
       cell: ({ row }) => {
         const document = row.original;
         const senderId = row.getValue("senderId") as string;
@@ -853,8 +859,8 @@ export default function Page() {
     },
     {
       accessorKey: "receiverId",
-      header: ({ column }) => <ColumnHeader column={column} title="Receiver" />,
-      meta: { label: "Receiver" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Receiver`} />,
+      meta: { label: t`Receiver` },
       cell: ({ row }) => {
         const document = row.original;
         const receiverId = row.getValue("receiverId") as string;
@@ -862,6 +868,7 @@ export default function Page() {
         const sentOverPeppol = document.sentOverPeppol;
         const sentOverEmail = document.sentOverEmail;
         const emailRecipients = document.emailRecipients;
+        const isReporting = isReportingDocumentTypeKey(documentType);
 
         // Check if document type is recognized and has parsed data
         const isRecognizedType = ["invoice", "creditNote", "selfBillingInvoice", "selfBillingCreditNote"].includes(documentType);
@@ -882,6 +889,7 @@ export default function Page() {
                     sentOverPeppol={sentOverPeppol}
                     sentOverEmail={sentOverEmail}
                     emailRecipients={emailRecipients || undefined}
+                    isReporting={isReporting}
                   />
                 </div>
               </div>
@@ -897,6 +905,7 @@ export default function Page() {
               sentOverPeppol={sentOverPeppol}
               sentOverEmail={sentOverEmail}
               emailRecipients={emailRecipients || undefined}
+              isReporting={isReporting}
             />
           </div>
         );
@@ -911,8 +920,8 @@ export default function Page() {
         const totals = (parsed as any)?.totals;
         return totals?.taxExclusiveAmount ? parseFloat(totals.taxExclusiveAmount) : null;
       },
-      header: ({ column }) => <ColumnHeader column={column} title="Total Excl. VAT" />,
-      meta: { label: "Total Excl. VAT" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Total Excl. VAT`} />,
+      meta: { label: t`Total Excl. VAT` },
       cell: ({ row }) => {
         const parsed = row.original.parsed;
         if (!parsed) {
@@ -937,8 +946,8 @@ export default function Page() {
         const totals = (parsed as any)?.totals;
         return totals?.taxInclusiveAmount ? parseFloat(totals.taxInclusiveAmount) : null;
       },
-      header: ({ column }) => <ColumnHeader column={column} title="Total Incl. VAT" />,
-      meta: { label: "Total Incl. VAT" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Total Incl. VAT`} />,
+      meta: { label: t`Total Incl. VAT` },
       cell: ({ row }) => {
         const parsed = row.original.parsed;
         if (!parsed) {
@@ -958,9 +967,9 @@ export default function Page() {
     {
       accessorKey: "direction",
       header: ({ column }) => (
-        <ColumnHeader column={column} title="Direction" />
+        <ColumnHeader column={column} title={t`Direction`} />
       ),
-      meta: { label: "Direction" },
+      meta: { label: t`Direction` },
       cell: ({ row }) => {
         const direction = row.getValue("direction") as string;
         return (
@@ -970,7 +979,7 @@ export default function Page() {
             ) : (
               <ArrowUp className="h-4 w-4" />
             )}
-            <span className="capitalize">{direction}</span>
+            <span>{direction === "incoming" ? t`Incoming` : t`Outgoing`}</span>
           </div>
         );
       },
@@ -980,23 +989,29 @@ export default function Page() {
     {
       accessorKey: "createdAt",
       header: ({ column }) => (
-        <ColumnHeader column={column} title="Created At" />
+        <ColumnHeader column={column} title={t`Created At`} />
       ),
-      meta: { label: "Created At" },
+      meta: { label: t`Created At` },
       cell: ({ row }) => {
         const date = row.getValue("createdAt") as string;
-        return format(new Date(date), "PPpp");
+        return new Date(date).toLocaleString(language, {
+          dateStyle: "medium",
+          timeStyle: "medium",
+        });
       },
       enableGlobalFilter: true,
     },
     {
       accessorKey: "readAt",
-      header: ({ column }) => <ColumnHeader column={column} title="Read At" />,
-      meta: { label: "Read At" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Read At`} />,
+      meta: { label: t`Read At` },
       cell: ({ row }) => {
         const date = row.getValue("readAt") as string;
         return date ? (
-          format(new Date(date), "PPpp")
+          new Date(date).toLocaleString(language, {
+            dateStyle: "medium",
+            timeStyle: "medium",
+          })
         ) : (
           <p className="text-muted-foreground">-</p>
         );
@@ -1029,8 +1044,8 @@ export default function Page() {
     },
     {
       accessorKey: "labels",
-      header: ({ column }) => <ColumnHeader column={column} title="Labels" />,
-      meta: { label: "Labels" },
+      header: ({ column }) => <ColumnHeader column={column} title={t`Labels`} />,
+      meta: { label: t`Labels` },
       cell: ({ row }) => {
         const documentLabels = row.original.labels || [];
         const documentId = row.original.id;
@@ -1049,9 +1064,9 @@ export default function Page() {
               labels={labels}
               assignedLabels={documentLabels}
               onAssign={(label) => handleAssignLabel(documentId, label.id)}
-              title="Assign Labels"
+              title={t`Assign Labels`}
               trigger={
-                <Button variant="ghost" size="icon" title="Add label">
+                <Button variant="ghost" size="icon" title={t`Add label`}>
                   <Tag className="h-4 w-4" />
                 </Button>
               }
@@ -1077,7 +1092,7 @@ export default function Page() {
               variant="ghost"
               size="icon"
               onClick={() => handleToggleMarkAsRead(id, row.original.readAt)}
-              title={isRead ? "Mark as unread" : "Mark as read"}
+              title={isRead ? t`Mark as unread` : t`Mark as read`}
             >
               {isRead ? (
                 <CheckCheck className="h-4 w-4 opacity-30" />
@@ -1089,7 +1104,7 @@ export default function Page() {
               variant="ghost"
               size="icon"
               onClick={() => handleDownloadDocument(id)}
-              title="Download document package"
+              title={t`Download document package`}
             >
               <FolderArchive className="h-4 w-4" />
             </Button>
@@ -1097,7 +1112,7 @@ export default function Page() {
               variant="ghost-destructive"
               size="icon"
               onClick={() => handleDeleteDocument(id)}
-              title="Delete document"
+              title={t`Delete document`}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -1114,6 +1129,7 @@ export default function Page() {
     handleToggleMarkAsRead,
     handleUnassignLabel,
     labels,
+    t,
   ]);
 
   const table = useReactTable({
@@ -1145,7 +1161,7 @@ export default function Page() {
   const filterConfigs = useMemo<FilterConfig<TransmittedDocumentWithoutBody>[]>(() => [
     {
       id: "companyId",
-      title: "Company",
+      title: t`Company`,
       options: companies.map((company) => ({
         label: company.name,
         value: company.id,
@@ -1153,45 +1169,42 @@ export default function Page() {
     },
     {
       id: "direction",
-      title: "Direction",
+      title: t`Direction`,
       options: [
-        { label: "Incoming", value: "incoming", icon: ArrowDown },
-        { label: "Outgoing", value: "outgoing", icon: ArrowUp },
+        { label: t`Incoming`, value: "incoming", icon: ArrowDown },
+        { label: t`Outgoing`, value: "outgoing", icon: ArrowUp },
       ],
     },
     {
       id: "type",
-      title: "Type",
-      options: [
-        { label: "Invoice", value: "invoice" },
-        { label: "Credit Note", value: "creditNote" },
-        { label: "Self Billing Invoice", value: "selfBillingInvoice" },
-        { label: "Self Billing Credit Note", value: "selfBillingCreditNote" },
-        { label: "Unknown", value: "unknown" },
-      ],
+      title: t`Type`,
+      options: STORED_DOCUMENT_TYPE_KEYS.map((value) => ({
+        label: getDocumentTypeLabel(t, value),
+        value,
+      })),
     },
     {
       id: "isUnread",
-      title: "Read Status",
+      title: t`Read Status`,
       options: [
-        { label: "Unread", value: "true", icon: Mail },
-        { label: "Read", value: "false", icon: MailOpen },
+        { label: t`Unread`, value: "true", icon: Mail },
+        { label: t`Read`, value: "false", icon: MailOpen },
       ],
     },
     {
       id: "labelId",
-      title: "Label",
+      title: t`Label`,
       options: labels.map((label) => ({
         label: label.name,
         value: label.id,
       })),
     },
-  ], [companies, labels]);
+  ], [companies, labels, t]);
 
   return (
     <PageTemplate
-      breadcrumbs={[{ label: "Peppol" }, { label: "Sent and received documents" }]}
-      description="View and manage your transmitted Peppol documents."
+      breadcrumbs={[{ label: "Peppol" }, { label: t`Sent and received documents` }]}
+      description={t`View and manage your transmitted Peppol documents.`}
       buttons={[
         <Button
           key="export"
@@ -1199,15 +1212,15 @@ export default function Page() {
           onClick={() => setIsExportDialogOpen(true)}
         >
           <Download className="h-4 w-4 mr-2" />
-          Export
+          {t`Export`}
         </Button>,
         ...(isPlayground
           ? [
               <ConfirmDialog
                 key="delete-all"
-                title="Delete All Documents"
-                description="Are you sure you want to delete all documents? This action cannot be undone. All documents in this playground will be permanently removed."
-                confirmButtonText="Delete All"
+                title={t`Delete All Documents`}
+                description={t`Are you sure you want to delete all documents? This action cannot be undone. All documents in this playground will be permanently removed.`}
+                confirmButtonText={t`Delete All`}
                 onConfirm={handleDeleteAllDocuments}
                 isLoading={isDeletingAll}
                 trigger={
@@ -1215,12 +1228,12 @@ export default function Page() {
                     {isDeletingAll ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Deleting...
+                        {t`Deleting...`}
                       </>
                     ) : (
                       <>
                         <Trash2 className="h-4 w-4 mr-2" />
-                        Delete All
+                        {t`Delete All`}
                       </>
                     )}
                   </Button>
@@ -1239,7 +1252,7 @@ export default function Page() {
           <>
             <DataTableToolbar
               table={table}
-              searchPlaceholder="Search documents..."
+              searchPlaceholder={t`Search documents...`}
               enableGlobalSearch
               throttleGlobalSearch
               filterColumns={filterConfigs}
@@ -1247,7 +1260,7 @@ export default function Page() {
             {selectedDocumentIds.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-3">
                 <span className="text-sm text-muted-foreground">
-                  {selectedDocumentIds.length} selected
+                  {t`${selectedDocumentIds.length} selected`}
                 </span>
                 <Button
                   variant="outline"
@@ -1260,7 +1273,7 @@ export default function Page() {
                   ) : (
                     <CheckCheck className="mr-2 h-4 w-4" />
                   )}
-                  Mark as read
+                  {t`Mark as read`}
                 </Button>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -1274,12 +1287,12 @@ export default function Page() {
                       ) : (
                         <Tag className="mr-2 h-4 w-4" />
                       )}
-                      Add label
+                      {t`Add label`}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 p-0" align="start">
                     <div className="p-2">
-                      <div className="mb-2 text-sm font-medium">Assign label</div>
+                      <div className="mb-2 text-sm font-medium">{t`Assign label`}</div>
                       <div className="max-h-64 space-y-1 overflow-y-auto">
                         {labels.map((label) => (
                           <button
@@ -1296,7 +1309,7 @@ export default function Page() {
                         ))}
                         {labels.length === 0 && (
                           <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                            No labels available
+                            {t`No labels available`}
                           </div>
                         )}
                       </div>
@@ -1315,7 +1328,7 @@ export default function Page() {
                       ) : (
                         <Download className="mr-2 h-4 w-4" />
                       )}
-                      Download ZIP
+                      {t`Download ZIP`}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-56 p-2" align="start">
@@ -1325,22 +1338,22 @@ export default function Page() {
                         className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
                       >
                         <FolderArchive className="h-4 w-4" />
-                        <span>Flat UBL ZIP</span>
+                        <span>{t`Flat UBL ZIP`}</span>
                       </button>
                       <button
                         onClick={() => handleBulkExport("nested")}
                         className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
                       >
                         <FolderArchive className="h-4 w-4" />
-                        <span>Nested ZIP</span>
+                        <span>{t`Nested ZIP`}</span>
                       </button>
                     </div>
                   </PopoverContent>
                 </Popover>
                 <ConfirmDialog
-                  title="Delete Selected Documents"
-                  description={`Are you sure you want to delete ${selectedDocumentIds.length} selected documents? This action cannot be undone.`}
-                  confirmButtonText="Delete"
+                  title={t`Delete Selected Documents`}
+                  description={t`Are you sure you want to delete ${selectedDocumentIds.length} selected documents? This action cannot be undone.`}
+                  confirmButtonText={t`Delete`}
                   onConfirm={handleBulkDelete}
                   isLoading={isBulkDeleting}
                   trigger={
@@ -1350,7 +1363,7 @@ export default function Page() {
                       disabled={isBulkMarkingAsRead || isBulkExporting || isBulkDeleting || bulkAssigningLabelId !== null}
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
+                      {t`Delete`}
                     </Button>
                   }
                 />

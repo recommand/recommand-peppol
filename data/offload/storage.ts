@@ -1,6 +1,8 @@
 import { transmittedDocuments } from "@peppol/db/schema";
-import { downloadTextFile } from "@core/lib/s3";
+import { downloadBinaryFile, downloadTextFile, uploadFile } from "@core/lib/s3";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
+
+export type OriginalPayloadContainerFormat = "none" | "pdf";
 
 // Upper bound on any single S3 request before we give up on it, protecting
 // against a request that hangs indefinitely (a stalled connection never
@@ -22,6 +24,7 @@ type DocumentS3Locator = {
   teamId: string;
   companyId: string;
   createdAt: Date;
+  s3KeyPrefix?: string | null;
 };
 
 // Root of all offloaded document objects. Every document object lives under
@@ -41,12 +44,12 @@ export function companyDocumentsS3Prefix(
   return `${teamDocumentsS3Prefix(teamId)}${companyId}/`;
 }
 
-// Derive the canonical S3 key prefix for a document. Called once, at offload
-// time; the result is persisted to s3KeyPrefix and used for all later reads.
-// Document ids are fixed-length ULIDs, so one document's prefix can never be
-// a prefix of another's; prefix-deleting it removes exactly this document's
-// objects.
+// Return the persisted S3 key prefix when one already exists; otherwise derive
+// the canonical prefix for a document.
 export function documentS3KeyPrefix(doc: DocumentS3Locator): string {
+  if (doc.s3KeyPrefix) {
+    return doc.s3KeyPrefix;
+  }
   const d = doc.createdAt;
   const yyyy = d.getUTCFullYear();
   const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
@@ -60,6 +63,10 @@ export function documentXmlKey(s3KeyPrefix: string): string {
 
 export function documentAttachmentsKey(s3KeyPrefix: string): string {
   return `${s3KeyPrefix}.attachments.json`;
+}
+
+export function documentOriginalPayloadKey(s3KeyPrefix: string): string {
+  return `${s3KeyPrefix}.original`;
 }
 
 // Whether a parsed document carries any embedded attachments.
@@ -140,6 +147,59 @@ export async function resolveDocumentXmlAndAttachments(
   return { xml, attachments };
 }
 
+export async function resolveDocumentOriginalPayload(
+  doc: { originalPayloadLocation: PayloadLocation; s3KeyPrefix: string | null }
+): Promise<Buffer | null> {
+  switch (doc.originalPayloadLocation) {
+    case "s3":
+      return await downloadBinaryFile(
+        documentOriginalPayloadKey(requireS3KeyPrefix(doc)),
+        { timeoutMs: S3_OPERATION_TIMEOUT_MS }
+      );
+    default:
+      return null;
+  }
+}
+
+export async function uploadDocumentOriginalPayload(
+  doc: DocumentS3Locator,
+  payload: string | Uint8Array | ArrayBuffer | Blob | Response,
+  containerFormat: Exclude<OriginalPayloadContainerFormat, "none"> = "pdf"
+): Promise<string> {
+  const s3KeyPrefix = documentS3KeyPrefix(doc);
+  await uploadFile(documentOriginalPayloadKey(s3KeyPrefix), payload, {
+    type: originalPayloadContentType(containerFormat),
+  });
+  return s3KeyPrefix;
+}
+
+export function originalPayloadFilename(
+  containerFormat: OriginalPayloadContainerFormat
+): string {
+  return originalPayloadFilenameWithBase("original", containerFormat);
+}
+
+export function originalPayloadFilenameWithBase(
+  base: string,
+  containerFormat: OriginalPayloadContainerFormat
+): string {
+  switch (containerFormat) {
+    case "pdf":
+      return `${base}.pdf`;
+    default:
+      return base;
+  }
+}
+
+function originalPayloadContentType(
+  containerFormat: Exclude<OriginalPayloadContainerFormat, "none">
+): string {
+  switch (containerFormat) {
+    case "pdf":
+      return "application/pdf";
+  }
+}
+
 export function hydrateDocumentParsedAttachments<T>(
   parsed: T,
   attachments: Attachment[]
@@ -180,6 +240,7 @@ export async function resolveDocumentParsedWithAttachments<T>(
 type OffloadedDocumentLocator = {
   xmlLocation: PayloadLocation;
   attachmentsLocation: PayloadLocation;
+  originalPayloadLocation: PayloadLocation;
   s3KeyPrefix: string | null;
 };
 
@@ -187,6 +248,7 @@ type OffloadedDocumentLocator = {
 export const offloadedDocumentSelect = {
   xmlLocation: transmittedDocuments.xmlLocation,
   attachmentsLocation: transmittedDocuments.attachmentsLocation,
+  originalPayloadLocation: transmittedDocuments.originalPayloadLocation,
   s3KeyPrefix: transmittedDocuments.s3KeyPrefix,
 };
 
@@ -199,7 +261,11 @@ export function offloadedDocumentS3Prefixes(
   const prefixes: string[] = [];
   for (const doc of docs) {
     if (!doc.s3KeyPrefix) continue;
-    if (doc.xmlLocation === "s3" || doc.attachmentsLocation === "s3") {
+    if (
+      doc.xmlLocation === "s3" ||
+      doc.attachmentsLocation === "s3" ||
+      doc.originalPayloadLocation === "s3"
+    ) {
       prefixes.push(doc.s3KeyPrefix);
     }
   }

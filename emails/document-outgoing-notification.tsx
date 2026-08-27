@@ -6,6 +6,7 @@ import {
   InfoSection,
   Section,
 } from "@core/emails/components/shared";
+import { fallbackT, type TranslationFunction } from "@core/lib/translations";
 
 export interface DocumentOutgoingNotificationProps {
   companyName: string;
@@ -15,6 +16,12 @@ export interface DocumentOutgoingNotificationProps {
   amount?: string;
   currency?: string;
   documentUrl?: string;
+  /**
+   * How the document left the platform. Reports are filed with a tax
+   * administration instead of being transmitted over the Peppol network.
+   */
+  channel?: "peppol" | "reporting";
+  t?: TranslationFunction;
 }
 
 export const DocumentOutgoingNotification = ({
@@ -25,47 +32,83 @@ export const DocumentOutgoingNotification = ({
   amount,
   currency,
   documentUrl,
-}: DocumentOutgoingNotificationProps) => (
-  <EmailLayout preview={`${documentType} sent to ${recipientName}`}>
-    <EmailHeading>{documentType} Sent</EmailHeading>
-    <Text className="mb-4">
-      Your company <strong>{companyName}</strong> has successfully sent a{" "}
-      {documentType.toLowerCase()} via the Peppol network.
-    </Text>
-    <InfoSection>
-      <Text className="my-1">
-        <strong>To:</strong> {recipientName}
+  channel = "peppol",
+  t = fallbackT,
+}: DocumentOutgoingNotificationProps) => {
+  const isReport = channel === "reporting";
+  // documentType arrives as its English label, which is also its translation
+  // key. It is never lower-cased mid-sentence: German capitalises every noun.
+  const typeLabel = t(documentType);
+
+  return (
+    <EmailLayout
+      preview={
+        isReport
+          ? t`${typeLabel} filed with ${recipientName}`
+          : t`${typeLabel} sent to ${recipientName}`
+      }
+      t={t}
+    >
+      <EmailHeading>
+        {isReport ? t`${typeLabel} filed` : t`${typeLabel} sent`}
+      </EmailHeading>
+      <Text className="mb-4">
+        {isReport
+          ? t`Your company ${companyName} has successfully filed a ${typeLabel} with the ${recipientName}.`
+          : t`Your company ${companyName} has successfully sent a ${typeLabel} via the Peppol network.`}
       </Text>
-      {documentNumber && (
+      <InfoSection>
         <Text className="my-1">
-          <strong>Document Number:</strong> {documentNumber}
+          <strong>{t`To`}:</strong> {recipientName}
         </Text>
-      )}
-      {amount && currency && (
-        <Text className="my-1">
-          <strong>Amount:</strong> {amount} {currency}
-        </Text>
-      )}
-    </InfoSection>
-    <Text className="mb-4">
-      The {documentType.toLowerCase()} has been delivered to the recipient
-      through the Peppol network. The document and any attachments are included
-      with this email for your records.
-    </Text>
-    {documentUrl ? (
-      <Section className="my-6 text-center">
-        <Button href={documentUrl}>Open document</Button>
-      </Section>
-    ) : null}
-  </EmailLayout>
-);
+        {documentNumber && (
+          <Text className="my-1">
+            <strong>{isReport ? t`Reference` : t`Document number`}:</strong>{" "}
+            {documentNumber}
+          </Text>
+        )}
+        {amount && currency && (
+          <Text className="my-1">
+            <strong>{t`Amount`}:</strong> {amount} {currency}
+          </Text>
+        )}
+      </InfoSection>
+      <Text className="mb-4">
+        {isReport
+          ? t`The ${typeLabel} has been accepted for processing by our approved reporting partner. The reported data is included with this email for your records.`
+          : t`The ${typeLabel} has been delivered to the recipient through the Peppol network. The document and any attachments are included with this email for your records.`}
+      </Text>
+      {documentUrl ? (
+        <Section className="my-6 text-center">
+          <Button href={documentUrl}>
+            {isReport ? t`Open report` : t`Open document`}
+          </Button>
+        </Section>
+      ) : null}
+    </EmailLayout>
+  );
+};
 
 export const subject = (props: DocumentOutgoingNotificationProps) => {
+  const t = props.t ?? fallbackT;
+  const typeLabel = t(props.documentType);
+  const isReport = props.channel === "reporting";
+
   if (props.documentNumber) {
-    return `${props.documentType} sent successfully: ${props.documentNumber}`;
+    return isReport
+      ? t`${typeLabel} filed successfully: ${props.documentNumber}`
+      : t`${typeLabel} sent successfully: ${props.documentNumber}`;
   }
 
-  return `${props.documentType} sent successfully${props.recipientName ? `: ${props.recipientName}` : ""}`;
+  if (props.recipientName) {
+    return isReport
+      ? t`${typeLabel} filed successfully with ${props.recipientName}`
+      : t`${typeLabel} sent successfully to ${props.recipientName}`;
+  }
+
+  return isReport
+    ? t`${typeLabel} filed successfully`
+    : t`${typeLabel} sent successfully`;
 };
 
 DocumentOutgoingNotification.PreviewProps = {

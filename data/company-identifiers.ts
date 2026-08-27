@@ -1,9 +1,9 @@
 import { companies, companyIdentifiers, teamExtensions } from "@peppol/db/schema";
-import { validateIdentifier } from "@peppol/utils/identifier-validation";
+import { isSiren, validateIdentifier } from "@peppol/utils/identifier-validation";
 import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
-import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./phoss-smp";
+import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";
 import { getTeamExtensionAndCompanyByCompanyId } from "./teams";
 
 export type CompanyIdentifier = typeof companyIdentifiers.$inferSelect;
@@ -82,6 +82,38 @@ export async function getSendingCompanyIdentifier(companyId: string): Promise<Co
   return identifiers[0];
 }
 
+/**
+ * The identifiers a company may register under a French scheme all have to name
+ * the company itself: its SIREN, the SIRET of one of its establishments, or an
+ * electronic address of either, all of which open with that SIREN. The form of
+ * each scheme is settled by validateIdentifier before this runs.
+ */
+function validateProtectedFrenchIdentifier({
+  scheme,
+  identifier,
+  enterpriseNumber,
+}: {
+  scheme: string;
+  identifier: string;
+  enterpriseNumber: string | null;
+}): void {
+  const companySiren = cleanEnterpriseNumber(enterpriseNumber);
+
+  if (!companySiren) {
+    throw new UserFacingError(`Company identifier with scheme ${scheme} requires a company enterprise number to be set.`);
+  }
+
+  if (!isSiren(companySiren)) {
+    throw new UserFacingError(`Company identifier with scheme ${scheme} requires the company enterprise number to be a valid SIREN, got: ${companySiren}`);
+  }
+
+  const cleanedIdentifier = cleanEnterpriseNumber(identifier)!;
+
+  if (!cleanedIdentifier.startsWith(companySiren)) {
+    throw new UserFacingError(`Company identifier with scheme ${scheme} must belong to the company. Expected the company SIREN ${companySiren}, or a SIRET or address starting with it. Got: ${identifier}`);
+  }
+}
+
 async function validateProtectedIdentifier({
   scheme,
   identifier,
@@ -98,7 +130,13 @@ async function validateProtectedIdentifier({
 
   const cleanedScheme = cleanScheme(scheme);
 
-  if (cleanedScheme === "0208") {
+  if (cleanedScheme === "0225" || cleanedScheme === "0002" || cleanedScheme === "0009") {
+    validateProtectedFrenchIdentifier({
+      scheme: cleanedScheme,
+      identifier,
+      enterpriseNumber: teamInfo.company.enterpriseNumber,
+    });
+  } else if (cleanedScheme === "0208") {
     const cleanedIdentifier = cleanEnterpriseNumber(identifier);
     const cleanedEnterpriseNumber = cleanEnterpriseNumber(teamInfo.company.enterpriseNumber);
     

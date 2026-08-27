@@ -5,6 +5,7 @@ import { Label } from "@core/components/ui/label";
 import { toast } from "@core/components/ui/sonner";
 import { cn } from "@core/lib/utils";
 import { Upload } from "lucide-react";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface XmlUploadZoneProps {
   loadedFileName: string | null;
@@ -18,15 +19,17 @@ export function XmlUploadZone({
   loadedFileName,
   onLoaded,
   onClear,
-  label = "Upload XML file",
+  label,
   maxBytes = 5 * 1024 * 1024,
 }: XmlUploadZoneProps) {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t`Upload XML file`;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const loadFile = async (file: File) => {
     if (file.size > maxBytes) {
-      toast.error("XML file is too large (max 5MB)");
+      toast.error(t`XML file is too large (max 5MB)`);
       return;
     }
 
@@ -34,7 +37,7 @@ export function XmlUploadZone({
       !file.name.toLowerCase().endsWith(".xml") &&
       !file.type.toLowerCase().includes("xml")
     ) {
-      toast.error("Please upload an XML file");
+      toast.error(t`Please upload an XML file`);
       return;
     }
 
@@ -44,7 +47,7 @@ export function XmlUploadZone({
 
   return (
     <div>
-      <Label>{label}</Label>
+      <Label>{resolvedLabel}</Label>
       <Card
         className={cn(
           "mt-2 p-4 border-dashed",
@@ -74,7 +77,7 @@ export function XmlUploadZone({
           try {
             await loadFile(file);
           } catch {
-            toast.error("Failed to read file");
+            toast.error(t`Failed to read file`);
           }
         }}
       >
@@ -82,12 +85,12 @@ export function XmlUploadZone({
           <div className="flex items-start gap-2">
             <Upload className="h-5 w-5 mt-0.5 text-muted-foreground" />
             <div className="space-y-1">
-              <p className="text-sm font-medium">Drag & drop an XML file</p>
+              <p className="text-sm font-medium">{t`Drag & drop an XML file`}</p>
               <p className="text-xs text-muted-foreground">
-                Or choose a file to fill the XML textarea below
+                {t`Or choose a file to fill the XML textarea below`}
               </p>
               {loadedFileName && (
-                <p className="text-xs text-accent">Loaded: {loadedFileName}</p>
+                <p className="text-xs text-accent">{t`Loaded: ${loadedFileName}`}</p>
               )}
             </div>
           </div>
@@ -104,7 +107,7 @@ export function XmlUploadZone({
                 try {
                   await loadFile(file);
                 } catch {
-                  toast.error("Failed to read file");
+                  toast.error(t`Failed to read file`);
                 } finally {
                   e.target.value = "";
                 }
@@ -115,10 +118,10 @@ export function XmlUploadZone({
               variant="default"
               onClick={() => fileInputRef.current?.click()}
             >
-              Choose file
+              {t`Choose file`}
             </Button>
             <Button type="button" variant="outline" onClick={onClear}>
-              Clear
+              {t`Clear`}
             </Button>
           </div>
         </div>

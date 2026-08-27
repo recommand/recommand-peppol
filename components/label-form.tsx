@@ -4,6 +4,7 @@ import { Button } from "@core/components/ui/button";
 import type { Label as LabelType } from "../types/label";
 import { AsyncButton } from "@core/components/async-button";
 import { FOLDER, WARNING, DATA, PROGRESS, CONST } from "@core/lib/config/colors";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const COLOR_PRESETS = [
   { name: "Green", value: FOLDER },
@@ -22,10 +23,11 @@ type LabelFormProps = {
 };
 
 export function LabelForm({ label, onChange, onSubmit, onCancel, isEditing = false }: LabelFormProps) {
+    const { t } = useTranslation();
     return (
         <div className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="name">Label Name</Label>
+                <Label htmlFor="name">{t`Label Name`}</Label>
                 <Input
                     id="name"
                     value={label.name || ""}
@@ -34,7 +36,7 @@ export function LabelForm({ label, onChange, onSubmit, onCancel, isEditing = fal
                 />
             </div>
             <div className="space-y-2">
-                <Label htmlFor="colorHex">Color</Label>
+                <Label htmlFor="colorHex">{t`Color`}</Label>
                 <div className="space-y-3">
                     <div className="flex items-center gap-2">
                         <Input
@@ -54,8 +56,9 @@ export function LabelForm({ label, onChange, onSubmit, onCancel, isEditing = fal
                         />
                     </div>
                     <div className="flex flex-wrap gap-1.5 justify-end">
-                        {COLOR_PRESETS.map((preset) => (
-                            <button
+                        {COLOR_PRESETS.map((preset) => {
+                            const presetName = preset.name === "Green" ? t`Green` : preset.name === "Orange" ? t`Orange` : preset.name === "Yellow" ? t`Yellow` : preset.name === "Blue" ? t`Blue` : t`Purple`;
+                            return <button
                                 key={preset.value}
                                 type="button"
                                 onClick={() => onChange({ ...label, colorHex: preset.value })}
@@ -65,15 +68,15 @@ export function LabelForm({ label, onChange, onSubmit, onCancel, isEditing = fal
                                         : "border-border hover:border-foreground/50"
                                 }`}
                                 style={{ backgroundColor: preset.value }}
-                                title={preset.name}
-                                aria-label={`Select ${preset.name} color`}
-                            />
-                        ))}
+                                title={presetName}
+                                aria-label={t`Select ${presetName} color`}
+                            />;
+                        })}
                     </div>
                 </div>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="externalId">External ID (Optional)</Label>
+                <Label htmlFor="externalId">{t`External ID (Optional)`}</Label>
                 <Input
                     id="externalId"
                     value={label.externalId || ""}
@@ -86,13 +89,12 @@ export function LabelForm({ label, onChange, onSubmit, onCancel, isEditing = fal
                     variant="outline"
                     onClick={onCancel}
                 >
-                    Cancel
+                    {t`Cancel`}
                 </Button>
                 <AsyncButton type="submit" onClick={onSubmit}>
-                    {isEditing ? "Save Changes" : "Create Label"}
+                    {isEditing ? t`Save Changes` : t`Create Label`}
                 </AsyncButton>
             </div>
         </div>
     );
 }
-

@@ -1,9 +1,21 @@
 import { describe, it, expect } from "bun:test";
-import { selfBillingCreditNoteToUBL } from "../utils/parsing/self-billing-creditnote/to-xml";
+import { selfBillingCreditNoteToUBL as serializeSelfBillingCreditNoteToUBL } from "../utils/parsing/self-billing-creditnote/to-xml";
 import type { SelfBillingCreditNote } from "../utils/parsing/self-billing-creditnote/schemas";
 import { parseSelfBillingCreditNoteFromXML } from "@peppol/utils/parsing/self-billing-creditnote/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
+
+const selfBillingProfile = {
+  customizationId:
+    "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0",
+  processId: "urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0",
+};
+
+function selfBillingCreditNoteToUBL(
+  options: Omit<Parameters<typeof serializeSelfBillingCreditNoteToUBL>[0], "profile">,
+) {
+  return serializeSelfBillingCreditNoteToUBL({ ...options, profile: selfBillingProfile });
+}
 
 async function checkSelfBillingCreditNoteXML(xml: string, selfBillingCreditNote: SelfBillingCreditNote, testName: string = "self-billing credit note") {
   expect(xml).toBeDefined();
@@ -814,4 +826,3 @@ describe("selfBillingCreditNoteToUBL", () => {
     });
   });
 });
-

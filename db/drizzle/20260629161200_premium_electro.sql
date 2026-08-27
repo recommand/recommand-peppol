@@ -1,0 +1,1 @@
+ALTER TYPE "public"."peppol_smp_provider" ADD VALUE 'at-shared-smp';

@@ -3,6 +3,8 @@ import { Input } from "@core/components/ui/input";
 import { Label } from "@core/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@core/components/ui/select";
 import { COUNTRIES } from "@peppol/utils/countries";
+import { useTranslation } from "@core/hooks/use-translation";
+import { createRegionNames, regionDisplayName, sortByRegionDisplayName } from "@core/lib/regions";
 
 export type BillingProfileFormData = {
   companyName: string;
@@ -34,10 +36,13 @@ export const DEFAULT_BILLING_PROFILE_FORM_DATA: BillingProfileFormData = {
 };
 
 export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }: BillingProfileFormProps) {
+  const { t, language } = useTranslation();
+  const regionNames = createRegionNames(language);
+  const countryOptions = sortByRegionDisplayName(COUNTRIES, regionNames);
   return (
     <div className="space-y-4 py-4">
       <div className="space-y-2">
-        <Label htmlFor="companyName">Company Name</Label>
+        <Label htmlFor="companyName">{t`Company Name`}</Label>
         <Input
           id="companyName"
           value={profileForm.companyName}
@@ -45,7 +50,7 @@ export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="address">Address</Label>
+        <Label htmlFor="address">{t`Address`}</Label>
         <Input
           id="address"
           value={profileForm.address}
@@ -54,7 +59,7 @@ export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label htmlFor="postalCode">Postal Code</Label>
+          <Label htmlFor="postalCode">{t`Postal Code`}</Label>
           <Input
             id="postalCode"
             value={profileForm.postalCode}
@@ -62,7 +67,7 @@ export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }
           />
         </div>
         <div>
-          <Label htmlFor="city">City</Label>
+          <Label htmlFor="city">{t`City`}</Label>
           <Input
             id="city"
             value={profileForm.city}
@@ -71,7 +76,7 @@ export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="country">Country</Label>
+        <Label htmlFor="country">{t`Country`}</Label>
         <Select
           value={profileForm.country}
           onValueChange={(value) => onChange({ ...profileForm, country: value })}
@@ -80,16 +85,16 @@ export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {COUNTRIES.map((country) => (
+            {countryOptions.map((country) => (
               <SelectItem key={country.code} value={country.code}>
-                {country.flag} {country.name}
+                {country.flag} {regionDisplayName(regionNames, country.code, country.name)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="vatNumber">VAT Number (Optional)</Label>
+        <Label htmlFor="vatNumber">{t`VAT Number (Optional)`}</Label>
         <Input
           id="vatNumber"
           value={profileForm.vatNumber || ''}
@@ -104,7 +109,7 @@ export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="billingEmail">Billing Email (Optional)</Label>
+        <Label htmlFor="billingEmail">{t`Billing Email (Optional)`}</Label>
         <Input
           id="billingEmail"
           type="email"
@@ -120,11 +125,11 @@ export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }
           }}
         />
         <p className="text-sm text-muted-foreground">
-          Email address to receive invoices. If not set, invoices will be sent to all team members.
+          {t`Email address to receive invoices. If not set, invoices will be sent to all team members.`}
         </p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="billingPeppolAddress">Billing Peppol Address (Optional)</Label>
+        <Label htmlFor="billingPeppolAddress">{t`Billing Peppol Address (Optional)`}</Label>
         <Input
           id="billingPeppolAddress"
           value={profileForm.billingPeppolAddress || ''}
@@ -139,17 +144,17 @@ export function BillingProfileForm({ profileForm, onChange, onCancel, onSubmit }
           }}
         />
         <p className="text-sm text-muted-foreground">
-          Peppol address for invoice delivery. If not set, we will try to derive it from your VAT number or deliver the invoice via email.
+          {t`Peppol address for invoice delivery. If not set, we will try to derive it from your VAT number or deliver the invoice via email.`}
         </p>
       </div>
       {(onCancel || onSubmit) && <div className="flex justify-end space-x-2 pt-4">
         {onCancel && <Button variant="outline" onClick={onCancel}>
-          Cancel
+          {t`Cancel`}
         </Button>}
         {onSubmit && <Button onClick={onSubmit}>
-          Save Changes
+          {t`Save Changes`}
         </Button>}
       </div>}
     </div>
   );
-} 
+}

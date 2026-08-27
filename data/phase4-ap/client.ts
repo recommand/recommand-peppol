@@ -17,6 +17,8 @@ export type SendAs4Response = {
   peppolConversationId: string | null;
   receivedPeppolSignalMessage: string | null;
   sbdhInstanceIdentifier: string | null;
+  // The access point provider's own transaction reference, when it exposes one.
+  apTransactionId?: string | null;
   sendingException?: {
     message: string;
   };
@@ -28,7 +30,8 @@ export async function sendAs4(options: {
   docTypeId: string;
   processId: string;
   countryC1: string;
-  body: string; // XML string
+  body: BodyInit;
+  contentType?: string;
   useTestNetwork: boolean,
 }): Promise<SendAs4Response> {
   const { senderId, receiverId, docTypeId, processId, countryC1, body } = options;
@@ -40,11 +43,14 @@ export async function sendAs4(options: {
     const encodedDocTypeId = encodeURIComponent(docTypeId);
     const encodedProcessId = encodeURIComponent(processId);
     const encodedCountryC1 = encodeURIComponent(countryC1);
+    const endpoint = options.contentType === "application/pdf"
+      ? `/sendas4-facturx/${encodedSenderId}/${encodedReceiverId}/${encodedCountryC1}`
+      : `/sendas4/${encodedSenderId}/${encodedReceiverId}/${encodedDocTypeId}/${encodedProcessId}/${encodedCountryC1}`;
 
-    const result = await fetchPhase4Ap(`/sendas4/${encodedSenderId}/${encodedReceiverId}/${encodedDocTypeId}/${encodedProcessId}/${encodedCountryC1}`, {
+    const result = await fetchPhase4Ap(endpoint, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/xml',
+        'Content-Type': options.contentType ?? 'application/xml',
       },
       body,
       useTestNetwork: options.useTestNetwork,

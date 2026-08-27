@@ -7,6 +7,7 @@ import { Input } from "@core/components/ui/input";
 import { Label } from "@core/components/ui/label";
 import { StatusMessage } from "@recommand/components/status-feedback";
 import { Loader2, AlertCircle, Mail, CheckCircle2, ChevronDown, Copy, Check } from "lucide-react";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("v1");
 const peppolClient = rc<Companies>("peppol");
@@ -16,6 +17,7 @@ type ForwardSectionProps =
     | { companyVerificationLogId: null; teamId: string; companyId: string; onAction?: () => void };
 
 export function ForwardSection({ companyVerificationLogId, teamId, companyId, onAction }: ForwardSectionProps) {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const [email, setEmail] = useState("");
     const [requesterName, setRequesterName] = useState("");
@@ -60,7 +62,7 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
             setEmail("");
             onAction?.();
         } catch {
-            setError("An unexpected error occurred. Please try again.");
+            setError(t`An unexpected error occurred. Please try again.`);
         } finally {
             setIsForwarding(false);
         }
@@ -90,7 +92,7 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
             onAction?.();
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            setError("Failed to copy URL. Please try again.");
+            setError(t`Failed to copy URL. Please try again.`);
         } finally {
             setIsCopying(false);
         }
@@ -99,7 +101,7 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
     return (
         <div className="border-t pt-6 space-y-4">
             <div className="flex flex-col items-center gap-2">
-                <p className="text-sm text-muted-foreground">Not the right person to complete this?</p>
+                <p className="text-sm text-muted-foreground">{t`Not the right person to complete this?`}</p>
                 <div className="flex gap-2">
                     <Button
                         type="button"
@@ -108,7 +110,7 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
                         onClick={() => setOpen((v) => !v)}
                     >
                         <Mail className="h-4 w-4" />
-                        Forward to someone else
+                        {t`Forward to someone else`}
                         <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
                     </Button>
                     <Button
@@ -125,7 +127,7 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
                         ) : (
                             <Copy className="h-4 w-4" />
                         )}
-                        {copied ? "Copied!" : "Copy verification URL"}
+                        {copied ? t`Copied!` : t`Copy verification URL`}
                     </Button>
                 </div>
             </div>
@@ -133,14 +135,14 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
                 <StatusMessage
                     tone="success"
                     icon={CheckCircle2}
-                    title="Verification link sent"
-                    description="The request was forwarded successfully. You can close this page."
+                    title={t`Verification link sent`}
+                    description={t`The request was forwarded successfully. You can close this page.`}
                 />
             ) : (
                 <div className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-1.5">
-                            <Label htmlFor="requesterName">Your name</Label>
+                            <Label htmlFor="requesterName">{t`Your name`}</Label>
                             <Input
                                 id="requesterName"
                                 placeholder="Jane Smith"
@@ -149,7 +151,7 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
                             />
                         </div>
                         <div className="space-y-1.5">
-                            <Label htmlFor="requesterEmail">Your email</Label>
+                            <Label htmlFor="requesterEmail">{t`Your email`}</Label>
                             <Input
                                 id="requesterEmail"
                                 type="email"
@@ -161,7 +163,7 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
                     </div>
                     <div className="flex items-end gap-2">
                         <div className="flex-1 space-y-1.5">
-                            <Label htmlFor="forwardEmail">Forward to</Label>
+                            <Label htmlFor="forwardEmail">{t`Forward to`}</Label>
                             <Input
                                 id="forwardEmail"
                                 type="email"
@@ -180,7 +182,7 @@ export function ForwardSection({ companyVerificationLogId, teamId, companyId, on
                             ) : (
                                 <>
                                     <Mail className="h-4 w-4" />
-                                    Forward
+                                    {t`Forward`}
                                 </>
                             )}
                         </Button>

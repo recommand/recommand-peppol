@@ -10,6 +10,7 @@ import { rc } from "@recommand/lib/client";
 import { useActiveTeam } from "@core/hooks/user";
 import { toast } from "@core/components/ui/sonner";
 import type { Companies } from "@peppol/api/companies";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const companiesClient = rc<Companies>("peppol");
 
@@ -19,6 +20,7 @@ interface CompanySelectorProps {
 }
 
 export function CompanySelector({ value, onChange }: CompanySelectorProps) {
+  const { t } = useTranslation();
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>(
     []
   );
@@ -43,7 +45,7 @@ export function CompanySelector({ value, onChange }: CompanySelectorProps) {
         const json = await response.json();
 
         if (!json.success || !Array.isArray(json.companies)) {
-          toast.error("Failed to load companies");
+          toast.error(t`Failed to load companies`);
           setCompanies([]);
         } else {
           const companiesList = json.companies.map(
@@ -55,7 +57,7 @@ export function CompanySelector({ value, onChange }: CompanySelectorProps) {
           setCompanies(companiesList);
         }
       } catch (error) {
-        toast.error("Failed to load companies");
+        toast.error(t`Failed to load companies`);
         setCompanies([]);
       } finally {
         setIsLoading(false);
@@ -76,7 +78,7 @@ export function CompanySelector({ value, onChange }: CompanySelectorProps) {
     return (
       <Select disabled>
         <SelectTrigger>
-          <SelectValue placeholder="Loading companies..." />
+          <SelectValue placeholder={t`Loading companies...`} />
         </SelectTrigger>
       </Select>
     );
@@ -86,7 +88,7 @@ export function CompanySelector({ value, onChange }: CompanySelectorProps) {
     return (
       <Select disabled>
         <SelectTrigger>
-          <SelectValue placeholder="No companies available" />
+          <SelectValue placeholder={t`No companies available`} />
         </SelectTrigger>
       </Select>
     );
@@ -109,7 +111,7 @@ export function CompanySelector({ value, onChange }: CompanySelectorProps) {
       }}
     >
       <SelectTrigger>
-        <SelectValue placeholder="Select a company" />
+        <SelectValue placeholder={t`Select a company`} />
       </SelectTrigger>
       <SelectContent>
         {companies.map((company) => (

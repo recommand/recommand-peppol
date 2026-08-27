@@ -6,6 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@core/components/ui/tooltip";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface RecipientSelectorProps {
   value: string;
@@ -18,6 +19,7 @@ export function RecipientSelector({
   onChange,
   optional = false,
 }: RecipientSelectorProps) {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState(value);
 
   useEffect(() => {
@@ -50,14 +52,13 @@ export function RecipientSelector({
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
             <p className="text-sm">
-              Enter the recipient's Peppol ID. Format:{" "}
-              <code>[scheme]:[identifier]</code>
+              {t`Enter the recipient's Peppol ID. Format: [scheme]:[identifier]`}
             </p>
             <p className="text-sm mt-2">
-              E.g. <code>0208:[Belgian Enterprise Number]</code>
+              {t`E.g. 0208:[Belgian Enterprise Number]`}
             </p>
             <p className="text-sm mt-2">
-              Leave empty to send via email only.
+              {t`Leave empty to send via email only.`}
             </p>
           </TooltipContent>
         </Tooltip>

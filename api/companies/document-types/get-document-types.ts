@@ -9,8 +9,16 @@ import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/a
 import { companyDocumentTypeResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { getCompanyDocumentTypes } from "@peppol/data/company-document-types";
+import { receivingCapabilities } from "@peppol/utils/type-repository/receiving-capabilities";
 
 const server = new Server();
+
+const receivingCapabilityResponse = z.object({
+    formatKey: z.string(),
+    translatableTitle: z.string(),
+    docTypeId: z.string(),
+    processId: z.string(),
+});
 
 const getDocumentTypesRouteDescription = describeRoute({
     operationId: "getCompanyDocumentTypes",
@@ -18,7 +26,10 @@ const getDocumentTypesRouteDescription = describeRoute({
     summary: "List Company Document Types",
     tags: ["Company Document Types"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved company document types", z.object({ documentTypes: z.array(companyDocumentTypeResponse) })),
+        ...describeSuccessResponseWithZod("Successfully retrieved company document types", z.object({
+            documentTypes: z.array(companyDocumentTypeResponse),
+            receivingCapabilities: z.array(receivingCapabilityResponse),
+        })),
         ...describeErrorResponse(500, "Failed to fetch company document types"),
     },
 });
@@ -52,7 +63,7 @@ const _getDocumentTypes = server.get(
 async function _getDocumentTypesImplementation(c: GetDocumentTypesContext) {
     try {
         const documentTypes = await getCompanyDocumentTypes(c.var.company.id);
-        return c.json(actionSuccess({ documentTypes }));
+        return c.json(actionSuccess({ documentTypes, receivingCapabilities }));
     } catch (error) {
         return c.json(actionFailure("Could not fetch company document types"), 500);
     }

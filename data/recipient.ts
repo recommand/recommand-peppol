@@ -1,9 +1,9 @@
 import { createHash } from "crypto";
-import { PARTICIPANT_SCHEME, DOCUMENT_SCHEME } from "./phoss-smp/service-metadata";
+import { PARTICIPANT_SCHEME, DOCUMENT_SCHEME, PROCESS_SCHEME } from "./phoss-smp/service-metadata";
 import { XMLParser } from "fast-xml-parser";
 import { base32Encode } from "@peppol/utils/base32";
 import { resolveNaptr } from "@peppol/utils/naptr";
-import { getDocumentTypeInfo } from "@peppol/utils/document-types";
+import { resolveDocTypeId } from "@peppol/utils/type-repository/receiving-capabilities";
 import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
 import { parseCertificateExpiry } from "@peppol/utils/certificate";
 
@@ -64,6 +64,27 @@ const smpXmlParser = new XMLParser({
   removeNSPrefix: true,
 });
 
+/**
+ * Read the document type id out of a ServiceMetadataReference URL, whose path ends in
+ * `/services/{scheme}::{docTypeId}`. Returns null for a reference that is not shaped
+ * that way, which is all an SMP tells us about a document type we cannot address.
+ */
+export function docTypeIdFromServiceMetadataRef(ref: string): string | null {
+  try {
+    const url = new URL(ref);
+    const servicesIdx = url.pathname.lastIndexOf("/services/");
+    if (servicesIdx === -1) return null;
+
+    const rawDocType = url.pathname.substring(servicesIdx + "/services/".length);
+    const decoded = decodeURIComponent(rawDocType);
+    // Strip the scheme prefix (e.g. "busdox-docid-qns::")
+    const schemeEnd = decoded.indexOf("::");
+    return schemeEnd !== -1 ? decoded.substring(schemeEnd + 2) : decoded;
+  } catch {
+    return null;
+  }
+}
+
 export async function verifyRecipient({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}) {
   const smpUrl = await getSmpUrl({recipientAddress, useTestNetwork});
 
@@ -116,22 +137,9 @@ export async function verifyRecipient({recipientAddress, useTestNetwork}: {recip
     
     // Derive supportedDocuments from service metadata reference URLs
     const supportedDocuments = serviceMetadataRefs.map(ref => {
-      try {
-        // Extract document type ID from the URL path: .../services/{scheme}::{docTypeId}
-        const url = new URL(ref);
-        const servicesIdx = url.pathname.lastIndexOf("/services/");
-        if (servicesIdx === -1) return null;
-
-        const rawDocType = url.pathname.substring(servicesIdx + "/services/".length);
-        const decoded = decodeURIComponent(rawDocType);
-        // Strip the scheme prefix (e.g. "busdox-docid-qns::")
-        const schemeEnd = decoded.indexOf("::");
-        const docTypeId = schemeEnd !== -1 ? decoded.substring(schemeEnd + 2) : decoded;
-
-        return { name: getDocumentTypeName(docTypeId), docTypeId };
-      } catch {
-        return null;
-      }
+      const docTypeId = docTypeIdFromServiceMetadataRef(ref);
+      if (!docTypeId) return null;
+      return { name: getDocumentTypeName(docTypeId), docTypeId };
     }).filter((d): d is { name: string; docTypeId: string } => d !== null);
 
     return {
@@ -156,9 +164,25 @@ export type ServiceMetadataResult = {
 };
 
 /**
- * Fetch a ServiceMetadata XML from an SMP and parse endpoint details.
+ * Bring a process id to its `scheme::value` form, so a caller-supplied id and an SMP
+ * ProcessIdentifier (which carries its scheme in an attribute) can be compared. An
+ * unqualified id is assumed to use the default process scheme.
  */
-export async function fetchServiceMetadata(serviceMetadataUrl: string): Promise<ServiceMetadataResult | null> {
+function qualifiedProcessId(value: unknown): string | null {
+  if (typeof value === "string") {
+    const processId = value.trim();
+    return processId.includes("::") ? processId : `${PROCESS_SCHEME}::${processId}`;
+  }
+  const node = value as { "#text"?: unknown; "@_scheme"?: unknown } | undefined;
+  if (typeof node?.["#text"] !== "string") return null;
+  return `${node["@_scheme"] ?? PROCESS_SCHEME}::${node["#text"].trim()}`;
+}
+
+/**
+ * Fetch a ServiceMetadata XML from an SMP and parse endpoint details.
+ * When a processId is given, only the matching process is considered.
+ */
+export async function fetchServiceMetadata(serviceMetadataUrl: string, options?: { processId?: string }): Promise<ServiceMetadataResult | null> {
   try {
     const response = await fetch(serviceMetadataUrl);
     if (!response.ok) return null;
@@ -170,7 +194,15 @@ export async function fetchServiceMetadata(serviceMetadataUrl: string): Promise<
     const serviceMetadata = doc.ServiceMetadata || doc.SignedServiceMetadata?.ServiceMetadata;
     const serviceInfo = serviceMetadata?.ServiceInformation;
     const processList = serviceInfo?.ProcessList;
-    const process = Array.isArray(processList?.Process) ? processList.Process[0] : processList?.Process;
+    const processes = Array.isArray(processList?.Process)
+      ? processList.Process
+      : processList?.Process
+        ? [processList.Process]
+        : [];
+    const expectedProcessId = options?.processId ? qualifiedProcessId(options.processId) : null;
+    const process = expectedProcessId
+      ? processes.find((p: any) => qualifiedProcessId(p?.ProcessIdentifier) === expectedProcessId)
+      : processes[0];
     const endpointList = process?.ServiceEndpointList;
     const endpoint = Array.isArray(endpointList?.Endpoint) ? endpointList.Endpoint[0] : endpointList?.Endpoint;
 
@@ -193,14 +225,37 @@ export async function fetchServiceMetadata(serviceMetadataUrl: string): Promise<
   }
 }
 
-export async function verifyDocumentSupport({recipientAddress, documentType, useTestNetwork}: {recipientAddress: string, documentType: string, useTestNetwork: boolean}) {
+/**
+ * List the process ids a ServiceMetadata registration is addressable over, in the order
+ * the SMP states them. The scheme is dropped so the ids compare against the ones the
+ * document format registry declares, which are written unqualified.
+ */
+export async function fetchServiceProcessIds(serviceMetadataUrl: string): Promise<string[]> {
+  const response = await fetch(serviceMetadataUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch service metadata: ${response.statusText}`);
+  }
+
+  const doc = smpXmlParser.parse(await response.text());
+  const serviceMetadata = doc.ServiceMetadata || doc.SignedServiceMetadata?.ServiceMetadata;
+  const processList = serviceMetadata?.ServiceInformation?.ProcessList;
+  const processes = Array.isArray(processList?.Process)
+    ? processList.Process
+    : processList?.Process
+      ? [processList.Process]
+      : [];
+
+  return processes
+    .map((process: any) => qualifiedProcessId(process?.ProcessIdentifier))
+    .filter((processId: string | null): processId is string => processId !== null)
+    .map((processId: string) => processId.substring(processId.indexOf("::") + 2));
+}
+
+export async function verifyDocumentSupport({recipientAddress, documentType, processId, useTestNetwork}: {recipientAddress: string, documentType: string, processId?: string, useTestNetwork: boolean}) {
   const smpUrl = await getSmpUrl({recipientAddress, useTestNetwork});
 
   // Map the document type to the Peppol document type code, if not possible, just use the document type as is
-  try {
-    const peppolDocumentTypeInfo = getDocumentTypeInfo(documentType);
-    documentType = peppolDocumentTypeInfo?.docTypeId;
-  } catch (error) {}
+  documentType = resolveDocTypeId(documentType);
 
   // Encode the document type for URL safety
   const encodedDocumentType = encodeURIComponent(documentType);
@@ -208,7 +263,7 @@ export async function verifyDocumentSupport({recipientAddress, documentType, use
   // Construct SMP URL according to Peppol spec with proper encoding
   const smpUrlWithDocumentType = `${smpUrl}/services/${DOCUMENT_SCHEME}::${encodedDocumentType}`;
 
-  const endpointDetails = await fetchServiceMetadata(smpUrlWithDocumentType);
+  const endpointDetails = await fetchServiceMetadata(smpUrlWithDocumentType, { processId });
 
   if (!endpointDetails) {
     throw new Error("Failed to verify document type capabilities: no endpoint found");

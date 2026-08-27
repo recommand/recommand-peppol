@@ -20,6 +20,8 @@ import { rc } from "@recommand/lib/client";
 import type { PreviewDocument as PreviewDocumentApi } from "@peppol/api/preview-document";
 import { useEffect, useMemo } from "react";
 import { useActiveTeam } from "@core/hooks/user";
+import { useTranslation } from "@core/hooks/use-translation";
+import type { TranslationFunction } from "@core/lib/translations";
 
 function getFormType(documentType: string): "invoice" | "creditNote" | "xml" {
   switch (documentType) {
@@ -36,25 +38,26 @@ function getFormType(documentType: string): "invoice" | "creditNote" | "xml" {
   }
 }
 
-function getDocumentDescription(documentType: string): string {
+function getDocumentDescription(documentType: string, t: TranslationFunction): string {
   switch (documentType) {
     case DocumentType.INVOICE:
-      return "Fill in the invoice details including buyer information, line items, and payment terms.";
+      return t`Fill in the invoice details including buyer information, line items, and payment terms.`;
     case DocumentType.CREDIT_NOTE:
-      return "Create a credit note for refunds, adjustments, or corrections to previous invoices.";
+      return t`Create a credit note for refunds, adjustments, or corrections to previous invoices.`;
     case DocumentType.SELF_BILLING_INVOICE:
-      return "Create a self billing invoice where the buyer issues the invoice on behalf of the seller.";
+      return t`Create a self billing invoice where the buyer issues the invoice on behalf of the seller.`;
     case DocumentType.SELF_BILLING_CREDIT_NOTE:
-      return "Create a self billing credit note for adjustments or corrections in a self billing flow.";
+      return t`Create a self billing credit note for adjustments or corrections in a self billing flow.`;
     case DocumentType.XML:
-      return "Upload or paste a raw UBL XML document that complies with Peppol standards.";
+      return t`Upload or paste a raw UBL XML document that complies with Peppol standards.`;
     default:
-      return "Complete the form below to create your document.";
+      return t`Complete the form below to create your document.`;
   }
 }
 
 export default function SendDocumentPage() {
   const activeTeam = useActiveTeam();
+  const { t } = useTranslation();
   const [documentType, setDocumentType] = useState<string>(
     DocumentType.INVOICE
   );
@@ -255,8 +258,8 @@ export default function SendDocumentPage() {
 
   return (
     <PageTemplate
-      breadcrumbs={[{ label: "Peppol" }, { label: "Send document" }]}
-      description="Send invoices and credit notes through the Peppol network."
+      breadcrumbs={[{ label: "Peppol" }, { label: t`Send document` }]}
+      description={t`Send invoices and credit notes through the Peppol network.`}
       buttons={[
         <div key="developer-mode" className="flex items-center gap-2">
           <Switch
@@ -265,7 +268,7 @@ export default function SendDocumentPage() {
             onCheckedChange={setDeveloperMode}
           />
           <Label htmlFor="developer-mode" className="text-sm">
-            Developer
+            {t`Developer`}
           </Label>
         </div>,
       ]}
@@ -278,9 +281,9 @@ export default function SendDocumentPage() {
           <Card className="p-6">
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold">Document Type</h3>
+                <h3 className="text-lg font-semibold">{t`Document Type`}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Choose the type of document you want to send
+                  {t`Choose the type of document you want to send`}
                 </p>
               </div>
               <Select
@@ -288,49 +291,49 @@ export default function SendDocumentPage() {
                 onValueChange={handleDocumentTypeChange}
               >
                 <SelectTrigger id="documentType" className="px-4 py-6">
-                  <SelectValue placeholder="Select document type" />
+                  <SelectValue placeholder={t`Select document type`} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={DocumentType.INVOICE}>
                     <div className="flex flex-col py-1">
-                      <span className="font-medium">Invoice</span>
+                      <span className="font-medium">{t`Invoice`}</span>
                       <span className="text-xs text-muted-foreground">
-                        Standard billing document
+                        {t`Standard billing document`}
                       </span>
                     </div>
                   </SelectItem>
                   <SelectItem value={DocumentType.CREDIT_NOTE}>
                     <div className="flex flex-col py-1">
-                      <span className="font-medium">Credit Note</span>
+                      <span className="font-medium">{t`Credit Note`}</span>
                       <span className="text-xs text-muted-foreground">
-                        Refund or adjustment document
+                        {t`Refund or adjustment document`}
                       </span>
                     </div>
                   </SelectItem>
                   <SelectItem value={DocumentType.SELF_BILLING_INVOICE}>
                     <div className="flex flex-col py-1">
-                      <span className="font-medium">Self Billing Invoice</span>
+                      <span className="font-medium">{t`Self Billing Invoice`}</span>
                       <span className="text-xs text-muted-foreground">
-                        Self billing invoice
+                        {t`Self billing invoice`}
                       </span>
                     </div>
                   </SelectItem>
                   <SelectItem value={DocumentType.SELF_BILLING_CREDIT_NOTE}>
                     <div className="flex flex-col py-1">
                       <span className="font-medium">
-                        Self Billing Credit Note
+                        {t`Self Billing Credit Note`}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Self billing credit note
+                        {t`Self billing credit note`}
                       </span>
                     </div>
                   </SelectItem>
                   {developerMode && (
                     <SelectItem value={DocumentType.XML}>
                       <div className="flex flex-col py-1">
-                        <span className="font-medium">Raw XML</span>
+                        <span className="font-medium">{t`Raw XML`}</span>
                         <span className="text-xs text-muted-foreground">
-                          Custom UBL document
+                          {t`Custom UBL document`}
                         </span>
                       </div>
                     </SelectItem>
@@ -344,9 +347,9 @@ export default function SendDocumentPage() {
           <Card className="p-6">
             <div className="space-y-4">
               <div className="border-b pb-4">
-                <h3 className="text-lg font-semibold">Document Details</h3>
+                <h3 className="text-lg font-semibold">{t`Document Details`}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {getDocumentDescription(documentType)}
+                  {getDocumentDescription(documentType, t)}
                 </p>
               </div>
               <DocumentForm
@@ -368,7 +371,7 @@ export default function SendDocumentPage() {
           ) : (
             <DocumentPreview
               html={previewHtml}
-              emptyText="Fill in the company, recipient, and required invoice fields to see a preview."
+              emptyText={t`Fill in the company, recipient, and required invoice fields to see a preview.`}
             />
           )}
         </div>

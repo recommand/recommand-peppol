@@ -1,5 +1,5 @@
-import { SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO } from "@peppol/utils/document-types";
-import { prebuildCreditNoteUBL } from "../creditnote/to-xml";
+import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
+import { prebuildCreditNoteUBL } from "../creditnote/peppol-ubl-bis3/to-xml";
 import type { SelfBillingCreditNote } from "./schemas";
 import { XMLBuilder } from "fast-xml-parser";
 
@@ -15,11 +15,13 @@ export function selfBillingCreditNoteToUBL(
     senderAddress,
     recipientAddress,
     isDocumentValidationEnforced,
+    profile,
   }: {
     selfBillingCreditNote: SelfBillingCreditNote;
     senderAddress: string;
     recipientAddress: string;
     isDocumentValidationEnforced: boolean;
+    profile: XmlProfile;
   }): string {
   // The self billing credit note is the same as the credit note with a different invoice type code (389 instead of 380)
   const ublCreditNote = prebuildCreditNoteUBL({
@@ -27,12 +29,9 @@ export function selfBillingCreditNoteToUBL(
     supplierAddress: recipientAddress,
     customerAddress: senderAddress,
     isDocumentValidationEnforced,
+    profile,
   });
 
-  // Set the CustomizationID
-  ublCreditNote.CreditNote["cbc:CustomizationID"] = "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0";
-  // Set the ProfileID
-  ublCreditNote.CreditNote["cbc:ProfileID"] = SELF_BILLING_CREDIT_NOTE_DOCUMENT_TYPE_INFO.processId;
   // Set the invoice type code to 389
   ublCreditNote.CreditNote["cbc:CreditNoteTypeCode"] = "261";
 

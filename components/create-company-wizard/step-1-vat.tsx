@@ -5,6 +5,7 @@ import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
 import type { CompanyFormData } from "@peppol/types/company";
 import { CompanyIdentityFields, getCompanyCountryDefaults, type CompanyIdentityFieldsValue } from "@peppol/components/company-form-fields";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
 
@@ -16,6 +17,7 @@ type Step1Props = {
 };
 
 export function Step1Vat({ teamId, data, onNext, onCancel }: Step1Props) {
+    const { t } = useTranslation();
     const [identityData, setIdentityData] = useState<Partial<CompanyIdentityFieldsValue>>({
         ...getCompanyCountryDefaults(data.country ?? "BE"),
         country: data.country ?? "BE",
@@ -70,14 +72,14 @@ export function Step1Vat({ teamId, data, onNext, onCancel }: Step1Props) {
             <CompanyIdentityFields
                 value={identityData}
                 onChange={mergeIdentityData}
-                vatNumberLabel="VAT Number"
+                vatNumberLabel={t`VAT Number`}
             />
             <div className="flex justify-between gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={onCancel}>
-                    Cancel
+                    {t`Cancel`}
                 </Button>
                 <AsyncButton type="submit" onClick={handleNext}>
-                    Next
+                    {t`Next`}
                 </AsyncButton>
             </div>
         </form>

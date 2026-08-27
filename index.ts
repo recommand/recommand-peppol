@@ -4,13 +4,16 @@ import { Logger } from "@recommand/lib/logger";
 import subscriptionServer from "./api/subscription";
 import billingProfileServer from "./api/billing-profile";
 import billingServer from "./api/billing";
+import reportingServer from "./api/reporting";
 import companiesServer from "./api/companies";
 import labelsServer from "./api/labels";
 import sendDocumentServer from "./api/send-document";
 import documentDefaultsServer from "./api/document-defaults";
 import previewDocumentServer from "./api/preview-document";
+import generateDocumentServer from "./api/generate-document";
 import receiveDocumentServer from "./api/internal/receive-document";
 import diditWebhookServer from "./api/internal/didit-webhook";
+import arratechWebhookServer from "./api/internal/arratech-webhook";
 import transmittedDocumentsServer from "./api/documents";
 import {
   generateSpecs,
@@ -122,6 +125,11 @@ For additional support or questions, don't hesitate to contact our support team.
           description: "Endpoints for sending documents",
         },
         {
+          name: "Reporting",
+          description:
+            "Submit B2C sales and payment information that Recommand reports to the relevant tax administration on your behalf.",
+        },
+        {
           name: "Recipients",
           description:
             "Interaction with the Peppol directory. For now, this always returns results from the production Peppol directory, even in playground teams.",
@@ -189,11 +197,13 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, sendDocumentServer);
   server.route(prefix, documentDefaultsServer);
   server.route(prefix, previewDocumentServer);
+  server.route(prefix, generateDocumentServer);
   server.route(prefix, companiesServer);
   server.route(prefix, transmittedDocumentsServer);
   server.route(prefix, recipientServer);
   server.route(prefix + "internal/", receiveDocumentServer);
   server.route(prefix + "internal/", diditWebhookServer);
+  server.route(prefix + "internal/", arratechWebhookServer);
 
   server.route(prefix, webhooksServer);
   server.route(prefix, integrationsServer);
@@ -204,7 +214,8 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, labelsServer);
 
   server.route(prefix, billingProfileServer); 
-  server.route(prefix, billingServer); 
+  server.route(prefix, billingServer);
+  // server.route(prefix, reportingServer); // TODO: Re-enable and validate this when the French reporting is available with AT, our PA
   server.route(prefix, subscriptionServer);
   server.route(prefix, teamsServer);
 }

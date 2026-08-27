@@ -69,6 +69,75 @@ export function invoiceDocument(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const FRENCH_SELLER = {
+  name: "Recommand E2E Vendeur",
+  street: "1 rue du Vendeur",
+  city: "Paris",
+  postalZone: "75001",
+  country: "FR",
+  vatNumber: "FR40303265045",
+  enterpriseNumberScheme: "0002",
+  enterpriseNumber: "303265045",
+};
+
+const FRENCH_BUYER = {
+  name: "Recommand E2E Acheteur",
+  street: "2 rue de l'Acheteur",
+  city: "Lyon",
+  postalZone: "69001",
+  country: "FR",
+  vatNumber: "FR91341815675",
+  enterpriseNumberScheme: "0002",
+  enterpriseNumber: "341815675",
+};
+
+const FRENCH_LINES = [
+  {
+    name: "Prestation de conseil",
+    description: "Ligne de test de bout en bout, ne pas traiter.",
+    quantity: "2",
+    unitCode: "HUR",
+    netPriceAmount: "50.00",
+    vat: { category: "S", percentage: "20.00" },
+  },
+];
+
+/**
+ * An invoice carrying the French regulatory extension, which is what the French
+ * doctypes ask for: the billing mode and the three mandatory payment notes, plus
+ * the business process that decides which of the two French processes it travels
+ * over.
+ */
+export function frenchInvoiceDocument(overrides: Record<string, unknown> = {}) {
+  return invoiceDocument({
+    invoiceNumber: nextRef("E2E-FR-INV"),
+    note: "Document de test de bout en bout, ne pas traiter.",
+    countrySpecific: {
+      country: "FR",
+      billingMode: "S1",
+      businessProcess: "REGULATED",
+      recoveryCostsNote:
+        "Indemnité forfaitaire de 40 EUR pour frais de recouvrement.",
+      latePaymentPenaltiesNote:
+        "Pénalités de retard selon les conditions de paiement.",
+      earlyPaymentDiscountNote: "Aucun escompte accordé pour paiement anticipé.",
+    },
+    seller: { ...FRENCH_SELLER },
+    buyer: { ...FRENCH_BUYER },
+    paymentMeans: [
+      {
+        name: "Banque de test",
+        paymentMethod: "credit_transfer",
+        reference: "E2E-PAYMENT",
+        iban: "FR1420041010050500013M02606",
+      },
+    ],
+    paymentTerms: { note: "Paiement à 30 jours" },
+    lines: FRENCH_LINES,
+    ...overrides,
+  });
+}
+
 /** A second line at another VAT rate, so the totals have to group by rate. */
 const REDUCED_RATE_LINE = {
   name: "E2E reduced rate line",
@@ -247,15 +316,27 @@ export const DOC_TYPE_ID = {
     "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0::2.1",
   messageLevelResponse:
     "urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2::ApplicationResponse##urn:fdc:peppol.eu:poacc:trns:mlr:3::2.1",
+  ciiInvoice:
+    "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017::D22B",
+  /** The French CIUS of the CII doctype above, which travels over the French processes. */
+  franceCiusCiiInvoice:
+    "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::D22B",
 } as const;
 
 export const PROCESS_ID = {
   billing: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
   selfBilling: "urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0",
   messageLevelResponse: "urn:fdc:peppol.eu:poacc:bis:mlr:3",
+  /** Carried by the UBL BIS 3 invoice doctype, but not by the CII one. */
+  franceRegulated: "urn:peppol:france:billing:regulated",
 } as const;
 
-/** Used to prove an explicitly provided processId wins over detection. */
+/**
+ * No format supports this one: it proves an explicitly provided processId wins
+ * over detection for raw XML, where it only names the process the document is
+ * transmitted over, and is refused for the JSON document types, where it would
+ * end up as the profile identifier of the document we generate.
+ */
 export const CUSTOM_PROCESS_ID = "urn:www.cenbii.eu:profile:bii05:ver2.0";
 
 /** Well formed, but not a doctype the API knows how to parse. */

@@ -24,11 +24,17 @@ the same whether or not `ETE_UNIT_TEST_*` happen to be set.
 
 ## Running
 
-If nothing is listening at `ETE_UNIT_TEST_HOST`, a dev server is started and
-stopped again when the run finishes. A server that was already running is
-reused and left running. This works for any `bun test` invocation, because
-`bunfig.toml` preloads `test/setup.ts`, and the suite waits for readiness
-itself as well.
+If nothing is listening at `ETE_UNIT_TEST_HOST` (`http://localhost:3000` when
+it is unset), a dev server is started and stopped again when the run finishes.
+A server that was already running is reused and left running. This works for
+any `bun test` invocation, because `bunfig.toml` preloads `test/setup.ts`, and
+the suite waits for readiness itself as well.
+
+The preloaded setup owns the server: Bun runs its hooks once around the whole
+run, so the server stays up for every file. Nothing in this folder may stop it,
+because these hooks run around this file only and Bun picks up test files in
+filesystem order — stopping it here would kill it under the files that come
+after.
 
 ```bash
 # from the repository root
@@ -84,6 +90,11 @@ and discards them, but they still count towards your Postmark volume. The suite
 also calls the external validation service once per document and the PDF
 renderer once per PDF case.
 
+One block also creates a company and deletes it again. The French regulated
+flows are only open to a company registered in France, which the configured
+company is not, so that block makes one of its own. A run that is killed
+halfway may leave it behind, under the name `Recommand E2E Vendeur`.
+
 ## What is covered
 
 The matrix is the cartesian product of:
@@ -126,3 +137,10 @@ their declared `documentType`, undetectable and invalid XML, unrecognised
 doctype identifiers with and without a `processId`, the empty `email.to` edge
 cases, the totals described above, and the server side defaults for seller,
 buyer, dates and message level response ids.
+
+The French regulated flows are covered from both sides. Sending one from the
+configured company is refused, because those flows are only open to a company
+registered in France and, outside a playground, only over the French access
+point. Sending the same document from a French company the suite creates for
+itself is accepted, and the stored document is asserted to carry the French
+doctype and the regulated process.

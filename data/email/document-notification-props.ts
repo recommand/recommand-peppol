@@ -1,111 +1,32 @@
 import type { DocumentIncomingNotificationProps } from "@peppol/emails/document-incoming-notification";
 import type { DocumentOutgoingNotificationProps } from "@peppol/emails/document-outgoing-notification";
 import { getCompanyById } from "@peppol/data/companies";
-import { extractDocumentAttachments, getDocumentTypeLabel } from "@peppol/data/email/send-email";
+import { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
 import { labels, transmittedDocuments } from "@peppol/db/schema";
-import { getDocumentFilename, type ParsedDocument } from "@peppol/utils/document-filename";
-import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
-import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
-import type { SelfBillingCreditNote } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
-import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
-import type { DocumentType } from "@peppol/utils/document-types";
-import { renderDocumentPdf } from "@peppol/utils/document-renderer";
+import { UNNAMED_PARTY } from "@peppol/utils/type-repository/document-types/constants";
 import { resolveDocumentParsedWithAttachments, resolveDocumentXml } from "@peppol/data/offload/storage";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
+import { getDocumentType } from "@peppol/utils/type-repository/document-types";
+import type {
+  AnyDocumentType,
+  ParsedDocumentOf,
+  StoredDocumentType,
+} from "@peppol/utils/type-repository/document-types/types";
 import { db } from "@recommand/db";
 import { and, eq } from "drizzle-orm";
 import type { EventEnvelope } from "@core/lib/rules/types";
-
-export function extractDocumentDetails(
-  parsedDocument: ParsedDocument | null,
-  type: DocumentType
-): {
-  documentNumber?: string;
-  amount?: string;
-  currency?: string;
-  sellerName: string;
-  buyerName: string;
-  senderName: string;
-  receiverName: string;
-} {
-  if (!parsedDocument) {
-    return {
-      sellerName: "Unknown",
-      buyerName: "Unknown",
-      senderName: "Unknown",
-      receiverName: "Unknown",
-    };
-  }
-
-  let documentNumber: string | undefined;
-  let amount: string | undefined;
-  let currency: string | undefined;
-
-  if ("invoiceNumber" in parsedDocument) {
-    documentNumber = parsedDocument.invoiceNumber;
-  } else if ("creditNoteNumber" in parsedDocument) {
-    documentNumber = parsedDocument.creditNoteNumber;
-  }
-
-  if (
-    "totals" in parsedDocument &&
-    parsedDocument.totals &&
-    typeof parsedDocument.totals === "object"
-  ) {
-    const totals = parsedDocument.totals as { payableAmount?: number | string };
-    amount = totals.payableAmount?.toString();
-    currency = "-";
-  }
-
-  let sellerName = "Unknown";
-  let buyerName = "Unknown";
-  let senderName = "Unknown";
-  let receiverName = "Unknown";
-  if (["invoice", "creditNote"].includes(type)) {
-    senderName =
-      (parsedDocument as Invoice | CreditNote).seller?.name || "Unknown";
-    receiverName =
-      (parsedDocument as Invoice | CreditNote).buyer?.name || "Unknown";
-    sellerName =
-      (parsedDocument as Invoice | CreditNote).seller?.name || "Unknown";
-    buyerName =
-      (parsedDocument as Invoice | CreditNote).buyer?.name || "Unknown";
-  } else if (["selfBillingInvoice", "selfBillingCreditNote"].includes(type)) {
-    senderName =
-      (parsedDocument as SelfBillingInvoice | SelfBillingCreditNote).buyer
-        ?.name || "Unknown";
-    receiverName =
-      (parsedDocument as SelfBillingInvoice | SelfBillingCreditNote).seller
-        ?.name || "Unknown";
-    sellerName =
-      (parsedDocument as SelfBillingInvoice | SelfBillingCreditNote).seller
-        ?.name || "Unknown";
-    buyerName =
-      (parsedDocument as SelfBillingInvoice | SelfBillingCreditNote).buyer
-        ?.name || "Unknown";
-  }
-
-  return {
-    documentNumber,
-    amount,
-    currency,
-    sellerName,
-    buyerName,
-    senderName,
-    receiverName,
-  };
-}
 
 function getAppBaseUrl() {
   return (process.env.BASE_URL ?? "https://app.recommand.eu").replace(/\/$/, "");
 }
 
-function getDocumentTypeLabelSafe(type?: string | null) {
-  if (!type) {
-    return "Document";
-  }
+type RepositoryDocument = ParsedDocumentOf<AnyDocumentType>;
 
-  return getDocumentTypeLabel(type as DocumentType);
+function getDocumentDetails(type: string, parsedDocument: RepositoryDocument | null) {
+  const documentType = getDocumentType(type);
+  return documentType?.email && parsedDocument
+    ? documentType.email.extractDocumentDetails(parsedDocument)
+    : {};
 }
 
 export async function buildIncomingDocumentNotificationProps(
@@ -132,16 +53,16 @@ export async function buildIncomingDocumentNotificationProps(
   }
 
   const { documentNumber, amount, currency, senderName } =
-    extractDocumentDetails(
-      (document.parsed as ParsedDocument | null | undefined) ?? null,
-      document.type
+    getDocumentDetails(
+      document.type,
+      (document.parsed as RepositoryDocument | null | undefined) ?? null,
     );
 
   return {
     event,
     companyName: company.name,
-    senderName,
-    documentType: getDocumentTypeLabel(document.type),
+    senderName: senderName ?? UNNAMED_PARTY,
+    documentType: getDocumentType(document.type)?.translatableTitle ?? "Document",
     documentNumber,
     amount,
     currency,
@@ -173,19 +94,20 @@ export async function buildOutgoingDocumentNotificationProps(
   }
 
   const { documentNumber, amount, currency, receiverName } =
-    extractDocumentDetails(
-      (document.parsed as ParsedDocument | null | undefined) ?? null,
-      document.type
+    getDocumentDetails(
+      document.type,
+      (document.parsed as RepositoryDocument | null | undefined) ?? null,
     );
 
   return {
     companyName: company.name,
-    recipientName: receiverName,
-    documentType: getDocumentTypeLabel(document.type),
+    recipientName: receiverName ?? UNNAMED_PARTY,
+    documentType: getDocumentType(document.type)?.translatableTitle ?? "Document",
     documentNumber,
     amount,
     currency,
     documentUrl: `${getAppBaseUrl()}/transmitted-documents/${document.id}`,
+    channel: getDocumentType(document.type)?.class === "reporting" ? "reporting" : "peppol",
   };
 }
 
@@ -229,9 +151,9 @@ export async function buildDocumentLabelNotificationProps(event: EventEnvelope) 
     : [];
 
   const documentNumber = document
-    ? extractDocumentDetails(
-        (document.parsed as ParsedDocument | null | undefined) ?? null,
-        document.type
+    ? getDocumentDetails(
+        document.type,
+        (document.parsed as RepositoryDocument | null | undefined) ?? null,
       ).documentNumber
     : undefined;
 
@@ -239,7 +161,9 @@ export async function buildDocumentLabelNotificationProps(event: EventEnvelope) 
     companyName: company?.name ?? payload?.companyId ?? "Unknown",
     labelName: label?.name ?? payload?.labelExternalId ?? payload?.labelId ?? "Unknown",
     labelExternalId: label?.externalId ?? payload?.labelExternalId ?? null,
-    documentType: getDocumentTypeLabelSafe(document?.type ?? payload?.docType),
+    documentType:
+      getDocumentType(document?.type ?? payload?.docType ?? "")
+        ?.translatableTitle ?? "Document",
     documentNumber,
     documentUrl: `${getAppBaseUrl()}/transmitted-documents/${event.aggregateId}`,
   };
@@ -269,8 +193,8 @@ export async function buildIncomingDocumentNotificationAttachmentParts(options: 
   transmittedDocumentId: string;
   companyId: string;
   companyName: string;
-  type: DocumentType;
-  parsedDocument: ParsedDocument | null;
+  type: StoredDocumentType;
+  parsedDocument: RepositoryDocument | null;
   xmlDocument: string | null;
   includeAutoGeneratedPdf: boolean;
   includeDocumentJson: boolean;
@@ -285,8 +209,8 @@ export async function buildOutgoingDocumentNotificationAttachmentParts(options: 
   transmittedDocumentId: string;
   companyId: string;
   companyName: string;
-  type: DocumentType;
-  parsedDocument: ParsedDocument | null;
+  type: StoredDocumentType;
+  parsedDocument: RepositoryDocument | null;
   xmlDocument: string | null;
   includeAutoGeneratedPdf: boolean;
   includeDocumentJson: boolean;
@@ -301,15 +225,18 @@ async function buildDocumentNotificationAttachmentParts(options: {
   transmittedDocumentId: string;
   companyId: string;
   companyName: string;
-  type: DocumentType;
-  parsedDocument: ParsedDocument | null;
+  type: StoredDocumentType;
+  parsedDocument: RepositoryDocument | null;
   xmlDocument: string | null;
   includeAutoGeneratedPdf: boolean;
   includeDocumentJson: boolean;
   direction: "incoming" | "outgoing";
 }) {
   const embeddedAttachments = extractDocumentAttachments(options.parsedDocument);
-  const filename = getDocumentFilename(options.type, options.parsedDocument);
+  const documentType = getDocumentType(options.type);
+  const filename = documentType && options.parsedDocument
+    ? documentType.generateFilename(options.parsedDocument)
+    : "document";
   const xmlAttachment = options.xmlDocument
     ? {
         Content: Buffer.from(options.xmlDocument, "utf-8").toString("base64"),
@@ -326,13 +253,17 @@ async function buildDocumentNotificationAttachmentParts(options: {
     Name: string;
   } | null = null;
 
-  if (options.includeAutoGeneratedPdf && options.parsedDocument) {
+  if (
+    options.includeAutoGeneratedPdf &&
+    options.parsedDocument &&
+    documentType
+  ) {
     try {
-      const pdfBuffer = await renderDocumentPdf({
-        id: options.transmittedDocumentId,
-        type: options.type,
-        parsed: options.parsedDocument,
-      } as never);
+      const pdfBuffer = await documentType.render(
+        options.parsedDocument,
+        { format: "pdf" },
+        { documentId: options.transmittedDocumentId },
+      );
       autoGeneratedPdfAttachment = {
         Content: Buffer.from(pdfBuffer).toString("base64"),
         ContentID: null,
@@ -431,7 +362,7 @@ export async function buildPeppolDocumentEmailAttachments(
   }
 
   const parsedDocument =
-    ((await resolveDocumentParsedWithAttachments(document)) as ParsedDocument | null | undefined) ?? null;
+    ((await resolveDocumentParsedWithAttachments(document)) as RepositoryDocument | null | undefined) ?? null;
   const xmlDocument = await resolveDocumentXml(document);
 
   const attachmentParts = document.direction === "outgoing"

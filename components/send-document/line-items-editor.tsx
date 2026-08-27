@@ -14,6 +14,7 @@ import { Plus, Trash2 } from "lucide-react";
 import type { DocumentLine } from "@peppol/utils/parsing/invoice/schemas";
 import { VAT_CATEGORIES } from "@peppol/utils/parsing/invoice/schemas";
 import { Card } from "@core/components/ui/card";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface LineItemsEditorProps {
   lines: DocumentLine[];
@@ -26,6 +27,7 @@ export function LineItemsEditor({
   onChange,
   isCreditNote = false,
 }: LineItemsEditorProps) {
+  const { t } = useTranslation();
   const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set([0]));
 
   const addLine = () => {
@@ -102,14 +104,14 @@ export function LineItemsEditor({
             <div className="space-y-4">
               <div className="flex items-start gap-2">
                 <div className="flex-1">
-                  <Label>Item Name *</Label>
+                  <Label>{t`Item Name *`}</Label>
                   <Input
                     value={line.name}
                     onChange={(e) =>
                       updateLine(index, "name", e.target.value)
                     }
                     placeholder={
-                      isCreditNote ? "Credit item" : "Product or service"
+                      isCreditNote ? t`Credit item` : t`Product or service`
                     }
                     required
                   />
@@ -126,20 +128,20 @@ export function LineItemsEditor({
               </div>
 
               <div>
-                <Label>Description</Label>
+                <Label>{t`Description`}</Label>
                 <Textarea
                   value={line.description || ""}
                   onChange={(e) =>
                     updateLine(index, "description", e.target.value)
                   }
-                  placeholder="Optional description"
+                  placeholder={t`Optional description`}
                   rows={3}
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label>Quantity *</Label>
+                  <Label>{t`Quantity *`}</Label>
                   <Input
                     type="number"
                     step="any"
@@ -151,7 +153,7 @@ export function LineItemsEditor({
                   />
                 </div>
                 <div>
-                  <Label>Unit</Label>
+                  <Label>{t`Unit`}</Label>
                   <Select
                     value={line.unitCode}
                     onValueChange={(value) =>
@@ -162,19 +164,19 @@ export function LineItemsEditor({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="C62">One</SelectItem>
-                      <SelectItem value="HUR">Hour</SelectItem>
-                      <SelectItem value="DAY">Day</SelectItem>
-                      <SelectItem value="MON">Month</SelectItem>
-                      <SelectItem value="KGM">Kilogram</SelectItem>
-                      <SelectItem value="MTR">Meter</SelectItem>
-                      <SelectItem value="LTR">Liter</SelectItem>
-                      <SelectItem value="MWH">Megawatt hour (MWh)</SelectItem>
+                      <SelectItem value="C62">{t`One`}</SelectItem>
+                      <SelectItem value="HUR">{t`Hour`}</SelectItem>
+                      <SelectItem value="DAY">{t`Day`}</SelectItem>
+                      <SelectItem value="MON">{t`Month`}</SelectItem>
+                      <SelectItem value="KGM">{t`Kilogram`}</SelectItem>
+                      <SelectItem value="MTR">{t`Meter`}</SelectItem>
+                      <SelectItem value="LTR">{t`Liter`}</SelectItem>
+                      <SelectItem value="MWH">{t`Megawatt hour (MWh)`}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Price *</Label>
+                  <Label>{t`Price *`}</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -189,7 +191,7 @@ export function LineItemsEditor({
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label>VAT Category</Label>
+                  <Label>{t`VAT Category`}</Label>
                   <Select
                     value={line.vat?.category || "S"}
                     onValueChange={(value) =>
@@ -202,14 +204,14 @@ export function LineItemsEditor({
                     <SelectContent>
                       {Object.entries(VAT_CATEGORIES).map(([code, name]) => (
                         <SelectItem key={code} value={code}>
-                          {code}: {name}
+                          {code}: {t(name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>VAT %</Label>
+                  <Label>{t`VAT %`}</Label>
                   <Input
                     type="number"
                     step="0.01"
@@ -225,12 +227,11 @@ export function LineItemsEditor({
               </div>
 
               <div className="flex justify-between items-center pt-2 border-t text-sm">
-                <span className="text-muted-foreground">Line Total:</span>
+                <span className="text-muted-foreground">{t`Line Total:`}</span>
                 <div className="text-right">
-                  <div>Net: €{lineTotal.netAmount}</div>
+                  <div>{t`Net: €${lineTotal.netAmount}`}</div>
                   <div className="text-xs text-muted-foreground">
-                    VAT: €{lineTotal.vatAmount} | Total: €
-                    {lineTotal.totalAmount}
+                    {t`VAT: €${lineTotal.vatAmount} | Total: €${lineTotal.totalAmount}`}
                   </div>
                 </div>
               </div>
@@ -242,22 +243,22 @@ export function LineItemsEditor({
       <div className="flex justify-between items-center">
         <Button type="button" variant="outline" onClick={addLine}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Line
+          {t`Add Line`}
         </Button>
 
         {lines.length > 0 && (
           <Card className="p-3">
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="text-muted-foreground">Net Total:</span>
+                <span className="text-muted-foreground">{t`Net Total:`}</span>
                 <p className="font-medium">€{totals.totalNet}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Total VAT:</span>
+                <span className="text-muted-foreground">{t`Total VAT:`}</span>
                 <p className="font-medium">€{totals.totalVat}</p>
               </div>
               <div>
-                <span className="text-muted-foreground">Total Gross:</span>
+                <span className="text-muted-foreground">{t`Total Gross:`}</span>
                 <p className="font-semibold">€{totals.totalGross}</p>
               </div>
             </div>

@@ -1,5 +1,6 @@
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@core/components/ui/tooltip";
+import { useTranslation } from "@core/hooks/use-translation";
 
 interface PartyInfo {
   name: string;
@@ -17,6 +18,7 @@ interface PartyInfoTooltipProps {
 }
 
 export function PartyInfoTooltip({ partyInfo, peppolAddress }: PartyInfoTooltipProps) {
+  const { t } = useTranslation();
   const addressParts = [
     partyInfo.street,
     partyInfo.street2,
@@ -41,9 +43,9 @@ export function PartyInfoTooltip({ partyInfo, peppolAddress }: PartyInfoTooltipP
           <p className="font-medium">{partyInfo.name}</p>
           <p className="text-xs mt-1">{fullAddress}</p>
           {partyInfo.vatNumber && (
-            <p className="text-xs mt-1">VAT: {partyInfo.vatNumber}</p>
+            <p className="text-xs mt-1">{t`VAT: ${partyInfo.vatNumber}`}</p>
           )}
-          <p className="text-xs mt-1">Peppol address: {peppolAddress}</p>
+          <p className="text-xs mt-1">{t`Peppol address: ${peppolAddress}`}</p>
         </div>
       </TooltipContent>
     </Tooltip>

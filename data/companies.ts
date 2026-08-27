@@ -1,7 +1,7 @@
 import { companies, companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { eq, and, or, isNull, asc } from "drizzle-orm";
-import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./phoss-smp";
+import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
 import {
   cleanEnterpriseNumber,
   cleanVatNumber,
@@ -19,6 +19,7 @@ import { companyDocumentsS3Prefix } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
 import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
+import { resolveDefaultPeppolProviders } from "./peppol-providers";
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = typeof companies.$inferInsert;
@@ -117,7 +118,7 @@ export async function getCompanyByPeppolId({
       )
     );
   if (results.length === 0) {
-    throw new Error(`Company with peppol id ${originalPeppolId} not found`);
+    throw new Error(`Company with peppol id ${originalPeppolId} not found as ${useTestNetwork ? "test" : "production"} company`);
   }
   return results[0].peppol_companies;
 }
@@ -149,6 +150,7 @@ function validateCompanyCountryIdentifiers({
 export async function createCompany(company: InsertCompany & { skipDefaultCompanySetup: boolean }): Promise<Company> {
   const cleanedVat = cleanVatNumber(company.vatNumber);
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
+  const defaultPeppolProviders = resolveDefaultPeppolProviders(company.country);
 
   if (getCountrySupportLevel(company.country) === "unsupported") {
     throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be created in this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`);
@@ -166,7 +168,10 @@ export async function createCompany(company: InsertCompany & { skipDefaultCompan
 
   const createdCompany = await db
     .insert(companies)
-    .values(company)
+    .values({
+      ...defaultPeppolProviders,
+      ...company,
+    })
     .returning()
     .then((rows) => rows[0]);
 

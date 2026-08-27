@@ -6,6 +6,7 @@ import { Checkbox } from "@core/components/ui/checkbox";
 import { CompanyDetailsFields, CompanyIdentityFields } from "@peppol/components/company-form-fields";
 import { StatusMessage } from "@recommand/components/status-feedback";
 import { AlertTriangle } from "lucide-react";
+import { useTranslation } from "@core/hooks/use-translation";
 
 type CompanyFormProps = {
     company: Partial<Company>;
@@ -18,6 +19,7 @@ type CompanyFormProps = {
 };
 
 export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing = false, showEnterpriseNumberForBelgianCompanies = false, showVerificationWarning = false }: CompanyFormProps) {
+    const { t } = useTranslation();
     const mergeCompany = (updates: Partial<Company>) => {
         onChange({ ...company, ...updates });
     };
@@ -38,17 +40,17 @@ export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing =
                         checked={company.isSmpRecipient === true}
                         onCheckedChange={(checked) => mergeCompany({ isSmpRecipient: checked === true })}
                     />
-                    <Label htmlFor="isSmpRecipient" className="text-sm mt-0 pt-0">Register as recipient</Label>
+                    <Label htmlFor="isSmpRecipient" className="text-sm mt-0 pt-0">{t`Register as recipient`}</Label>
                 </div>
-                <p className="text-xs text-pretty text-muted-foreground">If enabled, the company will be registered as a recipient in our SMP (the Peppol address book). This will allow you to send and receive documents. If disabled, you will only be able to send documents via Recommand.</p>
+                <p className="text-xs text-pretty text-muted-foreground">{t`If enabled, the company will be registered as a recipient in our SMP (the Peppol address book). This will allow you to send and receive documents. If disabled, you will only be able to send documents via Recommand.`}</p>
             </div>
             <div className="space-y-3 pt-2">
                 {showVerificationWarning && (
                     <StatusMessage
                         tone="warning"
                         icon={AlertTriangle}
-                        title="Saving will require re-verification"
-                        description="The VAT or enterprise number changed. Saving will revoke open verification sessions and any current verification status, and the company will need to be verified again."
+                        title={t`Saving will require re-verification`}
+                        description={t`The VAT or enterprise number changed. Saving will revoke open verification sessions and any current verification status, and the company will need to be verified again.`}
                     />
                 )}
                 <div className="flex justify-end gap-2">
@@ -57,10 +59,10 @@ export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing =
                         variant="outline"
                         onClick={onCancel}
                     >
-                        Cancel
+                        {t`Cancel`}
                     </Button>
                     <AsyncButton type="submit" onClick={onSubmit}>
-                        {isEditing ? "Save Changes" : "Create Company"}
+                        {isEditing ? t`Save Changes` : t`Create Company`}
                     </AsyncButton>
                 </div>
             </div>

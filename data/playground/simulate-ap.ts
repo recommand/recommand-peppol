@@ -1,6 +1,6 @@
 import { UserFacingError } from "@peppol/utils/util";
+import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
 import { getCompanyByPeppolId } from "../companies";
-import { receiveDocument } from "../receive-document";
 
 export async function simulateSendAs4(options: {
   senderId: string;
@@ -8,9 +8,9 @@ export async function simulateSendAs4(options: {
   docTypeId: string;
   processId: string;
   countryC1: string;
-  body: string; // XML string
+  body: BodyInit;
+  contentType?: string;
 
-  // Playground specific options
   playgroundTeamId: string;
 }) {
 
@@ -34,14 +34,14 @@ export async function simulateSendAs4(options: {
     return
   }
 
-  // The company is registered, so we can receive the document
-  await receiveDocument({
+  await receivingPipeline({
     senderId: options.senderId,
     receiverId: options.receiverId,
     docTypeId: options.docTypeId,
     processId: options.processId,
     countryC1: options.countryC1,
     body: options.body,
+    contentType: options.contentType,
     skipBilling: true,
     playgroundTeamId: options.playgroundTeamId,
   });

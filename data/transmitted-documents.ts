@@ -20,13 +20,17 @@ export type TransmittedDocument = typeof transmittedDocuments.$inferSelect;
 export type InsertTransmittedDocument = typeof transmittedDocuments.$inferInsert;
 type TransmittedDocumentSearchField = "senderName" | "receiverName" | "documentNumber" | "searchText";
 type TransmittedDocumentLabel = Omit<Label, "teamId" | "createdAt" | "updatedAt">;
-export type PublicTransmittedDocument = Omit<TransmittedDocument, TransmittedDocumentSearchField | "offloadClaimedAt">;
+type InternalProviderField = "accessPointProvider" | "smpProvider" | "apTransactionId" | "externalReferenceId";
+export type PublicTransmittedDocument = Omit<
+  TransmittedDocument,
+  TransmittedDocumentSearchField | InternalProviderField | "offloadClaimedAt"
+>;
 export type PublicTransmittedDocumentWithLabels = PublicTransmittedDocument & {
   labels?: TransmittedDocumentLabel[];
 };
 
 // Internal storage-location fields that must never be exposed to API consumers.
-type InternalStorageField = "xmlLocation" | "attachmentsLocation" | "s3KeyPrefix";
+type InternalStorageField = "xmlLocation" | "attachmentsLocation" | "originalPayloadLocation" | "originalPayloadContainerFormat" | "s3KeyPrefix";
 
 // Create a type that excludes the body field but includes parsed data
 export type TransmittedDocumentWithoutBody = Omit<PublicTransmittedDocument, "xml" | InternalStorageField> & {
@@ -49,6 +53,8 @@ const publicTransmittedDocumentSelect = {
   xml: transmittedDocuments.xml,
   xmlLocation: transmittedDocuments.xmlLocation,
   attachmentsLocation: transmittedDocuments.attachmentsLocation,
+  originalPayloadLocation: transmittedDocuments.originalPayloadLocation,
+  originalPayloadContainerFormat: transmittedDocuments.originalPayloadContainerFormat,
   s3KeyPrefix: transmittedDocuments.s3KeyPrefix,
   sentOverPeppol: transmittedDocuments.sentOverPeppol,
   sentOverEmail: transmittedDocuments.sentOverEmail,
@@ -80,7 +86,7 @@ export async function toApiTransmittedDocument(
     resolveDocumentXml(doc),
     resolveDocumentParsedWithAttachments(doc),
   ]);
-  const { xmlLocation, attachmentsLocation, s3KeyPrefix, ...rest } = doc;
+  const { xmlLocation, attachmentsLocation, originalPayloadLocation, originalPayloadContainerFormat, s3KeyPrefix, ...rest } = doc;
   return { ...rest, xml, parsed };
 }
 
@@ -238,6 +244,8 @@ export async function getTransmittedDocuments(
       emailRecipients: transmittedDocuments.emailRecipients,
       parsed: transmittedDocuments.parsed,
       attachmentsLocation: transmittedDocuments.attachmentsLocation,
+      originalPayloadLocation: transmittedDocuments.originalPayloadLocation,
+      originalPayloadContainerFormat: transmittedDocuments.originalPayloadContainerFormat,
       s3KeyPrefix: transmittedDocuments.s3KeyPrefix,
       validation: transmittedDocuments.validation,
       peppolMessageId: transmittedDocuments.peppolMessageId,
@@ -258,7 +266,7 @@ export async function getTransmittedDocuments(
     documents,
     S3_REQUEST_CONCURRENCY,
     async (doc) => {
-      const { attachmentsLocation, s3KeyPrefix, ...publicDoc } = doc;
+      const { attachmentsLocation, originalPayloadLocation, originalPayloadContainerFormat, s3KeyPrefix, ...publicDoc } = doc;
       return {
         ...publicDoc,
         labels: documentLabelsMap.get(doc.id) || [],

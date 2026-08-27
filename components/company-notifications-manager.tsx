@@ -11,6 +11,7 @@ import { rc } from "@recommand/lib/client";
 import type { CompanyNotificationEmailAddresses } from "@peppol/api/companies/notification-email-addresses";
 import type { CompanyNotificationEmailAddress } from "@peppol/data/company-notification-emails";
 import { stringifyActionFailure } from "@recommand/lib/utils";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<CompanyNotificationEmailAddresses>("peppol");
 
@@ -30,15 +31,16 @@ type NotificationEmailFormData = {
 };
 
 function NotificationAttachmentHelp() {
+  const { t } = useTranslation();
   return (
     <p className="text-xs text-muted-foreground">
-      XML and any document attachments are always included. You can also attach a generated
-      document preview (PDF) and a small JSON document with key document details.
+      {t`XML and any document attachments are always included. You can also attach a generated document preview (PDF) and a small JSON document with key document details.`}
     </p>
   );
 }
 
 export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotificationsManagerProps) {
+  const { t } = useTranslation();
   const [notificationEmails, setNotificationEmails] = useState<CompanyNotificationEmailAddress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -99,7 +101,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
       );
     } catch (error) {
       console.error("Error fetching notification email addresses:", error);
-      toast.error("Failed to load notification email addresses: " + error);
+      toast.error(t`Failed to load notification email addresses: ${error}`);
     } finally {
       setIsLoading(false);
     }
@@ -107,12 +109,12 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
 
   const handleAdd = async () => {
     if (!formData.email.trim()) {
-      toast.error("Email is required");
+      toast.error(t`Email is required`);
       return;
     }
 
     if (!formData.notifyIncoming && !formData.notifyOutgoing) {
-      toast.error("Please select at least one notification type");
+      toast.error(t`Please select at least one notification type`);
       return;
     }
 
@@ -128,7 +130,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Notification email address added successfully");
+      toast.success(t`Notification email address added successfully`);
       setFormData({
         email: "",
         notifyIncoming: false,
@@ -140,7 +142,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
       });
       setIsAdding(false);
     } catch (error) {
-      toast.error("Failed to add notification email address: " + error);
+      toast.error(t`Failed to add notification email address: ${error}`);
     } finally {
       setIsSubmitting(false);
       fetchNotificationEmails();
@@ -149,16 +151,16 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
 
   const handleEdit = async () => {
     if (!editingId) {
-      toast.error("No notification email address selected for editing");
+      toast.error(t`No notification email address selected for editing`);
       return;
     }
     if (!editFormData.email.trim()) {
-      toast.error("Email is required");
+      toast.error(t`Email is required`);
       return;
     }
 
     if (!editFormData.notifyIncoming && !editFormData.notifyOutgoing) {
-      toast.error("Please select at least one notification type");
+      toast.error(t`Please select at least one notification type`);
       return;
     }
 
@@ -174,7 +176,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Notification email address updated successfully");
+      toast.success(t`Notification email address updated successfully`);
       setEditingId(null);
       setEditFormData({
         email: "",
@@ -186,7 +188,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
         includeDocumentJsonOutgoing: false,
       });
     } catch (error) {
-      toast.error("Failed to update notification email address: " + error);
+      toast.error(t`Failed to update notification email address: ${error}`);
     } finally {
       setIsSubmitting(false);
       fetchNotificationEmails();
@@ -204,9 +206,9 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Notification email address deleted successfully");
+      toast.success(t`Notification email address deleted successfully`);
     } catch (error) {
-      toast.error("Failed to delete notification email address: " + error);
+      toast.error(t`Failed to delete notification email address: ${error}`);
     } finally {
       fetchNotificationEmails();
     }
@@ -255,12 +257,12 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Notifications</CardTitle>
-          <CardDescription>Manage email notifications for documents</CardDescription>
+          <CardTitle>{t`Notifications`}</CardTitle>
+          <CardDescription>{t`Manage email notifications for documents`}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-32">
-            <div className="text-center text-muted-foreground">Loading...</div>
+            <div className="text-center text-muted-foreground">{t`Loading...`}</div>
           </div>
         </CardContent>
       </Card>
@@ -272,15 +274,15 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
       <CardHeader>
         <div className="flex items-center justify-between gap-4">
           <div>
-            <CardTitle>Notifications</CardTitle>
+            <CardTitle>{t`Notifications`}</CardTitle>
             <CardDescription className="text-balance">
-              Configure email addresses to receive notifications when documents are sent or received.
+              {t`Configure email addresses to receive notifications when documents are sent or received.`}
             </CardDescription>
           </div>
           {!isAdding && (
             <Button onClick={() => setIsAdding(true)} size="sm">
               <Plus className="h-4 w-4" />
-              Add Email
+              {t`Add Email`}
             </Button>
           )}
         </div>
@@ -290,7 +292,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
           <div className="p-4 border rounded-lg bg-muted/50">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="add-email">Email Address</Label>
+                <Label htmlFor="add-email">{t`Email Address`}</Label>
                 <Input
                   id="add-email"
                   type="email"
@@ -300,7 +302,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                 />
               </div>
               <div className="space-y-3">
-                <Label>Notify for</Label>
+                <Label>{t`Notify for`}</Label>
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <label
@@ -315,7 +317,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                         }
                       />
                       <span className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Incoming documents
+                        {t`Incoming documents`}
                       </span>
                     </label>
                     {formData.notifyIncoming && (
@@ -336,7 +338,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                             htmlFor="add-incoming-pdf"
                             className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
-                            Generated document preview
+                            {t`Generated document preview`}
                           </label>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -354,7 +356,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                             htmlFor="add-incoming-json"
                             className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
-                            JSON document
+                            {t`JSON document`}
                           </label>
                         </div>
                       </div>
@@ -373,7 +375,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                         }
                       />
                       <span className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Outgoing documents
+                        {t`Outgoing documents`}
                       </span>
                     </label>
                     {formData.notifyOutgoing && (
@@ -394,7 +396,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                             htmlFor="add-outgoing-pdf"
                             className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
-                            Generated document preview  
+                            {t`Generated document preview`}
                           </label>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -412,7 +414,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                             htmlFor="add-outgoing-json"
                             className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
-                            JSON document
+                            {t`JSON document`}
                           </label>
                         </div>
                       </div>
@@ -424,11 +426,11 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
             <div className="flex gap-2 mt-4 justify-end">
               <AsyncButton onClick={handleAdd} size="sm" disabled={isSubmitting}>
                 <Check className="h-4 w-4" />
-                Add
+                {t`Add`}
               </AsyncButton>
               <Button onClick={cancelAdd} variant="outline" size="sm" disabled={isSubmitting}>
                 <X className="h-4 w-4" />
-                Cancel
+                {t`Cancel`}
               </Button>
             </div>
           </div>
@@ -438,8 +440,8 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
           {notificationEmails.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Mail className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No notification emails configured</p>
-              <p className="text-sm">Add an email address to receive notifications</p>
+              <p>{t`No notification emails configured`}</p>
+              <p className="text-sm">{t`Add an email address to receive notifications`}</p>
             </div>
           ) : (
             notificationEmails.map((notificationEmail) => (
@@ -448,7 +450,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor={`edit-email-${notificationEmail.id}`} className="text-xs">
-                        Email Address
+                        {t`Email Address`}
                       </Label>
                       <Input
                         id={`edit-email-${notificationEmail.id}`}
@@ -458,7 +460,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                       />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-xs">Notify for</Label>
+                      <Label className="text-xs">{t`Notify for`}</Label>
                       <div className="space-y-3">
                         <div className="space-y-2">
                           <label
@@ -473,7 +475,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                               }
                             />
                             <span className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                              Incoming invoices
+                              {t`Incoming invoices`}
                             </span>
                           </label>
                           {editFormData.notifyIncoming && (
@@ -494,7 +496,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                                   htmlFor={`edit-incoming-pdf-${notificationEmail.id}`}
                                   className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
-                                  Generated document preview  
+                                  {t`Generated document preview`}
                                 </label>
                               </div>
                               <div className="flex items-center space-x-2">
@@ -512,7 +514,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                                   htmlFor={`edit-incoming-json-${notificationEmail.id}`}
                                   className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
-                                  JSON document
+                                  {t`JSON document`}
                                 </label>
                               </div>
                             </div>
@@ -531,7 +533,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                               }
                             />
                             <span className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                              Outgoing invoices
+                              {t`Outgoing invoices`}
                             </span>
                           </label>
                           {editFormData.notifyOutgoing && (
@@ -552,7 +554,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                                   htmlFor={`edit-outgoing-pdf-${notificationEmail.id}`}
                                   className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
-                                  Generated document preview  
+                                  {t`Generated document preview`}
                                 </label>
                               </div>
                               <div className="flex items-center space-x-2">
@@ -570,7 +572,7 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                                   htmlFor={`edit-outgoing-json-${notificationEmail.id}`}
                                   className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                 >
-                                  JSON document
+                                  {t`JSON document`}
                                 </label>
                               </div>
                             </div>
@@ -581,11 +583,11 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                     <div className="flex gap-2 justify-end">
                       <AsyncButton onClick={handleEdit} size="sm" variant="default" disabled={isSubmitting}>
                         <Check className="h-4 w-4" />
-                        Save Changes
+                        {t`Save Changes`}
                       </AsyncButton>
                       <Button onClick={cancelEdit} size="sm" variant="outline" disabled={isSubmitting}>
                         <X className="h-4 w-4" />
-                        Cancel Edit
+                        {t`Cancel Edit`}
                       </Button>
                     </div>
                   </div>
@@ -594,9 +596,9 @@ export function CompanyNotificationsManager({ teamId, companyId }: CompanyNotifi
                     <div className="flex-1">
                       <div className="font-medium">{notificationEmail.email}</div>
                       <div className="text-xs text-muted-foreground flex gap-2 mt-1">
-                        {notificationEmail.notifyIncoming && <span>Incoming</span>}
+                        {notificationEmail.notifyIncoming && <span>{t`Incoming`}</span>}
                         {notificationEmail.notifyIncoming && notificationEmail.notifyOutgoing && <span>•</span>}
-                        {notificationEmail.notifyOutgoing && <span>Outgoing</span>}
+                        {notificationEmail.notifyOutgoing && <span>{t`Outgoing`}</span>}
                       </div>
                     </div>
                     <div className="flex gap-2">

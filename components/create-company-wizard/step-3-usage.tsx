@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@core/components/ui/button";
 import { Send, Download, ArrowLeftRight } from "lucide-react";
+import { useTranslation } from "@core/hooks/use-translation";
 
 type UsageOption = "send" | "receive" | "both";
 
@@ -11,26 +12,27 @@ type Step3Props = {
 };
 
 export function Step3Usage({ isSmpRecipient, onNext, onBack }: Step3Props) {
+    const { t } = useTranslation();
     const defaultOption: UsageOption = isSmpRecipient ? "both" : "send";
     const [selected, setSelected] = useState<UsageOption>(defaultOption);
 
     const options: { value: UsageOption; label: string; description: string; icon: React.ElementType }[] = [
         {
             value: "send",
-            label: "Send documents only",
-            description: "Use Recommand to send Peppol documents to your customers.",
+            label: t`Send documents only`,
+            description: t`Use Recommand to send Peppol documents to your customers.`,
             icon: Send,
         },
         {
             value: "receive",
-            label: "Receive documents only",
-            description: "Register your company in the Peppol network so suppliers can send you documents.",
+            label: t`Receive documents only`,
+            description: t`Register your company in the Peppol network so suppliers can send you documents.`,
             icon: Download,
         },
         {
             value: "both",
-            label: "Send and receive documents",
-            description: "Full Peppol participation: send documents and receive them from your network.",
+            label: t`Send and receive documents`,
+            description: t`Full Peppol participation: send documents and receive them from your network.`,
             icon: ArrowLeftRight,
         },
     ];
@@ -42,7 +44,7 @@ export function Step3Usage({ isSmpRecipient, onNext, onBack }: Step3Props) {
     return (
         <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-                What do you want to use Recommand for with this company?
+                {t`What do you want to use Recommand for with this company?`}
             </p>
             <div className="space-y-3">
                 {options.map(({ value, label, description, icon: Icon }) => (
@@ -70,10 +72,10 @@ export function Step3Usage({ isSmpRecipient, onNext, onBack }: Step3Props) {
             </div>
             <div className="flex justify-between gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={onBack}>
-                    Back
+                    {t`Back`}
                 </Button>
                 <Button type="button" onClick={handleNext}>
-                    Create Company
+                    {t`Create Company`}
                 </Button>
             </div>
         </div>

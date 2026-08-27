@@ -36,7 +36,6 @@ import type {
 import type { Label } from "@peppol/types/label";
 import { Badge } from "@core/components/ui/badge";
 import { LabelBadge } from "@peppol/components/label-badge";
-import { format } from "date-fns";
 import { Alert, AlertDescription, AlertTitle } from "@core/components/ui/alert";
 import {
   Tabs,
@@ -55,6 +54,9 @@ import type { ValidationResponse } from "@peppol/types/validation";
 import { CsvAttachmentTable } from "@peppol/components/csv-attachment-table";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
+import { isReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/keys";
+import { useTranslation } from "@core/hooks/use-translation";
+import { getDocumentTypeLabel } from "@peppol/lib/client/document-type-labels";
 
 const client = rc<TransmittedDocuments>("peppol");
 const labelsClient = rc<Labels>("v1");
@@ -64,6 +66,7 @@ type TransmittedDocumentWithLabels = TransmittedDocument & {
 };
 
 export default function TransmittedDocumentDetailPage() {
+  const { t, language } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const activeTeam = useActiveTeam();
@@ -115,7 +118,7 @@ export default function TransmittedDocumentDetailPage() {
         setDoc(hydratedDoc);
       } catch (error) {
         console.error("Error fetching document:", error);
-        toast.error("Failed to load document");
+        toast.error(t`Failed to load document`);
         navigate("/transmitted-documents");
       } finally {
         setIsLoading(false);
@@ -139,13 +142,13 @@ export default function TransmittedDocumentDetailPage() {
         const json = await response.json();
 
         if (!json.success || !Array.isArray(json.labels)) {
-          throw new Error("Failed to load labels");
+          throw new Error(t`Failed to load labels`);
         }
 
         setLabels(json.labels);
       } catch (error) {
         console.error("Failed to load labels:", error);
-        toast.error("Failed to load labels");
+        toast.error(t`Failed to load labels`);
         setLabels([]);
       }
     };
@@ -228,7 +231,7 @@ export default function TransmittedDocumentDetailPage() {
 
   const handleDelete = async () => {
     if (!activeTeam?.id || !doc) return;
-    if (!confirm("Are you sure you want to delete this document?")) return;
+    if (!confirm(t`Are you sure you want to delete this document?`)) return;
 
     try {
       const response = await client[":teamId"]["documents"][
@@ -244,11 +247,11 @@ export default function TransmittedDocumentDetailPage() {
         throw new Error(stringifyActionFailure(json.errors));
       }
 
-      toast.success("Document deleted successfully");
+      toast.success(t`Document deleted successfully`);
       navigate("/transmitted-documents");
     } catch (error) {
       console.error("Failed to delete document:", error);
-      toast.error("Failed to delete document");
+      toast.error(t`Failed to delete document`);
     }
   };
 
@@ -290,7 +293,7 @@ export default function TransmittedDocumentDetailPage() {
         currentDoc ? { ...currentDoc, labels: previousLabels } : currentDoc
       );
       toast.error(
-        isAssigned ? "Failed to remove label" : "Failed to assign label"
+        isAssigned ? t`Failed to remove label` : t`Failed to assign label`
       );
     }
   };
@@ -323,14 +326,14 @@ export default function TransmittedDocumentDetailPage() {
       }
 
       toast.success(
-        read ? "Document marked as read" : "Document marked as unread"
+        read ? t`Document marked as read` : t`Document marked as unread`
       );
     } catch (error) {
       console.error("Failed to update document read status:", error);
       setDoc((currentDoc) =>
         currentDoc ? { ...currentDoc, readAt: previousReadAt } : currentDoc
       );
-      toast.error("Failed to update document read status");
+      toast.error(t`Failed to update document read status`);
     }
   };
 
@@ -360,10 +363,10 @@ export default function TransmittedDocumentDetailPage() {
       window.document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast.success("Document downloaded successfully");
+      toast.success(t`Document downloaded successfully`);
     } catch (error) {
       console.error("Failed to download document:", error);
-      toast.error("Failed to download document");
+      toast.error(t`Failed to download document`);
     }
   };
 
@@ -373,12 +376,12 @@ export default function TransmittedDocumentDetailPage() {
         breadcrumbs={[
           { label: "Peppol", href: "/" },
           {
-            label: "Sent and received documents",
+            label: t`Sent and received documents`,
             href: "/transmitted-documents",
           },
-          { label: "Loading..." },
+          { label: t`Loading...` },
         ]}
-        description="Loading document details..."
+        description={t`Loading document details...`}
       >
         <div className="flex items-center justify-center h-96">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -393,16 +396,16 @@ export default function TransmittedDocumentDetailPage() {
         breadcrumbs={[
           { label: "Peppol", href: "/" },
           {
-            label: "Sent and received documents",
+            label: t`Sent and received documents`,
             href: "/transmitted-documents",
           },
-          { label: "Not found" },
+          { label: t`Not found` },
         ]}
-        description="Document not found"
+        description={t`Document not found`}
       >
         <div className="flex items-center justify-center h-96">
           <Button onClick={() => navigate("/transmitted-documents")}>
-            Back to documents
+            {t`Back to documents`}
           </Button>
         </div>
       </PageTemplate>
@@ -427,10 +430,11 @@ export default function TransmittedDocumentDetailPage() {
     parsed?.selfBillingInvoiceNumber ??
     parsed?.selfBillingCreditNoteNumber;
   const hasStructuredData = !!parsed && doc.type !== "unknown";
+  const hasXml = Boolean(doc.xml);
   const titleNumber =
     documentNumber || `${doc.id.slice(0, 6)}...${doc.id.slice(-6)}`;
   const directionLabel =
-    doc.direction === "incoming" ? "Incoming document" : "Outgoing document";
+    doc.direction === "incoming" ? t`Incoming document` : t`Outgoing document`;
 
   const pageTitle =
     doc.validation && doc.validation.result !== "valid" ? (
@@ -447,13 +451,13 @@ export default function TransmittedDocumentDetailPage() {
       breadcrumbs={[
         { label: "Peppol", href: "/" },
         {
-          label: "Sent and received documents",
+          label: t`Sent and received documents`,
           href: "/transmitted-documents",
         },
         { label: doc.id },
       ]}
       title={pageTitle}
-      description="Preview and metadata for this transmitted Peppol document."
+      description={t`Preview and metadata for this transmitted Peppol document.`}
       buttons={[
         <DocumentLabelPicker
           key="labels"
@@ -462,8 +466,8 @@ export default function TransmittedDocumentDetailPage() {
           onAssign={(label) => handleUpdateLabel(label, false)}
           onUnassign={(label) => handleUpdateLabel(label, true)}
           showAssignedLabels
-          title="Document labels"
-          emptyText="No labels available"
+          title={t`Document labels`}
+          emptyText={t`No labels available`}
           align="end"
           trigger={
             <Button variant="outline">
@@ -476,7 +480,7 @@ export default function TransmittedDocumentDetailPage() {
           variant="outline"
           size="icon"
           onClick={handleToggleMarkAsRead}
-          title={doc.readAt ? "Mark as unread" : "Mark as read"}
+          title={doc.readAt ? t`Mark as unread` : t`Mark as read`}
         >
           <CheckCheck
             className={doc.readAt ? "h-4 w-4 opacity-30" : "h-4 w-4"}
@@ -484,11 +488,11 @@ export default function TransmittedDocumentDetailPage() {
         </AsyncButton>,
         <AsyncButton key="download" variant="outline" onClick={handleDownload}>
           <FolderArchive className="h-4 w-4 mr-2" />
-          Download package
+          {t`Download package`}
         </AsyncButton>,
         <AsyncButton key="delete" variant="destructive" onClick={handleDelete}>
           <Trash2 className="h-4 w-4 mr-2" />
-          Delete
+          {t`Delete`}
         </AsyncButton>,
       ]}
     >
@@ -499,20 +503,26 @@ export default function TransmittedDocumentDetailPage() {
               {directionIcon}
               <span>{directionLabel}</span>
               <span>•</span>
-              <span className="capitalize">{doc.type}</span>
+              <span>{getDocumentTypeLabel(t, doc.type)}</span>
             </div>
             <CardTitle className="text-2xl font-semibold tracking-tight">
               {titleNumber}
             </CardTitle>
             <CardDescription className="flex flex-wrap items-center gap-2 text-xs md:text-sm">
               <span className="text-muted-foreground">
-                Created {format(new Date(doc.createdAt), "PPpp")}
+                {t`Created ${new Date(doc.createdAt).toLocaleString(language, {
+                  dateStyle: "medium",
+                  timeStyle: "medium",
+                })}`}
               </span>
               {doc.readAt && (
                 <>
                   <span>•</span>
                   <span className="text-muted-foreground">
-                    Read {format(new Date(doc.readAt), "PPpp")}
+                    {t`Read ${new Date(doc.readAt).toLocaleString(language, {
+                      dateStyle: "medium",
+                      timeStyle: "medium",
+                    })}`}
                   </span>
                 </>
               )}
@@ -524,6 +534,7 @@ export default function TransmittedDocumentDetailPage() {
                 sentOverPeppol={doc.sentOverPeppol}
                 sentOverEmail={doc.sentOverEmail}
                 emailRecipients={doc.emailRecipients || undefined}
+                isReporting={isReportingDocumentTypeKey(doc.type)}
               />
               {doc.labels &&
                 doc.labels.map((label) => (
@@ -539,10 +550,11 @@ export default function TransmittedDocumentDetailPage() {
 
         {!hasStructuredData && (
           <Alert className="border-dashed">
-            <AlertTitle>Limited document details</AlertTitle>
+            <AlertTitle>{t`Limited document details`}</AlertTitle>
             <AlertDescription>
-              This document could not be fully parsed. Only technical metadata
-              and raw XML are available.
+              {hasXml
+                ? t`This document could not be fully parsed. Only technical metadata and raw XML are available.`
+                : t`This document could not be fully parsed. Only technical metadata is available.`}
             </AlertDescription>
           </Alert>
         )}
@@ -550,10 +562,9 @@ export default function TransmittedDocumentDetailPage() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Card>
             <CardHeader>
-              <CardTitle>Document preview</CardTitle>
+              <CardTitle>{t`Document preview`}</CardTitle>
               <CardDescription>
-                Rendered billing document and inline previews for any
-                attachments.
+                {t`Preview of the billing document and any attachments.`}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -561,7 +572,7 @@ export default function TransmittedDocumentDetailPage() {
                 {attachments.length > 0 && (
                   <TabsList className="flex w-full gap-2 overflow-x-auto mb-3">
                     <TabsTrigger value="main">
-                      Generated document preview
+                      {t`Generated document preview`}
                     </TabsTrigger>
                     {attachments.map((attachment, index) => (
                       <TabsTrigger
@@ -569,7 +580,7 @@ export default function TransmittedDocumentDetailPage() {
                         value={`attachment-${index}`}
                       >
                         {(() => {
-                          const label = attachment.filename || attachment.description || (attachment.url ? "External link" : `Attachment ${index + 1}`);
+                          const label = attachment.filename || attachment.description || (attachment.url ? t`External link` : t`Attachment ${index + 1}`);
                           return label.length > 24 ? `${label.slice(0, 24)}…` : label;
                         })()}
                       </TabsTrigger>
@@ -581,13 +592,13 @@ export default function TransmittedDocumentDetailPage() {
                   {isPreviewLoading && (
                     <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Loading preview...
+                      {t`Loading preview...`}
                     </div>
                   )}
                   {!isPreviewLoading && previewHtml && (
                     <div className="border rounded-md overflow-hidden bg-background">
                       <iframe
-                        title="Document preview"
+                        title={t`Document preview`}
                         srcDoc={previewHtml}
                         className="w-full h-[800px] border-0"
                       />
@@ -595,7 +606,7 @@ export default function TransmittedDocumentDetailPage() {
                   )}
                   {!isPreviewLoading && !previewHtml && (
                     <p className="text-sm text-muted-foreground">
-                      No preview available for this document.
+                      {t`No preview available for this document.`}
                     </p>
                   )}
                 </TabsContent>
@@ -646,7 +657,7 @@ export default function TransmittedDocumentDetailPage() {
                           }
                         })()
                       : null) ||
-                    "Attachment";
+                    t`Attachment`;
                   const showMimeType = hasEmbedded || (!isUrlOnly && mimeType !== "application/octet-stream");
 
                   return (
@@ -668,7 +679,7 @@ export default function TransmittedDocumentDetailPage() {
                           <div className="flex justify-center">
                             <img
                               src={dataUrl}
-                              alt={attachment.filename || "Image attachment"}
+                              alt={attachment.filename || t`Image attachment`}
                               className="max-h-[800px] w-auto rounded border bg-background"
                             />
                           </div>
@@ -677,7 +688,7 @@ export default function TransmittedDocumentDetailPage() {
                         {hasEmbedded && isPdf && dataUrl && (
                           <div className="border rounded-md overflow-hidden bg-background">
                             <iframe
-                              title={attachment.filename || "PDF attachment"}
+                              title={attachment.filename || t`PDF attachment`}
                               src={dataUrl}
                               className="w-full h-[800px] border-0"
                             />
@@ -716,7 +727,7 @@ export default function TransmittedDocumentDetailPage() {
                                 rel="noreferrer"
                                 className="shrink-0 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
                               >
-                                Open link
+                                {t`Open link`}
                                 <ExternalLink className="h-3 w-3" />
                               </a>
                             </div>
@@ -730,8 +741,7 @@ export default function TransmittedDocumentDetailPage() {
                           (!isTextLike || decodedText === null) &&
                           dataUrl && (
                             <p className="text-sm text-muted-foreground">
-                              This attachment type cannot be previewed inline,
-                              but you can download it.
+                              {t`This attachment type cannot be previewed inline, but you can download it.`}
                             </p>
                           )}
 
@@ -741,14 +751,13 @@ export default function TransmittedDocumentDetailPage() {
                             download={attachment.filename || undefined}
                             className="inline-flex items-center text-sm text-primary underline"
                           >
-                            Download attachment
+                            {t`Download attachment`}
                           </a>
                         )}
 
                         {!hasEmbedded && !attachment.url && (
                           <p className="text-sm text-muted-foreground">
-                            No embedded content or external reference available
-                            for this attachment.
+                            {t`No embedded content or external reference available for this attachment.`}
                           </p>
                         )}
                       </div>
@@ -763,9 +772,9 @@ export default function TransmittedDocumentDetailPage() {
             {doc.validation && doc.validation.result !== "valid" && (
               <Card className="border-destructive/30 bg-destructive/5 dark:border-destructive/50 dark:bg-destructive/10">
                 <CardHeader>
-                  <CardTitle>Document Validation Issues</CardTitle>
+                  <CardTitle>{t`Document Validation Issues`}</CardTitle>
                   <CardDescription className="text-foreground">
-                    This document has validation errors that need attention.
+                    {t`This document has validation errors that need attention.`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -779,9 +788,9 @@ export default function TransmittedDocumentDetailPage() {
             {relatedDocuments.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Related documents</CardTitle>
+                  <CardTitle>{t`Related documents`}</CardTitle>
                   <CardDescription>
-                    Documents with the referenced envelope ID.
+                    {t`Documents with the referenced envelope ID.`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -827,10 +836,12 @@ export default function TransmittedDocumentDetailPage() {
                                 </span>
                                 <span>•</span>
                                 <span>
-                                  {format(
-                                    new Date(relatedDoc.createdAt),
-                                    "PPp"
-                                  )}
+                                  {new Date(
+                                    relatedDoc.createdAt
+                                  ).toLocaleString(language, {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  })}
                                 </span>
                               </div>
                             </div>
@@ -845,72 +856,85 @@ export default function TransmittedDocumentDetailPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Technical details & raw data</CardTitle>
+                <CardTitle>{t`Technical details & raw data`}</CardTitle>
                 <CardDescription>
-                  Inspect metadata, parsed JSON structure, or the original XML
-                  payload.
+                  {hasStructuredData && hasXml
+                    ? t`Inspect metadata, parsed JSON structure, or the original XML payload.`
+                    : hasStructuredData
+                      ? t`Inspect metadata or the parsed JSON structure.`
+                      : hasXml
+                        ? t`Inspect metadata or the original XML payload.`
+                        : t`Inspect document metadata.`}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="metadata">
-                  <TabsList className="grid w-full grid-cols-3 mb-3">
-                    <TabsTrigger value="metadata">Metadata</TabsTrigger>
-                    <TabsTrigger value="json" disabled={!hasStructuredData}>
-                      JSON
+                  <TabsList className="flex w-full gap-2 mb-3">
+                    <TabsTrigger value="metadata" className="flex-1">
+                      {t`Metadata`}
                     </TabsTrigger>
-                    <TabsTrigger value="xml">XML</TabsTrigger>
+                    {hasStructuredData && (
+                      <TabsTrigger value="json" className="flex-1">
+                        {t`JSON`}
+                      </TabsTrigger>
+                    )}
+                    {hasXml && (
+                      <TabsTrigger value="xml" className="flex-1">
+                        {t`XML`}
+                      </TabsTrigger>
+                    )}
                   </TabsList>
                   <TabsContent value="metadata">
                     <div className="grid grid-cols-1 gap-3 text-xs md:text-sm">
                       <div className="space-y-1">
-                        <div className="text-muted-foreground">Document ID</div>
+                        <div className="text-muted-foreground">{t`Document ID`}</div>
                         <div className="font-mono text-xs break-all">
                           {doc.id}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-muted-foreground">Company ID</div>
+                        <div className="text-muted-foreground">{t`Company ID`}</div>
                         <div className="font-mono text-xs break-all">
                           {doc.companyId}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-muted-foreground">Sender ID</div>
+                        <div className="text-muted-foreground">{t`Sender ID`}</div>
                         <div className="font-mono text-xs break-all">
                           {doc.senderId}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-muted-foreground">Receiver ID</div>
+                        <div className="text-muted-foreground">{t`Receiver ID`}</div>
                         <div className="font-mono text-xs break-all">
                           {doc.receiverId}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-muted-foreground">DocType ID</div>
+                        <div className="text-muted-foreground">{t`DocType ID`}</div>
                         <div className="font-mono text-xs break-all">
                           {doc.docTypeId}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-muted-foreground">Process ID</div>
+                        <div className="text-muted-foreground">{t`Process ID`}</div>
                         <div className="font-mono text-xs break-all">
                           {doc.processId}
                         </div>
                       </div>
                       <div className="space-y-1">
                         <div className="text-muted-foreground">
-                          Country (C1)
+                          {t`Country (C1)`}
                         </div>
                         <div className="font-mono text-xs break-all">
                           {doc.countryC1}
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <div className="text-muted-foreground">Attachments</div>
+                        <div className="text-muted-foreground">{t`Attachments`}</div>
                         {attachments.length === 0 && (
                           <div className="text-xs text-muted-foreground">
-                            No attachments found on this document.
+                            {t`No attachments found on this document.`}
                           </div>
                         )}
                         {attachments.length > 0 && (
@@ -926,7 +950,7 @@ export default function TransmittedDocumentDetailPage() {
                                 <div className="flex flex-wrap items-center justify-between gap-1">
                                   <div className="font-mono text-xs break-all">
                                     {attachment.filename ||
-                                      "Unnamed attachment"}
+                                      t`Unnamed attachment`}
                                   </div>
                                   {attachment.mimeCode && (
                                     <span className="text-[0.65rem] uppercase tracking-wide text-muted-foreground">
@@ -947,7 +971,7 @@ export default function TransmittedDocumentDetailPage() {
                                       rel="noreferrer"
                                       className="text-primary underline break-all"
                                     >
-                                      Open external reference
+                                      {t`Open external reference`}
                                     </a>
                                   </div>
                                 )}
@@ -967,7 +991,7 @@ export default function TransmittedDocumentDetailPage() {
                               className="w-full font-normal [&[data-state=open]>svg]:rotate-180"
                             >
                               <span className="text-sm font-medium">
-                                Advanced
+                                {t`Advanced`}
                               </span>
                               <ChevronDown className="h-4 w-4 transition-transform duration-200" />
                             </Button>
@@ -977,7 +1001,7 @@ export default function TransmittedDocumentDetailPage() {
                               {doc.peppolMessageId && (
                                 <div className="space-y-1">
                                   <div className="text-muted-foreground">
-                                    Peppol Message ID
+                                    {t`Peppol Message ID`}
                                   </div>
                                   <div className="font-mono text-xs break-all">
                                     {doc.peppolMessageId}
@@ -987,7 +1011,7 @@ export default function TransmittedDocumentDetailPage() {
                               {doc.peppolConversationId && (
                                 <div className="space-y-1">
                                   <div className="text-muted-foreground">
-                                    Peppol Conversation ID
+                                    {t`Peppol Conversation ID`}
                                   </div>
                                   <div className="font-mono text-xs break-all">
                                     {doc.peppolConversationId}
@@ -997,7 +1021,7 @@ export default function TransmittedDocumentDetailPage() {
                               {doc.receivedPeppolSignalMessage && (
                                 <div className="space-y-1">
                                   <div className="text-muted-foreground">
-                                    Received Peppol Signal Message
+                                    {t`Received Peppol Signal Message`}
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Button
@@ -1020,11 +1044,11 @@ export default function TransmittedDocumentDetailPage() {
                                         link.click();
                                         window.document.body.removeChild(link);
                                         window.URL.revokeObjectURL(url);
-                                        toast.success("XML downloaded");
+                                        toast.success(t`XML downloaded`);
                                       }}
                                     >
                                       <ArrowDown className="h-4 w-4 mr-2" />
-                                      Download XML
+                                      {t`Download XML`}
                                     </Button>
                                     <Button
                                       variant="outline"
@@ -1036,12 +1060,12 @@ export default function TransmittedDocumentDetailPage() {
                                           doc.receivedPeppolSignalMessage
                                         );
                                         toast.success(
-                                          "XML copied to clipboard"
+                                          t`XML copied to clipboard`
                                         );
                                       }}
                                     >
                                       <Copy className="h-4 w-4 mr-2" />
-                                      Copy XML
+                                      {t`Copy XML`}
                                     </Button>
                                   </div>
                                 </div>
@@ -1049,7 +1073,7 @@ export default function TransmittedDocumentDetailPage() {
                               {doc.envelopeId && (
                                 <div className="space-y-1">
                                   <div className="text-muted-foreground">
-                                    Envelope ID
+                                    {t`Envelope ID`}
                                   </div>
                                   <div className="font-mono text-xs break-all">
                                     {doc.envelopeId}
@@ -1062,8 +1086,8 @@ export default function TransmittedDocumentDetailPage() {
                       )}
                     </div>
                   </TabsContent>
-                  <TabsContent value="json">
-                    {hasStructuredData && (
+                  {hasStructuredData && (
+                    <TabsContent value="json">
                       <div className="space-y-2">
                         <div className="h-[320px] overflow-auto w-full rounded-md border bg-card">
                           <SyntaxHighlighter
@@ -1080,38 +1104,40 @@ export default function TransmittedDocumentDetailPage() {
                             navigator.clipboard.writeText(
                               JSON.stringify(parsed, null, 2)
                             );
-                            toast.success("JSON copied to clipboard");
+                            toast.success(t`JSON copied to clipboard`);
                           }}
                         >
                           <Copy className="h-4 w-4 mr-2" />
-                          Copy JSON
+                          {t`Copy JSON`}
                         </Button>
                       </div>
-                    )}
-                  </TabsContent>
-                  <TabsContent value="xml">
-                    <div className="space-y-2">
-                      <div className="h-[320px] overflow-auto w-full rounded-md border bg-card">
-                        <SyntaxHighlighter
-                          code={doc.xml ?? ""}
-                          language="xml"
-                          className="p-4 h-full min-w-full"
-                        />
+                    </TabsContent>
+                  )}
+                  {hasXml && (
+                    <TabsContent value="xml">
+                      <div className="space-y-2">
+                        <div className="h-[320px] overflow-auto w-full rounded-md border bg-card">
+                          <SyntaxHighlighter
+                            code={doc.xml ?? ""}
+                            language="xml"
+                            className="p-4 h-full min-w-full"
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            navigator.clipboard.writeText(doc.xml ?? "");
+                            toast.success(t`XML copied to clipboard`);
+                          }}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          {t`Copy XML`}
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => {
-                          navigator.clipboard.writeText(doc.xml ?? "");
-                          toast.success("XML copied to clipboard");
-                        }}
-                      >
-                        <Copy className="h-4 w-4 mr-2" />
-                        Copy XML
-                      </Button>
-                    </div>
-                  </TabsContent>
+                    </TabsContent>
+                  )}
                 </Tabs>
               </CardContent>
             </Card>

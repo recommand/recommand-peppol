@@ -19,6 +19,7 @@ import type { Subscription } from "api/subscription";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { Check } from "lucide-react";
 import { cn } from "@core/lib/utils";
+import { useTranslation } from "@core/hooks/use-translation";
 
 const subscriptionClient = rc<Subscription>("v1");
 
@@ -44,6 +45,7 @@ export function PlansGrid({
   onSubscriptionUpdate,
   showHeader = true,
 }: PlansGridProps) {
+  const { t, language } = useTranslation();
   const professionalTiers = availablePlans.filter((plan) =>
     plan.id.startsWith(PROFESSIONAL_PREFIX)
   );
@@ -89,12 +91,12 @@ export function PlansGrid({
             ? new Date(data.subscription.lastBilledAt)
             : null,
         });
-        toast.success("Subscription updated successfully");
+        toast.success(t`Subscription updated successfully`);
       } else {
         toast.error(stringifyActionFailure(data.errors));
       }
     } catch (error) {
-      toast.error("Failed to update subscription");
+      toast.error(t`Failed to update subscription`);
     }
   };
 
@@ -108,9 +110,13 @@ export function PlansGrid({
     const isCurrent = isCurrentPlan(plan.id);
     const isActiveCurrent = isCurrent && !currentSubscription?.endDate;
     const tagline = options?.tierSelector
-      ? planTaglines[PROFESSIONAL_PREFIX]
-      : planTaglines[plan.id];
-    const displayName = options?.tierSelector ? "Professional" : plan.name;
+      ? t`For growing businesses with higher volumes`
+      : plan.id === "developer"
+        ? t`Try out Peppol, no credit card needed`
+        : plan.id === "starter"
+          ? t`For small businesses sending every month`
+          : t(planTaglines[plan.id]);
+    const displayName = options?.tierSelector ? t`Professional` : t(plan.name);
 
     return (
       <Card
@@ -123,14 +129,14 @@ export function PlansGrid({
       >
         {isPopular && (
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <Badge>Most popular</Badge>
+            <Badge>{t`Most popular`}</Badge>
           </div>
         )}
         {isCurrent && (
           <div className="absolute -top-3 right-4">
             <Badge variant="secondary">
               <Check className="h-3 w-3 mr-1" />
-              Current
+              {t`Current`}
             </Badge>
           </div>
         )}
@@ -142,7 +148,7 @@ export function PlansGrid({
           )}
           <div className="pt-2">
             {plan.basePrice === 0 ? (
-              <span className="text-3xl font-bold tracking-tight">Free</span>
+              <span className="text-3xl font-bold tracking-tight">{t`Free`}</span>
             ) : (
               <>
                 <span className="text-3xl font-bold tracking-tight">
@@ -150,7 +156,7 @@ export function PlansGrid({
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {" "}
-                  /month excl. VAT
+                  {t`/month excl. VAT`}
                 </span>
               </>
             )}
@@ -161,7 +167,7 @@ export function PlansGrid({
           {options?.tierSelector && (
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">
-                Documents per month
+                {t`Documents per month`}
               </p>
               <ToggleGroup
                 type="single"
@@ -178,7 +184,7 @@ export function PlansGrid({
                     value={tier.id}
                     className="text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
                   >
-                    {tier.includedMonthlyDocuments.toLocaleString("en")}
+                    {tier.includedMonthlyDocuments.toLocaleString(language)}
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
@@ -189,15 +195,15 @@ export function PlansGrid({
               <Check className="h-4 w-4 text-primary shrink-0" />
               <span>
                 <span className="font-medium">
-                  {plan.includedMonthlyDocuments.toLocaleString("en")}
+                  {plan.includedMonthlyDocuments.toLocaleString(language)}
                 </span>{" "}
-                documents included
+                {t`documents included`}
               </span>
             </li>
             <li className="flex items-center gap-2 text-sm">
               <Check className="h-4 w-4 text-primary shrink-0" />
               <span>
-                €{plan.documentOveragePrice.toFixed(2)} per extra document
+                {t`€${plan.documentOveragePrice.toFixed(2)} per extra document`}
               </span>
             </li>
           </ul>
@@ -214,9 +220,9 @@ export function PlansGrid({
           >
             {isCurrent
               ? currentSubscription?.endDate
-                ? "Resume Subscription"
-                : "Current Plan"
-              : "Select Plan"}
+                ? t`Resume Subscription`
+                : t`Current Plan`
+              : t`Select Plan`}
           </Button>
         </CardFooter>
       </Card>
@@ -227,11 +233,11 @@ export function PlansGrid({
     <div className="w-full">
       {showHeader && (
         <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Available Plans</h2>
+          <h2 className="text-xl font-semibold mb-2">{t`Available Plans`}</h2>
           <p className="text-muted-foreground">
             {currentSubscription
-              ? "Upgrade or change your current plan"
-              : "Choose the perfect plan for your needs"}
+              ? t`Upgrade or change your current plan`
+              : t`Choose the perfect plan for your needs`}
           </p>
         </div>
       )}
@@ -240,11 +246,9 @@ export function PlansGrid({
         {selectedTier && renderPlanCard(selectedTier, { tierSelector: true })}
       </div>
       <p className="mt-4 text-xs text-muted-foreground text-center">
-        Need more than{" "}
-        {Math.max(
+        {t`Need more than ${Math.max(
           ...availablePlans.map((plan) => plan.includedMonthlyDocuments)
-        ).toLocaleString("en")}{" "}
-        documents per month? Contact us for a custom plan.
+        ).toLocaleString(language)} documents per month? Contact us for a custom plan.`}
       </p>
     </div>
   );

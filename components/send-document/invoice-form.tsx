@@ -13,6 +13,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import type { Invoice, Party } from "@peppol/utils/parsing/invoice/schemas";
 import { format } from "date-fns";
+import { useTranslation } from "@core/hooks/use-translation";
 import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
 import { useActiveTeam } from "@core/hooks/user";
@@ -43,6 +44,7 @@ export function InvoiceForm({
   mode,
   groupedCounterpartyKey,
 }: InvoiceFormProps) {
+  const { t } = useTranslation();
   const activeTeam = useActiveTeam();
   const [invoice, setInvoice] = useState<Partial<Invoice>>({
     invoiceNumber: "",
@@ -347,7 +349,7 @@ export function InvoiceForm({
     <div className="space-y-6">
       <div className="grid gap-4">
         <div>
-          <Label htmlFor="invoiceNumber">Invoice Number *</Label>
+          <Label htmlFor="invoiceNumber">{t`Invoice Number *`}</Label>
           <Input
             id="invoiceNumber"
             value={invoice.invoiceNumber || ""}
@@ -359,7 +361,7 @@ export function InvoiceForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="issueDate">Issue Date</Label>
+            <Label htmlFor="issueDate">{t`Issue Date`}</Label>
             <Input
               id="issueDate"
               type="date"
@@ -373,7 +375,7 @@ export function InvoiceForm({
             />
           </div>
           <div>
-            <Label htmlFor="dueDate">Due Date</Label>
+            <Label htmlFor="dueDate">{t`Due Date`}</Label>
             <Input
               id="dueDate"
               type="date"
@@ -389,7 +391,7 @@ export function InvoiceForm({
         </div>
 
         <div>
-          <Label htmlFor="buyerReference">Buyer Reference</Label>
+          <Label htmlFor="buyerReference">{t`Buyer Reference`}</Label>
           <Input
             id="buyerReference"
             value={invoice.buyerReference || ""}
@@ -409,8 +411,8 @@ export function InvoiceForm({
           >
             <span>
               {isSelfBilling
-                ? "Buyer Information (Auto-populated)"
-                : "Buyer Information *"}
+                ? t`Buyer Information (Auto-populated)`
+                : t`Buyer Information *`}
             </span>
             <ChevronDown
               className={`h-4 w-4 transition-transform ${openSections.buyer ? "rotate-180" : ""}`}
@@ -435,8 +437,8 @@ export function InvoiceForm({
           >
             <span>
               {isSelfBilling
-                ? "Seller Information *"
-                : "Seller Information (Auto-populated)"}
+                ? t`Seller Information *`
+                : t`Seller Information (Auto-populated)`}
             </span>
             <ChevronDown
               className={`h-4 w-4 transition-transform ${openSections.seller ? "rotate-180" : ""}`}
@@ -458,7 +460,7 @@ export function InvoiceForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("lines")}
         >
-          <span>Invoice Lines *</span>
+          <span>{t`Invoice Lines *`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.lines ? "rotate-180" : ""}`}
           />
@@ -473,12 +475,12 @@ export function InvoiceForm({
 
       {requiresExemptionReason && (
         <div>
-          <Label htmlFor="vatExemptionReason">VAT Exemption Reason *</Label>
+          <Label htmlFor="vatExemptionReason">{t`VAT Exemption Reason *`}</Label>
           <Textarea
             id="vatExemptionReason"
             value={vatExemptionReason}
             onChange={(e) => handleVatExemptionReasonChange(e.target.value)}
-            placeholder="Reason why the invoice is exempt from VAT"
+            placeholder={t`Reason why the invoice is exempt from VAT`}
             rows={3}
             required
           />
@@ -490,7 +492,7 @@ export function InvoiceForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("attachments")}
         >
-          <span>Attachments</span>
+          <span>{t`Attachments`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.attachments ? "rotate-180" : ""}`}
           />
@@ -510,7 +512,7 @@ export function InvoiceForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("payment")}
         >
-          <span>Payment Information</span>
+          <span>{t`Payment Information`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.payment ? "rotate-180" : ""}`}
           />
@@ -530,19 +532,19 @@ export function InvoiceForm({
           className="flex w-full items-center justify-between py-2 font-medium transition-colors hover:text-primary"
           onClick={() => toggleSection("notes")}
         >
-          <span>Additional Notes</span>
+          <span>{t`Additional Notes`}</span>
           <ChevronDown
             className={`h-4 w-4 transition-transform ${openSections.notes ? "rotate-180" : ""}`}
           />
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-4">
           <div>
-            <Label htmlFor="note">Note</Label>
+            <Label htmlFor="note">{t`Note`}</Label>
             <Textarea
               id="note"
               value={invoice.note || ""}
               onChange={(e) => handleFieldChange("note", e.target.value)}
-              placeholder="Thank you for your business"
+              placeholder={t`Thank you for your business`}
               rows={3}
             />
           </div>

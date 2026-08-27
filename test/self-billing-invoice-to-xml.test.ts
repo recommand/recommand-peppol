@@ -1,9 +1,21 @@
 import { describe, it, expect } from "bun:test";
-import { selfBillingInvoiceToUBL } from "../utils/parsing/self-billing-invoice/to-xml";
+import { selfBillingInvoiceToUBL as serializeSelfBillingInvoiceToUBL } from "../utils/parsing/self-billing-invoice/to-xml";
 import type { SelfBillingInvoice } from "../utils/parsing/self-billing-invoice/schemas";
 import { parseSelfBillingInvoiceFromXML } from "@peppol/utils/parsing/self-billing-invoice/from-xml";
 import { sendDocumentViaAPI, validateXml } from "./utils/utils";
 import { XMLParser } from "fast-xml-parser";
+
+const selfBillingProfile = {
+    customizationId:
+        "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0",
+    processId: "urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0",
+};
+
+function selfBillingInvoiceToUBL(
+    options: Omit<Parameters<typeof serializeSelfBillingInvoiceToUBL>[0], "profile">,
+) {
+    return serializeSelfBillingInvoiceToUBL({ ...options, profile: selfBillingProfile });
+}
 
 async function checkSelfBillingInvoiceXML(xml: string, selfBillingInvoice: SelfBillingInvoice, testName: string = "self-billing invoice") {
     expect(xml).toBeDefined();
@@ -790,4 +802,3 @@ describe("selfBillingInvoiceToUBL", () => {
         });
     });
 });
-

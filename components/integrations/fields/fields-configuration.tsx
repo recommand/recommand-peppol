@@ -2,6 +2,7 @@ import type { Integration, IntegrationManifest } from "@peppol/types/integration
 import StringField from "./string-field";
 import BooleanField from "./boolean-field";
 import NumberField from "./number-field";
+import { useTranslation } from "@core/hooks/use-translation";
 
 export default function FieldsConfiguration({
     integration,
@@ -10,6 +11,7 @@ export default function FieldsConfiguration({
     integration: Integration;
     onChange: (integration: Integration) => void;
 }) {
+    const { t } = useTranslation();
     const manifest = integration.manifest as IntegrationManifest;
     const fields = manifest.fields || [];
     const currentFields = integration.configuration?.fields || [];
@@ -66,7 +68,7 @@ export default function FieldsConfiguration({
     if (fields.length === 0) {
         return (
             <div className="text-sm text-muted-foreground">
-                No configurable fields available for this integration.
+                {t`No configurable fields available for this integration.`}
             </div>
         );
     }
@@ -88,8 +90,8 @@ export default function FieldsConfiguration({
                             value={(value as string) || ""}
                             onChange={(newValue) => handleFieldChange(manifestField.id, newValue)}
                             required={manifestField.required}
-                            title={manifestField.title}
-                            description={manifestField.description}
+                            title={t(manifestField.title)}
+                            description={t(manifestField.description)}
                         />
                     );
                 } else if (manifestField.type === "boolean") {
@@ -103,8 +105,8 @@ export default function FieldsConfiguration({
                             value={value as boolean | undefined}
                             onChange={(newValue) => handleFieldChange(manifestField.id, newValue)}
                             required={manifestField.required}
-                            title={manifestField.title}
-                            description={manifestField.description}
+                            title={t(manifestField.title)}
+                            description={t(manifestField.description)}
                         />
                     );
                 } else if (manifestField.type === "number") {
@@ -118,8 +120,8 @@ export default function FieldsConfiguration({
                             value={value as number | undefined}
                             onChange={(newValue) => handleFieldChange(manifestField.id, newValue)}
                             required={manifestField.required}
-                            title={manifestField.title}
-                            description={manifestField.description}
+                            title={t(manifestField.title)}
+                            description={t(manifestField.description)}
                         />
                     );
                 }
@@ -128,4 +130,3 @@ export default function FieldsConfiguration({
         </div>
     );
 }
-

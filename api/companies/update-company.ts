@@ -9,7 +9,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
-import { companyResponse } from "./shared";
+import { companyResponse, toCompanyResponse } from "./shared";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { zodValidCountryCodes } from "@peppol/db/schema";
@@ -111,7 +111,7 @@ async function _updateCompanyImplementation(c: UpdateCompanyContext) {
             },
             metadata: { changedFields: Object.keys(updateData) },
         });
-        return c.json(actionSuccess({ company }));
+        return c.json(actionSuccess({ company: toCompanyResponse(company) }));
     } catch (error) {
         if (error instanceof UserFacingError) {
             return c.json(actionFailure(error), 400);
