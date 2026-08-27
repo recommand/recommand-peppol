@@ -361,15 +361,16 @@ simulator's rather than the access point's.
 ## Sends the playground company's own identity decides
 
 There is one piece of the environment that masking cannot reach: the seller.
-
-When a request omits `seller`, the API fills it in from the company doing the
-sending — the customer's company in production, the playground company here.
 The comparison masks the difference, but the *validator* sees the real
-document, and a dozen Schematron rules turn on whether the seller has a VAT
-number at all. A company that is not VAT registered sends an invoice whose
-lines are "Not subject to VAT"; production builds it without a seller VAT
-identifier and it passes; the replay builds it with the playground company's
-and BR-O-02 refuses it:
+document, so two things about the sending company reach it.
+
+**Its VAT number.** When a request omits `seller`, the API fills it in from the
+company doing the sending — the customer's company in production, the
+playground company here — and a dozen Schematron rules turn on whether the
+seller has a VAT number at all. A company that is not VAT registered sends an
+invoice whose lines are "Not subject to VAT"; production builds it without a
+seller VAT identifier and it passes; the replay builds it with the playground
+company's and BR-O-02 refuses it:
 
 ```
 BR-O-02: An Invoice that contains an Invoice line (BG-25) where the Invoiced item VAT
@@ -377,23 +378,49 @@ category code (BT-151) is "Not subject to VAT" shall not contain the Seller VAT
 identifier (BT-31), …
 ```
 
-Nothing about the API changed there — the sender did. `senderIdentityRejection`
-in `normalise.ts` recognises it, and those recordings are counted in the summary
-instead of failing. It is deliberately narrow, because this is the mask most
-likely to hide something real:
+**The scheme its endpoint is registered under.** The seller's `cbc:EndpointID`
+is not something a request can set at all: the sending pipeline builds the
+sender's address from `getSendingCompanyIdentifier` and writes that scheme and
+identifier into the document, whatever the request said about the seller. Not
+every scheme a company may register with is in the CEF EAS code list the
+Schematron holds it against — a French company registered under `0225` is
+refused where the playground company is not:
 
-- only for a request that **left the seller to be filled in**. One that supplied
-  its own seller is compared as strictly as anything else, so the same BR-O-02
-  fails the run;
-- only when **every** rule that fired is about the seller's VAT identity
-  (`BT-31`, `BT-63`), so a document with any other problem still fails;
-- only where the **recording succeeded**, which is what makes the sender the
-  only suspect: production validated the same document against the same rules
+```
+BR-CL-25: Endpoint identifier scheme identifier MUST belong to the CEF EAS code list
+PEPPOL-EN16931-CL008: Electronic address identifier scheme must be from the codelist
+"Electronic Address Identifier Scheme"
+```
+
+Nothing about the API changed in either case — the sender did.
+`senderIdentityRejection` in `normalise.ts` recognises both, and those
+recordings are counted in the summary instead of failing. It is deliberately
+narrow, because this is the mask most likely to hide something real:
+
+- the VAT rules only for a request that **left the seller to be filled in**. One
+  that supplied its own seller is compared as strictly as anything else, so the
+  same BR-O-02 fails the run;
+- the endpoint rules only where the API **wrote the endpoint**, so raw XML is
+  compared as strictly as anything else, and only where they fired on the
+  **seller's** endpoint — the same two rules fire on the buyer's, which the
+  request supplies, and a refusal about that one still fails the run;
+- only when **every** rule that fired is one of those (`BT-31`, `BT-63`, or the
+  two above on the seller's endpoint), so a document with any other problem
+  still fails;
+- only where the **other side was not refused**, which is what makes the sender
+  the only suspect: the same document was validated against the same rules there
   and passed.
 
+It is applied in both directions, because the difference cuts both ways: a
+recorded sender the playground company's identity gets refused in place of, and
+a recorded sender that was refused where the playground company gets through.
+The second is the one a French recording hits, and its XML is still compared —
+the seller is masked out of it, so what is left is the part of the document the
+request decided.
+
 Giving the playground company a profile that matches is not an alternative — a
-company either has a VAT number or it does not, and the recordings come from
-both kinds.
+company either has a VAT number or it does not, it is registered under one
+scheme or another, and the recordings come from every kind.
 
 ## Sends the recorded company never got to make
 

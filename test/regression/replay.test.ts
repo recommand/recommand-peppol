@@ -166,12 +166,14 @@ describe("send document recordings", () => {
           `transmitted is refused by too, so what changed is the verdict on that document rather than the ` +
           `document the API builds`,
       senderIdentity.length > 0 &&
-        `${senderIdentity.length} were refused because the playground company's VAT identity differs from the ` +
-          `recorded sender's, which is the sender changing rather than the API`,
+        `${senderIdentity.length} were refused because the playground company's identity — its VAT number or the ` +
+          `scheme its endpoint is registered under — differs from the recorded sender's, which is the sender ` +
+          `changing rather than the API`,
       senderIdentityAccepted.length > 0 &&
-        `${senderIdentityAccepted.length} were refused in production over the recorded sender's VAT identity, which ` +
-          `the playground company's differs from, so the replay got past the rule that fired there — again the ` +
-          `sender changing rather than the API; their XML was still compared`,
+        `${senderIdentityAccepted.length} were refused in production over the recorded sender's identity — its VAT ` +
+          `number or the scheme its endpoint is registered under — which the playground company's differs from, so ` +
+          `the replay got past the rule that fired there; again the sender changing rather than the API, and their ` +
+          `XML was still compared`,
       senderUnregistered.length > 0 &&
         `${senderUnregistered.length} were refused in production because the company that sent them has no company ` +
           `identifier, which the playground company does have, so the recorded refusal is the sending company's ` +
@@ -322,18 +324,18 @@ describe("send document recordings", () => {
         ) {
           // The mirror of the branch above, and the same difference read from
           // the other end: production refused this one over the seller it
-          // filled in from the sending company — a company with no VAT number,
-          // where the playground company has one — so the replayed document
-          // carries a seller VAT identifier the recorded one does not and the
-          // rule that fired there does not fire here. The sender changed, not
-          // the API, and the recorded refusal says nothing about what the API
-          // should answer for the document the replay built. The XML below is
-          // still compared: the seller is masked out of it, so what is left is
-          // the part of the document the request decided.
+          // filled in from the sending company — one with no VAT number where
+          // the playground company has one, or one whose endpoint scheme is
+          // outside the EAS code list where the playground company's is in it —
+          // so the rule that fired there does not fire here. The sender
+          // changed, not the API, and the recorded refusal says nothing about
+          // what the API should answer for the document the replay built. The
+          // XML below is still compared: the seller is masked out of it, so
+          // what is left is the part of the document the request decided.
           senderIdentityAccepted.push(label(loaded));
           if (replay.status >= 400) {
             throw new Error(
-              `This recording was refused in production by rules about the sending company's VAT identity, which ` +
+              `This recording was refused in production by rules about the sending company's own identity, which ` +
                 `the playground company's differs from, so the replay was only expected to get past those rules. ` +
                 `It was refused for a different reason:\n  ${describeAnswer(replay.status, replay.body)}`,
             );

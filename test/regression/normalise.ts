@@ -62,29 +62,75 @@ export function sellerFromSendingCompany(request: any): boolean {
 const SENDER_VAT_RULE = /BT-31|BT-63|Seller VAT identifier/;
 
 /**
+ * The validation rules that turn on which *scheme* the sender's electronic
+ * address is registered under.
+ *
+ * The seller's `cbc:EndpointID` is not something a request can set: the sending
+ * pipeline builds the sender's address from `getSendingCompanyIdentifier` and
+ * writes that scheme and identifier into the document, whatever the request
+ * said about the seller. Both rules below hold that scheme against the CEF EAS
+ * code list, which not every scheme a company may register with is in — a
+ * French company registered under `0225` is refused by them where the
+ * playground company is not.
+ *
+ * Matched together with the field, unlike the VAT rules above: the very same
+ * two rules fire on the *buyer's* endpoint, which the request does supply, and
+ * a refusal about that one is the request's own and is compared as strictly as
+ * anything else.
+ */
+const SENDER_ENDPOINT_RULE = /^(?:BR-CL-25|PEPPOL-EN16931-CL008)\b/;
+
+/** The seller's endpoint, under whichever document root it sits. */
+const SENDER_ENDPOINT_FIELD =
+  /cac:AccountingSupplierParty\[\d+\]\/cac:Party\[\d+\]\/cbc:EndpointID\[\d+\]$/;
+
+/**
+ * Whether the document's seller endpoint was filled in from the sending
+ * company. Raw XML is passed through untouched — `prepareXmlDocument` is handed
+ * no sender address — so its seller endpoint is the request's own.
+ */
+function endpointFromSendingCompany(request: any): boolean {
+  return request?.documentType !== "xml";
+}
+
+/**
  * Whether a send was refused only because of *who* is sending it.
  *
- * When a request omits `seller`, the API fills it in from the company doing the
- * sending — the recorded company in production, the playground company here.
- * If the two differ in whether they have a VAT number at all, the replayed
- * document carries a seller VAT identifier where the recorded one did not, or
- * the other way round, and the validator refuses one of them. Nothing about the
- * API changed; the sender did, and it is the one piece of the environment that
- * reaches the validator where masking cannot follow.
+ * Two things about the sending company reach the document, and neither can be
+ * masked, because the *validator* sees the real document rather than the
+ * comparison's masked one:
+ *
+ * - **its VAT number.** When a request omits `seller`, the API fills it in from
+ *   the company doing the sending — the recorded company in production, the
+ *   playground company here. If the two differ in whether they have a VAT
+ *   number at all, the replayed document carries a seller VAT identifier where
+ *   the recorded one did not, or the other way round, and the validator refuses
+ *   one of them.
+ * - **the scheme its electronic address is registered under.** The seller's
+ *   endpoint is built from the sending company whatever the request said, so
+ *   the two documents carry different schemes always, and a scheme outside the
+ *   CEF EAS code list is refused where the playground company's is not.
+ *
+ * Nothing about the API changed in either case; the sender did, and it is the
+ * one piece of the environment that reaches the validator where masking cannot
+ * follow.
  *
  * Asked of either side, because the difference cuts both ways: a recorded
  * sender with no VAT number is refused where the playground company gets
  * through, and a recorded sender with one gets through where the playground
  * company is refused. The caller passes the recording's own answer for the
- * first and the replay's for the second; the request is the same either way,
- * since it is the request that left the seller to be filled in.
+ * first and the replay's for the second; the request is the same either way.
  *
  * Narrow on purpose, so it cannot swallow a real rejection:
  *
- * - only for a request that left the seller to be filled in — one that supplied
- *   its own is compared as strictly as any other;
- * - only when *every* rule that fired is about the seller's VAT identity, so a
- *   document with any other problem still fails;
+ * - the VAT rules only for a request that left the seller to be filled in — one
+ *   that supplied its own is compared as strictly as any other;
+ * - the endpoint rules only where the API wrote the endpoint, so raw XML is
+ *   compared as strictly as any other, and only where they fired on the
+ *   *seller's* endpoint, so the buyer's — which the request supplies — still
+ *   fails the run;
+ * - only when *every* rule that fired is one of those, so a document with any
+ *   other problem still fails;
  * - and the caller applies it only where the two sides answered differently and
  *   the other side was not refused, which is what makes the sender the only
  *   candidate: the same document was validated against the same rules there and
@@ -96,22 +142,36 @@ export function senderIdentityRejection(
   body: any,
 ): boolean {
   if (status !== 400) return false;
-  if (!sellerFromSendingCompany(request)) return false;
 
   const errors = body?.errors;
   if (!errors || typeof errors !== "object") return false;
 
+  const sellerDefaulted = sellerFromSendingCompany(request);
+  const endpointFromCompany = endpointFromSendingCompany(request);
+  if (!sellerDefaulted && !endpointFromCompany) return false;
+
   // `root` carries the generic "Document validation failed" headline that
   // accompanies every validation failure, so it says nothing about which rules
-  // fired.
-  const messages = Object.entries(errors)
+  // fired. Every other key is the path of the element a rule fired on, which
+  // the endpoint rules are told apart by.
+  const fired = Object.entries(errors)
     .filter(([field]) => field !== "root")
-    .flatMap(([, value]) => (Array.isArray(value) ? value : [value]));
+    .flatMap(([field, value]) =>
+      (Array.isArray(value) ? value : [value]).map((message) => ({
+        field,
+        message,
+      })),
+    );
 
   return (
-    messages.length > 0 &&
-    messages.every(
-      (message) => typeof message === "string" && SENDER_VAT_RULE.test(message),
+    fired.length > 0 &&
+    fired.every(
+      ({ field, message }) =>
+        typeof message === "string" &&
+        ((sellerDefaulted && SENDER_VAT_RULE.test(message)) ||
+          (endpointFromCompany &&
+            SENDER_ENDPOINT_FIELD.test(field) &&
+            SENDER_ENDPOINT_RULE.test(message))),
     )
   );
 }
