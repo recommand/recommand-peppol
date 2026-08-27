@@ -27,18 +27,33 @@ function matchesSignature(secret: string, rawBody: string, signature: string): b
 }
 
 // The transaction's apId tells us which of our configured access points (and
-// therefore which network) it belongs to.
+// therefore which network) it belongs to. Both networks are checked so that an
+// access point shared by a misconfiguration is reported as ambiguous instead of
+// defaulting to production.
 function resolveUseTestNetwork(apId: string): boolean | null {
+  const matches: boolean[] = [];
   for (const useTestNetwork of [false, true]) {
     try {
       if (getArratechConfig(useTestNetwork).apRef === apId) {
-        return useTestNetwork;
+        matches.push(useTestNetwork);
       }
     } catch {
       // Network not configured in this environment
     }
   }
-  return null;
+
+  if (matches.length !== 1) {
+    if (matches.length > 1) {
+      console.error(
+        "Ambiguous Arratech access point:",
+        apId,
+        "- ARRATECH_AP_REF and ARRATECH_TEST_AP_REF must be different values"
+      );
+    }
+    return null;
+  }
+
+  return matches[0]!;
 }
 
 server.post(

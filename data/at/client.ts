@@ -8,8 +8,8 @@ type ArratechConfig = {
   apRef: string;
 };
 
-function getEnv(name: string, fallbackName?: string): string {
-  const value = process.env[name] ?? (fallbackName ? process.env[fallbackName] : undefined);
+function getEnv(name: string): string {
+  const value = process.env[name];
   if (!value) {
     throw new Error(`${name} environment variable is not set`);
   }
@@ -23,22 +23,10 @@ export function getArratechConfig(useTestNetwork: boolean): ArratechConfig {
         ? process.env.ARRATECH_TEST_API_URL ?? process.env.ARRATECH_API_URL
         : process.env.ARRATECH_API_URL
     ) ?? "https://api.arratech.com",
-    apiKey: getEnv(
-      useTestNetwork ? "ARRATECH_TEST_API_KEY" : "ARRATECH_API_KEY",
-      "ARRATECH_API_KEY"
-    ),
-    orgId: getEnv(
-      useTestNetwork ? "ARRATECH_TEST_ORG_ID" : "ARRATECH_ORG_ID",
-      "ARRATECH_ORG_ID"
-    ),
-    smpRef: getEnv(
-      useTestNetwork ? "ARRATECH_TEST_SMP_REF" : "ARRATECH_SMP_REF",
-      "ARRATECH_SMP_REF"
-    ),
-    apRef: getEnv(
-      useTestNetwork ? "ARRATECH_TEST_AP_REF" : "ARRATECH_AP_REF",
-      "ARRATECH_AP_REF"
-    ),
+    apiKey: getEnv(useTestNetwork ? "ARRATECH_TEST_API_KEY" : "ARRATECH_API_KEY"),
+    orgId: getEnv(useTestNetwork ? "ARRATECH_TEST_ORG_ID" : "ARRATECH_ORG_ID"),
+    smpRef: getEnv(useTestNetwork ? "ARRATECH_TEST_SMP_REF" : "ARRATECH_SMP_REF"),
+    apRef: getEnv(useTestNetwork ? "ARRATECH_TEST_AP_REF" : "ARRATECH_AP_REF"),
   };
 }
 
