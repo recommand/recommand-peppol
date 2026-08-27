@@ -15,7 +15,7 @@ const accessPointProviders = {
   "recommand-ap1": {
     sendAs4: sendRecommandP1As4,
   },
-  "at-shared-ap": {
+  "at-shared-ap-fr": {
     sendAs4: sendArratechAs4,
   },
 } satisfies Record<AccessPointProviderId, AccessPointProvider>;

@@ -4,7 +4,7 @@ import type { AccessPointProviderId } from "@peppol/data/peppol-providers";
 import { SendingFailure } from "./errors";
 
 /** The access point the French regulated flows are transmitted over. */
-const FRANCE_ACCESS_POINT_PROVIDER: AccessPointProviderId = "at-shared-ap";
+const FRANCE_ACCESS_POINT_PROVIDER: AccessPointProviderId = "at-shared-ap-fr";
 
 /**
  * The doc type ids that exist only inside the French regulated regime. They are the

@@ -1,0 +1,3052 @@
+{
+  "id": "6602e0e3-ba26-48ae-852c-c7049ec17a25",
+  "prevId": "fec8be08-6616-4b4a-bbc2-b6e4049d0a48",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.activated_integrations": {
+      "name": "activated_integrations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "manifest": {
+          "name": "manifest",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "configuration": {
+          "name": "configuration",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "activated_integrations_team_id_idx": {
+          "name": "activated_integrations_team_id_idx",
+          "columns": [
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "activated_integrations_team_id_teams_id_fk": {
+          "name": "activated_integrations_team_id_teams_id_fk",
+          "tableFrom": "activated_integrations",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "activated_integrations_company_id_peppol_companies_id_fk": {
+          "name": "activated_integrations_company_id_peppol_companies_id_fk",
+          "tableFrom": "activated_integrations",
+          "tableTo": "peppol_companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_billing_profiles": {
+      "name": "peppol_billing_profiles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mollie_customer_id": {
+          "name": "mollie_customer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_payment_id": {
+          "name": "first_payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "first_payment_status": {
+          "name": "first_payment_status",
+          "type": "peppol_payment_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "is_mandate_validated": {
+          "name": "is_mandate_validated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "profile_standing": {
+          "name": "profile_standing",
+          "type": "peppol_profile_standing",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "grace_started_at": {
+          "name": "grace_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "grace_reason": {
+          "name": "grace_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suspended_at": {
+          "name": "suspended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "company_name": {
+          "name": "company_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country": {
+          "name": "country",
+          "type": "peppol_valid_country_codes",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vat_number": {
+          "name": "vat_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "billing_email": {
+          "name": "billing_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "billing_peppol_address": {
+          "name": "billing_peppol_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_manually_billed": {
+          "name": "is_manually_billed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "peppol_billing_profiles_team_id_unique": {
+          "name": "peppol_billing_profiles_team_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "team_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_companies": {
+      "name": "peppol_companies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country": {
+          "name": "country",
+          "type": "peppol_valid_country_codes",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enterprise_number_scheme": {
+          "name": "enterprise_number_scheme",
+          "type": "peppol_valid_iso_icd_scheme_identifiers",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enterprise_number": {
+          "name": "enterprise_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vat_number": {
+          "name": "vat_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_smp_recipient": {
+          "name": "is_smp_recipient",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "access_point_provider": {
+          "name": "access_point_provider",
+          "type": "peppol_access_point_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-ap1'"
+        },
+        "smp_provider": {
+          "name": "smp_provider",
+          "type": "peppol_smp_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-smp1'"
+        },
+        "is_verified": {
+          "name": "is_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "verification_proof_reference": {
+          "name": "verification_proof_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "peppol_companies_team_id_teams_id_fk": {
+          "name": "peppol_companies_team_id_teams_id_fk",
+          "tableFrom": "peppol_companies",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_company_document_types": {
+      "name": "peppol_company_document_types",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "doc_type_id": {
+          "name": "doc_type_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "process_id": {
+          "name": "process_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "peppol_company_document_types_unique": {
+          "name": "peppol_company_document_types_unique",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "doc_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "process_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "peppol_company_document_types_company_id_peppol_companies_id_fk": {
+          "name": "peppol_company_document_types_company_id_peppol_companies_id_fk",
+          "tableFrom": "peppol_company_document_types",
+          "tableTo": "peppol_companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_company_identifiers": {
+      "name": "peppol_company_identifiers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scheme": {
+          "name": "scheme",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "peppol_company_identifiers_unique": {
+          "name": "peppol_company_identifiers_unique",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"scheme\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"identifier\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "peppol_company_identifiers_company_id_peppol_companies_id_fk": {
+          "name": "peppol_company_identifiers_company_id_peppol_companies_id_fk",
+          "tableFrom": "peppol_company_identifiers",
+          "tableTo": "peppol_companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_company_notification_email_addresses": {
+      "name": "peppol_company_notification_email_addresses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notify_incoming": {
+          "name": "notify_incoming",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "notify_outgoing": {
+          "name": "notify_outgoing",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "include_auto_generated_pdf_incoming": {
+          "name": "include_auto_generated_pdf_incoming",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "include_auto_generated_pdf_outgoing": {
+          "name": "include_auto_generated_pdf_outgoing",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "include_document_json_incoming": {
+          "name": "include_document_json_incoming",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "include_document_json_outgoing": {
+          "name": "include_document_json_outgoing",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "peppol_company_notification_email_addresses_unique": {
+          "name": "peppol_company_notification_email_addresses_unique",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"email\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "peppol_company_notification_email_addresses_company_id_peppol_companies_id_fk": {
+          "name": "peppol_company_notification_email_addresses_company_id_peppol_companies_id_fk",
+          "tableFrom": "peppol_company_notification_email_addresses",
+          "tableTo": "peppol_companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.company_verification_log": {
+      "name": "company_verification_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "verification_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'opened'"
+        },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "company_name": {
+          "name": "company_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enterprise_number": {
+          "name": "enterprise_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "peppol_valid_country_codes",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verification_proof_reference": {
+          "name": "verification_proof_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mandate_accepted_at": {
+          "name": "mandate_accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "company_verification_log_company_id_peppol_companies_id_fk": {
+          "name": "company_verification_log_company_id_peppol_companies_id_fk",
+          "tableFrom": "company_verification_log",
+          "tableTo": "peppol_companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.enterprise_data_cache": {
+      "name": "enterprise_data_cache",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "enterprise_number": {
+          "name": "enterprise_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country": {
+          "name": "country",
+          "type": "peppol_valid_country_codes",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "begin_date": {
+          "name": "begin_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "street": {
+          "name": "street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "number": {
+          "name": "number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "juridical_form_code": {
+          "name": "juridical_form_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "juridical_form_description": {
+          "name": "juridical_form_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "juridical_form_begin_date": {
+          "name": "juridical_form_begin_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "denomination_code": {
+          "name": "denomination_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "denomination_description": {
+          "name": "denomination_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "denomination_begin_date": {
+          "name": "denomination_begin_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "representatives": {
+          "name": "representatives",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "enterprise_data_cache_unique": {
+          "name": "enterprise_data_cache_unique",
+          "columns": [
+            {
+              "expression": "enterprise_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "country",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.integration_task_logs": {
+      "name": "integration_task_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "integration_id": {
+          "name": "integration_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event": {
+          "name": "event",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "task": {
+          "name": "task",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "success": {
+          "name": "success",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "context": {
+          "name": "context",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "integration_task_logs_integration_id_activated_integrations_id_fk": {
+          "name": "integration_task_logs_integration_id_activated_integrations_id_fk",
+          "tableFrom": "integration_task_logs",
+          "tableTo": "activated_integrations",
+          "columnsFrom": [
+            "integration_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_labels": {
+      "name": "peppol_labels",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color_hex": {
+          "name": "color_hex",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "peppol_labels_external_id_unique": {
+          "name": "peppol_labels_external_id_unique",
+          "columns": [
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "external_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"peppol_labels\".\"external_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "peppol_labels_team_id_teams_id_fk": {
+          "name": "peppol_labels_team_id_teams_id_fk",
+          "tableFrom": "peppol_labels",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_payment_failure_reminders": {
+      "name": "peppol_payment_failure_reminders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "billing_event_id": {
+          "name": "billing_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_addresses": {
+          "name": "email_addresses",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "peppol_payment_failure_reminders_billing_event_id_peppol_subscription_billing_events_id_fk": {
+          "name": "peppol_payment_failure_reminders_billing_event_id_peppol_subscription_billing_events_id_fk",
+          "tableFrom": "peppol_payment_failure_reminders",
+          "tableTo": "peppol_subscription_billing_events",
+          "columnsFrom": [
+            "billing_event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pending_s3_deletions": {
+      "name": "pending_s3_deletions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "prefix": {
+          "name": "prefix",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "pending_s3_deletions_claim_idx": {
+          "name": "pending_s3_deletions_claim_idx",
+          "columns": [
+            {
+              "expression": "claimed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_subscription_billing_event_lines": {
+      "name": "peppol_subscription_billing_event_lines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "subscription_billing_event_id": {
+          "name": "subscription_billing_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subscription_id": {
+          "name": "subscription_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subscription_start_date": {
+          "name": "subscription_start_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subscription_end_date": {
+          "name": "subscription_end_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subscription_last_billed_at": {
+          "name": "subscription_last_billed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "billing_config": {
+          "name": "billing_config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "included_monthly_documents": {
+          "name": "included_monthly_documents",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "base_price": {
+          "name": "base_price",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "incoming_document_overage_price": {
+          "name": "incoming_document_overage_price",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outgoing_document_overage_price": {
+          "name": "outgoing_document_overage_price",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_qty": {
+          "name": "used_qty",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_qty_incoming": {
+          "name": "used_qty_incoming",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_qty_outgoing": {
+          "name": "used_qty_outgoing",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "overage_qty_incoming": {
+          "name": "overage_qty_incoming",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "overage_qty_outgoing": {
+          "name": "overage_qty_outgoing",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_amount_excl": {
+          "name": "total_amount_excl",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "peppol_subscription_billing_event_lines_subscription_billing_event_id_peppol_subscription_billing_events_id_fk": {
+          "name": "peppol_subscription_billing_event_lines_subscription_billing_event_id_peppol_subscription_billing_events_id_fk",
+          "tableFrom": "peppol_subscription_billing_event_lines",
+          "tableTo": "peppol_subscription_billing_events",
+          "columnsFrom": [
+            "subscription_billing_event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_subscription_billing_events": {
+      "name": "peppol_subscription_billing_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "billing_profile_id": {
+          "name": "billing_profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "billing_date": {
+          "name": "billing_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "billing_period_start": {
+          "name": "billing_period_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "billing_period_end": {
+          "name": "billing_period_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_amount_excl": {
+          "name": "total_amount_excl",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vat_amount": {
+          "name": "vat_amount",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vat_category": {
+          "name": "vat_category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vat_percentage": {
+          "name": "vat_percentage",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_amount_incl": {
+          "name": "total_amount_incl",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_qty": {
+          "name": "used_qty",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_qty_incoming": {
+          "name": "used_qty_incoming",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_qty_outgoing": {
+          "name": "used_qty_outgoing",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "overage_qty_incoming": {
+          "name": "overage_qty_incoming",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "overage_qty_outgoing": {
+          "name": "overage_qty_outgoing",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_due": {
+          "name": "amount_due",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payment_status": {
+          "name": "payment_status",
+          "type": "peppol_payment_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "payment_id": {
+          "name": "payment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paid_amount": {
+          "name": "paid_amount",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payment_method": {
+          "name": "payment_method",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payment_date": {
+          "name": "payment_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invoice_id": {
+          "name": "invoice_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invoice_reference": {
+          "name": "invoice_reference",
+          "type": "serial",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "peppol_subscription_billing_events_billing_profile_id_peppol_billing_profiles_id_fk": {
+          "name": "peppol_subscription_billing_events_billing_profile_id_peppol_billing_profiles_id_fk",
+          "tableFrom": "peppol_subscription_billing_events",
+          "tableTo": "peppol_billing_profiles",
+          "columnsFrom": [
+            "billing_profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "peppol_subscription_billing_events_invoice_id_unique": {
+          "name": "peppol_subscription_billing_events_invoice_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "invoice_id"
+          ]
+        },
+        "peppol_subscription_billing_events_invoice_reference_unique": {
+          "name": "peppol_subscription_billing_events_invoice_reference_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "invoice_reference"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_subscriptions": {
+      "name": "peppol_subscriptions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plan_id": {
+          "name": "plan_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plan_name": {
+          "name": "plan_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "billing_config": {
+          "name": "billing_config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_billed_at": {
+          "name": "last_billed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.supporting_data_customers": {
+      "name": "supporting_data_customers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vat_number": {
+          "name": "vat_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enterprise_number": {
+          "name": "enterprise_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "peppol_addresses": {
+          "name": "peppol_addresses",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'"
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "postal_code": {
+          "name": "postal_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "supporting_customers_team_id_idx": {
+          "name": "supporting_customers_team_id_idx",
+          "columns": [
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "supporting_customers_external_id_unique": {
+          "name": "supporting_customers_external_id_unique",
+          "columns": [
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "external_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"supporting_data_customers\".\"external_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "supporting_data_customers_team_id_teams_id_fk": {
+          "name": "supporting_data_customers_team_id_teams_id_fk",
+          "tableFrom": "supporting_data_customers",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.supporting_data_supplier_labels": {
+      "name": "supporting_data_supplier_labels",
+      "schema": "",
+      "columns": {
+        "supporting_data_supplier_id": {
+          "name": "supporting_data_supplier_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label_id": {
+          "name": "label_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "supporting_data_supplier_labels_supporting_data_supplier_id_supporting_data_suppliers_id_fk": {
+          "name": "supporting_data_supplier_labels_supporting_data_supplier_id_supporting_data_suppliers_id_fk",
+          "tableFrom": "supporting_data_supplier_labels",
+          "tableTo": "supporting_data_suppliers",
+          "columnsFrom": [
+            "supporting_data_supplier_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "supporting_data_supplier_labels_label_id_peppol_labels_id_fk": {
+          "name": "supporting_data_supplier_labels_label_id_peppol_labels_id_fk",
+          "tableFrom": "supporting_data_supplier_labels",
+          "tableTo": "peppol_labels",
+          "columnsFrom": [
+            "label_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "supporting_data_supplier_labels_pkey": {
+          "name": "supporting_data_supplier_labels_pkey",
+          "columns": [
+            "supporting_data_supplier_id",
+            "label_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.supporting_data_suppliers": {
+      "name": "supporting_data_suppliers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vat_number": {
+          "name": "vat_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "peppol_addresses": {
+          "name": "peppol_addresses",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "supporting_suppliers_team_id_idx": {
+          "name": "supporting_suppliers_team_id_idx",
+          "columns": [
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "supporting_suppliers_external_id_unique": {
+          "name": "supporting_suppliers_external_id_unique",
+          "columns": [
+            {
+              "expression": "team_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "external_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"supporting_data_suppliers\".\"external_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "supporting_data_suppliers_team_id_teams_id_fk": {
+          "name": "supporting_data_suppliers_team_id_teams_id_fk",
+          "tableFrom": "supporting_data_suppliers",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_team_extensions": {
+      "name": "peppol_team_extensions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "is_playground": {
+          "name": "is_playground",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "use_test_network": {
+          "name": "use_test_network",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "verification_requirements": {
+          "name": "verification_requirements",
+          "type": "verification_requirements",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'lax'"
+        },
+        "company_verification_extension_until": {
+          "name": "company_verification_extension_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "support_email_address": {
+          "name": "support_email_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "peppol_team_extensions_id_teams_id_fk": {
+          "name": "peppol_team_extensions_id_teams_id_fk",
+          "tableFrom": "peppol_team_extensions",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_transfer_events": {
+      "name": "peppol_transfer_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "peppol_transfer_event_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'peppol'"
+        },
+        "transmitted_document_id": {
+          "name": "transmitted_document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direction": {
+          "name": "direction",
+          "type": "peppol_transfer_event_direction",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_transmitted_document_labels": {
+      "name": "peppol_transmitted_document_labels",
+      "schema": "",
+      "columns": {
+        "transmitted_document_id": {
+          "name": "transmitted_document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label_id": {
+          "name": "label_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "peppol_transmitted_document_labels_transmitted_document_id_peppol_transmitted_documents_id_fk": {
+          "name": "peppol_transmitted_document_labels_transmitted_document_id_peppol_transmitted_documents_id_fk",
+          "tableFrom": "peppol_transmitted_document_labels",
+          "tableTo": "peppol_transmitted_documents",
+          "columnsFrom": [
+            "transmitted_document_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "peppol_transmitted_document_labels_label_id_peppol_labels_id_fk": {
+          "name": "peppol_transmitted_document_labels_label_id_peppol_labels_id_fk",
+          "tableFrom": "peppol_transmitted_document_labels",
+          "tableTo": "peppol_labels",
+          "columnsFrom": [
+            "label_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "peppol_transmitted_document_labels_pkey": {
+          "name": "peppol_transmitted_document_labels_pkey",
+          "columns": [
+            "transmitted_document_id",
+            "label_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_transmitted_documents": {
+      "name": "peppol_transmitted_documents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "direction": {
+          "name": "direction",
+          "type": "peppol_transfer_event_direction",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sender_id": {
+          "name": "sender_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "receiver_id": {
+          "name": "receiver_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "doc_type_id": {
+          "name": "doc_type_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "process_id": {
+          "name": "process_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country_c1": {
+          "name": "country_c1",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "access_point_provider": {
+          "name": "access_point_provider",
+          "type": "peppol_access_point_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-ap1'"
+        },
+        "smp_provider": {
+          "name": "smp_provider",
+          "type": "peppol_smp_provider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recommand-smp1'"
+        },
+        "xml": {
+          "name": "xml",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "xml_location": {
+          "name": "xml_location",
+          "type": "peppol_payload_location",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'db'"
+        },
+        "attachments_location": {
+          "name": "attachments_location",
+          "type": "peppol_payload_location",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'db'"
+        },
+        "original_payload_location": {
+          "name": "original_payload_location",
+          "type": "peppol_payload_location",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "original_payload_container_format": {
+          "name": "original_payload_container_format",
+          "type": "peppol_original_payload_container_format",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "s3_key_prefix": {
+          "name": "s3_key_prefix",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "offload_claimed_at": {
+          "name": "offload_claimed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_over_peppol": {
+          "name": "sent_over_peppol",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "sent_over_email": {
+          "name": "sent_over_email",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "email_recipients": {
+          "name": "email_recipients",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'"
+        },
+        "type": {
+          "name": "type",
+          "type": "peppol_supported_document_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unknown'"
+        },
+        "parsed": {
+          "name": "parsed",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validation": {
+          "name": "validation",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sender_name": {
+          "name": "sender_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receiver_name": {
+          "name": "receiver_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "document_number": {
+          "name": "document_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "search_text": {
+          "name": "search_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "peppol_message_id": {
+          "name": "peppol_message_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "peppol_conversation_id": {
+          "name": "peppol_conversation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_peppol_signal_message": {
+          "name": "received_peppol_signal_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "envelope_id": {
+          "name": "envelope_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ap_transaction_id": {
+          "name": "ap_transaction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_reference_id": {
+          "name": "external_reference_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "read_at": {
+          "name": "read_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "peppol_transmitted_documents_offload_idx": {
+          "name": "peppol_transmitted_documents_offload_idx",
+          "columns": [
+            {
+              "expression": "xml_location",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "offload_claimed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "peppol_transmitted_documents_ap_transaction_id_idx": {
+          "name": "peppol_transmitted_documents_ap_transaction_id_idx",
+          "columns": [
+            {
+              "expression": "ap_transaction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"peppol_transmitted_documents\".\"ap_transaction_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "peppol_transmitted_documents_team_id_teams_id_fk": {
+          "name": "peppol_transmitted_documents_team_id_teams_id_fk",
+          "tableFrom": "peppol_transmitted_documents",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "peppol_transmitted_documents_company_id_peppol_companies_id_fk": {
+          "name": "peppol_transmitted_documents_company_id_peppol_companies_id_fk",
+          "tableFrom": "peppol_transmitted_documents",
+          "tableTo": "peppol_companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.peppol_webhooks": {
+      "name": "peppol_webhooks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "peppol_webhooks_team_id_teams_id_fk": {
+          "name": "peppol_webhooks_team_id_teams_id_fk",
+          "tableFrom": "peppol_webhooks",
+          "tableTo": "teams",
+          "columnsFrom": [
+            "team_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "peppol_webhooks_company_id_peppol_companies_id_fk": {
+          "name": "peppol_webhooks_company_id_peppol_companies_id_fk",
+          "tableFrom": "peppol_webhooks",
+          "tableTo": "peppol_companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.peppol_access_point_provider": {
+      "name": "peppol_access_point_provider",
+      "schema": "public",
+      "values": [
+        "recommand-ap1",
+        "at-shared-ap-fr"
+      ]
+    },
+    "public.peppol_original_payload_container_format": {
+      "name": "peppol_original_payload_container_format",
+      "schema": "public",
+      "values": [
+        "none",
+        "pdf"
+      ]
+    },
+    "public.peppol_payload_location": {
+      "name": "peppol_payload_location",
+      "schema": "public",
+      "values": [
+        "none",
+        "db",
+        "s3"
+      ]
+    },
+    "public.peppol_payment_status": {
+      "name": "peppol_payment_status",
+      "schema": "public",
+      "values": [
+        "none",
+        "open",
+        "pending",
+        "authorized",
+        "paid",
+        "canceled",
+        "expired",
+        "failed"
+      ]
+    },
+    "public.peppol_profile_standing": {
+      "name": "peppol_profile_standing",
+      "schema": "public",
+      "values": [
+        "pending",
+        "active",
+        "grace",
+        "suspended"
+      ]
+    },
+    "public.peppol_smp_provider": {
+      "name": "peppol_smp_provider",
+      "schema": "public",
+      "values": [
+        "recommand-smp1",
+        "at-shared-smp-fr"
+      ]
+    },
+    "public.peppol_supported_document_type": {
+      "name": "peppol_supported_document_type",
+      "schema": "public",
+      "values": [
+        "invoice",
+        "creditNote",
+        "selfBillingInvoice",
+        "selfBillingCreditNote",
+        "messageLevelResponse",
+        "frenchInvoicingCdar",
+        "frenchB2CSalesReport",
+        "frenchB2CPaymentReport",
+        "frenchB2BiInvoiceReport",
+        "frenchB2BiPaymentReport",
+        "unknown"
+      ]
+    },
+    "public.peppol_transfer_event_direction": {
+      "name": "peppol_transfer_event_direction",
+      "schema": "public",
+      "values": [
+        "incoming",
+        "outgoing"
+      ]
+    },
+    "public.peppol_transfer_event_type": {
+      "name": "peppol_transfer_event_type",
+      "schema": "public",
+      "values": [
+        "peppol",
+        "email",
+        "reporting"
+      ]
+    },
+    "public.peppol_valid_country_codes": {
+      "name": "peppol_valid_country_codes",
+      "schema": "public",
+      "values": [
+        "AU",
+        "AT",
+        "BE",
+        "BG",
+        "CA",
+        "HR",
+        "DK",
+        "EE",
+        "FI",
+        "FR",
+        "DE",
+        "GR",
+        "HK",
+        "HU",
+        "IS",
+        "IE",
+        "IT",
+        "JP",
+        "LV",
+        "LU",
+        "MY",
+        "NL",
+        "NZ",
+        "NO",
+        "PL",
+        "PT",
+        "RO",
+        "SG",
+        "SK",
+        "SI",
+        "ES",
+        "SE",
+        "AE",
+        "GB",
+        "US"
+      ]
+    },
+    "public.peppol_valid_iso_icd_scheme_identifiers": {
+      "name": "peppol_valid_iso_icd_scheme_identifiers",
+      "schema": "public",
+      "values": [
+        "0002",
+        "0003",
+        "0004",
+        "0005",
+        "0006",
+        "0007",
+        "0008",
+        "0009",
+        "0010",
+        "0011",
+        "0012",
+        "0013",
+        "0014",
+        "0015",
+        "0016",
+        "0017",
+        "0018",
+        "0019",
+        "0020",
+        "0021",
+        "0022",
+        "0023",
+        "0024",
+        "0025",
+        "0026",
+        "0027",
+        "0028",
+        "0029",
+        "0030",
+        "0031",
+        "0032",
+        "0033",
+        "0034",
+        "0035",
+        "0036",
+        "0037",
+        "0038",
+        "0039",
+        "0040",
+        "0041",
+        "0042",
+        "0043",
+        "0044",
+        "0045",
+        "0046",
+        "0047",
+        "0048",
+        "0049",
+        "0050",
+        "0051",
+        "0052",
+        "0053",
+        "0054",
+        "0055",
+        "0056",
+        "0057",
+        "0058",
+        "0059",
+        "0060",
+        "0061",
+        "0062",
+        "0063",
+        "0064",
+        "0065",
+        "0066",
+        "0067",
+        "0068",
+        "0069",
+        "0070",
+        "0071",
+        "0072",
+        "0073",
+        "0074",
+        "0075",
+        "0076",
+        "0077",
+        "0078",
+        "0079",
+        "0080",
+        "0081",
+        "0082",
+        "0083",
+        "0084",
+        "0085",
+        "0086",
+        "0087",
+        "0088",
+        "0089",
+        "0090",
+        "0091",
+        "0093",
+        "0094",
+        "0095",
+        "0096",
+        "0097",
+        "0098",
+        "0099",
+        "0100",
+        "0101",
+        "0102",
+        "0104",
+        "0105",
+        "0106",
+        "0107",
+        "0108",
+        "0109",
+        "0110",
+        "0111",
+        "0112",
+        "0113",
+        "0114",
+        "0115",
+        "0116",
+        "0117",
+        "0118",
+        "0119",
+        "0120",
+        "0121",
+        "0122",
+        "0123",
+        "0124",
+        "0125",
+        "0126",
+        "0127",
+        "0128",
+        "0129",
+        "0130",
+        "0131",
+        "0132",
+        "0133",
+        "0134",
+        "0135",
+        "0136",
+        "0137",
+        "0138",
+        "0139",
+        "0140",
+        "0141",
+        "0142",
+        "0143",
+        "0144",
+        "0145",
+        "0146",
+        "0147",
+        "0148",
+        "0149",
+        "0150",
+        "0151",
+        "0152",
+        "0153",
+        "0154",
+        "0155",
+        "0156",
+        "0157",
+        "0158",
+        "0159",
+        "0160",
+        "0161",
+        "0162",
+        "0163",
+        "0164",
+        "0165",
+        "0166",
+        "0167",
+        "0168",
+        "0169",
+        "0170",
+        "0171",
+        "0172",
+        "0173",
+        "0174",
+        "0175",
+        "0176",
+        "0177",
+        "0178",
+        "0179",
+        "0180",
+        "0183",
+        "0184",
+        "0185",
+        "0186",
+        "0187",
+        "0188",
+        "0189",
+        "0190",
+        "0191",
+        "0192",
+        "0193",
+        "0194",
+        "0195",
+        "0196",
+        "0197",
+        "0198",
+        "0199",
+        "0200",
+        "0201",
+        "0202",
+        "0203",
+        "0204",
+        "0205",
+        "0206",
+        "0207",
+        "0208",
+        "0209",
+        "0210",
+        "0211",
+        "0212",
+        "0213",
+        "0214",
+        "0215",
+        "0216",
+        "0217",
+        "0218",
+        "0219",
+        "0220",
+        "0221",
+        "0222",
+        "0223",
+        "0224",
+        "0225",
+        "0226",
+        "0227",
+        "0228",
+        "0229",
+        "0230",
+        "0231",
+        "0232",
+        "0233",
+        "0234",
+        "0235",
+        "0236",
+        "0237",
+        "0238",
+        "0239",
+        "0240"
+      ]
+    },
+    "public.peppol_validation_result": {
+      "name": "peppol_validation_result",
+      "schema": "public",
+      "values": [
+        "valid",
+        "invalid",
+        "not_supported",
+        "error"
+      ]
+    },
+    "public.verification_requirements": {
+      "name": "verification_requirements",
+      "schema": "public",
+      "values": [
+        "strict",
+        "trusted",
+        "lax"
+      ]
+    },
+    "public.verification_status": {
+      "name": "verification_status",
+      "schema": "public",
+      "values": [
+        "opened",
+        "idVerificationRequested",
+        "inReview",
+        "verified",
+        "rejected",
+        "error"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

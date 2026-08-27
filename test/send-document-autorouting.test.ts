@@ -32,7 +32,7 @@ const belgianCompany = {
 };
 const frenchCompany = {
   country: "FR",
-  accessPointProvider: "at-shared-ap" as const,
+  accessPointProvider: "at-shared-ap-fr" as const,
 };
 
 const plainInvoice = {};
@@ -53,7 +53,7 @@ function select(options: {
   document?: unknown;
   doctypeId?: string;
   processId?: string;
-  company?: { country: string; accessPointProvider: "recommand-ap1" | "at-shared-ap" };
+  company?: { country: string; accessPointProvider: "recommand-ap1" | "at-shared-ap-fr" };
   capabilities?: RecipientCapabilities | null;
 }) {
   return selectFormatAndProcess({

@@ -23,8 +23,8 @@ const frenchCompany = {
   enterpriseNumberScheme: "0225",
   vatNumber: "FR12303265045",
   isSmpRecipient: true,
-  accessPointProvider: "at-shared-ap",
-  smpProvider: "at-shared-smp",
+  accessPointProvider: "at-shared-ap-fr",
+  smpProvider: "at-shared-smp-fr",
 } as unknown as Company;
 
 const belgianCompany = {

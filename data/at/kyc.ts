@@ -18,7 +18,7 @@ import {
  * teams never reach Arratech, so they neither sign nor get filed.
  */
 export async function requiresArratechKycReview(company: Company): Promise<boolean> {
-  if (company.smpProvider !== "at-shared-smp") {
+  if (company.smpProvider !== "at-shared-smp-fr") {
     return false;
   }
 

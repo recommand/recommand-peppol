@@ -687,6 +687,13 @@
       "when": 1787580338500,
       "tag": "20260824140538_illegal_scourge",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1787834612291,
+      "tag": "20260827144332_rename_arratech_fr_providers",
+      "breakpoints": true
     }
   ]
 }

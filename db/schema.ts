@@ -88,14 +88,17 @@ export const validationResultEnum = pgEnum(
   validationResult.options
 );
 
-export const accessPointProviderIds = ["recommand-ap1", "at-shared-ap"] as const;
+export const accessPointProviderIds = [
+  "recommand-ap1",
+  "at-shared-ap-fr",
+] as const;
 export const zodAccessPointProviderIds = z.enum(accessPointProviderIds);
 export const accessPointProviderEnum = pgEnum(
   "peppol_access_point_provider",
   accessPointProviderIds
 );
 
-export const smpProviderIds = ["recommand-smp1", "at-shared-smp"] as const;
+export const smpProviderIds = ["recommand-smp1", "at-shared-smp-fr"] as const;
 export const zodSmpProviderIds = z.enum(smpProviderIds);
 export const smpProviderEnum = pgEnum("peppol_smp_provider", smpProviderIds);
 

@@ -146,7 +146,7 @@ export async function finalizeCompanyVerification({
     // A session waiting on Arratech's KYC already registered the participant, so
     // a refusal has to take it back off their SMP.
     (existingLog.status === "inReview" &&
-      company.smpProvider === "at-shared-smp" &&
+      company.smpProvider === "at-shared-smp-fr" &&
       shouldRegisterWithSmp({ ...smpStateBase, isVerified: true }));
   const shouldBeRegistered = shouldRegisterWithSmp({ ...smpStateBase, isVerified });
   const smpTransition =

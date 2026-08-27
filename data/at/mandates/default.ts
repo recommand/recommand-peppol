@@ -84,7 +84,7 @@ function buildScopeItems(company: Company): MandateScopeItem[] {
     });
   }
 
-  if (company.accessPointProvider === "at-shared-ap") {
+  if (company.accessPointProvider === "at-shared-ap-fr") {
     scopeItems.push({
       title: "Sending electronic invoices",
       description:

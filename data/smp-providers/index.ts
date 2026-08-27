@@ -57,7 +57,7 @@ const smpProviders = {
     unregisterCompanyDocumentType: unregisterRecommandP1CompanyDocumentType,
     unregisterCompanyIdentifier: unregisterRecommandP1CompanyIdentifier,
   },
-  "at-shared-smp": {
+  "at-shared-smp-fr": {
     upsertCompanyRegistrations: upsertArratechCompanyRegistrations,
     unregisterCompanyRegistrations: unregisterArratechCompanyRegistrations,
     upsertCompanyRegistration: upsertArratechCompanyRegistration,

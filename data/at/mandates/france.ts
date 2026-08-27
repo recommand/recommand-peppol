@@ -249,7 +249,7 @@ function buildAnnexItems(company: Company) {
     },
   ];
 
-  if (company.accessPointProvider === "at-shared-ap") {
+  if (company.accessPointProvider === "at-shared-ap-fr") {
     items.unshift({
       title: "Émission de factures électroniques",
       description:
