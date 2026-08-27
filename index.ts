@@ -23,6 +23,7 @@ import {
 import webhooksServer from "./api/webhooks";
 import integrationsServer from "./api/integrations";
 import recipientServer from "./api/recipients";
+import receivingCapabilitiesServer from "./api/receiving-capabilities";
 import playgroundsServer from "./api/playgrounds";
 import suppliersServer from "./api/suppliers";
 import teamsServer from "./api/teams/get-team-extension";
@@ -201,6 +202,7 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, companiesServer);
   server.route(prefix, transmittedDocumentsServer);
   server.route(prefix, recipientServer);
+  server.route(prefix, receivingCapabilitiesServer);
   server.route(prefix + "internal/", receiveDocumentServer);
   server.route(prefix + "internal/", diditWebhookServer);
   server.route(prefix + "internal/", arratechWebhookServer);

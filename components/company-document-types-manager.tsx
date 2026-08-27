@@ -9,12 +9,14 @@ import { toast } from "@core/components/ui/sonner";
 import { Plus, Edit, Trash2, X, Check } from "lucide-react";
 import { rc } from "@recommand/lib/client";
 import type { CompanyDocumentTypes } from "@peppol/api/companies/document-types";
+import type { ReceivingCapabilities } from "@peppol/api/receiving-capabilities";
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
 import type { ReceivingCapability } from "@peppol/utils/type-repository/receiving-capabilities/types";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<CompanyDocumentTypes>("peppol");
+const receivingCapabilitiesClient = rc<ReceivingCapabilities>("peppol");
 
 type CompanyDocumentTypesManagerProps = {
     teamId: string;
@@ -41,6 +43,10 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
         fetchDocumentTypes();
     }, [teamId, companyId]);
 
+    useEffect(() => {
+        fetchReceivingCapabilities();
+    }, []);
+
     const fetchDocumentTypes = async () => {
         try {
             setIsLoading(true);
@@ -59,12 +65,28 @@ export function CompanyDocumentTypesManager({ teamId, companyId }: CompanyDocume
                 createdAt: new Date(dt.createdAt),
                 updatedAt: new Date(dt.updatedAt),
             })));
-            setReceivingCapabilities(json.receivingCapabilities || []);
         } catch (error) {
             console.error("Error fetching document types:", error);
             toast.error(t`Failed to load company document types`);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchReceivingCapabilities = async () => {
+        try {
+            const response = await receivingCapabilitiesClient["receivingCapabilities"].$get();
+            const json = await response.json();
+
+            if (!json.success) {
+                toast.error(stringifyActionFailure(json.errors));
+                return;
+            }
+
+            setReceivingCapabilities(json.receivingCapabilities || []);
+        } catch (error) {
+            console.error("Error fetching receiving capabilities:", error);
+            toast.error(t`Failed to load supported document types`);
         }
     };
 
