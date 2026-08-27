@@ -10,6 +10,7 @@ import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
 import { getRecipientCapabilities } from "@peppol/data/recipient-capabilities";
 import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
+import { recordSendDocumentDelivery } from "@peppol/utils/metrics";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { ulid } from "ulid";
@@ -228,6 +229,14 @@ export async function sendingPipeline(c: SendingContext) {
         as4Response,
       },
       originalPayload: prepared.originalPayload,
+    });
+
+    recordSendDocumentDelivery({
+      documentType: prepared.type,
+      isPlayground,
+      useTestNetwork,
+      sentOverPeppol: sentPeppol,
+      emailRecipientCount: emailRecipients.length,
     });
 
     return c.json(
