@@ -698,6 +698,7 @@ Fill in the required fields to see a preview.,Vul de verplichte velden in om een
 Flat UBLs (all XMLs in root),Platte UBL's (alle XML-bestanden in de hoofdmap)
 For Belgian businesses\, the VAT number will be used to infer the enterprise number.,Voor Belgische bedrijven wordt het ondernemingsnummer afgeleid uit het btw-nummer.
 For Dutch businesses\, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).,Voor Nederlandse bedrijven heeft het btw-nummer de notatie NL + 9 cijfers + B + 2 cijfers (bijv. NL123456789B01).
+For French businesses\, the enterprise number is the 9 digit SIREN. A SIRET can be added as an extra Peppol identifier.,Voor Franse bedrijven is het ondernemingsnummer het SIREN-nummer van 9 cijfers. Een SIRET-nummer kan als extra Peppol-identificatie worden toegevoegd.
 For Dutch sellers\, the scheme identifier is required to be able to send invoices and credit notes.,Voor Nederlandse verkopers is de schema-identificatie verplicht om facturen en creditnota's te kunnen verzenden.
 Full Peppol participation: send documents and receive them from your network.,Volledige deelname aan Peppol: verzend documenten en ontvang ze vanuit je netwerk.
 Generates a PDF of the document and embeds it as an attachment.,Genereert een pdf van het document en voegt deze als bijlage toe.

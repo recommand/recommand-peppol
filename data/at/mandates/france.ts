@@ -1,6 +1,7 @@
 import type { Company } from "@peppol/data/companies";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import { FRENCH_MANDATE_TEMPLATE } from "@peppol/templates/mandate-fr";
+import { isSiren, isSiret } from "@peppol/utils/identifier-validation";
 import { UserFacingError } from "@peppol/utils/util";
 import { formatMandateDate, MANDATARY, OPERATOR } from "./shared";
 import {
@@ -43,31 +44,6 @@ function frenchNumber(value: string | null | undefined): string | null {
     return null;
   }
   return value.replace(/[\s.\-]/g, "").split(/\D/)[0];
-}
-
-function passesLuhn(digits: string): boolean {
-  let sum = 0;
-  let double = false;
-  for (let index = digits.length - 1; index >= 0; index--) {
-    let digit = digits.charCodeAt(index) - 48;
-    if (double) {
-      digit *= 2;
-      if (digit > 9) {
-        digit -= 9;
-      }
-    }
-    sum += digit;
-    double = !double;
-  }
-  return sum % 10 === 0;
-}
-
-function isSiren(digits: string): boolean {
-  return /^\d{9}$/.test(digits) && passesLuhn(digits);
-}
-
-function isSiret(digits: string): boolean {
-  return /^\d{14}$/.test(digits) && passesLuhn(digits);
 }
 
 /**
@@ -169,7 +145,7 @@ function toAnnuaireAddress(
     return null;
   }
   const value = identifier.identifier.replace(/[\s.]/g, "");
-  if (identifier.scheme !== "0225" && /^\d{14}$/.test(value)) {
+  if (/^\d{14}$/.test(value)) {
     return `${value.slice(0, 9)}_${value}`;
   }
   return value;

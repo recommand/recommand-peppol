@@ -636,6 +636,7 @@ Fill in the required fields to see a preview.,Renseignez les champs obligatoires
 Flat UBLs (all XMLs in root),UBL non imbriqués (tous les fichiers XML à la racine)
 For Belgian businesses\, the VAT number will be used to infer the enterprise number.,Pour les entreprises belges\, le numéro de TVA servira à déduire le numéro d'entreprise.
 For Dutch businesses\, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).,Pour les entreprises néerlandaises\, le format du numéro de TVA est NL + 9 chiffres + B + 2 chiffres (p. ex. NL123456789B01).
+For French businesses\, the enterprise number is the 9 digit SIREN. A SIRET can be added as an extra Peppol identifier.,Pour les entreprises françaises\, le numéro d'entreprise est le numéro SIREN à 9 chiffres. Un numéro SIRET peut être ajouté comme identifiant Peppol supplémentaire.
 For Dutch sellers\, the scheme identifier is required to be able to send invoices and credit notes.,Pour les vendeurs néerlandais\, l'identifiant de schéma est requis afin de pouvoir envoyer des factures et des avoirs.
 For growing businesses with higher volumes,Pour les entreprises en croissance avec des volumes plus élevés
 For small businesses sending every month,Pour les petites entreprises qui envoient des documents chaque mois

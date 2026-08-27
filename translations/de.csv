@@ -368,6 +368,7 @@ Flat UBLs (all XMLs in root),Flache UBL-Struktur (alle XML-Dateien im Stammverze
 for assistance.,um Unterstützung zu erhalten.
 For Belgian businesses\, the VAT number will be used to infer the enterprise number.,Bei belgischen Unternehmen wird die Unternehmensnummer aus der Umsatzsteuer-Identifikationsnummer abgeleitet.
 For Dutch businesses\, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).,Bei niederländischen Unternehmen hat die Umsatzsteuer-Identifikationsnummer das Format NL + 9 Ziffern + B + 2 Ziffern (z. B. NL123456789B01).
+For French businesses\, the enterprise number is the 9 digit SIREN. A SIRET can be added as an extra Peppol identifier.,Bei französischen Unternehmen ist die Unternehmensnummer die neunstellige SIREN-Nummer. Eine SIRET-Nummer kann als zusätzliche Peppol-Kennung hinzugefügt werden.
 For Dutch sellers\, the scheme identifier is required to be able to send invoices and credit notes.,Bei niederländischen Verkäufern ist die Schemakennung erforderlich\, um Rechnungen und Gutschriften senden zu können.
 For growing businesses with higher volumes,Für wachsende Unternehmen mit höherem Volumen
 For small businesses sending every month,Für kleine Unternehmen\, die jeden Monat senden
