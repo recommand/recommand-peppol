@@ -215,7 +215,7 @@ for (const prefix of ["/peppol/", "/v1/"]) {
 
   server.route(prefix, billingProfileServer); 
   server.route(prefix, billingServer);
-  server.route(prefix, reportingServer);
+  // server.route(prefix, reportingServer); // TODO: Re-enable and validate this when the French reporting is available with AT, our PA
   server.route(prefix, subscriptionServer);
   server.route(prefix, teamsServer);
 }
