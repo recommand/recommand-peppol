@@ -18,12 +18,8 @@ import { ulid } from "ulid";
 import { isNotNull, SQL, sql } from "drizzle-orm";
 import { uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
-import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import { autoUpdateTimestamp } from "@recommand/db/custom-types";
 import { COUNTRIES } from "@peppol/utils/countries";
-import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
-import type { SelfBillingCreditNote } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
 import type {
   IntegrationConfiguration,
   IntegrationManifest,
