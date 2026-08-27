@@ -7,11 +7,19 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@recommand/db";
 import { transmittedDocuments } from "@peppol/db/schema";
 import { UserFacingError } from "@peppol/utils/util";
-import { fetchArratech, getArratechConfig } from "@peppol/data/at/client";
+import { downloadBusinessDocument } from "@peppol/data/at/ap";
+import { getArratechConfig } from "@peppol/data/at/client";
+import { recordProviderSentTransaction } from "@peppol/data/provider-sent";
 import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
-import { extractStandardBusinessDocumentPayload } from "@peppol/utils/sbdh";
 
 const server = new Server();
+
+const RECEIVED_EVENT_TYPE = "transaction.received";
+const SENT_EVENT_TYPE = "transaction.sent";
+
+// The access point every company on this provider sends through, and therefore the
+// provider that reported the transactions this webhook queues.
+const ARRATECH_ACCESS_POINT_PROVIDER = "at-shared-ap-fr" as const;
 
 function matchesSignature(secret: string, rawBody: string, signature: string): boolean {
   const hmac = createHmac("sha256", secret);
@@ -56,6 +64,23 @@ function resolveUseTestNetwork(apId: string): boolean | null {
   return matches[0]!;
 }
 
+async function findTransmittedDocument(
+  apTransactionId: string,
+  direction: "incoming" | "outgoing"
+): Promise<{ id: string } | undefined> {
+  return await db
+    .select({ id: transmittedDocuments.id })
+    .from(transmittedDocuments)
+    .where(
+      and(
+        eq(transmittedDocuments.apTransactionId, apTransactionId),
+        eq(transmittedDocuments.direction, direction)
+      )
+    )
+    .limit(1)
+    .then((rows) => rows[0]);
+}
+
 server.post(
   "/arratech",
   describeRoute({ hide: true }),
@@ -96,7 +121,9 @@ server.post(
         return c.json(actionFailure("Invalid webhook payload: " + parseResult.error.message), 400);
       }
 
-      if (parseResult.data.eventType !== "transaction.received") {
+      const eventType = parseResult.data.eventType;
+      if (eventType !== RECEIVED_EVENT_TYPE && eventType !== SENT_EVENT_TYPE) {
+        console.log("Ignoring Arratech webhook event type:", eventType);
         return c.json(actionSuccess({ message: "Event type not processed" }), 200);
       }
 
@@ -109,6 +136,7 @@ server.post(
         processId: z.string(),
         senderCountry: z.string().optional(),
         docInstanceId: z.string().optional(),
+        transactionStatus: z.string().optional(),
       });
 
       const payloadResult = transactionPayloadSchema.safeParse(parseResult.data.payload);
@@ -131,41 +159,46 @@ server.post(
         return c.json(actionFailure("Signature does not match the access point's network"), 401);
       }
 
-      const existingDocument = await db
-        .select({ id: transmittedDocuments.id })
-        .from(transmittedDocuments)
-        .where(
-          and(
-            eq(transmittedDocuments.apTransactionId, payload.id),
-            eq(transmittedDocuments.direction, "incoming")
-          )
-        )
-        .limit(1);
-      if (existingDocument.length > 0) {
+      if (eventType === SENT_EVENT_TYPE) {
+        // The event fires on successful delivery, but the status is checked when it is
+        // reported so a failed transaction is never stored as a sent document.
+        if (
+          payload.transactionStatus &&
+          payload.transactionStatus.toUpperCase() !== "COMPLETED"
+        ) {
+          return c.json(actionSuccess({ message: "Transaction not completed" }), 200);
+        }
+
+        // Arratech reports every outbound transaction, including the ones our own
+        // sending pipeline created. Those are recognised by the envelope claim their
+        // send wrote before the document ever reached Arratech, so only the documents
+        // Arratech sent on our behalf are recorded here (see data/provider-sent).
+        const outcome = await recordProviderSentTransaction({
+          c,
+          accessPointProvider: ARRATECH_ACCESS_POINT_PROVIDER,
+          apTransactionId: payload.id,
+          useTestNetwork,
+          senderId: payload.senderId,
+          receiverId: payload.receiverId,
+          docTypeId: payload.docTypeId,
+          processId: payload.processId,
+          senderCountry: payload.senderCountry ?? null,
+          docInstanceId: payload.docInstanceId ?? null,
+        });
+
+        return c.json(actionSuccess({ outcome }), 200);
+      }
+
+      if (await findTransmittedDocument(payload.id, "incoming")) {
         return c.json(actionSuccess({ message: "Already processed" }), 200);
       }
 
-      const config = getArratechConfig(useTestNetwork);
-      const response = await fetchArratech(
-        `/orgs/${config.orgId}/transactions/${payload.id}/business_document`,
-        { useTestNetwork }
-      );
-      if (!response.ok) {
-        console.error("Failed to download Arratech business document:", response.status);
+      const document = await downloadBusinessDocument({
+        transactionId: payload.id,
+        useTestNetwork,
+      });
+      if (!document) {
         return c.json(actionFailure("Failed to download business document"), 502);
-      }
-
-      const documentPayload = extractStandardBusinessDocumentPayload(
-        await response.text()
-      );
-      let body: string | Blob;
-      let contentType: string;
-      if (documentPayload.kind === "binary") {
-        contentType = documentPayload.mimeType;
-        body = new Blob([new Uint8Array(documentPayload.content)], { type: contentType });
-      } else {
-        contentType = "application/xml";
-        body = documentPayload.xml;
       }
 
       await receivingPipeline({
@@ -174,8 +207,8 @@ server.post(
         docTypeId: payload.docTypeId,
         processId: payload.processId,
         countryC1: payload.senderCountry ?? "",
-        body,
-        contentType,
+        body: document.body,
+        contentType: document.contentType,
         useTestNetwork,
         sbdhInstanceIdentifier: payload.docInstanceId ?? null,
         as4MessageId: null,

@@ -569,7 +569,11 @@ export const transmittedDocuments = pgTable(
       table.createdAt,
       table.offloadClaimedAt
     ),
-    index("peppol_transmitted_documents_ap_transaction_id_idx")
+    // Unique: one transmitted document per access point transaction. Both the
+    // sending pipeline and the provider webhooks write this id, and the
+    // constraint is what makes a transaction impossible to record twice
+    // instead of merely unlikely to be.
+    uniqueIndex("peppol_transmitted_documents_ap_transaction_id_idx")
       .on(table.apTransactionId)
       .where(isNotNull(table.apTransactionId)),
   ]
@@ -603,6 +607,23 @@ export const pendingS3Deletions = pgTable(
     ),
   ]
 );
+
+// The SBDH envelopes our sending pipeline handed to an access point. The row is
+// written before the document is sent, so by the time the access point can report the
+// transaction back to us the claim is already there: it is what tells the handler of
+// that report whether the transaction belongs to a send of ours or to a document the
+// provider sent on our behalf (see data/provider-sent). Rows are pruned once they are
+// far older than any send can be.
+export const outgoingEnvelopeClaims = pgTable("peppol_outgoing_envelope_claims", {
+  // The SBDH instance identifier, which the access point echoes back as the
+  // transaction's document instance id.
+  instanceIdentifier: text("instance_identifier").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+}, (table) => [
+  index("peppol_outgoing_envelope_claims_created_at_idx").on(table.createdAt),
+]);
 
 export const transmittedDocumentLabels = pgTable(
   "peppol_transmitted_document_labels",
