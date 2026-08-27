@@ -9,7 +9,10 @@ import { ublFranceCiusInvoiceFormat } from "../utils/type-repository/document-fo
 import { ublFranceExtendedCreditnoteFormat } from "../utils/type-repository/document-formats/ubl-france-extended-creditnote";
 import { ublFranceExtendedInvoiceFormat } from "../utils/type-repository/document-formats/ubl-france-extended-invoice";
 import type { AnyDocumentFormat } from "../utils/type-repository/document-formats/types";
-import { FRANCE_NON_REGULATED_PROCESS_ID } from "../utils/type-repository/document-formats/france-process";
+import {
+  FRANCE_NON_REGULATED_PROCESS_ID,
+  FRANCE_REGULATED_PROCESS_ID,
+} from "../utils/type-repository/document-formats/france-process";
 
 const invoice: Invoice = {
   invoiceNumber: "INV-FR-001",
@@ -67,26 +70,38 @@ function toXml(format: AnyDocumentFormat): string {
 }
 
 describe("CII D22B profiles", () => {
-  it("writes the selected process into formats whose XML profile carries it", () => {
-    const xml = peppolUblBis3InvoiceFormat.encode(
-      {
-        ...invoice,
-        countrySpecific: {
-          ...invoice.countrySpecific!,
-          businessProcess: "NON_REGULATED",
-        },
-      },
+  it("keeps the BIS billing process in ProfileID on a French transport", () => {
+    // The French processes route the transmission; the payload is still Peppol BIS
+    // Billing 3.0, whose BT-23 has to stay the BIS process identifier for the receiver
+    // to resolve a ruleset for it. The French process id travels in the SBDH instead.
+    for (const processId of [
+      FRANCE_REGULATED_PROCESS_ID,
       FRANCE_NON_REGULATED_PROCESS_ID,
-      {
-        senderAddress: "0225:303265045",
-        recipientAddress: "0225:341815675",
-        isDocumentValidationEnforced: true,
-      },
-    );
+    ]) {
+      const xml = peppolUblBis3InvoiceFormat.encode(
+        {
+          ...invoice,
+          countrySpecific: {
+            ...invoice.countrySpecific!,
+            businessProcess:
+              processId === FRANCE_REGULATED_PROCESS_ID
+                ? "REGULATED"
+                : "NON_REGULATED",
+          },
+        },
+        processId,
+        {
+          senderAddress: "0225:303265045",
+          recipientAddress: "0225:341815675",
+          isDocumentValidationEnforced: true,
+        },
+      );
 
-    expect(xml).toContain(
-      `<cbc:ProfileID>${FRANCE_NON_REGULATED_PROCESS_ID}</cbc:ProfileID>`,
-    );
+      expect(xml).toContain(
+        "<cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>",
+      );
+      expect(xml).not.toContain(processId);
+    }
   });
 
   it("keeps the French billing mode in XML for a non-regulated transport", () => {
