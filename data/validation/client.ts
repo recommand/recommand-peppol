@@ -49,10 +49,13 @@ export function groupValidationErrors(
   validation: ValidationResponse,
 ): Record<string, string[]> {
   return validation.errors.reduce<Record<string, string[]>>((all, error) => {
-    const message = `${error.ruleCode}: ${error.errorMessage}`;
-    const messages = all[error.fieldName] ?? [];
+    const field = error.fieldName || "root";
+    const message = error.ruleCode
+      ? `${error.ruleCode}: ${error.errorMessage}`
+      : error.errorMessage;
+    const messages = all[field] ?? [];
     if (!messages.includes(message)) {
-      all[error.fieldName] = [...messages, message];
+      all[field] = [...messages, message];
     }
     return all;
   }, {});

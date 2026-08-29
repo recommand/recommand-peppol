@@ -11,12 +11,16 @@ export async function validateDocument(
   const validation = await validateXmlDocument(xml);
   if (validation.result !== "invalid") return validation;
 
+  const grouped = groupValidationErrors(validation);
+  const { root: unscoped = [], ...fields } = grouped;
+
   throw new SendingFailure(
     {
       root: [
         "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
+        ...unscoped,
       ],
-      ...groupValidationErrors(validation),
+      ...fields,
     },
     400,
   );
