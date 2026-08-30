@@ -17,6 +17,7 @@ export async function publishCompanyVerificationEvent({
 }): Promise<void> {
   await publishEvent("peppol.company.verification.v1", {
     teamId,
+    streamId: companyId,
     aggregateType: "peppol.company",
     aggregateId: companyId,
     idempotencyKey: `peppol.company.verification:${verificationEventId}:${status}`,

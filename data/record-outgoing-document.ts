@@ -129,6 +129,7 @@ export async function recordOutgoingDocument(options: {
 
   await publishEvent("peppol.document.sent.v1", {
     teamId,
+    streamId: company.id,
     aggregateType: "peppol.document",
     aggregateId: transmittedDocument.id,
     idempotencyKey: `peppol.document.sent:${transmittedDocument.id}`,

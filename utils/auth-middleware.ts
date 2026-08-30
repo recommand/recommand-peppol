@@ -154,7 +154,7 @@ const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
       if (!payload) {
         return null;
       }
-      return { userId: null, isAdmin: false, language: "en", apiKey: null, teamId: payload.teamId as string };
+      return { userId: null, isAdmin: false, language: "en", apiKey: null, teamId: payload.teamId as string, installation: null, service: null };
     } catch (error) {
       console.error(error);
       return null;

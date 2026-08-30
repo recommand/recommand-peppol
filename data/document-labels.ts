@@ -58,6 +58,7 @@ export async function assignLabelToDocument(
 
   await publishEvent("peppol.document.label.assigned.v1", {
     teamId,
+    streamId: document.companyId,
     aggregateType: "peppol.document",
     aggregateId: documentId,
     idempotencyKey: `peppol.document.label.assigned:${documentId}:${labelId}`,
@@ -139,6 +140,7 @@ export async function assignLabelToDocuments(
     documentsToAssign.map((document) =>
       publishEvent("peppol.document.label.assigned.v1", {
         teamId,
+        streamId: document.companyId,
         aggregateType: "peppol.document",
         aggregateId: document.id,
         idempotencyKey: `peppol.document.label.assigned:${document.id}:${labelId}`,
@@ -197,6 +199,7 @@ export async function unassignLabelFromDocument(
 
   await publishEvent("peppol.document.label.unassigned.v1", {
     teamId,
+    streamId: document.companyId,
     aggregateType: "peppol.document",
     aggregateId: documentId,
     idempotencyKey: `peppol.document.label.unassigned:${documentId}:${labelId}`,

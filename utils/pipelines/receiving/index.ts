@@ -147,6 +147,7 @@ export async function receivingPipeline(
 
   await publishEvent("peppol.document.received.v1", {
     teamId: company.teamId,
+    streamId: company.id,
     aggregateType: "peppol.document",
     aggregateId: transmittedDocument.id,
     idempotencyKey: `peppol.document.received:${transmittedDocument.id}`,
