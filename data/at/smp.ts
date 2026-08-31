@@ -248,17 +248,16 @@ async function registerCompanyIdentifier({
   documentTypes: CompanyDocumentType[];
   useTestNetwork: boolean;
 }) {
-  if (!company.isSmpRecipient || !company.id) {
+  if (!company.id) {
     return;
   }
 
-  if (!await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, undefined, company.id, company.id)) {
+  if (company.isSmpRecipient && !await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, undefined, company.id, company.id)) {
     throw new UserFacingError("Company cannot be registered as SMP recipient, it has identifiers that are already registered as recipient with another company.");
   }
 
   const config = getArratechConfig(useTestNetwork);
   const peppolIdentifier = participantIdentifier(identifier);
-  const supportedDocumentTypes = await resolveArratechDocumentTypes(documentTypes, useTestNetwork);
   const existingParticipant = await getParticipantByIdentifier({
     identifier,
     useTestNetwork,
@@ -292,6 +291,13 @@ async function registerCompanyIdentifier({
       }
     );
 
+  // Send-only companies are filed as EXTERNAL when the identifier is already on
+  // another SMP. Arratech rejects receive metadata and PD publish on those.
+  if (!company.isSmpRecipient) {
+    return;
+  }
+
+  const supportedDocumentTypes = await resolveArratechDocumentTypes(documentTypes, useTestNetwork);
   console.log("About to update supported document types", supportedDocumentTypes);
 
   await updateSupportedDocumentTypes({
@@ -310,10 +316,6 @@ export async function upsertCompanyRegistrations({
   useTestNetwork: boolean;
 }) {
   const company = await getCompanyById(companyId);
-  if (company && !company.isSmpRecipient) {
-    return;
-  }
-
   const identifiers = await getCompanyIdentifiers(companyId);
   const documentTypes = await getCompanyDocumentTypes(companyId);
   if (!company || !identifiers || !documentTypes) {
@@ -367,6 +369,11 @@ export async function unregisterCompanyDocumentType({
   documentType: CompanyDocumentType;
   useTestNetwork: boolean;
 }) {
+  const company = await getCompanyById(documentType.companyId);
+  if (company && !company.isSmpRecipient) {
+    return;
+  }
+
   const identifiers = await getCompanyIdentifiers(documentType.companyId);
   const documentTypeToRemove = await resolveArratechDocumentType(documentType, useTestNetwork);
 

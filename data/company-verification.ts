@@ -140,6 +140,7 @@ export async function finalizeCompanyVerification({
     useTestNetwork,
     isSmpRecipient: company.isSmpRecipient,
     verificationRequirements,
+    smpProvider: company.smpProvider,
   };
   const wasRegistered =
     shouldRegisterWithSmp({ ...smpStateBase, isVerified: company.isVerified }) ||

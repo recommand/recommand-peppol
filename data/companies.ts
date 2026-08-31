@@ -216,7 +216,7 @@ export async function createCompany(company: InsertCompany & { skipDefaultCompan
  * @param isPlayground Whether the company is in a playground team, if so we don't register the company in the SMP
  */
 async function setupCompanyDefaults({ company, isPlayground, useTestNetwork, verificationRequirements }: { company: Company, isPlayground: boolean, useTestNetwork: boolean, verificationRequirements?: string }): Promise<void> {
-  const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements });
+  const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements, smpProvider: company.smpProvider });
   const countryInfo = COUNTRIES.find((country) => country.code === company.country);
 
   for (const documentType of countryInfo?.defaultDocumentTypes ?? []) {
@@ -319,8 +319,8 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
   const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
   const verificationRequirements = teamExtension?.verificationRequirements ?? undefined;
-  const wasRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: oldCompany.isSmpRecipient, isVerified: oldCompany.isVerified, verificationRequirements });
-  const shouldBeRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: updatedCompany.isSmpRecipient, isVerified: updatedCompany.isVerified, verificationRequirements });
+  const wasRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: oldCompany.isSmpRecipient, isVerified: oldCompany.isVerified, verificationRequirements, smpProvider: oldCompany.smpProvider });
+  const shouldBeRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: updatedCompany.isSmpRecipient, isVerified: updatedCompany.isVerified, verificationRequirements, smpProvider: updatedCompany.smpProvider });
 
   if (!wasRegistered && shouldBeRegistered) {
     try {
@@ -361,6 +361,9 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
         if (!canUpsert) {
           throw new UserFacingError("Company cannot be registered as SMP recipient, it has identifiers that are already registered as recipient with another company.");
         }
+      }
+      if (oldCompany.isSmpRecipient !== updatedCompany.isSmpRecipient && shouldBeRegistered) {
+        await upsertCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
       }
     } catch (error) {
       // If the check fails, rollback the update of the company
@@ -411,7 +414,7 @@ export async function deleteCompany({
   const teamExtension = await getTeamExtension(teamId);
   const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
-  if (shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements: teamExtension?.verificationRequirements ?? undefined })) {
+  if (shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements: teamExtension?.verificationRequirements ?? undefined, smpProvider: company.smpProvider })) {
     await unregisterCompanyRegistrations({ companyId, useTestNetwork });
   }
 

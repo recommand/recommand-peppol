@@ -24,14 +24,19 @@ export function shouldRegisterWithSmp({
     isSmpRecipient,
     isVerified,
     verificationRequirements,
+    smpProvider,
 }: {
     isPlayground?: boolean;
     useTestNetwork?: boolean;
     isSmpRecipient: boolean;
     isVerified: boolean;
     verificationRequirements?: string;
+    smpProvider?: string;
 }): boolean {
-    // Only allow registration with the SMP if the company is an SMP recipient and is verified
+    // Recipients are registered in the SMP. Arratech also needs a participant for
+    // send-only companies (classified EXTERNAL when the identifier already lives
+    // on another SMP) so KYC and sending still have a record to attach to.
     const requiresVerification = verificationRequirements === "strict";
-    return shouldInteractWithPeppolNetwork({ isPlayground, useTestNetwork }) && isSmpRecipient && (!requiresVerification || isVerified);
+    const needsSmpRecord = isSmpRecipient || smpProvider === "at-shared-smp-fr";
+    return shouldInteractWithPeppolNetwork({ isPlayground, useTestNetwork }) && needsSmpRecord && (!requiresVerification || isVerified);
 }

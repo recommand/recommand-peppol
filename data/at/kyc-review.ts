@@ -55,6 +55,7 @@ export async function startArratechKycReview({
     useTestNetwork,
     isSmpRecipient: company.isSmpRecipient,
     verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+    smpProvider: company.smpProvider,
   };
 
   await db
