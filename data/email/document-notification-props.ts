@@ -2,7 +2,8 @@ import type { DocumentIncomingNotificationProps } from "@peppol/emails/document-
 import type { DocumentOutgoingNotificationProps } from "@peppol/emails/document-outgoing-notification";
 import { getCompanyById } from "@peppol/data/companies";
 import { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
-import { labels, transmittedDocuments } from "@peppol/db/schema";
+import { transmittedDocuments } from "@peppol/db/schema";
+import { labels } from "@directory/db/schema";
 import { UNNAMED_PARTY } from "@peppol/utils/type-repository/document-types/constants";
 import { resolveDocumentParsedWithAttachments, resolveDocumentXml } from "@peppol/data/offload/storage";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";

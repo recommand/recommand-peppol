@@ -1,7 +1,7 @@
 import type { CreditNote } from "../creditnote/schemas";
 import { frenchCountrySpecificSchema, type FrenchCountrySpecific } from "../country-specific/france";
 import type { Invoice } from "../invoice/schemas";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 export function validateFrenchRegulatedBillingDocument(
   document: Invoice | CreditNote

@@ -1,6 +1,6 @@
 import { Label } from "@core/components/ui/label";
 import { Button } from "@core/components/ui/button";
-import type { Company } from "../types/company";
+import type { Company } from "@peppol/types/company";
 import { AsyncButton } from "@core/components/async-button";
 import { Checkbox } from "@core/components/ui/checkbox";
 import { CompanyDetailsFields, CompanyIdentityFields } from "@peppol/components/company-form-fields";

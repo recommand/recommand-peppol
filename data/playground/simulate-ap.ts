@@ -1,4 +1,4 @@
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
 import { getCompanyByPeppolId } from "../companies";
 

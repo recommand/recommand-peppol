@@ -6,6 +6,7 @@ import {
   type AuthenticatedUserContext,
   type TeamAccessOptions,
 } from "@core/lib/auth-middleware";
+import { registerIntegrationSupportedAuthExtension } from "@directory/utils/auth-middleware";
 import { verifySession, type SessionVerificationExtension } from "@core/lib/session";
 import { getBillingProfile } from "@peppol/data/billing-profile";
 import { getCompanyById, type Company } from "@peppol/data/companies";
@@ -137,7 +138,7 @@ export function requireValidSubscription() {
   );
 }
 
-const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
+export const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
   // Also allow access if the user is authenticated via an integration JWT
   async (c) => {
     const authorizationHeader = c.req.header("Authorization")?.split(" ");
@@ -154,13 +155,29 @@ const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
       if (!payload) {
         return null;
       }
-      return { userId: null, isAdmin: false, language: "en", apiKey: null, teamId: payload.teamId as string };
+      // An integration JWT is neither a core installation nor a service
+      // principal, so both stay null, exactly as for cookie and basic auth.
+      return {
+        userId: null,
+        isAdmin: false,
+        language: "en",
+        apiKey: null,
+        teamId: payload.teamId as string,
+        installation: null,
+        service: null,
+      };
     } catch (error) {
       console.error(error);
       return null;
     }
   }
 ]
+
+export function registerPeppolAuthExtensions() {
+  for (const extension of integrationSupportedAuthExtensions) {
+    registerIntegrationSupportedAuthExtension(extension);
+  }
+}
 
 export function requireIntegrationSupportedAuth() {
   return requireAuth({

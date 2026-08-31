@@ -15,8 +15,8 @@ import { CompanyIdentifiersManager } from "../../../../components/company-identi
 import { CompanyDocumentTypesManager } from "../../../../components/company-document-types-manager";
 import { CompanyNotificationsManager } from "../../../../components/company-notifications-manager";
 import { CompanyIntegrationsManager } from "../../../../components/company-integrations-manager";
-import type { Company, CompanyFormData } from "../../../../types/company";
-import { defaultCompanyFormData } from "../../../../types/company";
+import type { Company, CompanyFormData } from "@peppol/types/company";
+import { defaultCompanyFormData } from "@peppol/types/company";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@core/components/ui/card";
 import { useIsPlayground } from "@peppol/lib/client/playgrounds";
 import { canUseIntegrations } from "@peppol/utils/plan-validation";
@@ -24,7 +24,7 @@ import { BUILT_IN_INTEGRATIONS } from "@peppol/utils/integrations";
 import type { Subscription as SubscriptionType } from "@peppol/data/subscriptions";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { StatusMessage } from "@recommand/components/status-feedback";
-import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
+import { cleanEnterpriseNumber, cleanVatNumber } from "@directory/utils/util";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");

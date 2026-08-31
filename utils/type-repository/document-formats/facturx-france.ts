@@ -3,7 +3,7 @@ import {
   generateFacturXDocument,
 } from "@peppol/data/factur-x/client";
 import { findFirstEmbeddedPdfAttachment } from "@peppol/utils/pdf-attachment-helper";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { frenchRegulatedInvoiceToCII } from "@peppol/utils/parsing/invoice/cii-d22b-france-regulated/to-xml";
 import { parseFrenchRegulatedInvoiceFromCII } from "@peppol/utils/parsing/invoice/cii-d22b-france-regulated/from-xml";
 import { frenchRegulatedCreditNoteToCII } from "@peppol/utils/parsing/creditnote/cii-d22b-france-regulated/to-xml";

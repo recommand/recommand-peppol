@@ -2,7 +2,7 @@ import type { Company } from "@peppol/data/companies";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import { FRENCH_MANDATE_TEMPLATE } from "@peppol/templates/mandate-fr";
 import { isSiren, isSiret } from "@peppol/utils/identifier-validation";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { formatMandateDate, MANDATARY, OPERATOR } from "./shared";
 import {
   type CompanyIdentityRow,

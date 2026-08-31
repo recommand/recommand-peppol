@@ -10,7 +10,7 @@ import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTe
 import { updateIntegration } from "@peppol/data/integrations";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { configurationSchema } from "@peppol/types/integration/configuration";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { audit } from "@core/lib/audit";
 
 const server = new Server();

@@ -30,6 +30,7 @@ import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/documen
 import type { ParsedDocument } from "@peppol/utils/type-repository/document-types/parsed";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
+import { labels } from "@directory/db/schema";
 
 export const paymentStatusEnum = pgEnum("peppol_payment_status", [
   "none",
@@ -653,107 +654,6 @@ export const teamExtensions = pgTable("peppol_team_extensions", {
   companyVerificationExtensionUntil: timestamp("company_verification_extension_until", { withTimezone: true }),
   supportEmailAddress: text("support_email_address"),
 });
-
-export const labels = pgTable(
-  "peppol_labels",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => "lbl_" + ulid()),
-    teamId: text("team_id")
-      .references(() => teams.id, { onDelete: "cascade" })
-      .notNull(),
-    externalId: text("external_id"),
-    name: text("name").notNull(),
-    colorHex: text("color_hex").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: autoUpdateTimestamp(),
-  },
-  (table) => [
-    uniqueIndex("peppol_labels_external_id_unique")
-      .on(table.teamId, table.externalId)
-      .where(isNotNull(table.externalId)),
-  ]
-);
-
-export const supportingDataSuppliers = pgTable(
-  "supporting_data_suppliers",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => "sd_supp_" + ulid()), // Supporting Data Supplier
-    teamId: text("team_id")
-      .references(() => teams.id, { onDelete: "cascade" })
-      .notNull(),
-    externalId: text("external_id"),
-    name: text("name").notNull(),
-    vatNumber: text("vat_number"),
-    peppolAddresses: text("peppol_addresses").notNull().array().default([]),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: autoUpdateTimestamp(),
-  },
-  (table) => [
-    index("supporting_suppliers_team_id_idx").on(table.teamId),
-    uniqueIndex("supporting_suppliers_external_id_unique")
-      .on(table.teamId, table.externalId)
-      .where(isNotNull(table.externalId)),
-  ]
-);
-
-export const supportingDataSupplierLabels = pgTable(
-  "supporting_data_supplier_labels",
-  {
-    supportingDataSupplierId: text("supporting_data_supplier_id")
-      .references(() => supportingDataSuppliers.id, { onDelete: "cascade" })
-      .notNull(),
-    labelId: text("label_id")
-      .references(() => labels.id, { onDelete: "cascade" })
-      .notNull(),
-  },
-  (table) => [
-    primaryKey({
-      name: "supporting_data_supplier_labels_pkey",
-      columns: [table.supportingDataSupplierId, table.labelId],
-    }),
-  ]
-);
-
-export const supportingDataCustomers = pgTable(
-  "supporting_data_customers",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => "sd_cust_" + ulid()),
-    teamId: text("team_id")
-      .references(() => teams.id, { onDelete: "cascade" })
-      .notNull(),
-    externalId: text("external_id"),
-    name: text("name").notNull(),
-    vatNumber: text("vat_number"),
-    enterpriseNumber: text("enterprise_number"),
-    peppolAddresses: text("peppol_addresses").notNull().array().default([]),
-    address: text("address").notNull(),
-    city: text("city").notNull(),
-    postalCode: text("postal_code").notNull(),
-    country: text("country").notNull(),
-    email: text("email"),
-    phone: text("phone"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: autoUpdateTimestamp(),
-  },
-  (table) => [
-    index("supporting_customers_team_id_idx").on(table.teamId),
-    uniqueIndex("supporting_customers_external_id_unique")
-      .on(table.teamId, table.externalId)
-      .where(isNotNull(table.externalId)),
-  ]
-);
 
 export const activatedIntegrations = pgTable(
   "activated_integrations",

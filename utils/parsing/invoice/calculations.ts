@@ -10,7 +10,7 @@ import type {
 import type { CreditNote } from "../creditnote/schemas";
 import type { SelfBillingInvoice } from "../self-billing-invoice/schemas";
 import type { SelfBillingCreditNote } from "../self-billing-creditnote/schemas";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 type VatCalculationDocument = Pick<
   Invoice,

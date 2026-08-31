@@ -6,7 +6,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { cleanEnterpriseNumber } from "@peppol/utils/util";
+import { cleanEnterpriseNumber } from "@directory/utils/util";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();

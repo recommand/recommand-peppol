@@ -9,7 +9,7 @@ import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/a
 import { companyNotificationEmailAddressResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { createCompanyNotificationEmailAddress } from "@peppol/data/company-notification-emails";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 const server = new Server();
 

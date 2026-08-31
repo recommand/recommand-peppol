@@ -1,7 +1,7 @@
 import { getCompanyIdentifiers } from "@peppol/data/company-identifiers";
 import type { Company } from "@peppol/data/companies";
 import { getTeamExtension } from "@peppol/data/teams";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 import { getParticipantByIdentifier } from "./smp";
 import {

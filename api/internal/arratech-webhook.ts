@@ -6,7 +6,7 @@ import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db } from "@recommand/db";
 import { transmittedDocuments } from "@peppol/db/schema";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { downloadBusinessDocument } from "@peppol/data/at/ap";
 import { getArratechConfig } from "@peppol/data/at/client";
 import { recordProviderSentTransaction } from "@peppol/data/provider-sent";

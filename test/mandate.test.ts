@@ -9,7 +9,7 @@ import { buildMandateTemplateData } from "../data/at/mandates/default";
 import { buildFrenchMandateTemplateData } from "../data/at/mandates/france";
 import { MANDATE_TEMPLATE } from "../templates/mandate";
 import { FRENCH_MANDATE_TEMPLATE } from "../templates/mandate-fr";
-import type { Company } from "../data/companies";
+import type { Company } from "@peppol/data/companies";
 import type { CompanyIdentifier } from "../data/company-identifiers";
 
 const frenchCompany = {

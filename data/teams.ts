@@ -1,8 +1,9 @@
 import { db } from "@recommand/db";
 import { eq } from "drizzle-orm";
-import { companies, teamExtensions } from "@peppol/db/schema";
+import { teamExtensions } from "@peppol/db/schema";
+import { companies } from "@peppol/db/schema";
 import { teams } from "@core/db/schema";
-import type { Company } from "./companies";
+import type { Company } from "@peppol/data/companies";
 
 export type TeamExtension = Partial<typeof teamExtensions.$inferSelect>; // Partial because we don't always have a team extension
 
