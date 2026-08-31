@@ -4,7 +4,7 @@ import { eq, and, sql, isNotNull, desc, asc } from "drizzle-orm";
 import { configurationSchema } from "@peppol/types/integration/configuration";
 import { stateSchema } from "@peppol/types/integration/state";
 import { type IntegrationManifest, type IntegrationConfiguration, type IntegrationState, type IntegrationEvent, taskLogSchema } from "@peppol/types/integration";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { getCompany } from "@peppol/data/companies";
 import { getActiveSubscription } from "@peppol/data/subscriptions";
 import { isPlayground } from "@peppol/data/teams";

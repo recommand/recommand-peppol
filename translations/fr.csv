@@ -6,22 +6,18 @@ Accepting...,Acceptation...
 Active,Actif
 Active subscription with full access,Abonnement actif avec accès complet
 Add,Ajouter
-Add Address,Ajouter une adresse
 Add all companies for which you want to send or receive Peppol documents.,Ajoutez toutes les entreprises pour lesquelles vous souhaitez envoyer ou recevoir des documents Peppol.
 Add label,Ajouter un libellé
 Add playground,Ajouter un environnement de test
 Address,Adresse
-Address *,Adresse *
 Advanced,Avancé
 All documents deleted successfully,Tous les documents ont été supprimés avec succès
 Amount (excl. VAT),Montant (hors TVA)
 An unexpected error occurred. Please try again.,Une erreur inattendue s'est produite. Veuillez réessayer.
 Are you sure you want to delete all documents? This action cannot be undone. All documents in this playground will be permanently removed.,Êtes-vous sûr de vouloir supprimer tous les documents ? Cette action est irréversible. Tous les documents de cet environnement de test seront définitivement supprimés.
-Are you sure you want to delete customer "{0}"?,Êtes-vous sûr de vouloir supprimer le client « {0} » ?
 Are you sure you want to delete this company? This action cannot be undone.,Êtes-vous sûr de vouloir supprimer cette entreprise ? Cette action est irréversible.
 Are you sure you want to delete this document?,Êtes-vous sûr de vouloir supprimer ce document ?
 Are you sure you want to delete this integration? This action cannot be undone.,Êtes-vous sûr de vouloir supprimer cette intégration ? Cette action est irréversible.
-Are you sure you want to delete this supplier? This action cannot be undone.,Êtes-vous sûr de vouloir supprimer ce fournisseur ? Cette action est irréversible.
 Are you sure you want to delete {0} selected documents? This action cannot be undone.,Êtes-vous sûr de vouloir supprimer les {0} documents sélectionnés ? Cette action est irréversible.
 Are you sure you want to reset the integration state? This will clear all stored state data.,Êtes-vous sûr de vouloir réinitialiser l'état de l'intégration ? Toutes les données d'état enregistrées seront effacées.
 Assign Labels,Attribuer des libellés
@@ -54,7 +50,6 @@ Choose a plan below to get started with Peppol document transmission,Choisissez 
 Choose the simulated verification outcome for {0} in this playground environment.,Choisissez le résultat de vérification simulé pour {0} dans cet environnement de test.
 Choose the type of document you want to send,Choisissez le type de document que vous souhaitez envoyer
 City,Ville
-City *,Ville *
 Color,Couleur
 Companies,Entreprises
 Companies are the legal entities you send or receive Peppol documents for.,Les entreprises sont les entités juridiques pour lesquelles vous envoyez ou recevez des documents Peppol.
@@ -82,20 +77,11 @@ Copy XML,Copier le XML
 Copy verification URL,Copier l'URL de vérification
 Country,Pays
 Country (C1),Pays (C1)
-Country *,Pays *
 Create Company,Créer une entreprise
-Create Customer,Créer un client
-Create Label,Créer un libellé
 Create New Company,Créer une entreprise
-Create New Customer,Créer un client
-Create New Label,Créer un libellé
-Create New Supplier,Créer un fournisseur
-Create Supplier,Créer un fournisseur
 Create a billing profile,Créer un profil de facturation
 Create a credit note for refunds\, adjustments\, or corrections to previous invoices.,Créez un avoir pour les remboursements\, ajustements ou corrections de factures antérieures.
-Create a new customer with the details below.,Créez un client avec les informations ci-dessous.
 Create a new playground to test your Peppol API integrations.,Créez un environnement de test pour tester vos intégrations à l'API Peppol.
-Create a new supplier with the details below.,Créez un fournisseur avec les informations ci-dessous.
 Create a self billing credit note for adjustments or corrections in a self billing flow.,Créez un avoir d'autofacturation pour les ajustements ou corrections d'un flux d'autofacturation.
 Create a self billing invoice where the buyer issues the invoice on behalf of the seller.,Créez une facture d'autofacturation dans laquelle l'acheteur émet la facture au nom du vendeur.
 Create playground,Créer un environnement de test
@@ -104,9 +90,6 @@ Created At,Créé le
 Created {0},Créé le {0}
 Credit Note,Avoir
 Custom UBL document,Document UBL personnalisé
-Customer created successfully,Client créé avec succès
-Customer deleted successfully,Client supprimé avec succès
-Customer updated successfully,Client mis à jour avec succès
 Customers,Clients
 Delete,Supprimer
 Delete All,Tout supprimer
@@ -147,9 +130,6 @@ Download package,Télécharger le paquet
 Edit,Modifier
 Edit Billing Profile,Modifier le profil de facturation
 Edit Company,Modifier l'entreprise
-Edit Customer,Modifier le client
-Edit Label,Modifier le libellé
-Edit Supplier,Modifier le fournisseur
 Edit company details for {0},Modifier les informations de l'entreprise {0}
 Email,E-mail
 Enable or disable integration capabilities,Activer ou désactiver les fonctionnalités de l'intégration
@@ -160,7 +140,6 @@ Envelope ID,ID enveloppe
 Event,Événement
 Expired,Expiré
 Export,Exporter
-External ID,Identifiant externe
 External link,Lien externe
 Failed,Échec
 Failed to assign label,Échec de l'attribution du libellé
@@ -170,33 +149,27 @@ Failed to create playground,Échec de la création de l'environnement de test
 Failed to create verification session: {0},Échec de la création de la session de vérification : {0}
 Failed to delete all documents,Échec de la suppression de tous les documents
 Failed to delete company: {0},Échec de la suppression de l'entreprise : {0}
-Failed to delete customer,Échec de la suppression du client
 Failed to delete document,Échec de la suppression du document
 Failed to delete documents,Échec de la suppression des documents
 Failed to delete integration: {0},Échec de la suppression de l'intégration : {0}
-Failed to delete supplier,Échec de la suppression du fournisseur
 Failed to download document,Échec du téléchargement du document
 Failed to export documents,Échec de l'exportation des documents
 Failed to load billing events,Échec du chargement des événements de facturation
 Failed to load companies,Échec du chargement des entreprises
 Failed to load company,Échec du chargement de l'entreprise
 Failed to load current usage,Échec du chargement de l'utilisation actuelle
-Failed to load customers,Échec du chargement des clients
 Failed to load document,Échec du chargement du document
 Failed to load documents,Échec du chargement des documents
 Failed to load integration,Échec du chargement de l'intégration
 Failed to load labels,Échec du chargement des libellés
 Failed to load rule builder options,Échec du chargement des options de création de règles
 Failed to load subscription,Échec du chargement de l'abonnement
-Failed to load suppliers,Échec du chargement des fournisseurs
 Failed to load task logs,Échec du chargement des journaux de tâches
 Failed to load verification data. Please try again.,Échec du chargement des données de vérification. Veuillez réessayer.
 Failed to load verification status. Please try again.,Échec du chargement du statut de vérification. Veuillez réessayer.
 Failed to mark documents as read,Échec du marquage des documents comme lus
 Failed to remove label,Échec de la suppression du libellé
 Failed to reset integration state: {0},Échec de la réinitialisation de l'état de l'intégration : {0}
-Failed to save customer,Échec de l'enregistrement du client
-Failed to save supplier,Échec de l'enregistrement du fournisseur
 Failed to unassign label,Échec du retrait du libellé
 Failed to update company. ({0}),Échec de la mise à jour de l'entreprise. ({0})
 Failed to update document read status,Échec de la mise à jour du statut de lecture du document
@@ -245,12 +218,8 @@ JSON copied to clipboard,JSON copié dans le presse-papiers
 Keep Subscription,Conserver l'abonnement
 Key,Clé
 Label,Libellé
-Label ID copied to clipboard,Identifiant du libellé copié dans le presse-papiers
 Label added to {0} documents,Libellé ajouté à {0} documents
-Label created successfully,Libellé créé avec succès
-Label deleted successfully,Libellé supprimé avec succès
 Label not found,Libellé introuvable
-Label updated successfully,Libellé mis à jour avec succès
 Labels,Libellés
 Last name,Nom
 Limited document details,Détails limités du document
@@ -264,7 +233,6 @@ Loading...,Chargement...
 Main Street 123,Rue Principale 123
 Make changes to the company information below,Modifiez les informations de l'entreprise ci-dessous
 Make configuration changes to the integration,Modifiez la configuration de l'intégration
-Manage labels for organizing and categorizing your data.,Gérez les libellés pour organiser et classer vos données.
 Manage your companies\, send and receive Peppol documents\, and monitor your subscription all in one place.,Gérez vos entreprises\, envoyez et recevez des documents Peppol et suivez votre abonnement depuis un seul endroit.
 Manage your subscription plan and billing information,Gérez votre forfait et vos informations de facturation
 Mandate Status: Not yet validated,Statut du mandat : pas encore validé
@@ -279,13 +247,8 @@ Metadata,Métadonnées
 Monthly Price,Prix mensuel
 N/A,S/O
 Name,Nom
-Name *,Nom *
-Name is required,Le nom est requis
 Nested ZIP,ZIP imbriqué
 No Active Subscription,Aucun abonnement actif
-No Peppol IDs added yet.,Aucun identifiant Peppol ajouté pour le moment.
-No Peppol addresses added. Click "Add Address" to add one.,Aucune adresse Peppol ajoutée. Cliquez sur « Ajouter une adresse » pour en ajouter une.
-No active team selected,Aucune équipe active sélectionnée
 No attachments found on this document.,Aucune pièce jointe trouvée dans ce document.
 No available labels,Aucun libellé disponible
 No billing events found,Aucun événement de facturation trouvé
@@ -304,8 +267,6 @@ Not the right person to complete this?,Vous n'êtes pas la bonne personne pour e
 Open,Ouvert
 Open external reference,Ouvrir la référence externe
 Open link,Ouvrir le lien
-Optional VAT number,Numéro de TVA facultatif
-Optional external identifier,Identifiant externe facultatif
 Outgoing,Sortant
 Outgoing document,Document sortant
 Overage Rate,Tarif de dépassement
@@ -317,19 +278,15 @@ Payment Mandate,Mandat de paiement
 Payment Status,Statut du paiement
 Payment Status: {0},Statut du paiement : {0}
 Pending,En attente
-Peppol Addresses,Adresses Peppol
 Peppol Conversation ID,Identifiant de conversation Peppol
-Peppol IDs,Identifiants Peppol
 Peppol Message ID,Identifiant de message Peppol
 Period,Période
-Phone,Téléphone
 Pick a plan,Choisir un forfait
 Playground Environment,Environnement de test
 Playground created successfully,Environnement de test créé avec succès
 Playground name,Nom de l'environnement de test
 Please enter a name for the playground,Veuillez saisir un nom pour l'environnement de test
 Please wait while we validate your payment mandate.,Veuillez patienter pendant la validation de votre mandat de paiement.
-Postal Code *,Code postal *
 Preparing signature...,Préparation de la signature...
 Preview and metadata for this transmitted Peppol document.,Aperçu et métadonnées de ce document Peppol transmis.
 Price per Document,Prix par document
@@ -352,7 +309,6 @@ Refund or adjustment document,Document de remboursement ou d'ajustement
 Reject,Rejeter
 Rejecting...,Rejet...
 Related documents,Documents associés
-Remove,Supprimer
 Preview of the billing document and any attachments.,Aperçu du document de facturation et des éventuelles pièces jointes.
 Representative Details,Informations sur le représentant
 Request failed,Échec de la demande
@@ -367,7 +323,6 @@ Scheduled,Planifié
 Scheduled subscription change,Modification d'abonnement planifiée
 Search customers...,Rechercher des clients...
 Search documents...,Rechercher des documents...
-Search suppliers...,Rechercher des fournisseurs...
 Select all rows,Sélectionner toutes les lignes
 Select country,Sélectionner un pays
 Select document type,Sélectionner un type de document
@@ -400,9 +355,6 @@ Streamline your document processing workflow,Optimisez votre flux de traitement 
 Subscription,Abonnement
 Subscription cancelled successfully,Abonnement annulé avec succès
 Success,Succès
-Supplier created successfully,Fournisseur créé avec succès
-Supplier deleted successfully,Fournisseur supprimé avec succès
-Supplier updated successfully,Fournisseur mis à jour avec succès
 Suppliers,Fournisseurs
 Supporting data,Données de référence
 Switch to a production team to manage your subscription.,Passez à une équipe de production pour gérer votre abonnement.
@@ -437,8 +389,6 @@ Unlimited usage - pay per document transmitted (€{0} each),Utilisation illimit
 Unnamed attachment,Pièce jointe sans nom
 Unread,Non lu
 Update Payment Method,Mettre à jour le moyen de paiement
-Update the customer details below.,Mettez à jour les informations du client ci-dessous.
-Update the supplier details below.,Mettez à jour les informations du fournisseur ci-dessous.
 Update your billing information,Mettez à jour vos informations de facturation pour les factures
 Upload or paste a raw UBL XML document that complies with Peppol standards.,Téléversez ou collez un document XML UBL brut conforme aux normes Peppol.
 Use Peppol Test Network,Utiliser le réseau de test Peppol
@@ -466,8 +416,6 @@ Verifying...,Vérification...
 View Available Plans,Afficher les forfaits disponibles
 View Verification Status,Afficher le statut de vérification
 View and manage integration state,Afficher et gérer l'état de l'intégration
-View and manage your customers (supporting data).,Afficher et gérer vos clients (données de référence).
-View and manage your suppliers (supporting data).,Afficher et gérer vos fournisseurs (données de référence).
 View and manage your transmitted Peppol documents.,Afficher et gérer vos documents Peppol transmis.
 Volume-based,Selon le volume
 We could not complete the verification flow for {0}.,Nous n'avons pas pu terminer le processus de vérification pour {0}.
@@ -493,7 +441,6 @@ Your identity verification for {0} is being reviewed manually. This page will up
 Your name,Votre nom
 Your payment method is set up and ready for billing.,Votre moyen de paiement est configuré et prêt pour la facturation.
 Your signature,Votre signature
-e.g. 0208:1012081766,p. ex. 0208:1012081766
 for assistance.,pour obtenir de l'aide.
 incoming,entrant
 of Recommand on behalf of {0}.,de Recommand au nom de {0}.
@@ -537,7 +484,6 @@ Available Plans,Forfaits disponibles
 Back,Retour
 Billing Email (Optional),E-mail de facturation (facultatif)
 Billing Peppol Address (Optional),Adresse Peppol de facturation (facultative)
-Blue,Bleu
 Buyer Information (Auto-populated),Informations sur l'acheteur (renseignées automatiquement)
 Buyer Information *,Informations sur l'acheteur *
 Buyer Reference,Référence de l'acheteur
@@ -611,7 +557,6 @@ Example Company,Entreprise exemple
 Export Documents,Exporter les documents
 Export all sent/received documents within a date range (max 1 month) as a ZIP archive.,Exportez tous les documents envoyés/reçus dans une plage de dates (un mois maximum) sous forme d'archive ZIP.
 Exporting...,Exportation...
-External ID (Optional),Identifiant externe (facultatif)
 Failed to add document type: {0},Échec de l'ajout du type de document : {0}
 Failed to add identifier: {0},Échec de l'ajout de l'identifiant : {0}
 Failed to add integration: {0},Échec de l'ajout de l'intégration : {0}
@@ -669,7 +614,6 @@ Item Name *,Nom de l'article *
 JSON document,Document JSON
 JavaScript Fetch,Fetch JavaScript
 Kilogram,Kilogramme
-Label Name,Nom du libellé
 Last month,Mois dernier
 Leave blank to auto-detect from the document type,Laissez vide pour détecter automatiquement à partir du type de document
 Leave blank to auto-detect from your XML (if possible),Laissez vide pour détecter automatiquement à partir de votre XML (si possible)
@@ -720,7 +664,6 @@ Only if Peppol fails,Uniquement en cas d'échec de Peppol
 Optional description,Description facultative
 Optionally attach supporting documents such as PDFs or images. Files are embedded in the Peppol document.,Vous pouvez joindre des justificatifs tels que des PDF ou des images. Les fichiers sont intégrés au document Peppol.
 Or choose a file to fill the XML textarea below,Ou choisissez un fichier pour remplir la zone XML ci-dessous
-Orange,Orange
 Outgoing documents,Documents sortants
 Outgoing invoices,Factures sortantes
 Output type *,Type de sortie *
@@ -742,7 +685,6 @@ Process ID (optional),Identifiant de processus (facultatif)
 Process ID is required,L'identifiant de processus est requis
 Product or service,Produit ou service
 Professional,Professional
-Purple,Violet
 Quantity *,Quantité *
 Raw XML Document,Document XML brut
 Reason for credit note,Motif de l'avoir
@@ -765,7 +707,6 @@ Select a customer...,Sélectionner un client...
 Select a preset...,Sélectionner un préréglage...
 Select an integration to connect to this company.,Sélectionnez une intégration à connecter à cette entreprise.
 Select scheme...,Sélectionner un schéma...
-Select {0} color,Sélectionner la couleur {0}
 Seller Information (Auto-populated),Informations sur le vendeur (renseignées automatiquement)
 Seller Information *,Informations sur le vendeur *
 Seller details,Informations sur le vendeur
@@ -831,7 +772,6 @@ When to send email,Quand envoyer l'e-mail
 XML Document *,Document XML *
 XML and any document attachments are always included. You can also attach a generated document preview (PDF) and a small JSON document with key document details.,Le XML et les éventuelles pièces jointes du document sont toujours inclus. Vous pouvez également joindre un aperçu généré (PDF) et un petit document JSON contenant les principales informations du document.
 XML file is too large (max 5MB),Le fichier XML est trop volumineux (5 Mo maximum)
-Yellow,Jaune
 You can use HTML tags for formatting. The document will be attached as XML\, plus any embedded attachments (optionally including a generated PDF).,Vous pouvez utiliser des balises HTML pour la mise en forme. Le document sera joint au format XML\, avec les éventuelles pièces jointes intégrées (dont un PDF généré facultatif).
 You must be in a team to complete this step,Vous devez appartenir à une équipe pour terminer cette étape
 cURL Command,Commande cURL

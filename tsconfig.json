@@ -30,6 +30,7 @@
       "@recommand/*": ["../framework/*"],
       "@core/*": ["../core/*"],
       "@peppol/*": ["*"],
+      "@directory/*": ["../directory/*"],
     }
   }
 }

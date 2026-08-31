@@ -1,7 +1,7 @@
 import type { Company } from "@peppol/data/companies";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import { MANDATE_TEMPLATE } from "@peppol/templates/mandate";
-import { getCountryName } from "@peppol/utils/countries";
+import { getCountryName } from "@directory/utils/countries";
 import { formatMandateDate, MANDATARY, OPERATOR } from "./shared";
 import {
   type CompanyIdentityRow,

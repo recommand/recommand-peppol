@@ -8,13 +8,13 @@ import {
 } from "@peppol/data/offload/storage";
 import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
 import { sendIncomingDocumentNotifications } from "@peppol/data/send-document-notifications";
-import { findSupplierByVatAndPeppolId } from "@peppol/data/suppliers";
+import { findSupplierByVatAndPeppolId } from "@directory/data/suppliers";
 import { validateXmlDocument } from "@peppol/data/validation/client";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { db } from "@recommand/db";
 import { ulid } from "ulid";
 import { prepareIncomingDocument } from "./prepare-document";

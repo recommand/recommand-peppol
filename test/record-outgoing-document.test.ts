@@ -5,7 +5,7 @@ import {
   type OutgoingDocumentDelivery,
   type OutgoingDocumentPayload,
 } from "../data/outgoing-document-row";
-import type { Company } from "../data/companies";
+import type { Company } from "@peppol/data/companies";
 import {
   frenchB2CReportSchema,
   getFrenchB2CReportDocumentProfile,

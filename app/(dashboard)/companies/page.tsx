@@ -32,7 +32,7 @@ import {
   DialogTrigger,
 } from "@core/components/ui/dialog";
 import { CreateCompanyWizard } from "../../../components/create-company-wizard";
-import type { Company } from "../../../types/company";
+import type { Company } from "@peppol/types/company";
 import { DataTableToolbar } from "@core/components/data-table/toolbar";
 import { DataTablePagination } from "@core/components/data-table/pagination";
 import { Link } from "react-router-dom";

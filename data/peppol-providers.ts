@@ -1,7 +1,4 @@
-import type {
-  accessPointProviderIds,
-  smpProviderIds,
-} from "@peppol/db/schema";
+import type { accessPointProviderIds, smpProviderIds } from "@peppol/db/schema";
 
 export type AccessPointProviderId = (typeof accessPointProviderIds)[number];
 export type SmpProviderId = (typeof smpProviderIds)[number];

@@ -1,4 +1,5 @@
-import { fixNewlines, UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
+import { fixNewlines } from "@peppol/utils/util";
 import { fetchSmp } from "./client";
 import { XMLBuilder } from "fast-xml-parser";
 

@@ -2,7 +2,7 @@ import { canUpsertCompanyIdentifier, getCompanyIdentifiers, type CompanyIdentifi
 import { getCompanyDocumentTypes, type CompanyDocumentType } from "@peppol/data/company-document-types";
 import { getCompanyById, type Company, type InsertCompany } from "@peppol/data/companies";
 import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { fetchArratechJson, getArratechConfig } from "./client";
 
 type MinimalCompanyIdentifier = {

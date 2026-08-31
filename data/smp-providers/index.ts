@@ -18,7 +18,7 @@ import {
 import type { SmpProviderId } from "@peppol/data/peppol-providers";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 type MinimalCompanyIdentifier = {
   scheme: string;

@@ -1,7 +1,7 @@
 import {
   billingProfiles,
 } from "@peppol/db/schema";
-import { cleanVatNumber } from "@peppol/utils/util";
+import { cleanVatNumber } from "@directory/utils/util";
 import type { VatCategory } from "@peppol/utils/parsing/invoice/schemas";
 import { getMinimalTeamMembers } from "@core/data/team-members";
 import { render } from "@react-email/render";

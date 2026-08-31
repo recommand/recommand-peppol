@@ -9,7 +9,7 @@ import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/a
 import { companyDocumentTypeResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { createCompanyDocumentType } from "@peppol/data/company-document-types";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 
 const server = new Server();

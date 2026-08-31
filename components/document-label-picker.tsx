@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@core/components/ui/popover";
-import type { Label } from "@peppol/types/label";
+import type { Label } from "@directory/types/label";
 import { useTranslation } from "@core/hooks/use-translation";
 
 interface DocumentLabelPickerProps {

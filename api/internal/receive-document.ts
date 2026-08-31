@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireInternalToken } from "@peppol/utils/auth-middleware";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { describeRoute } from "hono-openapi";
 
 export const receiveDocumentSchema = z.object({

@@ -2,7 +2,7 @@ import {
   billingProfiles,
 } from "@peppol/db/schema";
 import Decimal from "decimal.js";
-import { cleanVatNumber } from "@peppol/utils/util";
+import { cleanVatNumber } from "@directory/utils/util";
 import { COUNTRIES } from "@peppol/utils/countries";
 import type { VatCategory } from "@peppol/utils/parsing/invoice/schemas";
 

@@ -1,6 +1,7 @@
-import { companies, companyIdentifiers, teamExtensions } from "@peppol/db/schema";
+import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
+import { companies } from "@peppol/db/schema";
 import { isSiren, validateIdentifier } from "@peppol/utils/identifier-validation";
-import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
+import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@directory/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
 import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";

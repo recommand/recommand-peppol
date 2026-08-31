@@ -12,7 +12,7 @@ import { upsertCompanyRegistrations } from "@peppol/data/smp-providers";
 import { getTeamExtension } from "@peppol/data/teams";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import {
   buildArratechKycFiling,
   submitArratechCompanyKyc,
