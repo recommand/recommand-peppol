@@ -242,11 +242,13 @@ async function registerCompanyIdentifier({
   identifier,
   documentTypes,
   useTestNetwork,
+  includeCapabilities = true,
 }: {
   company: Company | InsertCompany;
   identifier: MinimalCompanyIdentifier;
   documentTypes: CompanyDocumentType[];
   useTestNetwork: boolean;
+  includeCapabilities?: boolean;
 }) {
   if (!company.isSmpRecipient || !company.id) {
     return;
@@ -258,7 +260,6 @@ async function registerCompanyIdentifier({
 
   const config = getArratechConfig(useTestNetwork);
   const peppolIdentifier = participantIdentifier(identifier);
-  const supportedDocumentTypes = await resolveArratechDocumentTypes(documentTypes, useTestNetwork);
   const existingParticipant = await getParticipantByIdentifier({
     identifier,
     useTestNetwork,
@@ -292,8 +293,11 @@ async function registerCompanyIdentifier({
       }
     );
 
-  console.log("About to update supported document types", supportedDocumentTypes);
+  if (!includeCapabilities) {
+    return;
+  }
 
+  const supportedDocumentTypes = await resolveArratechDocumentTypes(documentTypes, useTestNetwork);
   await updateSupportedDocumentTypes({
     participantId: participant.id,
     documentTypes: supportedDocumentTypes,
@@ -305,9 +309,11 @@ async function registerCompanyIdentifier({
 export async function upsertCompanyRegistrations({
   companyId,
   useTestNetwork,
+  includeCapabilities = true,
 }: {
   companyId: string;
   useTestNetwork: boolean;
+  includeCapabilities?: boolean;
 }) {
   const company = await getCompanyById(companyId);
   if (company && !company.isSmpRecipient) {
@@ -321,7 +327,7 @@ export async function upsertCompanyRegistrations({
   }
 
   for (const identifier of identifiers) {
-    await registerCompanyIdentifier({ company, identifier, documentTypes, useTestNetwork });
+    await registerCompanyIdentifier({ company, identifier, documentTypes, useTestNetwork, includeCapabilities });
   }
 }
 
