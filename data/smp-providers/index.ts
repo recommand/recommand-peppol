@@ -29,6 +29,7 @@ type SmpProvider = {
   upsertCompanyRegistrations(options: {
     companyId: string;
     useTestNetwork: boolean;
+    includeCapabilities?: boolean;
   }): Promise<void>;
   unregisterCompanyRegistrations(options: {
     companyId: string;
@@ -85,6 +86,7 @@ async function getSmpProviderForCompanyId(
 export async function upsertCompanyRegistrations(options: {
   companyId: string;
   useTestNetwork: boolean;
+  includeCapabilities?: boolean;
 }) {
   const provider = await getSmpProviderForCompanyId(options.companyId);
   await provider.upsertCompanyRegistrations(options);
