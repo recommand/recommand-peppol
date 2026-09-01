@@ -1,7 +1,7 @@
 import { fetchSmp } from "./client";
 import { XMLBuilder } from "fast-xml-parser";
 import { PARTICIPANT_SCHEME } from "./service-metadata";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,

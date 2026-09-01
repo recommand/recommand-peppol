@@ -23,7 +23,7 @@ import {
   getDocumentFilename,
 } from "@peppol/utils/document-filename";
 import { useActiveTeam } from "@core/hooks/user";
-import type { Customers } from "@peppol/api/customers";
+import type { Customers } from "@directory/api/customers";
 import type { Party } from "@peppol/utils/parsing/invoice/schemas";
 import { Combobox } from "@core/components/ui/combobox";
 import {

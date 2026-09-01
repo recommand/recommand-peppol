@@ -18,7 +18,7 @@ import {
 import type { SmpProviderId } from "@peppol/data/peppol-providers";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 type MinimalCompanyIdentifier = {
   scheme: string;
@@ -29,6 +29,7 @@ type SmpProvider = {
   upsertCompanyRegistrations(options: {
     companyId: string;
     useTestNetwork: boolean;
+    includeCapabilities?: boolean;
   }): Promise<void>;
   unregisterCompanyRegistrations(options: {
     companyId: string;
@@ -85,6 +86,7 @@ async function getSmpProviderForCompanyId(
 export async function upsertCompanyRegistrations(options: {
   companyId: string;
   useTestNetwork: boolean;
+  includeCapabilities?: boolean;
 }) {
   const provider = await getSmpProviderForCompanyId(options.companyId);
   await provider.upsertCompanyRegistrations(options);

@@ -1,7 +1,8 @@
-import { supportedDocumentTypeEnum, transmittedDocuments, transmittedDocumentLabels, labels } from "@peppol/db/schema";
+import { supportedDocumentTypeEnum, transmittedDocuments, transmittedDocumentLabels } from "@peppol/db/schema";
+import { labels } from "@directory/db/schema";
 import { db } from "@recommand/db";
 import { eq, and, or, sql, desc, isNull, isNotNull, inArray, ilike, gte, lt } from "drizzle-orm";
-import type { Label } from "./labels";
+import type { Label } from "@directory/data/labels";
 import { removeAttachmentsFromParsedDocument } from "@peppol/utils/parsing/remove-attachments";
 import {
   offloadedDocumentS3Prefixes,

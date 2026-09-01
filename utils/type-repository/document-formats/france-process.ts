@@ -1,5 +1,5 @@
 import type { FranceCdarBusinessProcess } from "@peppol/utils/parsing/france-cdar/schemas";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 export const FRANCE_REGULATED_PROCESS_ID =
   "urn:peppol:france:billing:regulated";

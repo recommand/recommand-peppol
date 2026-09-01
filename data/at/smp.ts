@@ -1,8 +1,9 @@
 import { canUpsertCompanyIdentifier, getCompanyIdentifiers, type CompanyIdentifier } from "@peppol/data/company-identifiers";
 import { getCompanyDocumentTypes, type CompanyDocumentType } from "@peppol/data/company-document-types";
 import { getCompanyById, type Company, type InsertCompany } from "@peppol/data/companies";
+import { getTeamExtension } from "@peppol/data/teams";
 import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { fetchArratechJson, getArratechConfig } from "./client";
 
 type MinimalCompanyIdentifier = {
@@ -237,20 +238,46 @@ async function publishParticipant({
   );
 }
 
+/**
+ * Arratech does not allow skipping participant KYC on the production network,
+ * and KYC is only completed as part of company verification. Teams without
+ * strict verification register companies before (or without) verification, so
+ * their participants can never satisfy Arratech's KYC requirement.
+ */
+async function assertArratechRegistrationAllowed(
+  company: Company | InsertCompany,
+  useTestNetwork: boolean
+): Promise<void> {
+  if (useTestNetwork) {
+    return;
+  }
+
+  const teamExtension = await getTeamExtension(company.teamId);
+  if (teamExtension?.verificationRequirements !== "strict") {
+    throw new UserFacingError(
+      "This company cannot be registered: our French Plateforme Agreée requires KYC for every participant on the production network, which is only completed for teams with strict company verification. Contact support@recommand.eu to enable strict company verification for this team."
+    );
+  }
+}
+
 async function registerCompanyIdentifier({
   company,
   identifier,
   documentTypes,
   useTestNetwork,
+  includeCapabilities = true,
 }: {
   company: Company | InsertCompany;
   identifier: MinimalCompanyIdentifier;
   documentTypes: CompanyDocumentType[];
   useTestNetwork: boolean;
+  includeCapabilities?: boolean;
 }) {
   if (!company.isSmpRecipient || !company.id) {
     return;
   }
+
+  await assertArratechRegistrationAllowed(company, useTestNetwork);
 
   if (!await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, undefined, company.id, company.id)) {
     throw new UserFacingError("Company cannot be registered as SMP recipient, it has identifiers that are already registered as recipient with another company.");
@@ -258,7 +285,6 @@ async function registerCompanyIdentifier({
 
   const config = getArratechConfig(useTestNetwork);
   const peppolIdentifier = participantIdentifier(identifier);
-  const supportedDocumentTypes = await resolveArratechDocumentTypes(documentTypes, useTestNetwork);
   const existingParticipant = await getParticipantByIdentifier({
     identifier,
     useTestNetwork,
@@ -292,8 +318,11 @@ async function registerCompanyIdentifier({
       }
     );
 
-  console.log("About to update supported document types", supportedDocumentTypes);
+  if (!includeCapabilities) {
+    return;
+  }
 
+  const supportedDocumentTypes = await resolveArratechDocumentTypes(documentTypes, useTestNetwork);
   await updateSupportedDocumentTypes({
     participantId: participant.id,
     documentTypes: supportedDocumentTypes,
@@ -305,9 +334,11 @@ async function registerCompanyIdentifier({
 export async function upsertCompanyRegistrations({
   companyId,
   useTestNetwork,
+  includeCapabilities = true,
 }: {
   companyId: string;
   useTestNetwork: boolean;
+  includeCapabilities?: boolean;
 }) {
   const company = await getCompanyById(companyId);
   if (company && !company.isSmpRecipient) {
@@ -321,7 +352,7 @@ export async function upsertCompanyRegistrations({
   }
 
   for (const identifier of identifiers) {
-    await registerCompanyIdentifier({ company, identifier, documentTypes, useTestNetwork });
+    await registerCompanyIdentifier({ company, identifier, documentTypes, useTestNetwork, includeCapabilities });
   }
 }
 

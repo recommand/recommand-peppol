@@ -1,5 +1,5 @@
 import { companyDocumentTypes } from "@peppol/db/schema";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc } from "drizzle-orm";
 import { unregisterCompanyDocumentType, upsertCompanyRegistrations } from "./smp-providers";

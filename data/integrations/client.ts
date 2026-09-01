@@ -1,6 +1,7 @@
 import { errorResponseSchema, manifestSchema, successResponseSchema, type IntegrationConfigurationField, type IntegrationEvent, type IntegrationManifest } from "@peppol/types/integration";
 import { createIntegrationTaskLog, updateIntegrationState, type ActivatedIntegration } from ".";
-import { createCleanUrl, UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
+import { createCleanUrl } from "@peppol/utils/util";
 import { generateIntegrationJwt } from "./auth";
 import { getMinimalTeamMembers } from "@core/data/team-members";
 import { sendEmail } from "@core/lib/email";

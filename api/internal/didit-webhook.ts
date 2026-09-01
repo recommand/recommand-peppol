@@ -6,7 +6,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@recommand/db";
 import { companyVerificationLog } from "@peppol/db/schema";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { finalizeCompanyVerification, getCompanyVerificationLog } from "@peppol/data/company-verification";
 import { requiresArratechKycReview } from "@peppol/data/at/kyc";
 import { startArratechKycReview } from "@peppol/data/at/kyc-review";

@@ -1,7 +1,7 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
 import type { TransmittedDocuments } from "@peppol/api/documents";
-import type { Labels } from "@peppol/api/labels";
+import type { Labels } from "@directory/api/labels";
 import { useActiveTeam } from "@core/hooks/user";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -33,9 +33,9 @@ import type {
   TransmittedDocument,
   TransmittedDocumentWithoutBody,
 } from "@peppol/data/transmitted-documents";
-import type { Label } from "@peppol/types/label";
+import type { Label } from "@directory/types/label";
 import { Badge } from "@core/components/ui/badge";
-import { LabelBadge } from "@peppol/components/label-badge";
+import { LabelBadge } from "@directory/components/label-badge";
 import { Alert, AlertDescription, AlertTitle } from "@core/components/ui/alert";
 import {
   Tabs,

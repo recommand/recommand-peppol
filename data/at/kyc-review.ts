@@ -12,7 +12,7 @@ import { upsertCompanyRegistrations } from "@peppol/data/smp-providers";
 import { getTeamExtension } from "@peppol/data/teams";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import {
   buildArratechKycFiling,
   submitArratechCompanyKyc,
@@ -82,8 +82,14 @@ export async function startArratechKycReview({
     // Arratech attaches the KYC to a participant, so the company has to exist on
     // their SMP before we can file it. Arratech only lets the participant operate
     // once they accept that KYC, which is what keeps this short of a verification.
+    // On production, document types and Peppol Directory publish wait until that
+    // KYC is accepted. The test network still publishes them immediately.
     if (!isRegistered && shouldBeRegistered) {
-      await upsertCompanyRegistrations({ companyId: company.id, useTestNetwork });
+      await upsertCompanyRegistrations({
+        companyId: company.id,
+        useTestNetwork,
+        includeCapabilities: useTestNetwork,
+      });
     }
 
     filing = await buildArratechKycFiling({

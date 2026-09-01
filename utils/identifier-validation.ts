@@ -1,4 +1,4 @@
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 type IdentifierValidator = (identifier: string) => void;
 type CountryIdentifierValidators = {

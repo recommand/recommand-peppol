@@ -1,6 +1,6 @@
 import type { RecipientCapabilities } from "@peppol/data/recipient-capabilities";
 import { generateAndAttachRepositoryPdf } from "@peppol/utils/pdf-attachment-helper";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import type { AnyDocumentFormat } from "@peppol/utils/type-repository/document-formats/types";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";

@@ -1,10 +1,11 @@
-import { companies, teamExtensions } from "@peppol/db/schema";
+import { teamExtensions } from "@peppol/db/schema";
+import { companies } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { count, eq } from "drizzle-orm";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 
 export async function onTeamCreated(_event: string, context: { id: string, tx: PgTransaction<NodePgQueryResultHKT, Record<string, never>, ExtractTablesWithRelations<Record<string, never>>> }) {
   console.log("onTeamCreated", context);

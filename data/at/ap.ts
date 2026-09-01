@@ -10,7 +10,7 @@ import {
   extractStandardBusinessDocumentPayload,
   type SbdhPayload,
 } from "@peppol/utils/sbdh";
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError } from "@directory/utils/util";
 import { claimOutgoingEnvelope } from "@peppol/data/provider-sent/claims";
 import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 

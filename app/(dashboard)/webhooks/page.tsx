@@ -1,6 +1,6 @@
 import { RulesManagementPage } from "@core/components/rules/rules-management-page";
 import type { Companies } from "@peppol/api/companies";
-import type { Labels } from "@peppol/api/labels";
+import type { Labels } from "@directory/api/labels";
 import { useActiveTeam } from "@core/hooks/user";
 import { toast } from "@core/components/ui/sonner";
 import { rc } from "@recommand/lib/client";

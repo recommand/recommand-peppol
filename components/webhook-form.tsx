@@ -2,7 +2,7 @@ import { Button } from "@core/components/ui/button";
 import { Input } from "@core/components/ui/input";
 import { Label } from "@core/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@core/components/ui/select";
-import type { Company } from "../types/company";
+import type { Company } from "@peppol/types/company";
 import type { WebhookFormData } from "../types/webhook";
 import { useTranslation } from "@core/hooks/use-translation";
 

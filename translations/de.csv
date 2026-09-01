@@ -26,7 +26,6 @@ Accepting...,Wird angenommen...
 Active,Aktiv
 Active subscription with full access,Aktives Abonnement mit vollem Zugriff
 Add,Hinzufügen
-Add Address,Adresse hinzufügen
 Add all companies for which you want to send or receive Peppol documents.,Fügen Sie alle Unternehmen hinzu\, für die Sie Peppol-Dokumente senden oder empfangen möchten.
 Add an email address to receive notifications,Fügen Sie eine E-Mail-Adresse hinzu\, um Benachrichtigungen zu erhalten
 Add an integration to get started,Fügen Sie zunächst eine Integration hinzu
@@ -44,7 +43,6 @@ Add your first document type to get started,Fügen Sie zunächst Ihren ersten Do
 Add your first identifier to get started,Fügen Sie zunächst Ihre erste Kennung hinzu
 Additional Notes,Zusätzliche Hinweise
 Address,Adresse
-Address *,Adresse *
 Advanced,Erweitert
 All companies,Alle Unternehmen
 All documents deleted successfully,Alle Dokumente erfolgreich gelöscht
@@ -57,11 +55,9 @@ An unexpected error occurred. Please try again.,Ein unerwarteter Fehler ist aufg
 API Preview,API-Vorschau
 Are you sure you want to delete {0} selected documents? This action cannot be undone.,Möchten Sie wirklich {0} ausgewählte Dokumente löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 Are you sure you want to delete all documents? This action cannot be undone. All documents in this playground will be permanently removed.,Möchten Sie wirklich alle Dokumente löschen? Diese Aktion kann nicht rückgängig gemacht werden. Alle Dokumente in dieser Testumgebung werden dauerhaft entfernt.
-Are you sure you want to delete customer "{0}"?,Möchten Sie den Kunden „{0}“ wirklich löschen?
 Are you sure you want to delete this company? This action cannot be undone.,Möchten Sie dieses Unternehmen wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 Are you sure you want to delete this document?,Möchten Sie dieses Dokument wirklich löschen?
 Are you sure you want to delete this integration? This action cannot be undone.,Möchten Sie diese Integration wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-Are you sure you want to delete this supplier? This action cannot be undone.,Möchten Sie diesen Lieferanten wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
 Are you sure you want to reset the integration state? This will clear all stored state data.,Möchten Sie den Integrationsstatus wirklich zurücksetzen? Dadurch werden alle gespeicherten Statusdaten gelöscht.
 Assign label,Label zuweisen
 Assign labels,Labels zuweisen
@@ -90,7 +86,6 @@ Billing History,Abrechnungsverlauf
 Billing Peppol Address,Peppol-Abrechnungsadresse
 Billing Peppol Address (Optional),Peppol-Adresse für die Abrechnung (optional)
 Billing Profile,Abrechnungsprofil
-Blue,Blau
 Brussels,Brüssel
 Buyer details,Käuferdetails
 Buyer Information (Auto-populated),Käuferinformationen (automatisch ausgefüllt)
@@ -110,7 +105,6 @@ Choose the perfect plan for your needs,Wählen Sie den passenden Tarif für Ihre
 Choose the simulated verification outcome for {0} in this playground environment.,Wählen Sie das simulierte Verifizierungsergebnis für {0} in dieser Testumgebung aus.
 Choose the type of document you want to send,Wählen Sie den Dokumenttyp aus\, den Sie senden möchten
 City,Stadt
-City *,Stadt *
 Clear,Leeren
 Color,Farbe
 Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France),Gängige Schemata: 0208 (Belgien)\, 0106 (Niederlande)\, 0225 (Frankreich)
@@ -150,28 +144,19 @@ Copy verification URL,Verifizierungs-URL kopieren
 Copy XML,XML kopieren
 Country,Land
 Country (C1),Land (C1)
-Country *,Land *
 Country & VAT,Land und USt.
 Create,Erstellen
 Create a billing profile,Abrechnungsprofil erstellen
 Create a credit note for refunds\, adjustments\, or corrections to previous invoices.,Erstellen Sie eine Gutschrift für Erstattungen\, Anpassungen oder Korrekturen früherer Rechnungen.
-Create a new customer with the details below.,Erstellen Sie einen neuen Kunden mit den unten stehenden Angaben.
 Create a new playground to test your Peppol API integrations.,Erstellen Sie eine neue Testumgebung\, um Ihre Peppol-API-Integrationen zu testen.
-Create a new supplier with the details below.,Erstellen Sie einen neuen Lieferanten mit den unten stehenden Angaben.
 Create a playground to test integrations without billing requirements\, or switch to an existing team.,Erstellen Sie eine Testumgebung\, um Integrationen ohne Abrechnungsanforderungen zu testen\, oder wechseln Sie zu einem bestehenden Team.
 Create a self billing credit note for adjustments or corrections in a self billing flow.,Erstellen Sie eine Self-Billing-Gutschrift für Anpassungen oder Korrekturen in einem Self-Billing-Ablauf.
 Create a self billing invoice where the buyer issues the invoice on behalf of the seller.,Erstellen Sie eine Self-Billing-Rechnung\, bei der der Käufer die Rechnung im Namen des Verkäufers ausstellt.
 Create Company,Unternehmen erstellen
-Create Customer,Kunden erstellen
-Create Label,Label erstellen
 Create New Company,Neues Unternehmen erstellen
-Create New Customer,Neuen Kunden erstellen
-Create New Label,Neues Label erstellen
 Create new playground,Neue Testumgebung erstellen
-Create New Supplier,Neuen Lieferanten erstellen
 Create playground,Testumgebung erstellen
 Create Playground,Testumgebung erstellen
-Create Supplier,Lieferanten erstellen
 Create webhooks and automations that react to Peppol events.,Erstellen Sie Webhooks und Automatisierungen\, die auf Peppol-Ereignisse reagieren.
 Created {0},Erstellt am {0}
 Created At,Erstellt am
@@ -188,9 +173,6 @@ Current Plan,Aktueller Tarif
 Custom Email Content (Optional),Benutzerdefinierter E-Mail-Inhalt (optional)
 Custom UBL document,Benutzerdefiniertes UBL-Dokument
 Customer,Kunde
-Customer created successfully,Kunde erfolgreich erstellt
-Customer deleted successfully,Kunde erfolgreich gelöscht
-Customer updated successfully,Kunde erfolgreich aktualisiert
 Customers,Kunden
 Daily Sync,Tägliche Synchronisierung
 Date range must not exceed 1 month (31 days),Der Datumsbereich darf 1 Monat (31 Tage) nicht überschreiten
@@ -252,7 +234,6 @@ Download ZIP,ZIP herunterladen
 Drag & drop an XML file,XML-Datei hierher ziehen
 Due Date,Fälligkeitsdatum
 E.g. 0208:[Belgian Enterprise Number],Z. B. 0208:[belgische Unternehmensnummer]
-e.g. 0208:1012081766,z. B. 0208:1012081766
 e.g.\, 0208 (Belgium),z. B. 0208 (Belgien)
 e.g.\, 1012081766,z. B. 1012081766
 e.g.\, urn:fdc:peppol.eu:2017:poacc:billing:01:1.0,z. B. urn:fdc:peppol.eu:2017:poacc:billing:01:1.0
@@ -261,9 +242,6 @@ Edit,Bearbeiten
 Edit Billing Profile,Abrechnungsprofil bearbeiten
 Edit Company,Unternehmen bearbeiten
 Edit company details for {0},Unternehmensdaten für {0} bearbeiten
-Edit Customer,Kunden bearbeiten
-Edit Label,Label bearbeiten
-Edit Supplier,Lieferanten bearbeiten
 Email,E-Mail
 Email (Optional),E-Mail-Adresse (optional)
 Email Address,E-Mail-Adresse
@@ -296,8 +274,6 @@ Export,Exportieren
 Export all sent/received documents within a date range (max 1 month) as a ZIP archive.,Exportieren Sie alle gesendeten/empfangenen Dokumente innerhalb eines Datumsbereichs (max. 1 Monat) als ZIP-Archiv.
 Export Documents,Dokumente exportieren
 Exporting...,Wird exportiert...
-External ID,Externe ID
-External ID (Optional),Externe ID (optional)
 External link,Externer Link
 External Service Notification,Benachrichtigung eines externen Dienstes
 Failed,Fehlgeschlagen
@@ -313,14 +289,12 @@ Failed to create playground,Testumgebung konnte nicht erstellt werden
 Failed to create verification session: {0},Verifizierungssitzung konnte nicht erstellt werden: {0}
 Failed to delete all documents,Löschen aller Dokumente fehlgeschlagen
 Failed to delete company: {0},Unternehmen konnte nicht gelöscht werden: {0}
-Failed to delete customer,Kunde konnte nicht gelöscht werden
 Failed to delete document,Dokument konnte nicht gelöscht werden
 Failed to delete document type: {0},Dokumenttyp konnte nicht gelöscht werden: {0}
 Failed to delete documents,Dokumente konnten nicht gelöscht werden
 Failed to delete identifier: {0},Kennung konnte nicht gelöscht werden: {0}
 Failed to delete integration: {0},Integration konnte nicht gelöscht werden: {0}
 Failed to delete notification email address: {0},Benachrichtigungs-E-Mail-Adresse konnte nicht gelöscht werden: {0}
-Failed to delete supplier,Lieferant konnte nicht gelöscht werden
 Failed to download document,Dokument konnte nicht heruntergeladen werden
 Failed to export documents,Dokumente konnten nicht exportiert werden
 Failed to export documents. Please try again.,Dokumente konnten nicht exportiert werden. Bitte versuchen Sie es erneut.
@@ -330,7 +304,6 @@ Failed to load company,Unternehmen konnte nicht geladen werden
 Failed to load company document types,Dokumenttypen des Unternehmens konnten nicht geladen werden
 Failed to load company identifiers: {0},Unternehmenskennungen konnten nicht geladen werden: {0}
 Failed to load current usage,Aktuelle Nutzung konnte nicht geladen werden
-Failed to load customers,Kunden konnten nicht geladen werden
 Failed to load document,Dokument konnte nicht geladen werden
 Failed to load documents,Dokumente konnten nicht geladen werden
 Failed to load integration,Integration konnte nicht geladen werden
@@ -339,7 +312,6 @@ Failed to load labels,Labels konnten nicht geladen werden
 Failed to load notification email addresses: {0},Benachrichtigungs-E-Mail-Adressen konnten nicht geladen werden: {0}
 Failed to load rule builder options,Optionen für den Regel-Builder konnten nicht geladen werden
 Failed to load subscription,Abonnement konnte nicht geladen werden
-Failed to load suppliers,Lieferanten konnten nicht geladen werden
 Failed to load task logs,Aufgabenprotokolle konnten nicht geladen werden
 Failed to load verification data. Please try again.,Verifizierungsdaten konnten nicht geladen werden. Bitte versuchen Sie es erneut.
 Failed to load verification status. Please try again.,Verifizierungsstatus konnte nicht geladen werden. Bitte versuchen Sie es erneut.
@@ -347,8 +319,6 @@ Failed to mark documents as read,Dokumente konnten nicht als gelesen markiert we
 Failed to read file,Datei konnte nicht gelesen werden
 Failed to remove label,Label konnte nicht entfernt werden
 Failed to reset integration state: {0},Integrationsstatus konnte nicht zurückgesetzt werden: {0}
-Failed to save customer,Kunde konnte nicht gespeichert werden
-Failed to save supplier,Lieferant konnte nicht gespeichert werden
 Failed to send document,Dokument konnte nicht gesendet werden
 Failed to unassign label,Label-Zuweisung konnte nicht aufgehoben werden
 Failed to update company. ({0}),Unternehmen konnte nicht aktualisiert werden. ({0})
@@ -470,12 +440,7 @@ Key,Schlüssel
 Kilogram,Kilogramm
 Label,Label
 Label added to {0} documents,Label zu {0} Dokumenten hinzugefügt
-Label created successfully,Label erfolgreich erstellt
-Label deleted successfully,Label erfolgreich gelöscht
-Label ID copied to clipboard,Label-ID in die Zwischenablage kopiert
-Label Name,Labelname
 Label not found,Label nicht gefunden
-Label updated successfully,Label erfolgreich aktualisiert
 Labels,Labels
 Last month,Letzter Monat
 Last name,Nachname
@@ -500,7 +465,6 @@ Make changes to the company information below,Ändern Sie unten die Unternehmens
 Make configuration changes to the integration,Ändern Sie die Konfiguration der Integration
 Manage email notifications for documents,E-Mail-Benachrichtigungen für Dokumente verwalten
 Manage integrations for this company,Integrationen für dieses Unternehmen verwalten
-Manage labels for organizing and categorizing your data.,Labels zum Ordnen und Kategorisieren Ihrer Daten verwalten.
 Manage your companies\, send and receive Peppol documents\, and monitor your subscription all in one place.,Verwalten Sie Ihre Unternehmen\, senden und empfangen Sie Peppol-Dokumente und überwachen Sie Ihr Abonnement an einem Ort.
 Manage your company document types,Dokumenttypen Ihres Unternehmens verwalten
 Manage your company identifiers,Kennungen Ihres Unternehmens verwalten
@@ -521,8 +485,6 @@ Monthly Price,Monatlicher Preis
 Most popular,Am beliebtesten
 N/A,k. A.
 Name,Name
-Name *,Name *
-Name is required,Name ist erforderlich
 Need more than {0} documents per month? Contact us for a custom plan.,Benötigen Sie mehr als {0} Dokumente pro Monat? Kontaktieren Sie uns für einen individuellen Tarif.
 Nested structure (document packages),Verschachtelte Struktur (Dokumentpakete)
 Nested ZIP,Verschachteltes ZIP
@@ -531,7 +493,6 @@ Net: €{0},Netto: {0} €
 New companies cannot be created in {0}\, and existing companies cannot switch to it. We are working on supporting more countries in the future. Would you like to see support for {1}? Let us know via support@recommand.eu.,In {0} können keine neuen Unternehmen erstellt werden und bestehende Unternehmen können nicht dorthin wechseln. Wir arbeiten daran\, künftig weitere Länder zu unterstützen. Möchten Sie\, dass {1} unterstützt wird? Schreiben Sie uns an support@recommand.eu.
 Next,Weiter
 No Active Subscription,Kein aktives Abonnement
-No active team selected,Kein aktives Team ausgewählt
 No attachments added yet.,Noch keine Anhänge hinzugefügt.
 No attachments found on this document.,In diesem Dokument wurden keine Anhänge gefunden.
 No available labels,Keine verfügbaren Labels
@@ -551,8 +512,6 @@ No integrations configured,Keine Integrationen konfiguriert
 No labels available,Keine Labels verfügbar
 No notification email address selected for editing,Keine Benachrichtigungs-E-Mail-Adresse zur Bearbeitung ausgewählt
 No notification emails configured,Keine Benachrichtigungs-E-Mail-Adressen konfiguriert
-No Peppol addresses added. Click "Add Address" to add one.,Keine Peppol-Adressen hinzugefügt. Klicken Sie auf „Adresse hinzufügen“\, um eine hinzuzufügen.
-No Peppol IDs added yet.,Noch keine Peppol-IDs hinzugefügt.
 No preview available for this document.,Für dieses Dokument ist keine Vorschau verfügbar.
 No registered representatives could be found for this company in the CBE registry. You can still proceed with identity verification but your request will be manually reviewed.,Für dieses Unternehmen wurden im ZDU-Register keine eingetragenen Vertreter gefunden. Sie können mit der Identitätsprüfung fortfahren\, Ihre Anfrage wird jedoch manuell geprüft.
 No scheme found.,Kein Schema gefunden.
@@ -578,11 +537,8 @@ Open,Offen
 Open external reference,Externe Referenz öffnen
 Open link,Link öffnen
 Optional description,Optionale Beschreibung
-Optional external identifier,Optionale externe Kennung
-Optional VAT number,Optionale USt-IdNr.
 Optionally attach supporting documents such as PDFs or images. Files are embedded in the Peppol document.,Fügen Sie optional unterstützende Dokumente wie PDF-Dateien oder Bilder hinzu. Die Dateien werden in das Peppol-Dokument eingebettet.
 Or choose a file to fill the XML textarea below,Oder wählen Sie eine Datei aus\, um das XML-Textfeld unten auszufüllen
-Orange,Orange
 outgoing,ausgehend
 Outgoing,Ausgehend
 Outgoing document,Ausgehendes Dokument
@@ -604,15 +560,12 @@ Pending,Ausstehend
 Peppol address for invoice delivery. If not set\, we will try to derive it from your VAT number or deliver the invoice via email.,Peppol-Adresse für die Rechnungszustellung. Wenn keine festgelegt ist\, versuchen wir\, sie aus Ihrer Umsatzsteuer-Identifikationsnummer abzuleiten oder die Rechnung per E-Mail zuzustellen.
 Peppol address: {0},Peppol-Adresse: {0}
 Peppol addresses,Peppol-Adressen
-Peppol Addresses,Peppol-Adressen
 Peppol Conversation ID,Peppol-Konversations-ID
 Peppol identifiers are the addresses your company uses on the Peppol network. By default\, identifiers were created from your enterprise or VAT number. You can add additional identifiers here if needed.,Peppol-Kennungen sind die Adressen\, die Ihr Unternehmen im Peppol-Netzwerk verwendet. Standardmäßig wurden Kennungen aus Ihrer Unternehmens- oder Umsatzsteuer-Identifikationsnummer erstellt. Bei Bedarf können Sie hier weitere Kennungen hinzufügen.
-Peppol IDs,Peppol-IDs
 Peppol Message ID,Peppol-Nachrichten-ID
 per document,pro Dokument
 per month,pro Monat
 Period,Zeitraum
-Phone,Telefon
 Phone (Optional),Telefon (optional)
 Pick a plan,Tarif auswählen
 Playground created successfully,Testumgebung erfolgreich erstellt
@@ -625,7 +578,6 @@ Please select at least one notification type,Bitte wählen Sie mindestens einen 
 Please upload an XML file,Bitte laden Sie eine XML-Datei hoch
 Please wait while we validate your payment mandate.,Bitte warten Sie\, während wir Ihr Zahlungsmandat validieren.
 Postal Code,Postleitzahl
-Postal Code *,Postleitzahl *
 Preparing signature...,Signatur wird vorbereitet...
 Preview and metadata for this transmitted Peppol document.,Vorschau und Metadaten für dieses übertragene Peppol-Dokument.
 Price *,Preis *
@@ -640,7 +592,6 @@ Professional,Professional
 Professional 1000,Professional 1000
 Professional 2500,Professional 2500
 Professional 5000,Professional 5000
-Purple,Violett
 Quantity *,Menge *
 Raw XML,Roh-XML
 Raw XML Document,XML-Rohdokument
@@ -666,7 +617,6 @@ Register your company in the Peppol network so suppliers can send you documents.
 Reject,Ablehnen
 Rejecting...,Wird abgelehnt...
 Related documents,Zugehörige Dokumente
-Remove,Entfernen
 Preview of the billing document and any attachments.,Vorschau des Abrechnungsdokuments und vorhandener Anhänge.
 Representative Details,Vertreterangaben
 Request Body,Anfragetext
@@ -687,8 +637,6 @@ Scheme is required,Schema ist erforderlich
 Search customers...,Kunden suchen...
 Search documents...,Dokumente suchen...
 Search scheme...,Schema suchen...
-Search suppliers...,Lieferanten suchen...
-Select {0} color,Farbe {0} auswählen
 Select a company,Unternehmen auswählen
 Select a country,Land auswählen
 Select a customer...,Kunden auswählen...
@@ -761,9 +709,6 @@ Subscription cancelled successfully,Abonnement erfolgreich gekündigt
 Subscription updated successfully,Abonnement erfolgreich aktualisiert
 Success,Erfolgreich
 Suite 100,Suite 100
-Supplier created successfully,Lieferant erfolgreich erstellt
-Supplier deleted successfully,Lieferant erfolgreich gelöscht
-Supplier updated successfully,Lieferant erfolgreich aktualisiert
 Suppliers,Lieferanten
 Supporting data,Stammdaten
 Switch Team or Create Playground,Team wechseln oder Testumgebung erstellen
@@ -823,8 +768,6 @@ Unread,Ungelesen
 Unsupported file type. Allowed types: CSV\, PDF\, PNG\, JPG\, XLSX\, ODS.,Nicht unterstützter Dateityp. Zulässige Typen: CSV\, PDF\, PNG\, JPG\, XLSX\, ODS.
 Update,Aktualisieren
 Update Payment Method,Zahlungsmethode aktualisieren
-Update the customer details below.,Aktualisieren Sie unten die Kundendaten.
-Update the supplier details below.,Aktualisieren Sie unten die Lieferantendaten.
 Update your billing information,Abrechnungsinformationen für Rechnungen aktualisieren
 Updated: {0},Aktualisiert: {0}
 Upgrade or change your current plan,Aktuellen Tarif upgraden oder wechseln
@@ -865,8 +808,6 @@ Verify Company,Unternehmen verifizieren
 Verify your identity as a representative of {0} to activate this company on the Peppol network.,Verifizieren Sie Ihre Identität als Vertreter von {0}\, um dieses Unternehmen im Peppol-Netzwerk zu aktivieren.
 Verifying...,Wird verifiziert...
 View and manage integration state,Integrationsstatus anzeigen und verwalten
-View and manage your customers (supporting data).,Kunden (Stammdaten) anzeigen und verwalten.
-View and manage your suppliers (supporting data).,Lieferanten (Stammdaten) anzeigen und verwalten.
 View and manage your transmitted Peppol documents.,Übertragene Peppol-Dokumente anzeigen und verwalten.
 View Available Plans,Verfügbare Tarife anzeigen
 View Verification Status,Verifizierungsstatus anzeigen
@@ -886,7 +827,6 @@ XML copied to clipboard,XML in die Zwischenablage kopiert
 XML Document *,XML-Dokument *
 XML downloaded,XML heruntergeladen
 XML file is too large (max 5MB),XML-Datei ist zu groß (max. 5 MB)
-Yellow,Gelb
 Yes\, Cancel Subscription,Ja\, Abonnement kündigen
 You can use HTML tags for formatting. The document will be attached as XML\, plus any embedded attachments (optionally including a generated PDF).,Sie können HTML-Tags zur Formatierung verwenden. Das Dokument wird als XML-Datei zusammen mit allen eingebetteten Anhängen angehängt (optional einschließlich eines erstellten PDFs).
 You must be in a team to complete this step,Sie müssen Mitglied eines Teams sein\, um diesen Schritt abzuschließen
