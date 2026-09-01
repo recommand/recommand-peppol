@@ -67,6 +67,17 @@ const documentSentPayloadSchema = z.object({
   countryC1: z.string(),
 });
 
+// Point-in-time snapshot stored alongside document events, so consumers read
+// the document as it was when the event happened instead of fetching current
+// state back from the API. Attachments are still embedded in `parsed` at
+// publish time, which is what makes the snapshot heavy — the core event data
+// store offloads it to S3 when it is large.
+const documentEventDataSchema = z.object({
+  direction: z.enum(["incoming", "outgoing"]),
+  parsed: z.unknown().nullable(),
+  xml: z.string().nullable(),
+});
+
 const documentLabelPayloadSchema = z.object({
   companyId: z.string(),
   labelId: z.string(),
@@ -104,6 +115,7 @@ export function registerPeppolEventTypes() {
     type: "peppol.document.received.v1",
     aggregateType: "peppol.document",
     payload: documentReceivedPayloadSchema,
+    dataSchema: documentEventDataSchema,
     conditionFields: [
       { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
       documentTypeField,
@@ -136,6 +148,7 @@ export function registerPeppolEventTypes() {
     type: "peppol.document.sent.v1",
     aggregateType: "peppol.document",
     payload: documentSentPayloadSchema,
+    dataSchema: documentEventDataSchema,
     conditionFields: [
       { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
       documentTypeField,

@@ -161,6 +161,11 @@ export async function receivingPipeline(
       envelopeId: options.sbdhInstanceIdentifier ?? null,
       countryC1: options.countryC1,
     },
+    data: {
+      direction: "incoming",
+      parsed: parsedDocument ?? null,
+      xml: received.xmlDocument ?? null,
+    },
   });
 
   if (!options.skipBilling) {

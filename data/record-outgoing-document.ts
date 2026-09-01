@@ -143,6 +143,11 @@ export async function recordOutgoingDocument(options: {
       envelopeId: facts.envelopeId,
       countryC1: document.countryC1,
     },
+    data: {
+      direction: "outgoing",
+      parsed: document.parsed ?? null,
+      xml: document.xml ?? null,
+    },
   });
 
   // Create a new transferEvent for billing
