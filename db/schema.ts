@@ -1,4 +1,5 @@
 import type { BillingConfig } from "../data/plans";
+import type { ArratechOnboarding } from "@peppol/data/at/kyc-onboarding-state";
 import { teams } from "@core/db/schema";
 import {
   timestamp,
@@ -316,6 +317,7 @@ export const companyVerificationLog = pgTable(
     // When the representative signed the mandate that is filed with the KYC.
     mandateAcceptedAt: timestamp("mandate_accepted_at", { withTimezone: true }),
     errorMessage: text("error_message"),
+    arratechOnboarding: jsonb("arratech_onboarding").$type<ArratechOnboarding>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

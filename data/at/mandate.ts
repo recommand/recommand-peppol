@@ -14,7 +14,6 @@ export type CompanyKycIdentity = {
   rows: CompanyIdentityRow[];
   /** The jurisdiction specific payload Arratech's KYC expects, when defined. */
   metaData?: Record<string, string>;
-  /** Caveats support should know about before Arratech reviews the file. */
   notes: string[];
 };
 

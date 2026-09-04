@@ -1,6 +1,6 @@
 import { companyVerificationLog } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, inArray } from "drizzle-orm";
 import type { Company } from "@peppol/data/companies";
 import {
   getCompanyVerificationLog,
@@ -19,11 +19,6 @@ import {
   type ArratechKycFiling,
 } from "./kyc";
 
-/**
- * Files the company's KYC with Arratech and parks the verification session in
- * review. The mandate is signed by the representative whose identity Didit just
- * verified, and support is emailed to follow the acceptance up with Arratech.
- */
 export async function startArratechKycReview({
   companyVerificationLogId,
   company,
@@ -40,6 +35,17 @@ export async function startArratechKycReview({
   if (isFinalVerificationStatus(existingLog.status)) {
     return { status: existingLog.status };
   }
+  const teamExtension = await getTeamExtension(company.teamId);
+  if (company.country === "FR" && company.smpProvider === "at-shared-smp-fr" && !teamExtension?.useTestNetwork && !teamExtension?.isPlayground) {
+    const now = new Date().toISOString();
+    await db.update(companyVerificationLog).set({
+      status: "inReview", verificationProofReference, errorMessage: null,
+      arratechOnboarding: { phase: "submit", attempts: 0, startedAt: now, nextAttemptAt: now },
+    }).where(and(eq(companyVerificationLog.id, companyVerificationLogId),
+      isNull(companyVerificationLog.arratechOnboarding),
+      inArray(companyVerificationLog.status, ["opened", "idVerificationRequested", "inReview"])));
+    return { status: (await getCompanyVerificationLog(companyVerificationLogId))!.status };
+  }
   // The same identity verification must not be filed with Arratech twice.
   if (
     existingLog.status === "inReview" &&
@@ -48,7 +54,6 @@ export async function startArratechKycReview({
     return { status: existingLog.status };
   }
 
-  const teamExtension = await getTeamExtension(company.teamId);
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
   const smpStateBase = {
     isPlayground: teamExtension?.isPlayground,
@@ -79,11 +84,6 @@ export async function startArratechKycReview({
       );
     }
 
-    // Arratech attaches the KYC to a participant, so the company has to exist on
-    // their SMP before we can file it. Arratech only lets the participant operate
-    // once they accept that KYC, which is what keeps this short of a verification.
-    // On production, document types and Peppol Directory publish wait until that
-    // KYC is accepted. The test network still publishes them immediately.
     if (!isRegistered && shouldBeRegistered) {
       await upsertCompanyRegistrations({
         companyId: company.id,

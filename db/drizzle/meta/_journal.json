@@ -708,6 +708,13 @@
       "when": 1788203961793,
       "tag": "20260831191921_overrated_menace",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1788554342765,
+      "tag": "20260904203902_curved_viper",
+      "breakpoints": true
     }
   ]
 }

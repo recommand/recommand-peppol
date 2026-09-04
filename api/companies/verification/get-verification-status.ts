@@ -7,6 +7,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { UserFacingError } from "@directory/utils/util";
+import { getArratechVerificationProgress } from "@peppol/data/at/kyc-onboarding-state";
 
 const server = new Server();
 
@@ -39,9 +40,10 @@ async function _getVerificationStatusImplementation(c: GetVerificationStatusCont
 
         return c.json(actionSuccess({
             status: verificationLog.status,
-            errorMessage: verificationLog.errorMessage,
+            errorMessage: verificationLog.arratechOnboarding ? null : verificationLog.errorMessage,
             companyName: company.name,
             companyId: company.id,
+            ...getArratechVerificationProgress(verificationLog.arratechOnboarding, company.isSmpRecipient, verificationLog.status),
         }));
     } catch (error) {
         console.error(error);

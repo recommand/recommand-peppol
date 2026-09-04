@@ -12,11 +12,6 @@ import {
   type MandateInput,
 } from "./mandate";
 
-/**
- * Companies on the Arratech SMP are only verified once Arratech accepts their
- * KYC, and that KYC is filed with a mandate the representative signs. Playground
- * teams never reach Arratech, so they neither sign nor get filed.
- */
 export async function requiresArratechKycReview(company: Company): Promise<boolean> {
   if (company.smpProvider !== "at-shared-smp-fr") {
     return false;
@@ -178,10 +173,6 @@ export async function buildArratechKycFiling({
   };
 }
 
-/**
- * Files the KYC and its mandate against every Arratech participant of the
- * company. Arratech reviews it before the participant can operate.
- */
 export async function submitArratechCompanyKyc({
   companyId,
   filing,
