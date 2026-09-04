@@ -31,6 +31,7 @@ type ArratechBusinessCard = {
 
 type ArratechParticipant = {
   id: string;
+  status?: string;
   name: string;
   participantIdentifier: string;
   environment?: "PROD" | "TEST";
@@ -187,6 +188,7 @@ export async function getParticipantByIdentifier({
     {
       method: "GET",
       useTestNetwork,
+      signal: AbortSignal.timeout(30_000),
     }
   );
 
@@ -218,6 +220,7 @@ async function updateSupportedDocumentTypes({
       method: "PUT",
       body: JSON.stringify({ supportedDocumentTypes: documentTypes }),
       useTestNetwork,
+      signal: AbortSignal.timeout(30_000),
     }
   );
 }
@@ -235,6 +238,7 @@ async function getSupportedDocumentTypes({
     {
       method: "GET",
       useTestNetwork,
+      signal: AbortSignal.timeout(30_000),
     },
   );
 }
@@ -253,6 +257,7 @@ async function publishParticipant({
       method: "POST",
       body: JSON.stringify({ ids: [participantId] }),
       useTestNetwork,
+      signal: AbortSignal.timeout(30_000),
     }
   );
 }
@@ -285,12 +290,14 @@ async function registerCompanyIdentifier({
   documentTypes,
   useTestNetwork,
   includeCapabilities = true,
+  siret,
 }: {
   company: Company | InsertCompany;
   identifier: MinimalCompanyIdentifier;
   documentTypes: CompanyDocumentType[];
   useTestNetwork: boolean;
   includeCapabilities?: boolean;
+  siret?: string;
 }) {
   if (!company.isSmpRecipient || !company.id) {
     return;
@@ -309,11 +316,19 @@ async function registerCompanyIdentifier({
     useTestNetwork,
   });
 
+  if (existingParticipant && siret && existingParticipant.status !== "ACTIVE") {
+    if (includeCapabilities) {
+      throw new UserFacingError(`Arratech participant is not active (${existingParticipant.status})`);
+    }
+    return;
+  }
+
   const participant = existingParticipant
     ? await fetchArratechJson<ArratechParticipant>(
       `/orgs/${config.orgId}/participants/${existingParticipant.id}`,
       {
         method: "PUT",
+        signal: AbortSignal.timeout(30_000),
         body: JSON.stringify({
           name: company.name,
           businessCard: businessCard(company),
@@ -325,9 +340,11 @@ async function registerCompanyIdentifier({
       `/orgs/${config.orgId}/participants`,
       {
         method: "POST",
+        signal: AbortSignal.timeout(30_000),
         body: JSON.stringify({
           name: company.name,
           participantIdentifier: peppolIdentifier,
+          ...(siret && identifier.scheme === "0225" ? { siret } : {}),
           smpRef: config.smpRef,
           apRef: config.apRef,
           transportProfile: "peppol-transport-as4-v2_0",
@@ -364,10 +381,12 @@ export async function upsertCompanyRegistrations({
   companyId,
   useTestNetwork,
   includeCapabilities = true,
+  siret,
 }: {
   companyId: string;
   useTestNetwork: boolean;
   includeCapabilities?: boolean;
+  siret?: string;
 }) {
   const company = await getCompanyById(companyId);
   if (company && !company.isSmpRecipient) {
@@ -381,7 +400,7 @@ export async function upsertCompanyRegistrations({
   }
 
   for (const identifier of identifiers) {
-    await registerCompanyIdentifier({ company, identifier, documentTypes, useTestNetwork, includeCapabilities });
+    await registerCompanyIdentifier({ company, identifier, documentTypes, useTestNetwork, includeCapabilities, siret });
   }
 }
 

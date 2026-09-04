@@ -122,8 +122,6 @@ server.post(
         return c.json(actionSuccess({ message: "Verification status not changed (already verified)" }), 200);
       }
 
-      // Arratech companies are only verified once Arratech accepts their KYC,
-      // which support confirms manually.
       if (isVerified && await requiresArratechKycReview(company)) {
         const kycReview = await startArratechKycReview({
           companyVerificationLogId: companyVerificationLogRecord.id,
@@ -134,7 +132,7 @@ server.post(
           actionSuccess({
             message:
               kycReview.status === "inReview"
-                ? "Verification is awaiting Arratech KYC acceptance"
+                ? "Verification is awaiting platform activation"
                 : "Verification status not changed (already finalized)",
           }),
           200

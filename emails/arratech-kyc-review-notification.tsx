@@ -17,6 +17,7 @@ interface ArratechKycReviewNotificationProps {
   signatoryName?: string;
   network: "production" | "test";
   submissionError?: string | null;
+  sendOnly?: boolean;
 }
 
 export const ArratechKycReviewNotification = ({
@@ -30,15 +31,16 @@ export const ArratechKycReviewNotification = ({
   signatoryName,
   network = "production",
   submissionError = null,
+  sendOnly = false,
 }: ArratechKycReviewNotificationProps) => (
-  <EmailLayout preview={`${companyName} is waiting for Arratech to accept its KYC`}>
-    <EmailHeading>Arratech KYC awaiting acceptance</EmailHeading>
+  <EmailLayout preview={`${companyName} requires onboarding review`}>
+    <EmailHeading>Arratech onboarding requires review</EmailHeading>
     <Text className="mb-4">Hello,</Text>
     {submissionError ? (
       <Text className={`mb-4 text-[${DANGER}]`}>
         The identity of a representative of <strong>{companyName}</strong> was
-        verified, but filing its KYC with Arratech failed. The mandate is
-        attached to this email and has to be filed manually.
+        verified, but its platform onboarding needs attention. Review the error
+        below and any attached mandate before taking action.
       </Text>
     ) : (
       <Text className="mb-4">
@@ -47,11 +49,16 @@ export const ArratechKycReviewNotification = ({
         been filed with Arratech.
       </Text>
     )}
-    <Text className="mb-4">
-      The verification session stays under review until Arratech accepts the
-      company. Once they confirm, complete the session through the admin API so
-      the company is marked as verified.
-    </Text>
+    {sendOnly ? <Text className="mb-4">
+      This send-only request needs manual follow-up with Arratech. Keep the session
+      under review and inform the customer when there is an update. Do not enable
+      receiving or approve KYC as a workaround.
+    </Text> : <Text className="mb-4">
+      Check the KYC metadata and signed mandate. An organisation admin can approve
+      pending KYC via POST /kyc/approve. Arratech then completes Annuaire registration.
+      Wait for the participant to become ACTIVE before completing the session
+      through the admin API. An approved KYC alone is not sufficient.
+    </Text>}
     <InfoSection>
       <Text className="my-1 text-sm">
         <strong>Company:</strong> {companyName} ({companyId})
@@ -92,13 +99,13 @@ export const ArratechKycReviewNotification = ({
         </Text>
       ) : null}
     </InfoSection>
-    <Text className="mb-4 text-sm">
+    {!sendOnly && <Text className="mb-4 text-sm">
       Complete the session with{" "}
       <code>
         POST /api/admin/companies/verification/{verificationLogId}/complete
       </code>{" "}
       and a status of <code>verified</code> or <code>rejected</code>.
-    </Text>
+    </Text>}
   </EmailLayout>
 );
 
@@ -108,9 +115,7 @@ ArratechKycReviewNotification.PreviewProps = {
   verificationLogId: "cvl_01JX",
   jurisdiction: "FR",
   identityRows: [{ label: "SIREN", value: "303265045" }],
-  identityNotes: [
-    "SIRET 30326504500001 assumed to be the head office, the company only gave us its SIREN",
-  ],
+  identityNotes: ["Confirm the establishment identifier before completing the review."],
   electronicAddresses: ["0225:303265045"],
   signatoryName: "Jeanne Durand",
   network: "production",
@@ -124,5 +129,5 @@ export const subject = (props: {
   submissionError?: string | null;
 }) =>
   props.submissionError
-    ? `Arratech KYC submission failed for ${props.companyName}`
-    : `Arratech KYC awaiting acceptance for ${props.companyName}`;
+    ? `Arratech onboarding needs attention for ${props.companyName}`
+    : `Arratech onboarding review for ${props.companyName}`;

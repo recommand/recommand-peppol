@@ -23,6 +23,8 @@ type StatusData = {
     errorMessage: string | null;
     companyName: string;
     companyId: string;
+    activationPending?: boolean;
+    supportReviewPending?: boolean;
 };
 
 function DashboardLink() {
@@ -68,6 +70,8 @@ export default function Page() {
                 errorMessage: string | null;
                 companyName: string;
                 companyId: string;
+                activationPending?: boolean;
+                supportReviewPending?: boolean;
             };
 
             const status = data.status;
@@ -77,7 +81,7 @@ export default function Page() {
                 return;
             }
 
-            setStatusData({ status, errorMessage: data.errorMessage, companyName: data.companyName, companyId: data.companyId });
+            setStatusData({ ...data, status });
             setIsLoading(false);
 
             if ((FINAL_STATUSES as readonly string[]).includes(status) && intervalRef.current) {
@@ -217,8 +221,12 @@ export default function Page() {
                     <StatusHero
                         tone="info"
                         icon={Clock}
-                        title={t`Verification Under Review`}
-                        description={t`Your identity verification for ${statusData.companyName} is being reviewed manually. This page will update automatically once the review is complete.`}
+                        title={statusData.activationPending ? t`Company activation in progress` : t`Verification Under Review`}
+                        description={statusData.supportReviewPending
+                            ? t`Your request is being processed by our support team. You will receive a message when there is an update.`
+                            : statusData.activationPending
+                            ? t`Your identity has been verified. We are completing your company's network registration. This page will update automatically when activation is complete.`
+                            : t`Your identity verification for ${statusData.companyName} is being reviewed manually. This page will update automatically once the review is complete.`}
                     />
 
                     <Card>
@@ -226,7 +234,7 @@ export default function Page() {
                             <div className="flex items-center gap-3">
                                 <Clock className="h-5 w-5 text-muted-foreground shrink-0" />
                                 <div>
-                                    <p className="text-sm font-medium">{t`Manual review in progress`}</p>
+                                    <p className="text-sm font-medium">{statusData.activationPending ? t`Company activation in progress` : t`Manual review in progress`}</p>
                                     <p className="text-xs text-muted-foreground">{t`This may take some time. You can safely close this page and check back later.`}</p>
                                 </div>
                             </div>
