@@ -1,10 +1,14 @@
-import { canUpsertCompanyIdentifier, getCompanyIdentifiers, type CompanyIdentifier } from "@peppol/data/company-identifiers";
-import { getCompanyDocumentTypes, type CompanyDocumentType } from "@peppol/data/company-document-types";
-import { getCompanyById, type Company, type InsertCompany } from "@peppol/data/companies";
-import { getTeamExtension } from "@peppol/data/teams";
-import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
 import { UserFacingError } from "@directory/utils/util";
+import { type Company, getCompanyById, type InsertCompany } from "@peppol/data/companies";
+import { type CompanyDocumentType, getCompanyDocumentTypes } from "@peppol/data/company-document-types";
+import { type CompanyIdentifier, canUpsertCompanyIdentifier, getCompanyIdentifiers } from "@peppol/data/company-identifiers";
+import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
+import { getTeamExtension } from "@peppol/data/teams";
 import { fetchArratechJson, getArratechConfig } from "./client";
+import {
+  type ArratechSupportedDocumentType,
+  mergeSupportedDocumentTypes,
+} from "./supported-document-types";
 
 type MinimalCompanyIdentifier = {
   scheme: string;
@@ -23,12 +27,6 @@ type ArratechBusinessCard = {
     city: string;
     country: string;
   };
-};
-
-type ArratechSupportedDocumentType = {
-  documentId: string;
-  processId: string;
-  exactMatchOnly?: boolean;
 };
 
 type ArratechParticipant = {
@@ -209,6 +207,10 @@ async function updateSupportedDocumentTypes({
   documentTypes: ArratechSupportedDocumentType[];
   useTestNetwork: boolean;
 }): Promise<void> {
+  if (documentTypes.length > 20) {
+    throw new UserFacingError("AT SMP supports at most 20 document types per participant");
+  }
+
   const config = getArratechConfig(useTestNetwork);
   await fetchArratechJson<ArratechParticipant>(
     `/orgs/${config.orgId}/participants/${participantId}/supported_document_types`,
@@ -217,6 +219,23 @@ async function updateSupportedDocumentTypes({
       body: JSON.stringify({ supportedDocumentTypes: documentTypes }),
       useTestNetwork,
     }
+  );
+}
+
+async function getSupportedDocumentTypes({
+  participantId,
+  useTestNetwork,
+}: {
+  participantId: string;
+  useTestNetwork: boolean;
+}): Promise<ArratechSupportedDocumentType[]> {
+  const config = getArratechConfig(useTestNetwork);
+  return await fetchArratechJson<ArratechSupportedDocumentType[]>(
+    `/orgs/${config.orgId}/participants/${participantId}/supported_document_types`,
+    {
+      method: "GET",
+      useTestNetwork,
+    },
   );
 }
 
@@ -322,7 +341,17 @@ async function registerCompanyIdentifier({
     return;
   }
 
-  const supportedDocumentTypes = await resolveArratechDocumentTypes(documentTypes, useTestNetwork);
+  const requestedDocumentTypes = await resolveArratechDocumentTypes(documentTypes, useTestNetwork);
+  const currentDocumentTypes = existingParticipant
+    ? await getSupportedDocumentTypes({
+      participantId: participant.id,
+      useTestNetwork,
+    })
+    : participant.supportedDocumentTypes ?? [];
+  const supportedDocumentTypes = mergeSupportedDocumentTypes(
+    currentDocumentTypes,
+    requestedDocumentTypes,
+  );
   await updateSupportedDocumentTypes({
     participantId: participant.id,
     documentTypes: supportedDocumentTypes,
@@ -407,13 +436,10 @@ export async function unregisterCompanyDocumentType({
       continue;
     }
 
-    const currentDocumentTypes = await fetchArratechJson<ArratechSupportedDocumentType[]>(
-      `/orgs/${getArratechConfig(useTestNetwork).orgId}/participants/${participant.id}/supported_document_types`,
-      {
-        method: "GET",
-        useTestNetwork,
-      }
-    );
+    const currentDocumentTypes = await getSupportedDocumentTypes({
+      participantId: participant.id,
+      useTestNetwork,
+    });
     const nextDocumentTypes = currentDocumentTypes.filter((currentDocumentType) => {
       return currentDocumentType.documentId !== documentTypeToRemove.documentId
         || currentDocumentType.processId !== documentTypeToRemove.processId;
