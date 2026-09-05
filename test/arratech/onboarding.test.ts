@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import type { ArratechOnboarding } from '../../data/at/kyc-onboarding-state';
+import { scheduledJobs } from 'croner';
+import type { Logger } from '@recommand/lib/logger';
 
 const events: string[] = [];
 let log: any;
@@ -21,6 +23,7 @@ const state = (): ArratechOnboarding => ({
 
 mock.module('@recommand/db', () => ({
   db: {
+    select: () => ({ from: () => ({ where: () => ({ orderBy: () => ({ limit: async () => [{ id: log.id }] }) }) }) }),
     transaction: async (fn: any) => fn({ execute: async () => ({ rows: [{ acquired }] }) }),
     update: () => ({
       set: (patch: any) => ({
@@ -110,7 +113,7 @@ mock.module('@peppol/data/at/client', () => ({
   },
 }));
 
-const { processArratechOnboarding, notifyVerificationCompletion, VerificationBusyError } =
+const { processArratechOnboarding, notifyVerificationCompletion, VerificationBusyError, initializeArratechOnboardingCron } =
   await import('../../data/at/kyc-onboarding');
 
 beforeEach(() => {
@@ -155,6 +158,34 @@ beforeEach(() => {
 });
 
 describe('durable Arratech onboarding', () => {
+  it('logs scheduler registration, selection and processing stages without filing contents', async () => {
+    const previous = process.env.RUN_CRON;
+    const messages: string[] = [];
+    const record = (message: string) => { messages.push(message); };
+    const logger = { info: record, warn: record, error: record } as unknown as Logger;
+    try {
+      process.env.RUN_CRON = 'false';
+      initializeArratechOnboardingCron(logger);
+      expect(messages.join()).toContain('scheduler disabled');
+      process.env.RUN_CRON = 'true';
+      initializeArratechOnboardingCron(logger);
+      const job = scheduledJobs.find(job => job.name === 'peppol.arratech-onboarding')!;
+      expect(job).toBeDefined();
+      await job.trigger();
+      const output = messages.join('\n');
+      for (const stage of ['registered', 'tick', 'select-due completed', 'selected count=1', 'lock-acquired', 'build-filing completed', 'ensure-approved-kyc completed', 'save-retry completed', 'batch-finished']) {
+        expect(output).toContain(stage);
+      }
+      for (const sensitive of ['%PDF', 'didit-session', '303265045', 'Jean', 'Dupont']) {
+        expect(output).not.toContain(sensitive);
+      }
+    } finally {
+      scheduledJobs.find(job => job.name === 'peppol.arratech-onboarding')?.stop();
+      if (previous === undefined) delete process.env.RUN_CRON;
+      else process.env.RUN_CRON = previous;
+    }
+  });
+
   it('blocks a mismatched country before any provider writes', async () => {
     log.countrySpecific = { country: 'BE', siret: '30326504500011' };
     await processArratechOnboarding(log.id);
