@@ -9,8 +9,8 @@ const mandate = Buffer.from('%PDF-1.7 signed mandate');
 const path = '/orgs/org/participants/participant/kyc';
 const input = {
   path,
-  siren: '830905253',
-  siret: '83090525300015',
+  siren: '000000018',
+  siret: '00000001800002',
   mandate,
   fileName: 'mandate.pdf',
 };

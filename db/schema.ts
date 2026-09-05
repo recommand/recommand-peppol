@@ -1,5 +1,6 @@
 import type { BillingConfig } from "../data/plans";
 import type { ArratechOnboarding } from "@peppol/data/at/kyc-onboarding-state";
+import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { teams } from "@core/db/schema";
 import {
   timestamp,
@@ -309,6 +310,7 @@ export const companyVerificationLog = pgTable(
     lastName: text("last_name"),
     companyName: text("company_name"),
     enterpriseNumber: text("enterprise_number"),
+    countrySpecific: jsonb('country_specific').$type<VerificationCountrySpecific>(),
     address: text("address"),
     postalCode: text("postal_code"),
     city: text("city"),

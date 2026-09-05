@@ -3,6 +3,7 @@ import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
 import { DEFAULT_MANDATE_DOCUMENT } from "./mandates/default";
 import { FRENCH_MANDATE_DOCUMENT } from "./mandates/france";
+import { validateVerificationCountrySpecific, type VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 
 export type CompanyIdentityRow = {
   label: string;
@@ -63,6 +64,7 @@ export type MandateDocument = {
   resolveIdentity(
     company: CompanyIdentitySource,
     identifiers: Pick<CompanyIdentifier, "scheme" | "identifier">[],
+    countrySpecific?: VerificationCountrySpecific | null,
   ): CompanyKycIdentity;
   /** Mustache template rendered to the PDF that is filed with the KYC. */
   template: string;
@@ -83,8 +85,10 @@ export function getMandateDocument(
 export function resolveCompanyKycIdentity(
   company: CompanyIdentitySource,
   identifiers: Pick<CompanyIdentifier, "scheme" | "identifier">[],
+  countrySpecific?: VerificationCountrySpecific | null,
 ): CompanyKycIdentity {
-  return getMandateDocument(company.country).resolveIdentity(company, identifiers);
+  const verifiedData = validateVerificationCountrySpecific(company, countrySpecific);
+  return getMandateDocument(company.country).resolveIdentity(company, identifiers, verifiedData);
 }
 
 export async function renderMandatePdf(input: MandateInput): Promise<Buffer> {

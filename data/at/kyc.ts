@@ -4,6 +4,7 @@ import { getTeamExtension } from "@peppol/data/teams";
 import { UserFacingError } from "@directory/utils/util";
 import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 import { getParticipantByIdentifier } from "./smp";
+import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import {
   getMandateDocument,
   renderMandatePdf,
@@ -27,12 +28,14 @@ export async function requiresArratechKycReview(company: Company): Promise<boole
  */
 export async function buildMandateInput({
   company,
+  countrySpecific,
   signatory,
   signedAt,
   proofReference,
   reference,
 }: {
   company: Company;
+  countrySpecific?: VerificationCountrySpecific | null;
   signatory: { firstName: string; lastName: string; role?: string };
   signedAt: Date;
   proofReference: string | null;
@@ -49,7 +52,7 @@ export async function buildMandateInput({
     reference,
     company,
     identifiers,
-    identity: resolveCompanyKycIdentity(company, identifiers),
+    identity: resolveCompanyKycIdentity(company, identifiers, countrySpecific),
     signatory: {
       firstName: signatory.firstName,
       lastName: signatory.lastName,
@@ -139,6 +142,7 @@ export type ArratechKycFiling = {
  */
 export async function buildArratechKycFiling({
   company,
+  countrySpecific,
   signatory,
   signedAt,
   proofReference,
@@ -149,9 +153,11 @@ export async function buildArratechKycFiling({
   signedAt: Date;
   proofReference: string;
   reference: string;
+  countrySpecific?: VerificationCountrySpecific | null;
 }): Promise<ArratechKycFiling> {
   const input = await buildMandateInput({
     company,
+    countrySpecific,
     signatory,
     signedAt,
     proofReference,
@@ -183,6 +189,9 @@ export async function submitArratechCompanyKyc({
   useTestNetwork: boolean;
 }): Promise<void> {
   const identifiers = await getCompanyIdentifiers(companyId);
+  if (filing.jurisdiction === 'FR' && (!filing.identity.metaData?.siret || filing.identity.notes.length)) {
+    throw new UserFacingError('An explicit establishment SIRET is required before submitting KYC');
+  }
 
   for (const identifier of identifiers) {
     const participant = await getParticipantByIdentifier({

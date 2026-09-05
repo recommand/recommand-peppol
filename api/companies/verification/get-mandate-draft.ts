@@ -9,6 +9,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { UserFacingError } from "@directory/utils/util";
+import { verificationCountrySpecificSchema, validateVerificationCountrySpecific, getVerificationCountryRequirements } from '@peppol/types/verification-country-specific';
 
 const server = new Server();
 
@@ -19,6 +20,7 @@ const getMandateDraftParamSchema = z.object({
 const getMandateDraftJsonBodySchema = z.object({
     firstName: z.string().trim().min(1),
     lastName: z.string().trim().min(1),
+    countrySpecific: verificationCountrySpecificSchema.nullish(),
 });
 
 type GetMandateDraftContext = Context<Record<string, never>, string, { in: { param: z.input<typeof getMandateDraftParamSchema>, json: z.input<typeof getMandateDraftJsonBodySchema> }, out: { param: z.infer<typeof getMandateDraftParamSchema>, json: z.infer<typeof getMandateDraftJsonBodySchema> } }>;
@@ -34,7 +36,7 @@ const _getMandateDraft = server.post(
 async function _getMandateDraftImplementation(c: GetMandateDraftContext) {
     try {
         const { companyVerificationLogId } = c.req.valid("param");
-        const { firstName, lastName } = c.req.valid("json");
+        const { firstName, lastName, countrySpecific } = c.req.valid("json");
 
         const verificationLog = await getCompanyVerificationLog(companyVerificationLogId);
         if (!verificationLog) {
@@ -56,6 +58,8 @@ async function _getMandateDraftImplementation(c: GetMandateDraftContext) {
         const pdf = await renderMandatePdf(
             await buildMandateInput({
                 company,
+                countrySpecific: validateVerificationCountrySpecific(company, countrySpecific,
+                    getVerificationCountryRequirements(company.country, true, company.isSmpRecipient)?.required),
                 signatory: { firstName, lastName },
                 signedAt: new Date(),
                 // Nothing signs the draft yet; the identity verification does.

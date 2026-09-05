@@ -7,6 +7,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { UserFacingError } from "@directory/utils/util";
 import { describeRoute } from "hono-openapi";
+import { verificationCountrySpecificSchema } from '@peppol/types/verification-country-specific';
 
 const server = new Server();
 
@@ -18,6 +19,7 @@ const submitIdentityFormJsonBodySchema = z.object({
     firstName: z.string().trim().min(1),
     lastName: z.string().trim().min(1),
     mandateAccepted: z.boolean().default(false),
+    countrySpecific: verificationCountrySpecificSchema.nullish(),
 });
 
 type SubmitIdentityFormContext = Context<Record<string, never>, string, { in: { param: z.input<typeof submitIdentityFormParamSchema>, json: z.input<typeof submitIdentityFormJsonBodySchema> }, out: { param: z.infer<typeof submitIdentityFormParamSchema>, json: z.infer<typeof submitIdentityFormJsonBodySchema> } }>;
@@ -33,7 +35,7 @@ const _submitIdentityForm = server.post(
 async function _submitIdentityFormImplementation(c: SubmitIdentityFormContext) {
     try {
         const { companyVerificationLogId } = c.req.valid("param");
-        const { firstName, lastName, mandateAccepted } = c.req.valid("json");
+        const { firstName, lastName, mandateAccepted, countrySpecific } = c.req.valid("json");
 
         const verificationLog = await getCompanyVerificationLog(companyVerificationLogId);
         if (!verificationLog) {
@@ -45,7 +47,7 @@ async function _submitIdentityFormImplementation(c: SubmitIdentityFormContext) {
             return c.json(actionFailure("Company not found"), 404);
         }
 
-        const verificationUrl = await submitIdentityForm(companyVerificationLogId, verificationLog, company, firstName, lastName, mandateAccepted);
+        const verificationUrl = await submitIdentityForm(companyVerificationLogId, verificationLog, company, firstName, lastName, mandateAccepted, countrySpecific);
         return c.json(actionSuccess({ verificationUrl }));
     } catch (error) {
         console.error(error);

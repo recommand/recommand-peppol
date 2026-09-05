@@ -94,6 +94,7 @@ export async function startArratechKycReview({
 
     filing = await buildArratechKycFiling({
       company,
+      countrySpecific: existingLog.countrySpecific,
       signatory: {
         firstName: existingLog.firstName,
         lastName: existingLog.lastName,

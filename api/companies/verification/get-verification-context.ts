@@ -11,6 +11,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { UserFacingError } from "@directory/utils/util";
+import { getVerificationCountryRequirements } from '@peppol/types/verification-country-specific';
 
 const server = new Server();
 
@@ -75,12 +76,14 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
             company: {
                 id: company.id,
                 name: company.name,
+                country: company.country,
                 enterpriseNumber: company.enterpriseNumber,
             },
             isRepresentativeSelectionRequired,
             representatives,
             isPlayground: teamIsPlayground,
             isMandateRequired,
+            countryRequirements: getVerificationCountryRequirements(company.country, isMandateRequired, company.isSmpRecipient),
             // The signatory reads the mandate under the name the document
             // itself carries, which differs per jurisdiction.
             mandateTitle: isMandateRequired
