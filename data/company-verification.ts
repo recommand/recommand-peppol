@@ -12,7 +12,7 @@ import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
-import { submitVerificationIdentity } from '@peppol/data/verification-submission';
+import { submitVerificationIdentity, restartVerificationIdentity } from '@peppol/data/verification-submission';
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
 export type CompanyVerificationStatus = CompanyVerificationLog["status"];
@@ -384,19 +384,19 @@ export async function requestIdVerification(
     throw new UserFacingError("Verification is not in a state that allows identity verification.");
   }
 
-  const verificationUrl = await createIdVerificationUrl(companyVerificationLogId, company, {
-    firstName: log.firstName,
-    lastName: log.lastName,
+  return restartVerificationIdentity({
+    startIdentityVerification: () => createIdVerificationUrl(companyVerificationLogId, company, {
+      firstName: log.firstName,
+      lastName: log.lastName,
+    }),
+    confirmStillPending: async () => {
+      const rows = await db.update(companyVerificationLog)
+        .set({ status: 'idVerificationRequested' })
+        .where(and(eq(companyVerificationLog.id, companyVerificationLogId), eq(companyVerificationLog.status, 'idVerificationRequested')))
+        .returning({ id: companyVerificationLog.id });
+      return rows.length === 1;
+    },
   });
-
-  await db
-    .update(companyVerificationLog)
-    .set({ status: "idVerificationRequested" })
-    .where(eq(companyVerificationLog.id, companyVerificationLogId))
-    .returning()
-    .then((rows) => rows[0]);
-  
-  return verificationUrl;
 }
 
 async function createIdVerificationUrl(

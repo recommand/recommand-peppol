@@ -8,6 +8,17 @@ export type VerificationSubmission = {
   countrySpecific: VerificationCountrySpecific | null;
 };
 
+export async function restartVerificationIdentity(dependencies: {
+  startIdentityVerification: () => Promise<string>;
+  confirmStillPending: () => Promise<boolean>;
+}): Promise<string> {
+  const url = await dependencies.startIdentityVerification();
+  if (!await dependencies.confirmStillPending()) {
+    throw new UserFacingError('This verification changed while restarting. Please use the latest verification request.');
+  }
+  return url;
+}
+
 export async function submitVerificationIdentity(input: {
   company: { country: string; enterpriseNumber: string | null; isSmpRecipient: boolean };
   firstName: string;

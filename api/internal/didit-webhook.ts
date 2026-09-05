@@ -7,7 +7,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@recommand/db";
 import { companyVerificationLog } from "@peppol/db/schema";
 import { UserFacingError } from "@directory/utils/util";
-import { finalizeCompanyVerification, getCompanyVerificationLog } from "@peppol/data/company-verification";
+import { finalizeCompanyVerification, getCompanyVerificationLog, isFinalVerificationStatus } from "@peppol/data/company-verification";
+import { withVerificationLock, VerificationBusyError } from "@peppol/data/verification-lock";
 import { requiresArratechKycReview } from "@peppol/data/at/kyc";
 import { startArratechKycReview } from "@peppol/data/at/kyc-review";
 import { getCompanyById } from "@peppol/data/companies";
@@ -82,9 +83,13 @@ server.post(
         return c.json(actionSuccess({ message: "Webhook type not processed" }), 200);
       }
 
+      return await withVerificationLock(vendor_data, async () => {
       const companyVerificationLogRecord = await getCompanyVerificationLog(vendor_data);
       if (!companyVerificationLogRecord) {
         return c.json(actionFailure("Company verification log not found"), 404);
+      }
+      if (isFinalVerificationStatus(companyVerificationLogRecord.status)) {
+        return c.json(actionSuccess({ message: "Verification status not changed (already finalized)" }), 200);
       }
 
       const verificationProofReference = session_id;
@@ -161,7 +166,11 @@ server.post(
       }
 
       return c.json(actionSuccess({ message: result.status === "error" ? "Verification completed with activation error" : "Verification status updated" }), 200);
+      });
     } catch (error) {
+      if (error instanceof VerificationBusyError) {
+        return c.json(actionFailure(error.message), 503);
+      }
       console.error("Error processing Didit webhook:", error);
       if (error instanceof UserFacingError) {
         return c.json(actionFailure(error), 400);
