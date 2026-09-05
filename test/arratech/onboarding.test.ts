@@ -34,7 +34,7 @@ mock.module('@recommand/db', () => ({
 mock.module('@peppol/data/companies', () => ({ getCompanyById: async () => company }));
 mock.module('@peppol/data/teams', () => ({ getTeamExtension: async () => team }));
 mock.module('@peppol/data/company-identifiers', () => ({
-  getCompanyIdentifiers: async () => [{ scheme: '0225', identifier: '830905253' }],
+  getCompanyIdentifiers: async () => [{ scheme: '0225', identifier: '303265045' }],
 }));
 mock.module('@peppol/data/company-verification', () => ({
   getCompanyVerificationLog: async () => structuredClone(log),
@@ -73,8 +73,8 @@ mock.module('@peppol/data/send-arratech-kyc-review-email', () => ({
 }));
 mock.module('@peppol/data/at/kyc', () => ({
   buildArratechKycFiling: async () => ({
-    identity: { metaData: { siren: '830905253', siret: '83090525300015' }, notes: mandateNotes },
-    electronicAddresses: ['0225:830905253'],
+    identity: { metaData: { siren: '303265045', siret: '30326504500011' }, notes: mandateNotes },
+    electronicAddresses: ['0225:303265045'],
     mandate: Buffer.from('%PDF signed'),
     mandateFileName: 'mandate.pdf',
   }),
@@ -83,7 +83,7 @@ mock.module('@peppol/data/at/smp', () => ({
   getParticipantByIdentifier: async () => ({ id: 'participant', status: participantStatus }),
   upsertCompanyRegistrations: async (options: any) => {
     if (options.includeCapabilities === false) {
-      expect(options.siret).toBe('83090525300015');
+      expect(options.siret).toBe('30326504500011');
       events.push('register');
     } else {
       events.push('sync');
@@ -104,7 +104,7 @@ mock.module('@peppol/data/at/client', () => ({
     return Response.json({
       status: kycStatus,
       jurisdiction: 'FR',
-      metaData: { siren: '830905253', siret: '83090525300015' },
+      metaData: { siren: '303265045', siret: '30326504500011' },
       documents: [],
     });
   },
@@ -122,7 +122,8 @@ beforeEach(() => {
     firstName: 'Jean',
     lastName: 'Dupont',
     companyName: 'Company',
-    enterpriseNumber: '83090525300015',
+    enterpriseNumber: '303265045',
+    countrySpecific: { country: 'FR', siret: '30326504500011' },
     country: 'FR',
     address: 'Street',
     postalCode: '75001',
@@ -154,7 +155,66 @@ beforeEach(() => {
 });
 
 describe('durable Arratech onboarding', () => {
+  it('blocks a mismatched country before any provider writes', async () => {
+    log.countrySpecific = { country: 'BE', siret: '30326504500011' };
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+  });
+
+  it('does not let a supplement override submitted country data', async () => {
+    log.arratechOnboarding.identitySupplement = {
+      countrySpecific: { country: 'FR', siret: '00000001800002' }, source: 'confirmation', reviewedBy: 'support',
+      reviewedAt: new Date().toISOString(), verificationLogId: log.id,
+    };
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+  });
+
+  it('blocks a cached filing that differs from the submitted establishment', async () => {
+    await processArratechOnboarding(log.id);
+    events.length = 0;
+    log.arratechOnboarding.filing.siret = '00000001800002';
+    participantStatus = 'ACTIVE';
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(log.status).toBe('inReview');
+  });
+  it('uses the verification SIRET without a SIRET field on the company', async () => {
+    await processArratechOnboarding(log.id);
+    expect(events).toContain('approve');
+    expect(company).not.toHaveProperty('siret');
+  });
+
+  it('blocks missing establishment data before any provider writes', async () => {
+    delete log.countrySpecific;
+    await processArratechOnboarding(log.id);
+    expect(events).not.toContain('approve');
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+  });
+
+  it('accepts a reviewed legacy supplement without changing the signed snapshot', async () => {
+    delete log.countrySpecific;
+    log.arratechOnboarding.identitySupplement = {
+      countrySpecific: { country: 'FR', siret: '30326504500011' }, source: 'customer-confirmation', reviewedBy: 'support',
+      reviewedAt: new Date().toISOString(), verificationLogId: log.id,
+    };
+    await processArratechOnboarding(log.id);
+    expect(events).toContain('approve');
+    expect(log.countrySpecific).toBeUndefined();
+  });
+
+  it('rejects a supplement belonging to another session', async () => {
+    delete log.countrySpecific;
+    log.arratechOnboarding.identitySupplement = {
+      countrySpecific: { country: 'FR', siret: '30326504500011' }, source: 'customer-confirmation', reviewedBy: 'support',
+      reviewedAt: new Date().toISOString(), verificationLogId: 'other',
+    };
+    await processArratechOnboarding(log.id);
+    expect(events).not.toContain('approve');
+  });
   it('routes send-only to support once without registration or approval', async () => {
+    delete log.countrySpecific;
     company.isSmpRecipient = false;
     await processArratechOnboarding(log.id);
     expect(events).toEqual(['support']);

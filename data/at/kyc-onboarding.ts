@@ -18,6 +18,7 @@ import { companyVerificationLog } from '@peppol/db/schema';
 import { db } from '@recommand/db';
 import type { Logger } from '@recommand/lib/logger';
 import { Cron } from 'croner';
+import { UserFacingError } from '@directory/utils/util';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { fetchArratech, getArratechConfig } from '@peppol/data/at/client';
 import { buildArratechKycFiling } from '@peppol/data/at/kyc';
@@ -28,6 +29,7 @@ import {
   readKycResponse,
 } from '@peppol/data/at/kyc-onboarding-client';
 import type { ArratechOnboarding } from '@peppol/data/at/kyc-onboarding-state';
+import { validateVerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { getParticipantByIdentifier, upsertCompanyRegistrations } from '@peppol/data/at/smp';
 
 export class VerificationBusyError extends KycOnboardingError {
@@ -202,6 +204,7 @@ export async function processArratechOnboarding(id: string): Promise<void> {
       }
       if (
         log.enterpriseNumber !== company.enterpriseNumber ||
+        (state.identitySupplement && state.identitySupplement.verificationLogId !== log.id) ||
         log.companyName !== company.name ||
         log.country !== company.country ||
         log.address !== company.address ||
@@ -213,6 +216,14 @@ export async function processArratechOnboarding(id: string): Promise<void> {
         );
       }
       const identifiers = await getCompanyIdentifiers(company.id);
+      const countrySpecific = validateVerificationCountrySpecific(
+        company, log.countrySpecific ?? state.identitySupplement?.countrySpecific, true,
+      )!;
+      if (state.identitySupplement &&
+        (state.identitySupplement.countrySpecific.country !== countrySpecific.country ||
+          state.identitySupplement.countrySpecific.siret !== countrySpecific.siret)) {
+        throw new KycOnboardingError('Reviewed establishment data conflicts with the submitted verification.');
+      }
       if (!identifiers.length || identifiers.some((identifier) => identifier.scheme !== '0225')) {
         throw new KycOnboardingError(
           'Automatic French onboarding requires 0225 participant identifiers.',
@@ -221,6 +232,7 @@ export async function processArratechOnboarding(id: string): Promise<void> {
       if (!state.filing) {
         const filing = await buildArratechKycFiling({
           company,
+          countrySpecific,
           signatory: { firstName: log.firstName, lastName: log.lastName },
           signedAt: log.mandateAcceptedAt,
           proofReference: log.verificationProofReference,
@@ -245,6 +257,9 @@ export async function processArratechOnboarding(id: string): Promise<void> {
         await saveState(id, state);
       }
       const filing = state.filing;
+      if (filing.siret !== countrySpecific.siret) {
+        throw new KycOnboardingError('Establishment SIRET changed since the mandate was prepared.');
+      }
       const addresses = identifiers
         .map((identifier) => `${identifier.scheme}:${identifier.identifier}`)
         .sort();
@@ -296,7 +311,7 @@ export async function processArratechOnboarding(id: string): Promise<void> {
       await notifyVerificationCompletion(id, company, state);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const retryable = !(error instanceof KycOnboardingError) || error.retryable;
+      const retryable = !(error instanceof UserFacingError) && (!(error instanceof KycOnboardingError) || error.retryable);
       state.attempts++;
       const expired = Date.now() - Date.parse(state.startedAt) > 72 * 60 * 60 * 1000;
       if (!retryable || expired || (state.phase === 'submit' && state.attempts >= 12)) {

@@ -1,9 +1,18 @@
+import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
+
 export type ArratechOnboarding = {
   phase: 'submit' | 'activation' | 'support' | 'complete' | 'blocked';
   supportNotifiedAt?: string;
   attempts: number;
   nextAttemptAt: string;
   startedAt: string;
+  identitySupplement?: {
+    countrySpecific: VerificationCountrySpecific;
+    source: string;
+    reviewedBy: string;
+    reviewedAt: string;
+    verificationLogId: string;
+  };
   filing?: {
     siren: string;
     siret: string;

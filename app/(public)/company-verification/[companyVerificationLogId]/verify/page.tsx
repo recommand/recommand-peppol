@@ -14,6 +14,8 @@ import { Loader2, AlertCircle, ShieldCheck, RefreshCw, XCircle, FileSignature } 
 import { ForwardSection } from "./forward-section";
 import { MandateSection } from "./mandate-section";
 import { useTranslation } from "@core/hooks/use-translation";
+import { CountrySpecificFields } from './country-specific-fields';
+import { validateVerificationCountrySpecific, type VerificationCountrySpecific, type VerificationCountryRequirements } from '@peppol/types/verification-country-specific';
 
 const client = rc<Companies>("v1");
 const VERIFICATION_ALREADY_SUBMITTED_ERROR = "This verification has already been submitted.";
@@ -38,12 +40,14 @@ type VerificationContext = {
         id: string;
         name: string;
         enterpriseNumber: string | null;
+        country: string;
     };
     isRepresentativeSelectionRequired: boolean;
     representatives: Representative[];
     isPlayground: boolean;
     isMandateRequired: boolean;
     mandateTitle: string | null;
+    countryRequirements: VerificationCountryRequirements;
 };
 
 type VerificationStep = "details" | "mandate";
@@ -59,6 +63,7 @@ export default function Page() {
     const [selectedRepresentativeIndex, setSelectedRepresentativeIndex] = useState<string | null>(null);
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
+    const [countrySpecific, setCountrySpecific] = useState<VerificationCountrySpecific | null>(null);
     const [acceptTerms, setAcceptTerms] = useState(false);
     const [confirmPermission, setConfirmPermission] = useState(false);
 
@@ -92,7 +97,8 @@ export default function Page() {
         effectiveFirstName.trim() !== "" &&
         effectiveLastName.trim() !== "" &&
         acceptTerms &&
-        confirmPermission;
+        confirmPermission &&
+        (!context?.countryRequirements?.required || !!countrySpecific?.siret.trim());
 
     const statusPageUrl = companyVerificationLogId ? `/company-verification/${companyVerificationLogId}/status` : null;
 
@@ -149,6 +155,12 @@ export default function Page() {
 
     const handleContinue = () => {
         if (!isFormComplete) return;
+        try {
+            setCountrySpecific(validateVerificationCountrySpecific(context!.company, countrySpecific, context?.countryRequirements?.required));
+        } catch (error) {
+            setSubmitError(error instanceof Error ? error.message : t`Invalid verification details`);
+            return;
+        }
 
         // Companies filed with Arratech sign a mandate first; the identity check
         // they are sent to next is what signs it.
@@ -175,6 +187,7 @@ export default function Page() {
                     firstName: effectiveFirstName,
                     lastName: effectiveLastName,
                     mandateAccepted,
+                    countrySpecific,
                 },
             });
             const json = await response.json();
@@ -421,6 +434,7 @@ export default function Page() {
                         mandateTitle={context.mandateTitle}
                         firstName={effectiveFirstName}
                         lastName={effectiveLastName}
+                        countrySpecific={countrySpecific}
                         isSigning={isSubmitting}
                         signError={submitError}
                         onBack={() => setStep("details")}
@@ -428,6 +442,7 @@ export default function Page() {
                     />
                 ) : (
                     <>
+                        <CountrySpecificFields requirements={context.countryRequirements} value={countrySpecific} onChange={setCountrySpecific} />
                         {noRepresentativesFound ? (
                             <Card>
                                 <CardHeader>

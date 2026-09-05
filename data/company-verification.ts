@@ -11,6 +11,8 @@ import { getTeamExtension } from "./teams";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
+import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
+import { submitVerificationIdentity } from '@peppol/data/verification-submission';
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
 export type CompanyVerificationStatus = CompanyVerificationLog["status"];
@@ -289,7 +291,8 @@ export async function submitIdentityForm(
   company: Company,
   firstName: string,
   lastName: string,
-  mandateAccepted: boolean
+  mandateAccepted: boolean,
+  countrySpecific?: VerificationCountrySpecific | null,
 ): Promise<string> {
   if (log.status !== "opened") {
     throw new UserFacingError("This verification has already been submitted.");
@@ -332,24 +335,26 @@ export async function submitIdentityForm(
     }
   }
 
-  const verificationUrl = await createIdVerificationUrl(companyVerificationLogId, company, {
+  return submitVerificationIdentity({
+    company,
     firstName: effectiveFirstName,
     lastName: effectiveLastName,
-  });
-
-  await db
-    .update(companyVerificationLog)
-    .set({
+    mandateRequired,
+    mandateAccepted,
+    countrySpecific,
+  }, {
+    claimOpenedSubmission: async snapshot => {
+      const rows = await db.update(companyVerificationLog)
+        .set({ ...snapshot, status: 'idVerificationRequested' })
+        .where(and(eq(companyVerificationLog.id, companyVerificationLogId), eq(companyVerificationLog.status, 'opened')))
+        .returning({ id: companyVerificationLog.id });
+      return rows.length === 1;
+    },
+    startIdentityVerification: () => createIdVerificationUrl(companyVerificationLogId, company, {
       firstName: effectiveFirstName,
       lastName: effectiveLastName,
-      status: "idVerificationRequested",
-      mandateAcceptedAt: mandateRequired ? new Date() : null,
-    })
-    .where(eq(companyVerificationLog.id, companyVerificationLogId))
-    .returning()
-    .then((rows) => rows[0]);
-
-  return verificationUrl;
+    }),
+  });
 }
 
 export async function submitPlaygroundVerification(

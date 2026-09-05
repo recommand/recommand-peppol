@@ -3,6 +3,7 @@ import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import { FRENCH_MANDATE_TEMPLATE } from "@peppol/templates/mandate-fr";
 import { isSiren, isSiret } from "@peppol/utils/identifier-validation";
 import { UserFacingError } from "@directory/utils/util";
+import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { formatMandateDate, MANDATARY, OPERATOR } from "./shared";
 import {
   type CompanyIdentityRow,
@@ -52,15 +53,15 @@ function frenchNumber(value: string | null | undefined): string | null {
  * have to be well formed and agree with each other, since a wrong one ends up
  * in a filing towards the French administration.
  *
- * The one thing it does assume is the head office SIRET when the company only
- * ever gave us its SIREN, which it notes for support.
  */
 export function resolveFrenchCompanyIdentity(
   company: Pick<CompanyIdentitySource, "enterpriseNumber" | "vatNumber">,
   identifiers: Pick<CompanyIdentifier, "scheme" | "identifier">[],
+  countrySpecific?: VerificationCountrySpecific | null,
 ): CompanyKycIdentity {
   const sources: FrenchNumberSource[] = [
     { label: "enterprise number", value: company.enterpriseNumber },
+    { label: "establishment SIRET", value: countrySpecific?.siret ?? null },
     ...identifiers
       .filter((identifier) => FRENCH_IDENTIFIER_SCHEMES.has(identifier.scheme))
       .map((identifier) => ({
@@ -108,14 +109,10 @@ export function resolveFrenchCompanyIdentity(
   }
 
   const siren = sirens[0];
-  const siret = sirets[0] ?? `${siren}00001`;
-  const isSiretAssumed = sirets.length === 0;
+  const siret = sirets[0];
 
-  // An assumed head office SIRET has no place in the mandate; the SIREN, the
-  // legal name and the address identify the company on their own. Arratech does
-  // need one, so support is told it was assumed.
   const rows: CompanyIdentityRow[] = [{ label: "SIREN", value: siren }];
-  if (!isSiretAssumed) {
+  if (siret) {
     rows.push({ label: "SIRET", value: siret });
   }
   if (company.vatNumber) {
@@ -124,10 +121,10 @@ export function resolveFrenchCompanyIdentity(
 
   return {
     rows,
-    metaData: { siren, siret },
-    notes: isSiretAssumed
+    metaData: { siren, ...(siret ? { siret } : {}) },
+    notes: !siret
       ? [
-          `SIRET ${siret} assumed to be the head office, the company only gave us its SIREN`,
+          "An explicit establishment SIRET is required before submitting KYC",
         ]
       : [],
   };

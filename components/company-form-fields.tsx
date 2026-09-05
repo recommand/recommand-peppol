@@ -149,7 +149,7 @@ export function CompanyIdentityFields({
                             className="flex-1"
                         />
                     </div>
-                    {country === "FR" && <p className="text-xs text-pretty text-muted-foreground">{t`For French businesses, the enterprise number is the 9 digit SIREN. A SIRET can be added as an extra Peppol identifier.`}</p>}
+                    {country === "FR" && <p className="text-xs text-pretty text-muted-foreground">{t`For French businesses, enter the 9 digit SIREN. The establishment SIRET is requested during verification.`}</p>}
                     {showDutchEnterpriseNumberSchemeAlert && country === "NL" && enterpriseNumberScheme !== "0106" && enterpriseNumberScheme !== "0190" && enterpriseNumber.trim() && (
                         <StatusMessage
                             tone="warning"
