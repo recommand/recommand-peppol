@@ -33,6 +33,7 @@ import { validateVerificationCountrySpecific } from '@peppol/types/verification-
 import { getParticipantByIdentifier, upsertCompanyRegistrations } from '@peppol/data/at/smp';
 
 import { withVerificationLock } from '@peppol/data/verification-lock';
+import { onboardingDiagnostics, type OnboardingLogger } from '@peppol/data/at/onboarding-diagnostics';
 export { VerificationBusyError, withVerificationLock as withArratechVerificationLock } from '@peppol/data/verification-lock';
 
 function request(path: string, options: RequestInit) {
@@ -138,25 +139,28 @@ async function notifySendOnlySupport(id: string, company: Company, state: Arrate
   await saveState(id, state);
 }
 
-export async function processArratechOnboarding(id: string): Promise<void> {
-  await withVerificationLock(id, async () => {
-    const log = await getCompanyVerificationLog(id);
+export async function processArratechOnboarding(id: string, logger: OnboardingLogger = console): Promise<void> {
+  const diagnostic = onboardingDiagnostics(logger, `session=${id}`);
+  await diagnostic.step('locked-processing', () => withVerificationLock(id, async () => {
+    diagnostic.emit('info', 'lock-acquired');
+    const log = await diagnostic.step('load-session', () => getCompanyVerificationLog(id));
     if (!log?.arratechOnboarding) return;
     const state = log.arratechOnboarding;
+    diagnostic.emit('info', `state phase=${state.phase} attempts=${state.attempts}`);
     if (state.phase === 'complete' || state.phase === 'blocked') return;
-    const company = await getCompanyById(log.companyId);
+    const company = await diagnostic.step('load-company', () => getCompanyById(log.companyId));
     if (!company) return;
     if (log.status === 'verified') {
-      await notifyVerificationCompletion(id, company, state);
+      await diagnostic.step('notify-completion', () => notifyVerificationCompletion(id, company, state));
       return;
     }
     if (isFinalVerificationStatus(log.status)) return;
     if (state.phase === 'support') {
-      await notifySendOnlySupport(id, company, state);
+      await diagnostic.step('notify-support', () => notifySendOnlySupport(id, company, state));
       return;
     }
     try {
-      const team = await getTeamExtension(company.teamId);
+      const team = await diagnostic.step('load-team', () => getTeamExtension(company.teamId));
       if (
         company.country !== 'FR' ||
         company.smpProvider !== 'at-shared-smp-fr' ||
@@ -170,8 +174,8 @@ export async function processArratechOnboarding(id: string): Promise<void> {
       }
       if (!company.isSmpRecipient) {
         state.phase = 'support';
-        await saveState(id, state);
-        await notifySendOnlySupport(id, company, state);
+        await diagnostic.step('save-support', () => saveState(id, state));
+        await diagnostic.step('notify-support', () => notifySendOnlySupport(id, company, state));
         return;
       }
       if (
@@ -197,7 +201,7 @@ export async function processArratechOnboarding(id: string): Promise<void> {
           'Company details changed since the mandate was signed; start a new verification.',
         );
       }
-      const identifiers = await getCompanyIdentifiers(company.id);
+      const identifiers = await diagnostic.step('load-identifiers', () => getCompanyIdentifiers(company.id));
       const countrySpecific = validateVerificationCountrySpecific(
         company, log.countrySpecific ?? state.identitySupplement?.countrySpecific, true,
       )!;
@@ -212,14 +216,14 @@ export async function processArratechOnboarding(id: string): Promise<void> {
         );
       }
       if (!state.filing) {
-        const filing = await buildArratechKycFiling({
+        const filing = await diagnostic.step('build-filing', () => buildArratechKycFiling({
           company,
           countrySpecific,
-          signatory: { firstName: log.firstName, lastName: log.lastName },
-          signedAt: log.mandateAcceptedAt,
-          proofReference: log.verificationProofReference,
+          signatory: { firstName: log.firstName!, lastName: log.lastName! },
+          signedAt: log.mandateAcceptedAt!,
+          proofReference: log.verificationProofReference!,
           reference: log.id,
-        });
+        }));
         if (
           filing.identity.notes.length ||
           !filing.identity.metaData?.siret ||
@@ -236,7 +240,7 @@ export async function processArratechOnboarding(id: string): Promise<void> {
           mandateBase64: filing.mandate.toString('base64'),
           fileName: filing.mandateFileName,
         };
-        await saveState(id, state);
+        await diagnostic.step('save-filing', () => saveState(id, state));
       }
       const filing = state.filing;
       if (filing.siret !== countrySpecific.siret) {
@@ -251,55 +255,56 @@ export async function processArratechOnboarding(id: string): Promise<void> {
         );
       }
       if (state.phase === 'submit') {
-        await upsertCompanyRegistrations({
+        await diagnostic.step('register-participants', () => upsertCompanyRegistrations({
           companyId: company.id,
           useTestNetwork: false,
           includeCapabilities: false,
           siret: filing.siret,
-        });
+        }));
         const config = getArratechConfig(false);
         for (const identifier of identifiers) {
-          const participant = await getParticipantByIdentifier({
+          const participant = await diagnostic.step('load-participant', () => getParticipantByIdentifier({
             identifier,
             useTestNetwork: false,
-          });
+          }));
           if (!participant)
             throw new KycOnboardingError('Participant creation was not confirmed.', true);
-          await ensureApprovedKyc({
+          await diagnostic.step('ensure-approved-kyc', () => ensureApprovedKyc({
             request,
             path: `/orgs/${config.orgId}/participants/${participant.id}/kyc`,
             siren: filing.siren,
             siret: filing.siret,
             mandate: Buffer.from(filing.mandateBase64, 'base64'),
             fileName: filing.fileName,
-          });
+          }));
         }
         state.phase = 'activation';
         state.attempts = 0;
-        await saveState(id, state);
+        await diagnostic.step('save-activation', () => saveState(id, state));
       }
-      await assertArratechCompanyActive(company.id);
-      await upsertCompanyRegistrations({ companyId: company.id, useTestNetwork: false });
-      const current = await getCompanyVerificationLog(id);
+      await diagnostic.step('check-activation', () => assertArratechCompanyActive(company.id));
+      await diagnostic.step('sync-capabilities', () => upsertCompanyRegistrations({ companyId: company.id, useTestNetwork: false }));
+      const current = await diagnostic.step('reload-session', () => getCompanyVerificationLog(id));
       if (!current || isFinalVerificationStatus(current.status)) return;
-      const result = await finalizeCompanyVerification({
+      const result = await diagnostic.step('finalize-verification', () => finalizeCompanyVerification({
         companyVerificationLogId: id,
         company,
         status: 'verified',
-        verificationProofReference: log.verificationProofReference,
-      });
+        verificationProofReference: log.verificationProofReference!,
+      }));
       if (result.status !== 'verified')
         throw new KycOnboardingError(result.errorMessage ?? 'Company activation failed.');
-      await notifyVerificationCompletion(id, company, state);
+      await diagnostic.step('notify-completion', () => notifyVerificationCompletion(id, company, state));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const retryable = !(error instanceof UserFacingError) && (!(error instanceof KycOnboardingError) || error.retryable);
       state.attempts++;
+      diagnostic.emit('warn', `attempt-failed phase=${state.phase} attempts=${state.attempts} retryable=${retryable}`);
       const expired = Date.now() - Date.parse(state.startedAt) > 72 * 60 * 60 * 1000;
       if (!retryable || expired || (state.phase === 'submit' && state.attempts >= 12)) {
         state.phase = 'blocked';
-        await saveState(id, state, message);
-        await sendArratechKycReviewEmail({
+        await diagnostic.step('save-blocked', () => saveState(id, state, message));
+        await diagnostic.step('notify-blocked', () => sendArratechKycReviewEmail({
           companyId: company.id,
           companyName: company.name,
           verificationLogId: id,
@@ -308,22 +313,30 @@ export async function processArratechOnboarding(id: string): Promise<void> {
           submissionError: message,
           mandate: state.filing ? Buffer.from(state.filing.mandateBase64, 'base64') : undefined,
           mandateFileName: state.filing?.fileName,
-        });
+        }));
       } else {
         state.nextAttemptAt = new Date(
           Date.now() + Math.min(30, 2 ** Math.min(state.attempts, 5)) * 60_000,
         ).toISOString();
-        await saveState(id, state, message);
+        await diagnostic.step('save-retry', () => saveState(id, state, message));
       }
     }
-  });
+  }));
 }
 
 export function initializeArratechOnboardingCron(logger: Logger): void {
-  if (process.env.RUN_CRON !== 'true') return;
-  new Cron('* * * * *', { name: 'peppol.arratech-onboarding', protect: true }, async () => {
+  const diagnostic = onboardingDiagnostics(logger, 'scheduler');
+  if (process.env.RUN_CRON !== 'true') {
+    diagnostic.emit('info', 'disabled');
+    return;
+  }
+  new Cron('* * * * *', {
+    name: 'peppol.arratech-onboarding',
+    protect: () => diagnostic.emit('warn', 'tick-skipped previous-batch-still-running'),
+  }, async () => {
+    diagnostic.emit('info', 'tick');
     try {
-      const logs = await db
+      const logs = await diagnostic.step('select-due', async () => db
         .select({ id: companyVerificationLog.id })
         .from(companyVerificationLog)
         .where(
@@ -335,10 +348,11 @@ export function initializeArratechOnboardingCron(logger: Logger): void {
           ),
         )
         .orderBy(sql`${companyVerificationLog.arratechOnboarding}->>'nextAttemptAt'`)
-        .limit(25);
+        .limit(25));
+      diagnostic.emit('info', `selected count=${logs.length}`);
       for (const log of logs) {
         try {
-          await processArratechOnboarding(log.id);
+          await processArratechOnboarding(log.id, logger);
         } catch (error) {
           logger.error(
             `Arratech onboarding ${log.id}: ${error instanceof Error ? error.message : String(error)}`,
@@ -349,6 +363,9 @@ export function initializeArratechOnboardingCron(logger: Logger): void {
       logger.error(
         `Arratech onboarding worker failed: ${error instanceof Error ? error.message : String(error)}`,
       );
+    } finally {
+      diagnostic.emit('info', 'batch-finished');
     }
   });
+  diagnostic.emit('info', 'registered schedule=every-minute');
 }
