@@ -32,26 +32,8 @@ import type { ArratechOnboarding } from '@peppol/data/at/kyc-onboarding-state';
 import { validateVerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { getParticipantByIdentifier, upsertCompanyRegistrations } from '@peppol/data/at/smp';
 
-export class VerificationBusyError extends KycOnboardingError {
-  constructor() {
-    super('Verification is already being processed; retry shortly.', true);
-  }
-}
-
-export async function withArratechVerificationLock<T>(
-  id: string,
-  action: () => Promise<T>,
-): Promise<T> {
-  return db.transaction(async (tx) => {
-    const result = await tx.execute(
-      sql`select pg_try_advisory_xact_lock(hashtextextended(${`arratech-kyc:${id}`}, 0)) as acquired`,
-    );
-    if (!result.rows[0]?.acquired) {
-      throw new VerificationBusyError();
-    }
-    return action();
-  });
-}
+import { withVerificationLock } from '@peppol/data/verification-lock';
+export { VerificationBusyError, withVerificationLock as withArratechVerificationLock } from '@peppol/data/verification-lock';
 
 function request(path: string, options: RequestInit) {
   return fetchArratech(path, {
@@ -157,7 +139,7 @@ async function notifySendOnlySupport(id: string, company: Company, state: Arrate
 }
 
 export async function processArratechOnboarding(id: string): Promise<void> {
-  await withArratechVerificationLock(id, async () => {
+  await withVerificationLock(id, async () => {
     const log = await getCompanyVerificationLog(id);
     if (!log?.arratechOnboarding) return;
     const state = log.arratechOnboarding;
