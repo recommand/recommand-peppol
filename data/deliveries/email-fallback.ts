@@ -1,9 +1,14 @@
-import { ulid } from "ulid";
 import {
   buildOutgoingTransferEvents,
   type OutgoingDocumentPayload,
 } from "@peppol/data/outgoing-document-row";
+import {
+  newDeliveryId,
+  sendDocumentEmails,
+  type DocumentEmailSender,
+} from "@peppol/data/email/send-document-emails";
 import type { documentDeliveries, transferEvents } from "@peppol/db/schema";
+import { EMAIL_DELIVERY_PROVIDER } from "./model";
 import type { ParsedDocument } from "@peppol/utils/document-filename";
 import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/types";
 
@@ -84,7 +89,10 @@ export type EmailFallbackDocument = {
 export type EmailFallbackDeliveryRow = typeof documentDeliveries.$inferInsert;
 export type EmailFallbackTransferEventRow = typeof transferEvents.$inferInsert;
 
-/** An email delivery the fallback wrote or found, as much of it as closing the request needs. */
+/**
+ * An email delivery the fallback wrote or found: as much of it as closing the
+ * request needs, and as a report that overtook it needs to find it.
+ */
 export type EmailFallbackDelivery = Pick<
   typeof documentDeliveries.$inferSelect,
   "id" | "address" | "status" | "failureCategory" | "failureMessage" | "provider" | "providerTransactionId"
@@ -104,6 +112,7 @@ export type EmailFallbackDependencies = {
   recordedDelivery(deliveryId: string): Promise<EmailFallbackDelivery | null>;
   /** The document's content as sent, with its attachments. */
   loadPayload(documentId: string): Promise<{ xml: string | null; parsed: ParsedDocument | null }>;
+  /** Sends one message and returns the mail service's id for it, when it gives one. */
   sendEmail(options: {
     to: string;
     subject?: string;
@@ -112,7 +121,8 @@ export type EmailFallbackDependencies = {
     type: StoredDocumentType;
     parsedDocument: ParsedDocument | null;
     isPlayground: boolean;
-  }): Promise<void>;
+    metadata: Record<string, string>;
+  }): Promise<{ messageId: string | null }>;
   /** Writes one delivery row on its own, and leaves a row with that id alone if it exists. */
   recordDelivery(row: EmailFallbackDeliveryRow): Promise<EmailFallbackDelivery>;
   /**
@@ -144,17 +154,16 @@ export type EmailFallbackOutcome =
       kind: "sent";
       sent: string[];
       failed: { address: string; message: string }[];
-      /** The email deliveries this fallback stands for, as written. */
+      /**
+       * The email deliveries this fallback stands for, as written, so reports that
+       * overtook them can be applied.
+       */
       deliveries: EmailFallbackDelivery[];
     };
 
 /** The reason recorded for an address a stopped run had started on without recording the service's answer. */
 export const OUTCOME_NOT_RECORDED_MESSAGE =
   "The message was handed to the mail service, but whether the service accepted it was not recorded before the run stopped.";
-
-export function newEmailDeliveryId(): string {
-  return "dlv_" + ulid();
-}
 
 /**
  * Sends the email a document's sender asked for in case its Peppol transmission
@@ -181,6 +190,17 @@ export async function runEmailFallback(
 
   try {
     const payload = await deps.loadPayload(document.id);
+    const send: DocumentEmailSender = ({ to, metadata }) =>
+      deps.sendEmail({
+        to,
+        subject: document.request.subject,
+        htmlBody: document.request.htmlBody,
+        xmlDocument: payload.xml,
+        type: document.type,
+        parsedDocument: payload.parsed,
+        isPlayground: document.isPlayground,
+        metadata,
+      });
     const base = {
       transmittedDocumentId: document.id,
       teamId: document.teamId,
@@ -210,36 +230,43 @@ export async function runEmailFallback(
             status: "failed",
             failureCategory: "other",
             failureMessage: OUTCOME_NOT_RECORDED_MESSAGE,
+            provider: EMAIL_DELIVERY_PROVIDER,
           })
         );
         continue;
       }
 
-      const deliveryId = newEmailDeliveryId();
+      // Noted before the message leaves, so a run that stops between the two knows
+      // that this address may already have been mailed.
+      const deliveryId = newDeliveryId();
       await deps.noteAttempt(document.id, address, deliveryId);
-      let row: EmailFallbackDeliveryRow;
-      try {
-        await deps.sendEmail({
-          to: address,
-          subject: document.request.subject,
-          htmlBody: document.request.htmlBody,
-          xmlDocument: payload.xml,
-          type: document.type,
-          parsedDocument: payload.parsed,
-          isPlayground: document.isPlayground,
-        });
-        row = { ...base, id: deliveryId, address, status: "pending" };
-      } catch (error) {
-        console.error("Failed to send the fallback email:", error);
-        row = {
-          ...base,
-          id: deliveryId,
-          address,
-          status: "failed",
-          failureCategory: "transport",
-          failureMessage: error instanceof Error ? error.message : String(error),
-        };
-      }
+      // Mailed through the sender both paths use, which gives the message the
+      // metadata that lets the mail service's reports find this delivery.
+      const attempted = await sendDocumentEmails({
+        documentId: document.id,
+        recipients: [address],
+        deliveryId: () => deliveryId,
+        send,
+      });
+      const accepted = attempted.sent[0];
+      const row: EmailFallbackDeliveryRow = accepted
+        ? {
+            ...base,
+            id: deliveryId,
+            address,
+            status: "pending",
+            provider: EMAIL_DELIVERY_PROVIDER,
+            providerTransactionId: accepted.providerMessageId,
+          }
+        : {
+            ...base,
+            id: deliveryId,
+            address,
+            status: "failed",
+            failureCategory: "transport",
+            failureMessage: attempted.failed[0]!.message,
+            provider: EMAIL_DELIVERY_PROVIDER,
+          };
       // Written right away, so a run that stops after this point has left the
       // service's answer behind for the run that resumes it.
       deliveries.push(await deps.recordDelivery(row));

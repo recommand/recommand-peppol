@@ -14,6 +14,7 @@ import generateDocumentServer from "./api/generate-document";
 import receiveDocumentServer from "./api/internal/receive-document";
 import diditWebhookServer from "./api/internal/didit-webhook";
 import arratechWebhookServer from "./api/internal/arratech-webhook";
+import postmarkWebhookServer from "./api/internal/postmark-webhook";
 import transmittedDocumentsServer from "./api/documents";
 import {
   generateSpecs,
@@ -36,6 +37,7 @@ import { initializeArratechOnboardingCron } from "./data/at/kyc-onboarding";
 import { initializeFrenchReportingDeclarantCron } from "./data/fr-reporting-declarants";
 import { initializeFrenchReportingStatusCron } from "./data/fr-reporting-submissions";
 import { initializeDeliveryReconciliationCron } from "./data/deliveries/reconcile";
+import { initializeEmailDeliveryReconciliationCron } from "./data/deliveries/reconcile-email";
 import { initializeDeliveryBackfillCron } from "./data/deliveries/backfill";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
@@ -67,6 +69,7 @@ export async function init(app: RecommandApp, server: Server) {
   initializeFrenchReportingDeclarantCron(logger);
   initializeFrenchReportingStatusCron(logger);
   initializeDeliveryReconciliationCron(logger);
+  initializeEmailDeliveryReconciliationCron(logger);
   initializeDeliveryBackfillCron(logger);
 
   initializeMetricsServer(logger);
@@ -226,6 +229,7 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix + "internal/", receiveDocumentServer);
   server.route(prefix + "internal/", diditWebhookServer);
   server.route(prefix + "internal/", arratechWebhookServer);
+  server.route(prefix + "internal/", postmarkWebhookServer);
 
   server.route(prefix, webhooksServer);
   server.route(prefix, integrationsServer);

@@ -6,6 +6,11 @@ import {
 import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import { sendDocumentEmail } from "@peppol/data/email/send-email";
 import {
+  sendDocumentEmails,
+  type FailedDocumentEmail,
+  type SentDocumentEmail,
+} from "@peppol/data/email/send-document-emails";
+import {
   PlaygroundRecipientNotFoundError,
   simulateSendAs4,
 } from "@peppol/data/playground/simulate-ap";
@@ -189,30 +194,31 @@ export async function sendingPipeline(c: SendingContext) {
       }
     }
 
-    const emailRecipients: string[] = [];
+    let emailMessages: SentDocumentEmail[] = [];
+    let emailFailures: FailedDocumentEmail[] = [];
     let emailFailure = "";
     if (input.email && (input.email.when === "always" || !sentPeppol)) {
-      for (const recipient of input.email.to) {
-        try {
-          await sendDocumentEmail({
-            to: recipient,
-            subject: input.email.subject,
-            htmlBody: input.email.htmlBody,
+      const email = input.email;
+      const outcome = await sendDocumentEmails({
+        documentId,
+        recipients: email.to,
+        send: ({ to, metadata }) =>
+          sendDocumentEmail({
+            to,
+            subject: email.subject,
+            htmlBody: email.htmlBody,
             xmlDocument,
             type: prepared.type as any,
             parsedDocument: prepared.parsed,
             isPlayground,
-          });
-          emailRecipients.push(recipient);
-        } catch (error) {
-          console.error("Failed to send email:", error);
-          emailFailure =
-            error instanceof Error
-              ? error.message
-              : "No additional context available, please contact support@recommand.eu if you could use our help.";
-        }
-      }
+            metadata,
+          }),
+      });
+      emailMessages = outcome.sent;
+      emailFailures = outcome.failed;
+      emailFailure = outcome.failed.at(-1)?.message ?? "";
     }
+    const emailRecipients = emailMessages.map((message) => message.address);
 
     if (!sentPeppol && emailRecipients.length === 0) {
       throw new SendingFailure(
@@ -247,6 +253,8 @@ export async function sendingPipeline(c: SendingContext) {
         kind: "peppol",
         sentPeppol,
         emailRecipients,
+        emailMessages,
+        emailFailures,
         as4Response,
         peppolFailure:
           recipientAddress !== null && !sentPeppol

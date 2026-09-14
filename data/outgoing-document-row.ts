@@ -1,7 +1,15 @@
 import type { Company } from "@peppol/data/companies";
 import type { SendAs4Response } from "@peppol/data/access-point-providers";
-import type { DeliveryFailure, DeliveryStatus } from "@peppol/data/deliveries/model";
+import {
+  EMAIL_DELIVERY_PROVIDER,
+  type DeliveryFailure,
+  type DeliveryStatus,
+} from "@peppol/data/deliveries/model";
 import type { EmailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
+import type {
+  FailedDocumentEmail,
+  SentDocumentEmail,
+} from "@peppol/data/email/send-document-emails";
 import { accessPointConfirmsDeliveryOnSend } from "@peppol/data/peppol-providers";
 import {
   parsedHasAttachments,
@@ -28,6 +36,19 @@ export type OutgoingDocumentDelivery =
       kind: "peppol";
       sentPeppol: boolean;
       emailRecipients: string[];
+      /**
+       * What the mail service recorded for the messages behind `emailRecipients`:
+       * the delivery each was sent as and the service's id for it, which its later
+       * reports are matched on. Absent for documents recorded before message ids
+       * were kept, whose email deliveries carry no reference.
+       */
+      emailMessages?: SentDocumentEmail[];
+      /**
+       * The addresses the mail service refused in the send itself, with its reason.
+       * They are not in `emailRecipients`, which lists what went out, but each is
+       * a failed email delivery of the document.
+       */
+      emailFailures?: FailedDocumentEmail[];
       as4Response: SendAs4Response | null;
       /**
        * Why the Peppol transmission was refused, when it was and the document was
@@ -88,6 +109,8 @@ export function deliveryFacts(delivery: OutgoingDocumentDelivery) {
     apTransactionId: as4Response?.apTransactionId ?? null,
     peppolFailure: isReporting ? null : delivery.peppolFailure ?? null,
     emailFallback: isReporting ? null : delivery.emailFallback ?? null,
+    emailMessages: isReporting ? [] : delivery.emailMessages ?? [],
+    emailFailures: isReporting ? [] : delivery.emailFailures ?? [],
   };
 }
 
@@ -216,8 +239,11 @@ export function buildOutgoingTransferEvents(options: {
  * simulated send both do, and `pending` when the access point only reports the
  * outcome later. A transmission that was refused before it left, with the document
  * stored because an email fallback applied, is a `failed` delivery with the reason
- * the refusal gave. Email deliveries start out `pending`: the mail was accepted for
- * delivery, and nothing confirms its arrival yet.
+ * the refusal gave. Email deliveries start out `pending`: the mail service accepted
+ * the message, and reports its arrival or bounce later under the message id and
+ * delivery id the message was sent with. An address the mail service refused in the
+ * send is a `failed` email delivery with the service's reason, as it would be had
+ * the refusal come from the deferred fallback.
  */
 export function buildOutgoingDocumentDeliveries(options: {
   transmittedDocumentId: string;
@@ -269,12 +295,34 @@ export function buildOutgoingDocumentDeliveries(options: {
       providerTransactionId: facts.apTransactionId,
     });
   }
+  // Each message was sent as one delivery; the same address mailed twice is two
+  // messages and two deliveries, matched in order.
+  const messages = [...facts.emailMessages];
   for (const address of facts.emailRecipients) {
+    const at = messages.findIndex((message) => message.address === address);
+    const message = at === -1 ? null : messages.splice(at, 1)[0]!;
     rows.push({
       ...base,
+      ...(message ? { id: message.deliveryId } : {}),
       channel: "email",
       address,
       status: "pending",
+      provider: message ? EMAIL_DELIVERY_PROVIDER : null,
+      providerTransactionId: message?.providerMessageId ?? null,
+    });
+  }
+  for (const refused of facts.emailFailures) {
+    rows.push({
+      ...base,
+      id: refused.deliveryId,
+      channel: "email",
+      address: refused.address,
+      status: "failed",
+      failureCategory: "transport",
+      failureMessage: refused.message,
+      failureProviderCode: null,
+      provider: EMAIL_DELIVERY_PROVIDER,
+      providerTransactionId: null,
     });
   }
   return rows;

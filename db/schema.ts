@@ -865,12 +865,14 @@ export const documentDeliveries = pgTable(
     failureCategory: deliveryFailureCategoryEnum("failure_category"),
     failureMessage: text("failure_message"),
     failureProviderCode: text("failure_provider_code"),
-    // The service that carried the delivery: the access point provider for Peppol.
-    // Null for a simulated transmission and for channels without a provider record.
+    // The service that carried the delivery: the access point provider for Peppol,
+    // the mail service for email. Null for a simulated transmission.
     provider: text("provider"),
     useTestNetwork: boolean("use_test_network").notNull().default(false),
     // The provider's own reference for the transmission, which is what its later
-    // reports are matched on. Unique so a report can only ever land on one delivery.
+    // reports are matched on: the access point's transaction id, the mail service's
+    // message id. Unique within a provider so a report can only ever land on one
+    // delivery.
     providerTransactionId: text("provider_transaction_id"),
     // The provider's id and name for the last report applied, and that report's
     // payload as received, for support.
@@ -886,8 +888,8 @@ export const documentDeliveries = pgTable(
   },
   (table) => [
     index("peppol_document_deliveries_document_idx").on(table.transmittedDocumentId),
-    uniqueIndex("peppol_document_deliveries_provider_transaction_idx")
-      .on(table.providerTransactionId)
+    uniqueIndex("peppol_document_deliveries_provider_reference_idx")
+      .on(table.provider, table.providerTransactionId)
       .where(isNotNull(table.providerTransactionId)),
     index("peppol_document_deliveries_pending_idx").on(
       table.status,
@@ -900,24 +902,33 @@ export const documentDeliveries = pgTable(
 // A delivery outcome a provider reported for a transaction that has no delivery yet.
 // The report can arrive before the send that produced the transaction has recorded
 // its document, so it waits here, keyed by the transaction, and is applied when the
-// document's deliveries are written (see data/deliveries). One row per transaction,
-// however many times the provider retries the report.
-export const providerDeliveryReports = pgTable("peppol_provider_delivery_reports", {
-  providerTransactionId: text("provider_transaction_id").primaryKey(),
-  channel: deliveryChannelEnum("channel").notNull(),
-  provider: text("provider").notNull(),
-  useTestNetwork: boolean("use_test_network").notNull().default(false),
-  status: deliveryStatusEnum("status").notNull(),
-  failureCategory: deliveryFailureCategoryEnum("failure_category"),
-  failureMessage: text("failure_message"),
-  failureProviderCode: text("failure_provider_code"),
-  eventId: text("event_id"),
-  eventType: text("event_type"),
-  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
-  reportedAt: timestamp("reported_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+// document's deliveries are written (see data/deliveries). One row per transaction
+// of a provider, however many times the provider retries the report.
+export const providerDeliveryReports = pgTable(
+  "peppol_provider_delivery_reports",
+  {
+    provider: text("provider").notNull(),
+    providerTransactionId: text("provider_transaction_id").notNull(),
+    channel: deliveryChannelEnum("channel").notNull(),
+    useTestNetwork: boolean("use_test_network").notNull().default(false),
+    status: deliveryStatusEnum("status").notNull(),
+    failureCategory: deliveryFailureCategoryEnum("failure_category"),
+    failureMessage: text("failure_message"),
+    failureProviderCode: text("failure_provider_code"),
+    eventId: text("event_id"),
+    eventType: text("event_type"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    reportedAt: timestamp("reported_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "peppol_provider_delivery_reports_pkey",
+      columns: [table.provider, table.providerTransactionId],
+    }),
+  ]
+);
 
 export const transmittedDocumentLabels = pgTable(
   "peppol_transmitted_document_labels",

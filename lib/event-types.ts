@@ -353,7 +353,7 @@ export function registerPeppolEventTypes() {
     },
     ui: {
       label: "Delivery status changed",
-      description: "A delivery of a sent document was confirmed, or failed after the channel had accepted it",
+      description: "A delivery of a sent document was confirmed, or failed after the channel had accepted it: the recipient's access point acknowledged or refused a Peppol transmission, or an email was accepted by the recipient's mail server or bounced",
       group: "Documents",
     },
   });

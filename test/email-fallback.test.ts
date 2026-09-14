@@ -70,6 +70,7 @@ function fakeDependencies(options: {
 }) {
   let request: EmailFallbackRequest | null = options.document?.request ?? null;
   const sent: string[] = [];
+  const messages: { to: string; metadata: Record<string, string> }[] = [];
   const deliveries = new Map<string, EmailFallbackDelivery>(
     (options.existingDeliveries ?? []).map((delivery) => [delivery.id, delivery])
   );
@@ -105,6 +106,8 @@ function fakeDependencies(options: {
         throw new Error(`Mailbox ${email.to} rejected the message`);
       }
       sent.push(email.to);
+      messages.push({ to: email.to, metadata: email.metadata });
+      return { messageId: `msg-${sent.length}` };
     },
     async recordDelivery(row: EmailFallbackDeliveryRow) {
       const existing = deliveries.get(row.id!);
@@ -144,12 +147,12 @@ function fakeDependencies(options: {
       audited.push(event);
     },
   };
-  return { deps, sent, deliveries, finished, audited, request: () => request };
+  return { deps, sent, messages, deliveries, finished, audited, request: () => request };
 }
 
 describe("sending the email fallback after a later failure", () => {
   it("sends each requested address once, as the sending pipeline would, and bills what went out", async () => {
-    const { deps, sent, finished, audited, request } = fakeDependencies({ document });
+    const { deps, sent, messages, finished, audited, request } = fakeDependencies({ document });
     const now = new Date("2026-09-09T12:00:00Z");
 
     const outcome = await runEmailFallback("doc_1", deps, now);
@@ -165,6 +168,16 @@ describe("sending the email fallback after a later failure", () => {
       expect.objectContaining({ address: "a@example.com", status: "pending" }),
       expect.objectContaining({ address: "b@example.com", status: "pending" }),
     ]);
+    // Each message went out under its delivery's id, and keeps the mail service's id.
+    for (const [index, row] of finished[0]!.deliveries.entries()) {
+      expect(row.id).toMatch(/^dlv_/);
+      expect(row.provider).toBe("postmark");
+      expect(row.providerTransactionId).toBe(`msg-${index + 1}`);
+      expect(messages[index]!.metadata).toEqual({ deliveryId: row.id, documentId: "doc_1" });
+    }
+    expect(outcome.kind === "sent" && outcome.deliveries.map((row) => row.id)).toEqual(
+      finished[0]!.deliveries.map((row) => row.id)
+    );
     expect(finished[0]!.transferEvents.map((event) => event.type)).toEqual(["email", "email"]);
     expect(finished[0]!.sent).toEqual(["a@example.com", "b@example.com"]);
     expect(audited).toEqual([

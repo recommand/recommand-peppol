@@ -63,14 +63,14 @@ describe("deliveries for documents recorded before delivery tracking", () => {
     expect(row).toMatchObject({ status: "delivered", provider: null, providerTransactionId: null });
   });
 
-  it("marks a refused transmission that fell back to email failed, with one pending email delivery per address", () => {
+  it("marks a refused transmission that fell back to email failed, with one delivered email delivery per address", () => {
     const rows = buildHistoricalDeliveries(
       document({ id: "doc_4", sentOverPeppol: false, emailRecipients: ["b@example.com", "c@example.com"] })
     );
     expect(rows.map((row) => [row.channel, row.address, row.status, row.failureCategory ?? null])).toEqual([
       ["peppol", "0208:1", "failed", "other"],
-      ["email", "b@example.com", "pending", null],
-      ["email", "c@example.com", "pending", null],
+      ["email", "b@example.com", "delivered", null],
+      ["email", "c@example.com", "delivered", null],
     ]);
   });
 
@@ -79,6 +79,43 @@ describe("deliveries for documents recorded before delivery tracking", () => {
       document({ id: "doc_5", receiverId: null, sentOverPeppol: false, emailRecipients: ["d@example.com"] })
     );
     expect(rows.map((row) => row.channel)).toEqual(["email"]);
+  });
+
+  it("closes email deliveries as delivered, dated with the document, because no report can ever reach them", () => {
+    const rows = buildHistoricalDeliveries(
+      document({ id: "doc_6", emailRecipients: ["e@example.com"] })
+    );
+    // The message left before document emails carried a reference, so nothing the
+    // mail service says later can be matched to it: pending would never resolve.
+    expect(rows).toContainEqual(
+      expect.objectContaining({
+        channel: "email",
+        address: "e@example.com",
+        status: "delivered",
+        provider: null,
+        providerTransactionId: null,
+        statusChangedAt: createdAt,
+        createdAt,
+      })
+    );
+    // The Peppol delivery of the same document keeps the status the shared rules
+    // gave it: it can still be settled.
+    expect(rows.find((row) => row.channel === "peppol")).toMatchObject({ status: "delivered" });
+  });
+
+  it("leaves a shared access point transmission pending while closing the same document's email deliveries", () => {
+    const rows = buildHistoricalDeliveries(
+      document({
+        id: "doc_7",
+        accessPointProvider: "at-shared-ap-fr",
+        apTransactionId: "tx-7",
+        emailRecipients: ["f@example.com"],
+      })
+    );
+    expect(rows.map((row) => [row.channel, row.status])).toEqual([
+      ["peppol", "pending"],
+      ["email", "delivered"],
+    ]);
   });
 });
 

@@ -8,6 +8,7 @@ import {
   applyProviderDeliveryReport,
   interpretArratechTransactionStatus,
   pruneStagedDeliveryReports,
+  drainStagedDeliveryReports,
   type ArratechServiceError,
 } from "@peppol/data/deliveries";
 import { resumeStalledEmailFallbacks } from "@peppol/data/deliveries/email-fallback-db";
@@ -132,6 +133,16 @@ export async function reconcilePendingArratechDeliveries(
  * starts over.
  */
 export async function runDeliveryReconciliationTick(logger: Logger): Promise<void> {
+  try {
+    const applied = await drainStagedDeliveryReports(logger);
+    if (applied > 0) {
+      logger.info(`Replayed ${applied} stored delivery reports`);
+    }
+  } catch (error) {
+    logger.error(
+      `Could not replay stored delivery reports: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
   try {
     const { checked, applied } = await reconcilePendingArratechDeliveries(logger);
     if (checked > 0) {

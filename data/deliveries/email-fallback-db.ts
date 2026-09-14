@@ -98,7 +98,7 @@ const databaseDependencies: EmailFallbackDependencies = {
   },
 
   async sendEmail(options) {
-    await sendDocumentEmail(options);
+    return await sendDocumentEmail(options);
   },
 
   async recordDelivery(row) {

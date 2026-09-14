@@ -15,7 +15,7 @@ import {
   type OriginalPayloadContainerFormat,
 } from "@peppol/data/offload/storage";
 import {
-  applyStagedDeliveryReport,
+  applyStagedDeliveryReports,
   insertDocumentDeliveries,
   listDocumentDeliveries,
   summarizeDeliveryStatus,
@@ -214,22 +214,11 @@ export async function recordOutgoingDocument(options: {
     }
   }
 
-  // The access point may already have reported what became of this transaction, if
-  // its report overtook the send that produced the document. That report is applied
-  // now so the delivery is never left pending; nothing above is undone, the document
-  // did leave the platform and its transmission was made.
-  if (facts.apTransactionId) {
-    try {
-      await applyStagedDeliveryReport(facts.apTransactionId);
-    } catch (error) {
-      console.error("Failed to apply a staged delivery report:", error);
-      sendSystemAlert(
-        "Delivery Report Not Applied",
-        `Could not check for a delivery report for transaction ${facts.apTransactionId} of document ${transmittedDocument.id}.`,
-        "error"
-      );
-    }
-  }
+  // The access point or the mail service may already have reported what became of a
+  // transmission, if its report overtook the send that produced the document. Those
+  // reports are applied now so no delivery is left pending; nothing above is undone,
+  // the document did leave the platform and its transmissions were made.
+  await applyStagedDeliveryReports(transmittedDocument.deliveries);
 
   // The deliveries are read back rather than returned as inserted: a report may have
   // been applied in the meantime by whoever got to it first, this call or the webhook

@@ -8,7 +8,8 @@ import {
 } from "@peppol/db/schema";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { db } from "@recommand/db";
-import { and, eq, inArray, lt } from "drizzle-orm";
+import type { Logger } from "@recommand/lib/logger";
+import { and, eq, exists, inArray, lt, notExists, type SQL } from "drizzle-orm";
 import { runEmailFallbackForDocument } from "./email-fallback-db";
 import {
   attachDeliveries,
@@ -22,8 +23,8 @@ import {
 export * from "./model";
 
 // A report waits for its document for as long as a send can plausibly take to
-// record it, with a wide margin. Older ones belong to transactions that will never
-// get a document here and are dropped.
+// record it, with a wide margin. Older unmatched reports are dropped; a report
+// whose delivery exists is retained until it can be applied.
 const STAGED_REPORT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type ProviderReportOutcome =
@@ -53,6 +54,7 @@ const deliveryRowSelect = {
   failureCategory: documentDeliveries.failureCategory,
   failureMessage: documentDeliveries.failureMessage,
   failureProviderCode: documentDeliveries.failureProviderCode,
+  providerTransactionId: documentDeliveries.providerTransactionId,
 };
 
 /**
@@ -105,9 +107,9 @@ export async function withDocumentDeliveries<
   return attachDeliveries(documents, rows);
 }
 
-async function findDeliveryByProviderTransaction(
-  providerTransactionId: string
-): Promise<{ delivery: DocumentDelivery; document: DeliveryDocument } | undefined> {
+type FoundDelivery = { delivery: DocumentDelivery; document: DeliveryDocument };
+
+async function findDelivery(where: SQL): Promise<FoundDelivery | undefined> {
   const [row] = await db
     .select({
       delivery: documentDeliveries,
@@ -124,9 +126,45 @@ async function findDeliveryByProviderTransaction(
       transmittedDocuments,
       eq(transmittedDocuments.id, documentDeliveries.transmittedDocumentId)
     )
-    .where(eq(documentDeliveries.providerTransactionId, providerTransactionId))
+    .where(where)
     .limit(1);
   return row;
+}
+
+/** A provider's reference is only meaningful within that provider. */
+function findDeliveryByProviderTransaction(
+  provider: string,
+  providerTransactionId: string
+): Promise<FoundDelivery | undefined> {
+  return findDelivery(
+    and(
+      eq(documentDeliveries.provider, provider),
+      eq(documentDeliveries.providerTransactionId, providerTransactionId)
+    )!
+  );
+}
+
+/**
+ * The delivery a report names by our own id, provided the delivery was carried by
+ * the reporting provider and, when both sides have one, under the same reference:
+ * an id echoed back by the wrong provider or with another message's id is not
+ * trusted over the reference match that follows.
+ */
+async function findDeliveryForReport(
+  report: Pick<ProviderDeliveryReport, "provider" | "providerTransactionId" | "deliveryId">
+): Promise<FoundDelivery | undefined> {
+  if (report.deliveryId) {
+    const named = await findDelivery(eq(documentDeliveries.id, report.deliveryId));
+    if (
+      named &&
+      named.delivery.provider === report.provider &&
+      (named.delivery.providerTransactionId === null ||
+        named.delivery.providerTransactionId === report.providerTransactionId)
+    ) {
+      return named;
+    }
+  }
+  return await findDeliveryByProviderTransaction(report.provider, report.providerTransactionId);
 }
 
 /**
@@ -240,7 +278,12 @@ async function applyReportToDelivery(
  */
 async function runEmailFallbackAfterFailure(documentId: string): Promise<void> {
   try {
-    await runEmailFallbackForDocument(documentId);
+    const fallback = await runEmailFallbackForDocument(documentId);
+    if (fallback.kind === "sent") {
+      // The mail service may have reported on a message before its delivery was
+      // written, as it can for a message sent in the send itself.
+      await applyStagedDeliveryReports(fallback.deliveries);
+    }
   } catch (error) {
     console.error("Failed to send the email fallback:", error);
     sendSystemAlert(
@@ -262,7 +305,7 @@ async function runEmailFallbackAfterFailure(documentId: string): Promise<void> {
 export async function applyProviderDeliveryReport(
   report: ProviderDeliveryReport
 ): Promise<ProviderReportOutcome> {
-  const found = await findDeliveryByProviderTransaction(report.providerTransactionId);
+  const found = await findDeliveryForReport(report);
   if (found) {
     if (await applyReportToDelivery(found.delivery, found.document, report)) {
       return "applied";
@@ -297,11 +340,11 @@ export async function applyProviderDeliveryReport(
   // The document may have been recorded between the lookup above and the insert.
   // Its recording applies staged reports too, so whichever of the two finds the
   // delivery first moves it and the other finds it final.
-  const applied = await applyStagedDeliveryReport(report.providerTransactionId);
+  const applied = await applyStagedDeliveryReport(report.provider, report.providerTransactionId);
   if (applied === "staged") {
     sendSystemAlert(
       "Delivery Report For Unrecorded Transaction",
-      `The provider reported transaction ${report.providerTransactionId} as ${report.status} before any document was recorded for it. ` +
+      `${report.provider} reported ${report.channel} transaction ${report.providerTransactionId} as ${report.status} before any document was recorded for it. ` +
         `The report is applied once the document is recorded.\n` +
         `${report.failure?.providerCode ?? "no code"} ${report.failure?.category ?? ""}: ${report.failure?.message ?? "no error details"}`,
       "warning"
@@ -316,17 +359,22 @@ export async function applyProviderDeliveryReport(
  * report is staged in case the document arrived in the meantime.
  */
 export async function applyStagedDeliveryReport(
+  provider: string,
   providerTransactionId: string
 ): Promise<ProviderReportOutcome> {
+  const stagedKey = and(
+    eq(providerDeliveryReports.provider, provider),
+    eq(providerDeliveryReports.providerTransactionId, providerTransactionId)
+  );
   const [staged] = await db
     .select()
     .from(providerDeliveryReports)
-    .where(eq(providerDeliveryReports.providerTransactionId, providerTransactionId))
+    .where(stagedKey)
     .limit(1);
   if (!staged) {
     return "unchanged";
   }
-  const found = await findDeliveryByProviderTransaction(providerTransactionId);
+  const found = await findDeliveryByProviderTransaction(provider, providerTransactionId);
   if (!found) {
     return "staged";
   }
@@ -345,19 +393,84 @@ export async function applyStagedDeliveryReport(
     payload: staged.payload,
   });
   // Applied or found final: either way the report has reached its delivery.
-  await db
-    .delete(providerDeliveryReports)
-    .where(eq(providerDeliveryReports.providerTransactionId, providerTransactionId));
+  await db.delete(providerDeliveryReports).where(stagedKey);
   return applied ? "applied" : "unchanged";
+}
+
+/**
+ * Applies the reports that were staged for freshly written deliveries, if any of
+ * their providers reported before the document existed. Each is tried on its own so
+ * one that cannot be checked does not hide the others; the failure is reported.
+ */
+export async function applyStagedDeliveryReports(
+  deliveries: readonly Pick<DocumentDelivery, "id" | "provider" | "providerTransactionId">[]
+): Promise<void> {
+  for (const delivery of deliveries) {
+    if (!delivery.provider || !delivery.providerTransactionId) {
+      continue;
+    }
+    try {
+      await applyStagedDeliveryReport(delivery.provider, delivery.providerTransactionId);
+    } catch (error) {
+      console.error("Failed to apply a staged delivery report:", error);
+      sendSystemAlert(
+        "Delivery Report Not Applied",
+        `Could not check for a delivery report for ${delivery.provider} transaction ${delivery.providerTransactionId} of delivery ${delivery.id}.`,
+        "error"
+      );
+    }
+  }
+}
+
+function matchingStagedDelivery() {
+  return db
+    .select({ id: documentDeliveries.id })
+    .from(documentDeliveries)
+    .where(and(
+      eq(documentDeliveries.provider, providerDeliveryReports.provider),
+      eq(documentDeliveries.providerTransactionId, providerDeliveryReports.providerTransactionId)
+    ));
+}
+
+export async function drainStagedDeliveryReports(logger: Logger): Promise<number> {
+  const reports = await db
+    .select({
+      provider: providerDeliveryReports.provider,
+      reference: providerDeliveryReports.providerTransactionId,
+    })
+    .from(providerDeliveryReports)
+    .where(exists(matchingStagedDelivery()))
+    .orderBy(
+      providerDeliveryReports.reportedAt,
+      providerDeliveryReports.provider,
+      providerDeliveryReports.providerTransactionId
+    )
+    .limit(100);
+  let applied = 0;
+  for (const report of reports) {
+    try {
+      if (await applyStagedDeliveryReport(report.provider, report.reference) === "applied") {
+        applied++;
+      }
+    } catch (error) {
+      logger.error(
+        `Could not replay delivery report ${report.provider}/${report.reference}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+  return applied;
 }
 
 export async function pruneStagedDeliveryReports(): Promise<number> {
   const deleted = await db
     .delete(providerDeliveryReports)
     .where(
-      lt(
-        providerDeliveryReports.reportedAt,
-        new Date(Date.now() - STAGED_REPORT_RETENTION_MS)
+      and(
+        notExists(matchingStagedDelivery()),
+        lt(
+          providerDeliveryReports.reportedAt,
+          new Date(Date.now() - STAGED_REPORT_RETENTION_MS)
+        )
       )
     )
     .returning({ providerTransactionId: providerDeliveryReports.providerTransactionId });

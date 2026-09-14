@@ -291,3 +291,101 @@ describe("outgoing document deliveries", () => {
     expect(build(reportingDelivery, { receiverId: null })).toEqual([]);
   });
 });
+
+describe("email deliveries of a recorded document", () => {
+  const now = new Date("2026-09-09T10:00:00Z");
+  const build = (delivery: OutgoingDocumentDelivery) =>
+    buildOutgoingDocumentDeliveries({
+      transmittedDocumentId: "doc_1",
+      teamId: "team_1",
+      company: { id: company.id, accessPointProvider: "recommand-ap1" },
+      document: { receiverId: null },
+      delivery,
+      useTestNetwork: false,
+      now,
+    });
+
+  it("keep the id each message was sent under and the mail service's id for it", () => {
+    const rows = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["a@example.com", "b@example.com"],
+      emailMessages: [
+        { deliveryId: "dlv_a", address: "a@example.com", providerMessageId: "msg-a" },
+        { deliveryId: "dlv_b", address: "b@example.com", providerMessageId: "msg-b" },
+      ],
+      as4Response: null,
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({ id: "dlv_a", channel: "email", address: "a@example.com", status: "pending", provider: "postmark", providerTransactionId: "msg-a" }),
+      expect.objectContaining({ id: "dlv_b", channel: "email", address: "b@example.com", status: "pending", provider: "postmark", providerTransactionId: "msg-b" }),
+    ]);
+  });
+
+  it("match an address mailed twice to its two messages in order", () => {
+    const rows = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["a@example.com", "a@example.com"],
+      emailMessages: [
+        { deliveryId: "dlv_1", address: "a@example.com", providerMessageId: "msg-1" },
+        { deliveryId: "dlv_2", address: "a@example.com", providerMessageId: "msg-2" },
+      ],
+      as4Response: null,
+    });
+
+    expect(rows.map((row) => [row.id, row.providerTransactionId])).toEqual([
+      ["dlv_1", "msg-1"],
+      ["dlv_2", "msg-2"],
+    ]);
+  });
+
+  it("carry no reference for a document recorded without message ids", () => {
+    const [row] = build({ kind: "peppol", sentPeppol: false, emailRecipients: ["a@example.com"], as4Response: null });
+
+    expect(row).toMatchObject({ channel: "email", status: "pending", provider: null, providerTransactionId: null });
+    expect(row).not.toHaveProperty("id");
+  });
+
+  it("record an address the mail service refused in the send as a failed delivery with its reason", () => {
+    const rows = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["b@example.com"],
+      emailMessages: [{ deliveryId: "dlv_b", address: "b@example.com", providerMessageId: "msg-b" }],
+      emailFailures: [{ deliveryId: "dlv_a", address: "a@example.com", message: "Invalid 'To' address" }],
+      as4Response: null,
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({ id: "dlv_b", address: "b@example.com", status: "pending", providerTransactionId: "msg-b" }),
+      {
+        transmittedDocumentId: "doc_1",
+        teamId: "team_1",
+        companyId: company.id,
+        statusChangedAt: now,
+        useTestNetwork: false,
+        id: "dlv_a",
+        channel: "email",
+        address: "a@example.com",
+        status: "failed",
+        failureCategory: "transport",
+        failureMessage: "Invalid 'To' address",
+        failureProviderCode: null,
+        provider: "postmark",
+        providerTransactionId: null,
+      },
+    ]);
+    // Billing and the document's recipients only count what went out.
+    expect(
+      buildOutgoingTransferEvents({
+        teamId: "team_1",
+        companyId: company.id,
+        transmittedDocumentId: "doc_1",
+        document: { type: "invoice", parsed: null },
+        delivery: { kind: "peppol", sentPeppol: false, emailRecipients: ["b@example.com"], emailFailures: [{ deliveryId: "dlv_a", address: "a@example.com", message: "refused" }], as4Response: null },
+      }).map((event) => event.type)
+    ).toEqual(["email"]);
+  });
+});

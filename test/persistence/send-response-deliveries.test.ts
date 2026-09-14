@@ -56,7 +56,9 @@ mock.module("@peppol/data/deliveries", () => ({
     })) as DocumentDelivery[];
     return deliveries.map((delivery) => ({ ...delivery }));
   },
-  applyStagedDeliveryReport: async () => await stagedOutcome(),
+  applyStagedDeliveryReports: async () => {
+    await stagedOutcome();
+  },
   listDocumentDeliveries: async () => deliveries.map((delivery) => ({ ...delivery })),
 }));
 

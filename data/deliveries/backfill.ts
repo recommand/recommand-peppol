@@ -36,7 +36,7 @@ export type HistoricalOutgoingDocument = {
  * through an access point that reports later, recognisable by its transaction id,
  * is pending until the reconciliation poll settles it; a document with a receiver
  * that never went over Peppol was refused in the send and is failed; each mailed
- * address is a pending email delivery. Everything is dated when the document was.
+ * address is a delivered email delivery. Everything is dated when the document was.
  */
 export function buildHistoricalDeliveries(
   document: HistoricalOutgoingDocument
@@ -66,7 +66,15 @@ export function buildHistoricalDeliveries(
     },
     useTestNetwork: document.useTestNetwork,
     now: document.createdAt,
-  }).map((row) => ({ ...row, createdAt: document.createdAt }));
+  }).map((row) => ({
+    ...row,
+    createdAt: document.createdAt,
+    // These messages left before a document email carried a reference, so no mail
+    // service report can ever be matched to them and pending would never resolve.
+    // They were accepted by the mail service at the time, which is what
+    // sentOverEmail already claims, so that is what they are recorded as.
+    ...(row.channel === "email" ? { status: "delivered" as const } : {}),
+  }));
 }
 
 export type BackfillBatchResult = {

@@ -68,8 +68,9 @@ describe.skipIf(!testDatabaseUrl)("recovering an email fallback against PostgreS
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: () => {} }));
     mock.module("@peppol/data/email/send-email", () => ({
-      sendDocumentEmail: async ({ to }: { to: string }) => {
+      sendDocumentEmail: async ({ to, metadata }: { to: string; metadata: Record<string, string> }) => {
         mailed.push(to);
+        return { messageId: `msg-${metadata.deliveryId}` };
       },
     }));
     // The rules engine only writes for an event type it knows, so the real

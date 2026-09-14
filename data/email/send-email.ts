@@ -18,7 +18,9 @@ export async function sendDocumentEmail(options: {
   subject?: string;
   htmlBody?: string;
   isPlayground?: boolean;
-}) {
+  /** Sent with the message and returned in every report about it (see send-document-emails). */
+  metadata?: Record<string, string>;
+}): Promise<{ messageId: string | null }> {
   const documentType = getDocumentType(options.type);
   const documentTypeTitle = documentType?.translatableTitle ?? "Document";
   const filename = getDocumentFilename(options.type, options.parsedDocument);
@@ -62,7 +64,7 @@ export async function sendDocumentEmail(options: {
     attachments.push(xmlAttachment);
   }
 
-  await sendEmail({
+  const result = await sendEmail({
     from: senderName
       ? `${senderName} <noreply-documents@recommand.eu>`
       : "noreply-documents@recommand.eu",
@@ -70,5 +72,7 @@ export async function sendDocumentEmail(options: {
     subject: finalSubject,
     email: htmlBody,
     attachments: attachments,
+    metadata: options.metadata,
   });
+  return { messageId: result.messageId ?? null };
 }

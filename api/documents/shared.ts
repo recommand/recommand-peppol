@@ -41,14 +41,14 @@ export const deliveryStatusResponse = z.enum(deliveryStatuses).nullable().openap
 
 export const deliveryFailureResponse = z.object({
     category: z.enum(deliveryFailureCategories).openapi({
-        description: "Why the delivery failed, in the same terms for every channel and access point: `recipient_not_found` (the address is not registered on the network), `document_not_supported` (the recipient does not receive this document type), `validation` (the document was refused by a rule), `transport` (it could not be transmitted), `recipient_rejected`, `duplicate` or `other`.",
+        description: "Why the delivery failed, in the same terms for every channel and access point: `recipient_not_found` (the address is not registered on the network, or the mailbox does not exist), `document_not_supported` (the recipient does not receive this document type), `validation` (the document was refused by a rule), `transport` (it could not be transmitted, or the mail server did not take the message), `recipient_rejected` (the recipient or their server refused it, for email a block or spam complaint), `duplicate` or `other`.",
         example: "validation",
     }),
     message: z.string().nullable().openapi({
         description: "What went wrong, as the channel or access point described it.",
     }),
     providerCode: z.string().nullable().openapi({
-        description: "The access point's own code for the failure, when it reported one.",
+        description: "The access point's or mail service's own code for the failure, when it reported one: an access point error code, or a bounce type such as `HardBounce`.",
         example: "TXE-1005",
     }),
 }).openapi({ ref: "DeliveryFailure" });
@@ -67,7 +67,7 @@ export const deliveryResponse = z.object({
         example: "0208:0428643097",
     }),
     status: z.enum(deliveryStatuses).openapi({
-        description: "`pending`: the channel accepted the document and has not confirmed arrival. `delivered`: the channel confirmed arrival; for Peppol the recipient's access point acknowledged the document, for email the recipient's mail server accepted it. `failed`: the document did not arrive; see `failure`.",
+        description: "`pending`: the channel accepted the document and has not confirmed arrival. `delivered`: the channel confirmed arrival; for Peppol the recipient's access point acknowledged the document, for email the recipient's mail server accepted the message. `failed`: the document did not arrive; for email the message bounced or was refused. See `failure`.",
         example: "delivered",
     }),
     statusChangedAt: z.string().openapi({
@@ -80,8 +80,9 @@ export const deliveryResponse = z.object({
         peppolMessageId: z.string().nullable().optional().openapi({ description: "The AS4 message ID of the transmission." }),
         peppolConversationId: z.string().nullable().optional().openapi({ description: "The AS4 conversation ID of the transmission." }),
         envelopeId: z.string().nullable().optional().openapi({ description: "The envelope ID (SBDH instance identifier) of the transmission." }),
+        messageId: z.string().nullable().optional().openapi({ description: "The mail service's message ID of the email, for `email` deliveries. It is the ID a bounce or delivery notification from the mail service refers to. Null when the delivery predates message tracking." }),
     }).openapi({
-        description: "The identifiers the transmission is known by on its channel. Present for `peppol` deliveries; empty for other channels.",
+        description: "The identifiers the delivery is known by on its channel: the AS4 and envelope IDs for `peppol` deliveries, the mail service's `messageId` for `email` deliveries.",
     }),
 }).openapi({ ref: "Delivery" });
 
