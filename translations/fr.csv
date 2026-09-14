@@ -967,6 +967,11 @@ Change VAT settings,Modifier les paramètres de TVA
 Changing the regime during a reporting period can leave that period unfiled. Coordinate such a change with support.,Modifier le régime pendant une période de déclaration peut laisser cette période sans dépôt. Coordonnez ce changement avec le support.
 Choose the VAT regime and when VAT becomes due first,Choisissez d'abord le régime de TVA et le moment d'exigibilité de la TVA
 Daily B2C totals and cross-border invoices are reported to the French tax administration on the company's behalf. Register the company once\, then submit reports through the API.,Les totaux B2C journaliers et les factures transfrontalières sont transmis à l'administration fiscale française au nom de l'entreprise. Enregistrez l'entreprise une fois\, puis soumettez les déclarations via l'API.
+Delivered,Livré
+Deliveries,Livraisons
+Delivery failed,Livraison échouée
+Email delivery to {0} failed.,La livraison par e-mail à {0} a échoué.
+Error code {0}.,Code d'erreur {0}.
 Failed to load the e-reporting registration,Impossible de charger l'enregistrement e-reporting
 Failed to register the company for e-reporting,Impossible d'enregistrer l'entreprise pour l'e-reporting
 Filed by corrective filing,Déposée par dépôt rectificatif
@@ -976,11 +981,14 @@ French e-reporting,E-reporting France
 Last checked {0}.,Dernière vérification le {0}.
 Late\, awaiting corrective filing,En retard\, en attente de dépôt rectificatif
 Needs support,Support requis
+No deliveries recorded for this document.,Aucune livraison enregistrée pour ce document.
 On invoicing (TVA sur les débits),À la facturation (TVA sur les débits)
 On payment (TVA sur les encaissements),À l'encaissement (TVA sur les encaissements)
 Our support team has been notified and will contact you. You can also reach us at support@recommand.eu.,Notre équipe support a été informée et vous contactera. Vous pouvez aussi nous joindre à support@recommand.eu.
 Outcome code {0}.,Code de résultat {0}.
 Payment reports are only filed when VAT becomes due on payment.,Les déclarations de paiement ne sont déposées que lorsque la TVA est exigible à l'encaissement.
+Peppol,Peppol
+Peppol delivery to {0} failed.,La livraison Peppol à {0} a échoué.
 Playground and test-network teams do not file with the tax administration. Reports are accepted and recorded\, but simulated.,Les équipes playground et réseau de test ne déposent rien auprès de l'administration fiscale. Les déclarations sont acceptées et enregistrées\, mais simulées.
 Register for e-reporting,S'enregistrer pour l'e-reporting
 Registered,Enregistrée
@@ -992,6 +1000,7 @@ Select the VAT regime,Sélectionnez le régime de TVA
 Select when VAT becomes due,Sélectionnez le moment d'exigibilité de la TVA
 Simulated,Simulée
 Simulated: this report is recorded but not filed.,Simulée : cette déclaration est enregistrée mais non déposée.
+Status since {0},Statut depuis le {0}
 Superseded,Remplacée
 Suspended,Suspendue
 The company is registered for French e-reporting,L'entreprise est enregistrée pour l'e-reporting France
@@ -1004,3 +1013,4 @@ Update registration,Mettre à jour l'enregistrement
 VAT becomes due,Exigibilité de la TVA
 VAT regime,Régime de TVA
 Verify the company first. The signed French mandate is what allows us to report on its behalf.,Vérifiez d'abord l'entreprise. Le mandat français signé est ce qui nous autorise à déclarer en son nom.
+Where this document stands with each recipient it was sent to.,Où en est ce document auprès de chaque destinataire auquel il a été envoyé.

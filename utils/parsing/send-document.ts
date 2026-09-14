@@ -121,7 +121,7 @@ export const sendDocumentBaseShape = {
         .enum(["always", "on_peppol_failure"])
         .default("on_peppol_failure")
         .openapi({
-          description: "When to send the email. If the provided Peppol recipient is null, email becomes the primary delivery method and emails are always sent.",
+          description: "When to send the email. `always` sends it with the Peppol transmission. `on_peppol_failure` sends it when the Peppol transmission is refused at send time, or when the access point reports afterwards that it failed; in that second case the email goes out at that moment and appears as email deliveries on the document, announced by a `document.delivery_status_changed` event. If the Peppol recipient is null, email is the only channel and is always sent.",
         }),
       to: z.array(z.string()).openapi({
         description: "The email addresses to send the document to.",
@@ -142,7 +142,7 @@ export const sendDocumentBaseShape = {
     .openapi({
       ref: "Email",
       description:
-        "Email delivery options. When Peppol recipient is provided, email is optional and you can choose to always send the email, or only when Peppol delivery fails. When Peppol recipient is null, email becomes the primary delivery method and `email.to` is required. Each sent email is counted towards your document quota.",
+        "Email delivery options. When a Peppol recipient is provided, email is optional and you can choose to always send the email, or only when Peppol delivery fails, whether that is refused at send time or reported later by the access point. When the Peppol recipient is null, email becomes the primary delivery method and `email.to` is required. Each email counts towards your document quota at the moment it is sent.",
     }),
   pdfGeneration: z
     .object({

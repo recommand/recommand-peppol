@@ -31,6 +31,7 @@ import { TransmissionStatusIcons } from "@peppol/components/transmission-status-
 import { DocumentTypeCell } from "@peppol/components/document-type-cell";
 import { LabelBadge } from "@directory/components/label-badge";
 import { FrenchReportingStatusBadge } from "../../../components/french-reporting-status-badge";
+import { DeliveryFailedBadge } from "../../../components/delivery-failed-badge";
 import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
 import {
   Popover,
@@ -892,6 +893,7 @@ export default function Page() {
                     emailRecipients={emailRecipients || undefined}
                     isReporting={isReporting}
                   />
+                  <DeliveryFailedBadge deliveries={document.deliveries} size="sm" />
                 </div>
               </div>
             );
@@ -909,6 +911,7 @@ export default function Page() {
               isReporting={isReporting}
             />
             {isReporting && <FrenchReportingStatusBadge reporting={document.reporting} size="sm" />}
+            <DeliveryFailedBadge deliveries={document.deliveries} size="sm" />
           </div>
         );
       },

@@ -11,7 +11,12 @@ import { storedFrenchB2BiReportSchema } from "@peppol/utils/parsing/b2bi-reporti
 import { labelResponse } from "@directory/api/labels/shared";
 import { validationResponse } from "@peppol/types/validation";
 import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/document-types/keys";
-import { zodFrReportingStatuses } from "@peppol/db/schema";
+import {
+    deliveryChannels,
+    deliveryFailureCategories,
+    deliveryStatuses,
+    zodFrReportingStatuses,
+} from "@peppol/db/schema";
 
 const transmittedDocumentTypeSchema = z.enum(STORED_DOCUMENT_TYPE_KEYS);
 
@@ -28,6 +33,57 @@ export const frenchReportingStatusResponse = z.object({
     checkedAt: z.string().nullable().openapi({ description: "When the status was last refreshed from the reporting service." }),
     simulated: z.boolean().openapi({ description: "True for playground and test-network reports, which are recorded but never filed." }),
 }).openapi({ ref: "FrenchReportingStatus" });
+
+export const deliveryStatusResponse = z.enum(deliveryStatuses).nullable().openapi({
+    description: "Whether the document reached its recipient, summarised over its deliveries: `delivered` when at least one delivery was confirmed, `failed` when every delivery failed, `pending` while any is still awaiting the channel's confirmation. Null for documents without deliveries, such as incoming documents and filed reports.",
+    example: "delivered",
+});
+
+export const deliveryFailureResponse = z.object({
+    category: z.enum(deliveryFailureCategories).openapi({
+        description: "Why the delivery failed, in the same terms for every channel and access point: `recipient_not_found` (the address is not registered on the network), `document_not_supported` (the recipient does not receive this document type), `validation` (the document was refused by a rule), `transport` (it could not be transmitted), `recipient_rejected`, `duplicate` or `other`.",
+        example: "validation",
+    }),
+    message: z.string().nullable().openapi({
+        description: "What went wrong, as the channel or access point described it.",
+    }),
+    providerCode: z.string().nullable().openapi({
+        description: "The access point's own code for the failure, when it reported one.",
+        example: "TXE-1005",
+    }),
+}).openapi({ ref: "DeliveryFailure" });
+
+export const deliveryResponse = z.object({
+    id: z.string().openapi({
+        description: "The delivery ID. It identifies this delivery in `document.delivery_status_changed` webhook events.",
+        example: "dlv_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    }),
+    channel: z.enum(deliveryChannels).openapi({
+        description: "How the document was sent to this address.",
+        example: "peppol",
+    }),
+    address: z.string().openapi({
+        description: "The Peppol address or email address the document was sent to.",
+        example: "0208:0428643097",
+    }),
+    status: z.enum(deliveryStatuses).openapi({
+        description: "`pending`: the channel accepted the document and has not confirmed arrival. `delivered`: the channel confirmed arrival; for Peppol the recipient's access point acknowledged the document, for email the recipient's mail server accepted it. `failed`: the document did not arrive; see `failure`.",
+        example: "delivered",
+    }),
+    statusChangedAt: z.string().openapi({
+        description: "When the delivery reached its current status.",
+    }),
+    failure: deliveryFailureResponse.nullable().openapi({
+        description: "Why the delivery failed. Null unless the status is `failed`.",
+    }),
+    references: z.object({
+        peppolMessageId: z.string().nullable().optional().openapi({ description: "The AS4 message ID of the transmission." }),
+        peppolConversationId: z.string().nullable().optional().openapi({ description: "The AS4 conversation ID of the transmission." }),
+        envelopeId: z.string().nullable().optional().openapi({ description: "The envelope ID (SBDH instance identifier) of the transmission." }),
+    }).openapi({
+        description: "The identifiers the transmission is known by on its channel. Present for `peppol` deliveries; empty for other channels.",
+    }),
+}).openapi({ ref: "Delivery" });
 
 export const transmittedDocumentResponse = z.object({
     id: z.string().openapi({
@@ -101,7 +157,7 @@ export const transmittedDocumentResponse = z.object({
         description: "The outcome of validating the document against the rules of its document type. Null when the document was not validated.",
     }),
     sentOverPeppol: z.boolean().openapi({
-        description: "Whether the document travelled over the Peppol network. False for a document that was only delivered by email.",
+        description: "Whether the document was handed over to the Peppol network. False for a document that was only delivered by email. Whether it reached the recipient is what `deliveryStatus` and `deliveries` say.",
         example: true,
     }),
     sentOverEmail: z.boolean().openapi({
@@ -129,5 +185,9 @@ export const transmittedDocumentResponse = z.object({
     }),
     reporting: frenchReportingStatusResponse.nullable().openapi({
         description: "Where a French e-reporting report stands with the tax administration. Null for documents that are not reports.",
+    }),
+    deliveryStatus: deliveryStatusResponse,
+    deliveries: z.array(deliveryResponse).openapi({
+        description: "Where an outgoing document stands with each recipient: one entry per channel and address it was sent to. Empty for incoming documents and filed reports. `sentOverPeppol` says the document was handed to the network; a delivery says whether it arrived.",
     }),
 });

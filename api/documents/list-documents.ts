@@ -12,10 +12,11 @@ import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
-import { supportedDocumentTypeEnum } from "@peppol/db/schema";
+import { deliveryStatuses, supportedDocumentTypeEnum } from "@peppol/db/schema";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
 import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions";
+import { withDocumentDeliveries } from "@peppol/data/deliveries";
 
 const server = new Server();
 
@@ -86,6 +87,14 @@ const getTransmittedDocumentsQuerySchema = z.object({
   envelopeId: z.string().optional().openapi({
     description: "Filter documents by envelope ID (Standard Business Document Header Instance Identifier)",
   }),
+  deliveryStatus: z.enum(deliveryStatuses).optional().openapi({
+    description: "Filter outgoing documents by their summarised delivery status: `delivered` (confirmed on at least one channel), `failed` (every delivery failed) or `pending` (still awaiting confirmation). Documents without deliveries never match.",
+    example: "failed",
+  }),
+  deliveryFailed: z.enum(["true", "false"]).optional().openapi({
+    description: "When true, only documents with at least one failed delivery, whatever their other deliveries did. Use it to find the sends that need attention.",
+    example: "true",
+  }),
   excludeAttachments: z
     .preprocess(
       (value) => {
@@ -124,7 +133,7 @@ const _transmittedDocuments = server.get(
 
 async function _getTransmittedDocumentsImplementation(c: GetTransmittedDocumentsContext) {
   try {
-    const { page, limit, companyId, labelId, direction, search, type, from, to, isUnread, envelopeId, excludeAttachments } = c.req.valid("query");
+    const { page, limit, companyId, labelId, direction, search, type, from, to, isUnread, envelopeId, deliveryStatus, deliveryFailed, excludeAttachments } = c.req.valid("query");
     const { documents, total } = await getTransmittedDocuments(
       c.var.team.id,
       {
@@ -147,13 +156,15 @@ async function _getTransmittedDocumentsImplementation(c: GetTransmittedDocuments
         to,
         isUnread: isUnread === "true" ? true : isUnread === "false" ? false : undefined,
         envelopeId,
+        deliveryStatus,
+        deliveryFailed: deliveryFailed === "true" ? true : deliveryFailed === "false" ? false : undefined,
         excludeAttachments,
       }
     );
 
     return c.json(
       actionSuccess({
-        documents: await withFrenchReportingStatus(documents),
+        documents: await withDocumentDeliveries(await withFrenchReportingStatus(documents)),
         pagination: {
           total,
           page,

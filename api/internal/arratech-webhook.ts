@@ -10,12 +10,46 @@ import { UserFacingError } from "@directory/utils/util";
 import { downloadBusinessDocument } from "@peppol/data/at/ap";
 import { getArratechConfig } from "@peppol/data/at/client";
 import { recordProviderSentTransaction } from "@peppol/data/provider-sent";
+import {
+  applyProviderDeliveryReport,
+  arratechFailure,
+} from "@peppol/data/deliveries";
 import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
 
 const server = new Server();
 
 const RECEIVED_EVENT_TYPE = "transaction.received";
 const SENT_EVENT_TYPE = "transaction.sent";
+// Reported for an outbound transaction the API accepted that then failed validation
+// or delivery. Neither of the events above is emitted for it, so this one is what
+// tells us a send did not arrive.
+const SEND_FAILED_EVENT_TYPE = "transaction.send_failed";
+
+const PROCESSED_EVENT_TYPES: ReadonlySet<string> = new Set([
+  RECEIVED_EVENT_TYPE,
+  SENT_EVENT_TYPE,
+  SEND_FAILED_EVENT_TYPE,
+]);
+
+// The provider's customer-facing error for a failed transaction. Present on a failure
+// event only when the provider has details, and omitted rather than null otherwise.
+// Mapped to a delivery failure by its category (see data/deliveries/model).
+const serviceErrorSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  category: z.string(),
+});
+
+// Every field but the transaction id and its status is omitted from a transaction
+// event when it does not apply, which for a failure can be most of them: a document
+// refused before it was routed has no access point or addressing to report.
+const failedTransactionPayloadSchema = z.object({
+  id: z.string(),
+  transactionStatus: z.string().optional(),
+  apId: z.string().optional(),
+  docInstanceId: z.string().optional(),
+  serviceError: serviceErrorSchema.optional(),
+});
 
 // The access point every company on this provider sends through, and therefore the
 // provider that reported the transactions this webhook queues.
@@ -122,9 +156,58 @@ server.post(
       }
 
       const eventType = parseResult.data.eventType;
-      if (eventType !== RECEIVED_EVENT_TYPE && eventType !== SENT_EVENT_TYPE) {
+      if (!PROCESSED_EVENT_TYPES.has(eventType)) {
         console.log("Ignoring Arratech webhook event type:", eventType);
         return c.json(actionSuccess({ message: "Event type not processed" }), 200);
+      }
+
+      if (eventType === SEND_FAILED_EVENT_TYPE) {
+        const failedResult = failedTransactionPayloadSchema.safeParse(parseResult.data.payload);
+        if (!failedResult.success) {
+          console.error("Invalid failed transaction payload:", failedResult.error);
+          return c.json(actionFailure("Invalid transaction payload: " + failedResult.error.message), 400);
+        }
+        const failed = failedResult.data;
+
+        // A failure event may omit the access point. The signature then decides the
+        // network on its own, which it can only do when exactly one secret matched;
+        // when the access point is reported it has to agree with the signature, as
+        // for every other event.
+        let useTestNetwork: boolean;
+        if (failed.apId !== undefined) {
+          const resolved = resolveUseTestNetwork(failed.apId);
+          if (resolved === null) {
+            console.warn("Ignoring Arratech webhook for unknown access point:", failed.apId);
+            return c.json(actionSuccess({ message: "Unknown access point" }), 200);
+          }
+          if (resolved ? !matchesTestSecret : !matchesProductionSecret) {
+            return c.json(actionFailure("Signature does not match the access point's network"), 401);
+          }
+          useTestNetwork = resolved;
+        } else if (matchesProductionSecret !== matchesTestSecret) {
+          useTestNetwork = matchesTestSecret;
+        } else {
+          console.error(
+            "Cannot tell which network an Arratech failure event without an access point belongs to",
+            "- ARRATECH_WEBHOOK_SECRET and ARRATECH_TEST_WEBHOOK_SECRET must be different values"
+          );
+          return c.json(actionFailure("Ambiguous webhook network"), 400);
+        }
+
+        // The transaction had been accepted, so its delivery is pending; this report
+        // is what fails it.
+        const outcome = await applyProviderDeliveryReport({
+          channel: "peppol",
+          provider: ARRATECH_ACCESS_POINT_PROVIDER,
+          providerTransactionId: failed.id,
+          useTestNetwork,
+          status: "failed",
+          failure: arratechFailure(failed.serviceError),
+          eventId: parseResult.data.id,
+          eventType,
+          payload: (parseResult.data.payload ?? {}) as Record<string, unknown>,
+        });
+        return c.json(actionSuccess({ outcome }), 200);
       }
 
       const transactionPayloadSchema = z.object({
@@ -186,7 +269,22 @@ server.post(
           docInstanceId: payload.docInstanceId ?? null,
         });
 
-        return c.json(actionSuccess({ outcome }), 200);
+        // A completed transaction is a delivered document, whoever sent it: the
+        // delivery our own send left pending is confirmed here, and the delivery a
+        // document recorded from this report just got is confirmed the same way.
+        const delivery = await applyProviderDeliveryReport({
+          channel: "peppol",
+          provider: ARRATECH_ACCESS_POINT_PROVIDER,
+          providerTransactionId: payload.id,
+          useTestNetwork,
+          status: "delivered",
+          failure: null,
+          eventId: parseResult.data.id,
+          eventType,
+          payload: (parseResult.data.payload ?? {}) as Record<string, unknown>,
+        });
+
+        return c.json(actionSuccess({ outcome, delivery }), 200);
       }
 
       if (await findTransmittedDocument(payload.id, "incoming")) {

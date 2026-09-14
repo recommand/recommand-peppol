@@ -63,6 +63,29 @@ export async function fetchArratech(
   });
 }
 
+/**
+ * Resolves with `promise`, or rejects as soon as `signal` aborts. A response whose
+ * body never ends keeps the fetch's own promise pending, so a caller's deadline has
+ * to cover reading the body as well as receiving the headers.
+ */
+function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | null | undefined): Promise<T> {
+  if (!signal) {
+    return promise;
+  }
+  if (signal.aborted) {
+    return Promise.reject(signal.reason ?? new Error("Request aborted"));
+  }
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(signal.reason ?? new Error("Request aborted"));
+    signal.addEventListener("abort", abort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+  });
+}
+
+/**
+ * Fetches JSON from the provider. A `signal` in the options bounds the whole
+ * exchange: the request, the wait for the response and the reading of its body.
+ */
 export async function fetchArratechJson<T>(
   path: string,
   options: { useTestNetwork: boolean } & RequestInit
@@ -76,9 +99,9 @@ export async function fetchArratechJson<T>(
   });
 
   if (!response.ok) {
-    const message = await getErrorMessage(response);
+    const message = await untilAborted(getErrorMessage(response), options.signal);
     throw new UserFacingError(`AT request failed: ${message}`);
   }
 
-  return await response.json();
+  return await untilAborted(response.json() as Promise<T>, options.signal);
 }

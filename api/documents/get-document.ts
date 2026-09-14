@@ -17,6 +17,7 @@ import {
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
 import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions";
+import { withDocumentDeliveries } from "@peppol/data/deliveries";
 
 const server = new Server();
 
@@ -78,7 +79,7 @@ async function _getTransmittedDocumentImplementation(c: GetTransmittedDocumentCo
           }
         }
 
-        const [apiDocument] = await withFrenchReportingStatus([await toApiTransmittedDocument(document)]);
+        const [apiDocument] = await withDocumentDeliveries(await withFrenchReportingStatus([await toApiTransmittedDocument(document)]));
         return c.json(actionSuccess({ document: apiDocument! }));
       } catch (error) {
         return c.json(actionFailure("Failed to fetch document"), 500);

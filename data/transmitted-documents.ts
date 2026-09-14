@@ -1,9 +1,10 @@
-import { supportedDocumentTypeEnum, transmittedDocuments, transmittedDocumentLabels } from "@peppol/db/schema";
+import { documentDeliveries, supportedDocumentTypeEnum, transmittedDocuments, transmittedDocumentLabels } from "@peppol/db/schema";
 import { labels } from "@directory/db/schema";
 import { db } from "@recommand/db";
 import { eq, and, or, sql, desc, isNull, isNotNull, inArray, ilike, gte, lt } from "drizzle-orm";
 import type { Label } from "@directory/data/labels";
 import type { FrenchReportingStatusSummary } from "./fr-reporting-submissions";
+import type { DeliveryStatus, DeliverySummary } from "./deliveries/model";
 import { removeAttachmentsFromParsedDocument } from "@peppol/utils/parsing/remove-attachments";
 import {
   offloadedDocumentS3Prefixes,
@@ -22,7 +23,7 @@ export type TransmittedDocument = typeof transmittedDocuments.$inferSelect;
 export type InsertTransmittedDocument = typeof transmittedDocuments.$inferInsert;
 type TransmittedDocumentSearchField = "senderName" | "receiverName" | "documentNumber" | "searchText";
 type TransmittedDocumentLabel = Omit<Label, "teamId" | "createdAt" | "updatedAt">;
-type InternalProviderField = "accessPointProvider" | "smpProvider" | "apTransactionId" | "externalReferenceId";
+type InternalProviderField = "accessPointProvider" | "smpProvider" | "apTransactionId" | "externalReferenceId" | "emailFallback";
 export type PublicTransmittedDocument = Omit<
   TransmittedDocument,
   TransmittedDocumentSearchField | InternalProviderField | "offloadClaimedAt"
@@ -31,6 +32,9 @@ export type PublicTransmittedDocumentWithLabels = PublicTransmittedDocument & {
   labels?: TransmittedDocumentLabel[];
   /** Present on filed reports once the API has attached where they stand. */
   reporting?: FrenchReportingStatusSummary | null;
+  /** Present once the API has attached where the document stands with each recipient. */
+  deliveries?: DeliverySummary[];
+  deliveryStatus?: DeliveryStatus | null;
 };
 
 // Internal storage-location fields that must never be exposed to API consumers.
@@ -40,6 +44,8 @@ type InternalStorageField = "xmlLocation" | "attachmentsLocation" | "originalPay
 export type TransmittedDocumentWithoutBody = Omit<PublicTransmittedDocument, "xml" | InternalStorageField> & {
   labels?: TransmittedDocumentLabel[];
   reporting?: FrenchReportingStatusSummary | null;
+  deliveries?: DeliverySummary[];
+  deliveryStatus?: DeliveryStatus | null;
 };
 type InboxTransmittedDocument = Omit<PublicTransmittedDocument, "xml" | InternalStorageField | "parsed"> & {
   labels?: TransmittedDocumentLabel[];
@@ -146,10 +152,12 @@ export async function getTransmittedDocuments(
     envelopeId?: string | null;
     peppolMessageId?: string | null;
     peppolConversationId?: string | null;
+    deliveryStatus?: DeliveryStatus;
+    deliveryFailed?: boolean;
     excludeAttachments?: boolean;
   } = {}
 ): Promise<{ documents: TransmittedDocumentWithoutBody[]; total: number }> {
-  const { page = 1, limit = 10, companyId, labelId, direction, search, type, from, to, isUnread, envelopeId, peppolMessageId, peppolConversationId, excludeAttachments = false } = options;
+  const { page = 1, limit = 10, companyId, labelId, direction, search, type, from, to, isUnread, envelopeId, peppolMessageId, peppolConversationId, deliveryStatus, deliveryFailed, excludeAttachments = false } = options;
   const offset = (page - 1) * limit;
   const trimmedSearch = search?.trim();
   const normalizedLabelIds = labelId ? [...new Set(labelId)] : undefined;
@@ -219,6 +227,24 @@ export async function getTransmittedDocuments(
     whereClause.push(eq(transmittedDocuments.peppolConversationId, peppolConversationId));
   }else if (peppolConversationId === null) {
     whereClause.push(isNull(transmittedDocuments.peppolConversationId));
+  }
+  // The same summary rule as summarizeDeliveryStatus, expressed over the deliveries
+  // table: delivered if any delivery is, failed if all are, pending otherwise.
+  const hasDeliveryWithStatus = (status: DeliveryStatus) =>
+    sql`exists (select 1 from ${documentDeliveries} where ${documentDeliveries.transmittedDocumentId} = ${transmittedDocuments.id} and ${documentDeliveries.status} = ${status})`;
+  const hasDeliveryNotInStatus = (status: DeliveryStatus) =>
+    sql`exists (select 1 from ${documentDeliveries} where ${documentDeliveries.transmittedDocumentId} = ${transmittedDocuments.id} and ${documentDeliveries.status} <> ${status})`;
+  if (deliveryStatus === "delivered") {
+    whereClause.push(hasDeliveryWithStatus("delivered"));
+  } else if (deliveryStatus === "failed") {
+    whereClause.push(hasDeliveryWithStatus("failed"), sql`not ${hasDeliveryNotInStatus("failed")}`);
+  } else if (deliveryStatus === "pending") {
+    whereClause.push(hasDeliveryWithStatus("pending"), sql`not ${hasDeliveryWithStatus("delivered")}`);
+  }
+  if (deliveryFailed === true) {
+    whereClause.push(hasDeliveryWithStatus("failed"));
+  } else if (deliveryFailed === false) {
+    whereClause.push(sql`not ${hasDeliveryWithStatus("failed")}`);
   }
 
   // Get total count

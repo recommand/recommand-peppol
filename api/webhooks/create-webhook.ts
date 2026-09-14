@@ -15,7 +15,7 @@ const server = new Server();
 
 const createWebhookRouteDescription = describeRoute({
     operationId: "createWebhook",
-    description: "Register an HTTPS endpoint that Recommand posts events to as they happen, so you do not have to poll the documents endpoints. It receives every peppol event for the team: `document.received`, `document.sent`, `document.label.assigned`, `document.label.unassigned`, `document.reporting_status_changed` and `company.verification`. There is no per-event subscription. Set a `secret` to have every delivery signed, and check that signature before acting on a request. Deliveries are retried for a while on a timeout or a 5xx; any other response is treated as final.",
+    description: "Register an HTTPS endpoint that Recommand posts events to as they happen, so you do not have to poll the documents endpoints. It receives every peppol event for the team: `document.received`, `document.sent`, `document.delivery_status_changed`, `document.label.assigned`, `document.label.unassigned`, `document.reporting_status_changed` and `company.verification`. There is no per-event subscription. Set a `secret` to have every delivery signed, and check that signature before acting on a request. Deliveries are retried for a while on a timeout or a 5xx; any other response is treated as final.",
     summary: "Create Webhook",
     tags: ["Webhooks"],
     responses: {

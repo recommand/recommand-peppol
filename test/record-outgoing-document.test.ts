@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  buildOutgoingDocumentDeliveries,
   buildOutgoingDocumentRow,
   buildOutgoingTransferEvents,
   type OutgoingDocumentDelivery,
@@ -139,6 +140,20 @@ describe("outgoing document recording", () => {
     });
   });
 
+  it("keeps the email asked for on failure with the document until the outcome is known", () => {
+    const row = buildOutgoingDocumentRow({
+      id: "doc_invoice",
+      teamId: "team_1",
+      company,
+      document: peppolDocument,
+      delivery: { ...peppolDelivery, emailFallback: { to: ["a@example.com"], subject: "Invoice 1" } },
+      storage,
+    });
+    expect(row.emailFallback).toEqual({ to: ["a@example.com"], subject: "Invoice 1" });
+    expect(row.sentOverEmail).toBe(false);
+    expect(row.emailRecipients).toEqual([]);
+  });
+
   it("bills a report exactly once, like a transmission", () => {
     const base = {
       teamId: "team_1",
@@ -193,5 +208,86 @@ describe("outgoing document recording", () => {
         },
       })
     ).toEqual([]);
+  });
+});
+
+describe("outgoing document deliveries", () => {
+  const now = new Date("2026-09-09T10:00:00Z");
+  const build = (
+    delivery: OutgoingDocumentDelivery,
+    overrides: { accessPointProvider?: Company["accessPointProvider"]; receiverId?: string | null } = {}
+  ) =>
+    buildOutgoingDocumentDeliveries({
+      transmittedDocumentId: "doc_1",
+      teamId: "team_1",
+      company: { id: company.id, accessPointProvider: overrides.accessPointProvider ?? "recommand-ap1" },
+      document: { receiverId: overrides.receiverId === undefined ? "0208:987654321" : overrides.receiverId },
+      delivery,
+      useTestNetwork: false,
+      now,
+    });
+
+  it("records a transmission through our own access point as delivered: the receipt came with the send", () => {
+    const rows = build(peppolDelivery);
+    expect(rows).toEqual([
+      {
+        transmittedDocumentId: "doc_1",
+        teamId: "team_1",
+        companyId: company.id,
+        statusChangedAt: now,
+        useTestNetwork: false,
+        channel: "peppol",
+        address: "0208:987654321",
+        status: "delivered",
+        failureCategory: null,
+        failureMessage: null,
+        failureProviderCode: null,
+        provider: "recommand-ap1",
+        providerTransactionId: "tx-1",
+      },
+    ]);
+  });
+
+  it("leaves a transmission through a shared access point pending until it reports the outcome", () => {
+    const [row] = build(peppolDelivery, { accessPointProvider: "at-shared-ap-fr" });
+    expect(row).toMatchObject({ status: "pending", provider: "at-shared-ap-fr", providerTransactionId: "tx-1" });
+  });
+
+  it("records a simulated transmission as delivered without a provider, whatever the company's access point", () => {
+    const simulated: OutgoingDocumentDelivery = { kind: "peppol", sentPeppol: true, emailRecipients: [], as4Response: null };
+    const [row] = build(simulated, { accessPointProvider: "at-shared-ap-fr" });
+    expect(row).toMatchObject({ status: "delivered", provider: null, providerTransactionId: null });
+  });
+
+  it("records a refused transmission that fell back to email as failed, with the refusal's reason", () => {
+    const rows = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["a@example.com", "b@example.com"],
+      as4Response: null,
+      peppolFailure: { category: "document_not_supported", message: "Not registered for invoices", providerCode: null },
+    });
+    expect(rows.map((row) => [row.channel, row.address, row.status])).toEqual([
+      ["peppol", "0208:987654321", "failed"],
+      ["email", "a@example.com", "pending"],
+      ["email", "b@example.com", "pending"],
+    ]);
+    expect(rows[0]).toMatchObject({
+      failureCategory: "document_not_supported",
+      failureMessage: "Not registered for invoices",
+      provider: null,
+    });
+  });
+
+  it("creates no Peppol delivery for an email-only document", () => {
+    const rows = build(
+      { kind: "peppol", sentPeppol: false, emailRecipients: ["a@example.com"], as4Response: null },
+      { receiverId: null }
+    );
+    expect(rows.map((row) => row.channel)).toEqual(["email"]);
+  });
+
+  it("creates no deliveries for a filed report", () => {
+    expect(build(reportingDelivery, { receiverId: null })).toEqual([]);
   });
 });

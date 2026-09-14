@@ -33,6 +33,7 @@ import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/documen
 import type { ParsedDocument } from "@peppol/utils/type-repository/document-types/parsed";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
+import type { EmailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
 import { labels } from "@directory/db/schema";
 
 export const paymentStatusEnum = pgEnum("peppol_payment_status", [
@@ -622,6 +623,12 @@ export const transmittedDocuments = pgTable(
     sentOverPeppol: boolean("sent_over_peppol").notNull().default(true),
     sentOverEmail: boolean("sent_over_email").notNull().default(false),
     emailRecipients: text("email_recipients").notNull().array().default([]),
+    // The email the sender asked for in case the Peppol transmission fails, when the
+    // access point accepted the transmission and has not yet said whether it arrived.
+    // Marked started when it is acted on and cleared when that is done, so a failure
+    // reported twice sends it once and a run that stops can be resumed (see
+    // data/deliveries/email-fallback).
+    emailFallback: jsonb("email_fallback").$type<EmailFallbackRequest>(),
 
     type: supportedDocumentTypeEnum("type").notNull().default("unknown"),
     parsed: jsonb("parsed").$type<ParsedDocument>(),
@@ -665,6 +672,11 @@ export const transmittedDocuments = pgTable(
     // sending pipeline and the provider webhooks write this id, and the
     // constraint is what makes a transaction impossible to record twice
     // instead of merely unlikely to be.
+    // The few documents with a fallback waiting or under way, for the drain that
+    // resumes stopped runs.
+    index("peppol_transmitted_documents_email_fallback_idx")
+      .on(table.id)
+      .where(isNotNull(table.emailFallback)),
     uniqueIndex("peppol_transmitted_documents_ap_transaction_id_idx")
       .on(table.apTransactionId)
       .where(isNotNull(table.apTransactionId)),
@@ -796,6 +808,116 @@ export const outgoingEnvelopeClaims = pgTable("peppol_outgoing_envelope_claims",
 }, (table) => [
   index("peppol_outgoing_envelope_claims_created_at_idx").on(table.createdAt),
 ]);
+
+// How a document was handed to one recipient. A document is the content; a delivery
+// is one attempt to get it to one address over one channel, so a document sent over
+// Peppol and to two email addresses has three. New channels are added here.
+export const deliveryChannels = ["peppol", "email"] as const;
+export const deliveryChannelEnum = pgEnum("peppol_delivery_channel", deliveryChannels);
+
+// Where a delivery stands, in the same words for every channel. `pending` means the
+// channel accepted the document and has not said whether it arrived; `delivered`
+// means it confirmed arrival (for Peppol the recipient's access point acknowledged
+// the message, for email the recipient's mail server accepted it); `failed` is final.
+// A recipient-side rejection, reported after delivery, is a later addition.
+export const deliveryStatuses = ["pending", "delivered", "failed"] as const;
+export const deliveryStatusEnum = pgEnum("peppol_delivery_status", deliveryStatuses);
+
+// Why a delivery failed, in the channel's own terms rather than a provider's. The
+// provider's own code is kept next to it.
+export const deliveryFailureCategories = [
+  "recipient_not_found",
+  "document_not_supported",
+  "validation",
+  "transport",
+  "recipient_rejected",
+  "duplicate",
+  "other",
+] as const;
+export const deliveryFailureCategoryEnum = pgEnum(
+  "peppol_delivery_failure_category",
+  deliveryFailureCategories
+);
+
+// One row per delivery of an outgoing document (see data/deliveries). Written with
+// the document, and moved on by what the channel reports afterwards: an access point
+// that only confirms or fails a transmission later does so through its webhook or
+// the reconciliation poll. Incoming documents and filed reports have none. The
+// transport references (message, conversation and envelope ids) stay on the document.
+export const documentDeliveries = pgTable(
+  "peppol_document_deliveries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "dlv_" + ulid()),
+    transmittedDocumentId: text("transmitted_document_id")
+      .references(() => transmittedDocuments.id, { onDelete: "cascade" })
+      .notNull(),
+    teamId: text("team_id").notNull(),
+    companyId: text("company_id").notNull(),
+    channel: deliveryChannelEnum("channel").notNull(),
+    // The Peppol address or email address the document was delivered to.
+    address: text("address").notNull(),
+    status: deliveryStatusEnum("status").notNull(),
+    statusChangedAt: timestamp("status_changed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    failureCategory: deliveryFailureCategoryEnum("failure_category"),
+    failureMessage: text("failure_message"),
+    failureProviderCode: text("failure_provider_code"),
+    // The service that carried the delivery: the access point provider for Peppol.
+    // Null for a simulated transmission and for channels without a provider record.
+    provider: text("provider"),
+    useTestNetwork: boolean("use_test_network").notNull().default(false),
+    // The provider's own reference for the transmission, which is what its later
+    // reports are matched on. Unique so a report can only ever land on one delivery.
+    providerTransactionId: text("provider_transaction_id"),
+    // The provider's id and name for the last report applied, and that report's
+    // payload as received, for support.
+    providerEventId: text("provider_event_id"),
+    providerEventType: text("provider_event_type"),
+    providerPayload: jsonb("provider_payload").$type<Record<string, unknown>>(),
+    // When the provider was last asked about a delivery that was still pending.
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    index("peppol_document_deliveries_document_idx").on(table.transmittedDocumentId),
+    uniqueIndex("peppol_document_deliveries_provider_transaction_idx")
+      .on(table.providerTransactionId)
+      .where(isNotNull(table.providerTransactionId)),
+    index("peppol_document_deliveries_pending_idx").on(
+      table.status,
+      table.channel,
+      table.statusChangedAt
+    ),
+  ]
+);
+
+// A delivery outcome a provider reported for a transaction that has no delivery yet.
+// The report can arrive before the send that produced the transaction has recorded
+// its document, so it waits here, keyed by the transaction, and is applied when the
+// document's deliveries are written (see data/deliveries). One row per transaction,
+// however many times the provider retries the report.
+export const providerDeliveryReports = pgTable("peppol_provider_delivery_reports", {
+  providerTransactionId: text("provider_transaction_id").primaryKey(),
+  channel: deliveryChannelEnum("channel").notNull(),
+  provider: text("provider").notNull(),
+  useTestNetwork: boolean("use_test_network").notNull().default(false),
+  status: deliveryStatusEnum("status").notNull(),
+  failureCategory: deliveryFailureCategoryEnum("failure_category"),
+  failureMessage: text("failure_message"),
+  failureProviderCode: text("failure_provider_code"),
+  eventId: text("event_id"),
+  eventType: text("event_type"),
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  reportedAt: timestamp("reported_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 export const transmittedDocumentLabels = pgTable(
   "peppol_transmitted_document_labels",

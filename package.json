@@ -8,7 +8,8 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "test": "bun test ./test/*.test.ts",
-    "test:unit": "SKIP_E2E=1 bun test ./test/*.test.ts && SKIP_E2E=1 bun test ./test/arratech/onboarding.test.ts",
+    "test:unit": "SKIP_E2E=1 bun test ./test/*.test.ts && SKIP_E2E=1 bun test ./test/arratech/onboarding.test.ts && for f in ./test/persistence/*.test.ts; do SKIP_E2E=1 bun test $f || exit 1; done && bun run test:db",
+    "test:db": "for f in ./test/db/*.db.test.ts; do SKIP_E2E=1 bun test $f || exit 1; done",
     "test:e2e": "bun test --timeout 120000 ./test/e2e/",
     "test:regression": "bun test --timeout 120000 --only-failures --max-concurrency 20 ./test/regression/",
     "email:dev": "email dev --port 3002"

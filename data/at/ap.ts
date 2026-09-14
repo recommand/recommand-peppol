@@ -14,6 +14,11 @@ import { UserFacingError } from "@directory/utils/util";
 import { claimOutgoingEnvelope } from "@peppol/data/provider-sent/claims";
 import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 
+// Raised when the recipient's SMP entry for the document cannot be resolved: the
+// address is not registered, or not for this document type. Told apart from the
+// other ways a send fails so the delivery can say the recipient was not found.
+class RecipientLookupError extends UserFacingError {}
+
 // Arratech does not synchronously check receiver support before accepting a transaction, so
 // we perform the SMP-level document type and process check ourselves.
 async function checkReceiverSupportsDocumentType(options: {
@@ -35,7 +40,7 @@ async function checkReceiverSupportsDocumentType(options: {
     const encodedProcessId = processId.includes("::")
       ? processId
       : `${PROCESS_SCHEME}::${processId}`;
-    throw new UserFacingError(
+    throw new RecipientLookupError(
       `Failed to resolve SMP endpoint (${PARTICIPANT_SCHEME}::${receiverId}, ${DOCUMENT_SCHEME}::${docTypeId}, ${encodedProcessId})`
     );
   }
@@ -144,6 +149,8 @@ export async function sendAs4(options: {
           error instanceof Error
             ? error.message
             : "Failed to send document via AT access point",
+        category:
+          error instanceof RecipientLookupError ? "recipient_not_found" : "transport",
       },
     };
   }

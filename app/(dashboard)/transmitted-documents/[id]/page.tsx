@@ -56,7 +56,10 @@ import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-r
 import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
 import { isReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/keys";
 import { FrenchReportingStatusBadge } from "../../../../components/french-reporting-status-badge";
+import { DeliveryFailedBadge } from "../../../../components/delivery-failed-badge";
+import { DocumentDeliveries } from "../../../../components/document-deliveries";
 import type { FrenchReportingStatusSummary } from "@peppol/data/fr-reporting-submissions";
+import type { DeliveryStatus, DeliverySummary } from "@peppol/data/deliveries/model";
 import { useTranslation } from "@core/hooks/use-translation";
 import { getDocumentTypeLabel } from "@peppol/lib/client/document-type-labels";
 
@@ -66,6 +69,8 @@ const labelsClient = rc<Labels>("v1");
 type TransmittedDocumentWithLabels = TransmittedDocument & {
   labels?: Label[];
   reporting?: FrenchReportingStatusSummary | null;
+  deliveries?: DeliverySummary[];
+  deliveryStatus?: DeliveryStatus | null;
 };
 
 export default function TransmittedDocumentDetailPage() {
@@ -540,6 +545,7 @@ export default function TransmittedDocumentDetailPage() {
                 isReporting={isReportingDocumentTypeKey(doc.type)}
               />
               <FrenchReportingStatusBadge reporting={doc.reporting} />
+              <DeliveryFailedBadge deliveries={doc.deliveries} />
               {doc.labels &&
                 doc.labels.map((label) => (
                   <LabelBadge
@@ -551,6 +557,20 @@ export default function TransmittedDocumentDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        {doc.direction === "outgoing" && doc.deliveries && doc.deliveries.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t`Deliveries`}</CardTitle>
+              <CardDescription>
+                {t`Where this document stands with each recipient it was sent to.`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DocumentDeliveries deliveries={doc.deliveries} />
+            </CardContent>
+          </Card>
+        )}
 
         {!hasStructuredData && (
           <Alert className="border-dashed">

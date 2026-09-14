@@ -967,6 +967,11 @@ Change VAT settings,MwSt.-Einstellungen ändern
 Changing the regime during a reporting period can leave that period unfiled. Coordinate such a change with support.,Eine Änderung des Regimes während eines Meldezeitraums kann dazu führen\, dass dieser Zeitraum nicht eingereicht wird. Stimmen Sie eine solche Änderung mit dem Support ab.
 Choose the VAT regime and when VAT becomes due first,Wählen Sie zuerst das MwSt.-Regime und den Zeitpunkt der Steuerentstehung
 Daily B2C totals and cross-border invoices are reported to the French tax administration on the company's behalf. Register the company once\, then submit reports through the API.,Tägliche B2C-Summen und grenzüberschreitende Rechnungen werden im Namen des Unternehmens an die französische Steuerverwaltung gemeldet. Registrieren Sie das Unternehmen einmalig und reichen Sie die Meldungen anschließend über die API ein.
+Delivered,Zugestellt
+Deliveries,Zustellungen
+Delivery failed,Zustellung fehlgeschlagen
+Email delivery to {0} failed.,Die E-Mail-Zustellung an {0} ist fehlgeschlagen.
+Error code {0}.,Fehlercode {0}.
 Failed to load the e-reporting registration,Die E-Reporting-Registrierung konnte nicht geladen werden
 Failed to register the company for e-reporting,Das Unternehmen konnte nicht für E-Reporting registriert werden
 Filed by corrective filing,Eingereicht per Korrekturmeldung
@@ -976,11 +981,14 @@ French e-reporting,Französisches E-Reporting
 Last checked {0}.,Zuletzt geprüft am {0}.
 Late\, awaiting corrective filing,Verspätet\, wartet auf Korrekturmeldung
 Needs support,Support erforderlich
+No deliveries recorded for this document.,Für dieses Dokument sind keine Zustellungen erfasst.
 On invoicing (TVA sur les débits),Bei Rechnungsstellung (TVA sur les débits)
 On payment (TVA sur les encaissements),Bei Zahlung (TVA sur les encaissements)
 Our support team has been notified and will contact you. You can also reach us at support@recommand.eu.,Unser Support-Team wurde benachrichtigt und wird sich bei Ihnen melden. Sie erreichen uns auch unter support@recommand.eu.
 Outcome code {0}.,Ergebniscode {0}.
 Payment reports are only filed when VAT becomes due on payment.,Zahlungsmeldungen werden nur eingereicht\, wenn die MwSt. bei Zahlung entsteht.
+Peppol,Peppol
+Peppol delivery to {0} failed.,Die Peppol-Zustellung an {0} ist fehlgeschlagen.
 Playground and test-network teams do not file with the tax administration. Reports are accepted and recorded\, but simulated.,Playground- und Testnetzwerk-Teams reichen nichts bei der Steuerverwaltung ein. Meldungen werden angenommen und gespeichert\, aber simuliert.
 Register for e-reporting,Für E-Reporting registrieren
 Registered,Registriert
@@ -992,6 +1000,7 @@ Select the VAT regime,MwSt.-Regime auswählen
 Select when VAT becomes due,Zeitpunkt der Steuerentstehung auswählen
 Simulated,Simuliert
 Simulated: this report is recorded but not filed.,Simuliert: Diese Meldung wurde gespeichert\, aber nicht eingereicht.
+Status since {0},Status seit {0}
 Superseded,Ersetzt
 Suspended,Ausgesetzt
 The company is registered for French e-reporting,Das Unternehmen ist für französisches E-Reporting registriert
@@ -1004,3 +1013,4 @@ Update registration,Registrierung aktualisieren
 VAT becomes due,Steuerentstehung
 VAT regime,MwSt.-Regime
 Verify the company first. The signed French mandate is what allows us to report on its behalf.,Verifizieren Sie zuerst das Unternehmen. Das unterzeichnete französische Mandat berechtigt uns\, in seinem Namen zu melden.
+Where this document stands with each recipient it was sent to.,Wo dieses Dokument bei jedem Empfänger steht\, an den es gesendet wurde.

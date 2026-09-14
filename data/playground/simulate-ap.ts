@@ -2,6 +2,13 @@ import { UserFacingError } from "@directory/utils/util";
 import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
 import { getCompanyByPeppolId } from "../companies";
 
+/**
+ * The playground's counterpart of a recipient the network does not know: a send to
+ * one of the addresses reserved for it fails the way a lookup of an unregistered
+ * participant would.
+ */
+export class PlaygroundRecipientNotFoundError extends UserFacingError {}
+
 export async function simulateSendAs4(options: {
   senderId: string;
   receiverId: string;
@@ -16,7 +23,7 @@ export async function simulateSendAs4(options: {
 
   // If the recipientId is "404:404" or "0208:1234567894", throw an error
   if (options.receiverId === "404:404" || options.receiverId === "0208:1234567894") {
-    throw new UserFacingError("This document was sent to recipient 404:404 or 0208:1234567894, simulating the sending of a document to a Peppol address that does not exist.");
+    throw new PlaygroundRecipientNotFoundError("This document was sent to recipient 404:404 or 0208:1234567894, simulating the sending of a document to a Peppol address that does not exist.");
   }
 
   // Check if the receiverId is registered as a company in this playground team, search by enterprise number

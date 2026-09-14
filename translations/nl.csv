@@ -967,6 +967,11 @@ Change VAT settings,Btw-instellingen wijzigen
 Changing the regime during a reporting period can leave that period unfiled. Coordinate such a change with support.,Het regime wijzigen tijdens een aangifteperiode kan ervoor zorgen dat die periode niet wordt aangegeven. Stem zo'n wijziging af met support.
 Choose the VAT regime and when VAT becomes due first,Kies eerst het btw-regime en wanneer de btw verschuldigd wordt
 Daily B2C totals and cross-border invoices are reported to the French tax administration on the company's behalf. Register the company once\, then submit reports through the API.,Dagelijkse B2C-totalen en grensoverschrijdende facturen worden namens het bedrijf aan de Franse belastingdienst gerapporteerd. Registreer het bedrijf eenmalig en dien daarna rapporten in via de API.
+Delivered,Afgeleverd
+Deliveries,Afleveringen
+Delivery failed,Aflevering mislukt
+Email delivery to {0} failed.,E-mailaflevering aan {0} mislukt.
+Error code {0}.,Foutcode {0}.
 Failed to load the e-reporting registration,Laden van de e-reporting-registratie mislukt
 Failed to register the company for e-reporting,Registreren van het bedrijf voor e-reporting mislukt
 Filed by corrective filing,Aangegeven via corrigerende aangifte
@@ -976,11 +981,14 @@ French e-reporting,Franse e-reporting
 Last checked {0}.,Laatst gecontroleerd op {0}.
 Late\, awaiting corrective filing,Laattijdig\, wacht op corrigerende aangifte
 Needs support,Support nodig
+No deliveries recorded for this document.,Geen afleveringen geregistreerd voor dit document.
 On invoicing (TVA sur les débits),Bij facturatie (TVA sur les débits)
 On payment (TVA sur les encaissements),Bij betaling (TVA sur les encaissements)
 Our support team has been notified and will contact you. You can also reach us at support@recommand.eu.,Ons supportteam is op de hoogte gebracht en neemt contact met je op. Je kunt ons ook bereiken via support@recommand.eu.
 Outcome code {0}.,Resultaatcode {0}.
 Payment reports are only filed when VAT becomes due on payment.,Betalingsrapporten worden alleen ingediend wanneer de btw verschuldigd wordt bij betaling.
+Peppol,Peppol
+Peppol delivery to {0} failed.,Peppol-aflevering aan {0} mislukt.
 Playground and test-network teams do not file with the tax administration. Reports are accepted and recorded\, but simulated.,Playground- en testnetwerkteams dienen niets in bij de belastingdienst. Rapporten worden aanvaard en opgeslagen\, maar gesimuleerd.
 Register for e-reporting,Registreren voor e-reporting
 Registered,Geregistreerd
@@ -992,6 +1000,7 @@ Select the VAT regime,Selecteer het btw-regime
 Select when VAT becomes due,Selecteer wanneer de btw verschuldigd wordt
 Simulated,Gesimuleerd
 Simulated: this report is recorded but not filed.,Gesimuleerd: dit rapport is opgeslagen maar niet ingediend.
+Status since {0},Status sinds {0}
 Superseded,Vervangen
 Suspended,Opgeschort
 The company is registered for French e-reporting,Het bedrijf is geregistreerd voor Franse e-reporting
@@ -1004,3 +1013,4 @@ Update registration,Registratie bijwerken
 VAT becomes due,Btw verschuldigd
 VAT regime,Btw-regime
 Verify the company first. The signed French mandate is what allows us to report on its behalf.,Verifieer eerst het bedrijf. Het ondertekende Franse mandaat geeft ons de bevoegdheid om namens het bedrijf te rapporteren.
+Where this document stands with each recipient it was sent to.,Waar dit document staat bij elke ontvanger waarnaar het is verzonden.

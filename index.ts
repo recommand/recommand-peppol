@@ -35,6 +35,8 @@ import { initializeS3DeletionCronJobs } from "./data/s3-deletion/cron";
 import { initializeArratechOnboardingCron } from "./data/at/kyc-onboarding";
 import { initializeFrenchReportingDeclarantCron } from "./data/fr-reporting-declarants";
 import { initializeFrenchReportingStatusCron } from "./data/fr-reporting-submissions";
+import { initializeDeliveryReconciliationCron } from "./data/deliveries/reconcile";
+import { initializeDeliveryBackfillCron } from "./data/deliveries/backfill";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
@@ -64,6 +66,8 @@ export async function init(app: RecommandApp, server: Server) {
   initializeArratechOnboardingCron(logger);
   initializeFrenchReportingDeclarantCron(logger);
   initializeFrenchReportingStatusCron(logger);
+  initializeDeliveryReconciliationCron(logger);
+  initializeDeliveryBackfillCron(logger);
 
   initializeMetricsServer(logger);
 

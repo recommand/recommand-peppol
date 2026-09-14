@@ -2,6 +2,7 @@ import { audit, writeAuditEvent, type AuditEventInput } from "@core/lib/audit";
 import { publishEvent } from "@core/data/rules/events";
 import type { Company } from "@peppol/data/companies";
 import {
+  buildOutgoingDocumentDeliveries,
   buildOutgoingDocumentRow,
   buildOutgoingTransferEvents,
   deliveryFacts,
@@ -13,6 +14,13 @@ import {
   uploadDocumentOriginalPayload,
   type OriginalPayloadContainerFormat,
 } from "@peppol/data/offload/storage";
+import {
+  applyStagedDeliveryReport,
+  insertDocumentDeliveries,
+  listDocumentDeliveries,
+  summarizeDeliveryStatus,
+  type DocumentDelivery,
+} from "@peppol/data/deliveries";
 import { sendOutgoingDocumentNotifications } from "@peppol/data/send-document-notifications";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
 import { isUniqueViolation } from "@peppol/utils/db-errors";
@@ -26,11 +34,22 @@ export type {
   OutgoingDocumentPayload,
 } from "@peppol/data/outgoing-document-row";
 
+export type RecordedOutgoingDocument = {
+  id: string;
+  /**
+   * The document's deliveries as read back after recording, so a report that overtook
+   * the send is reflected whichever path applied it. A snapshot: a later report
+   * changes the database and notifies the owner, not this value.
+   */
+  deliveries: DocumentDelivery[];
+};
+
 /**
- * Persists an outgoing document and runs everything that follows from it: the sent
- * event, billing, notification emails, and the audit trail. Shared by every endpoint
- * that produces an outgoing document, so a document reaches the platform the same way
- * whether it was transmitted over Peppol or filed with a tax administration.
+ * Persists an outgoing document with its deliveries and runs everything that follows
+ * from it: the sent event, billing, notification emails, and the audit trail. Shared
+ * by every endpoint that produces an outgoing document, so a document reaches the
+ * platform the same way whether it was transmitted over Peppol or filed with a tax
+ * administration.
  */
 export async function recordOutgoingDocument(options: {
   /** The request that produced the document, for the audit trail. Null when a
@@ -40,6 +59,8 @@ export async function recordOutgoingDocument(options: {
   teamId: string;
   company: Company;
   isPlayground?: boolean;
+  /** Whether the document went over the Peppol test network, for the deliveries. */
+  useTestNetwork?: boolean;
   inputFormat: string;
   document: OutgoingDocumentPayload;
   delivery: OutgoingDocumentDelivery;
@@ -47,7 +68,7 @@ export async function recordOutgoingDocument(options: {
     content: Buffer;
     containerFormat: Exclude<OriginalPayloadContainerFormat, "none">;
   } | null;
-}): Promise<{ id: string }> {
+}): Promise<RecordedOutgoingDocument> {
   const { c, id, teamId, company, document, delivery } = options;
   const facts = deliveryFacts(delivery);
 
@@ -83,22 +104,38 @@ export async function recordOutgoingDocument(options: {
     }
   }
 
-  let transmittedDocument: { id: string };
+  // The document and its deliveries are one write: a document never exists without
+  // the deliveries that say where it stands.
+  let transmittedDocument: RecordedOutgoingDocument;
   try {
-    transmittedDocument = await db
-      .insert(transmittedDocuments)
-      .values(
-        buildOutgoingDocumentRow({
-          id,
+    transmittedDocument = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(transmittedDocuments)
+        .values(
+          buildOutgoingDocumentRow({
+            id,
+            teamId,
+            company,
+            document,
+            delivery,
+            storage,
+          })
+        )
+        .returning({ id: transmittedDocuments.id });
+      const deliveries = await insertDocumentDeliveries(
+        tx,
+        buildOutgoingDocumentDeliveries({
+          transmittedDocumentId: inserted!.id,
           teamId,
           company,
           document,
           delivery,
-          storage,
+          useTestNetwork: options.useTestNetwork ?? false,
+          now: storage.createdAt,
         })
-      )
-      .returning({ id: transmittedDocuments.id })
-      .then((rows) => rows[0]);
+      );
+      return { id: inserted!.id, deliveries };
+    });
   } catch (error) {
     // ap_transaction_id is unique, so a conflict means this exact transaction was
     // already recorded from the access point's report of it (see data/provider-sent),
@@ -117,7 +154,7 @@ export async function recordOutgoingDocument(options: {
         .limit(1)
         .then((rows) => rows[0]);
       if (existingFiling) {
-        return existingFiling;
+        return { ...existingFiling, deliveries: await listDocumentDeliveries(existingFiling.id) };
       }
     }
     const existing =
@@ -138,7 +175,7 @@ export async function recordOutgoingDocument(options: {
         `The access point's report of this transaction was not matched to its envelope claim.`,
       "warning"
     );
-    return existing;
+    return { ...existing, deliveries: await listDocumentDeliveries(existing.id) };
   }
 
   await publishEvent("peppol.document.sent.v1", {
@@ -155,6 +192,11 @@ export async function recordOutgoingDocument(options: {
       peppolConversationId: facts.peppolConversationId,
       envelopeId: facts.envelopeId,
       countryC1: document.countryC1,
+      // As recorded with the document: pending when the access point confirms
+      // later, delivered when the receipt came with the send, null for a report.
+      deliveryStatus: summarizeDeliveryStatus(
+        transmittedDocument.deliveries.map((delivery) => delivery.status)
+      ),
     },
   });
 
@@ -170,6 +212,34 @@ export async function recordOutgoingDocument(options: {
     if (te.length > 0) {
       await db.insert(transferEvents).values(te);
     }
+  }
+
+  // The access point may already have reported what became of this transaction, if
+  // its report overtook the send that produced the document. That report is applied
+  // now so the delivery is never left pending; nothing above is undone, the document
+  // did leave the platform and its transmission was made.
+  if (facts.apTransactionId) {
+    try {
+      await applyStagedDeliveryReport(facts.apTransactionId);
+    } catch (error) {
+      console.error("Failed to apply a staged delivery report:", error);
+      sendSystemAlert(
+        "Delivery Report Not Applied",
+        `Could not check for a delivery report for transaction ${facts.apTransactionId} of document ${transmittedDocument.id}.`,
+        "error"
+      );
+    }
+  }
+
+  // The deliveries are read back rather than returned as inserted: a report may have
+  // been applied in the meantime by whoever got to it first, this call or the webhook
+  // that received it, and the response should say what the database says. It is a
+  // snapshot as of this read; a report that arrives later reaches the owner through
+  // the delivery status event, not through this response.
+  try {
+    transmittedDocument.deliveries = await listDocumentDeliveries(transmittedDocument.id);
+  } catch (error) {
+    console.error("Failed to read back the deliveries of a recorded document:", error);
   }
 
   // Send notification emails to configured addresses

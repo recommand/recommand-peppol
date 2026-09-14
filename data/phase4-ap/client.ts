@@ -11,6 +11,8 @@ export function fetchPhase4Ap(url: string, options: { useTestNetwork?: boolean }
   });
 }
 
+import type { DeliveryFailureCategory } from "@peppol/data/deliveries/model";
+
 export type SendAs4Response = {
   ok: boolean;
   peppolMessageId: string | null;
@@ -21,6 +23,9 @@ export type SendAs4Response = {
   apTransactionId?: string | null;
   sendingException?: {
     message: string;
+    // Why the send was refused, when the adapter can tell. Left out when all it has
+    // is the access point's free-text message, which counts as a transport failure.
+    category?: DeliveryFailureCategory;
   };
 };
 
