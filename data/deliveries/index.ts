@@ -8,7 +8,8 @@ import {
 } from "@peppol/db/schema";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { db } from "@recommand/db";
-import { and, eq, inArray, lt, type SQL } from "drizzle-orm";
+import type { Logger } from "@recommand/lib/logger";
+import { and, eq, exists, inArray, lt, notExists, type SQL } from "drizzle-orm";
 import { runEmailFallbackForDocument } from "./email-fallback-db";
 import {
   attachDeliveries,
@@ -22,8 +23,8 @@ import {
 export * from "./model";
 
 // A report waits for its document for as long as a send can plausibly take to
-// record it, with a wide margin. Older ones belong to transactions that will never
-// get a document here and are dropped.
+// record it, with a wide margin. Older unmatched reports are dropped; a report
+// whose delivery exists is retained until it can be applied.
 const STAGED_REPORT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type ProviderReportOutcome =
@@ -421,13 +422,55 @@ export async function applyStagedDeliveryReports(
   }
 }
 
+function matchingStagedDelivery() {
+  return db
+    .select({ id: documentDeliveries.id })
+    .from(documentDeliveries)
+    .where(and(
+      eq(documentDeliveries.provider, providerDeliveryReports.provider),
+      eq(documentDeliveries.providerTransactionId, providerDeliveryReports.providerTransactionId)
+    ));
+}
+
+export async function drainStagedDeliveryReports(logger: Logger): Promise<number> {
+  const reports = await db
+    .select({
+      provider: providerDeliveryReports.provider,
+      reference: providerDeliveryReports.providerTransactionId,
+    })
+    .from(providerDeliveryReports)
+    .where(exists(matchingStagedDelivery()))
+    .orderBy(
+      providerDeliveryReports.reportedAt,
+      providerDeliveryReports.provider,
+      providerDeliveryReports.providerTransactionId
+    )
+    .limit(100);
+  let applied = 0;
+  for (const report of reports) {
+    try {
+      if (await applyStagedDeliveryReport(report.provider, report.reference) === "applied") {
+        applied++;
+      }
+    } catch (error) {
+      logger.error(
+        `Could not replay delivery report ${report.provider}/${report.reference}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+  return applied;
+}
+
 export async function pruneStagedDeliveryReports(): Promise<number> {
   const deleted = await db
     .delete(providerDeliveryReports)
     .where(
-      lt(
-        providerDeliveryReports.reportedAt,
-        new Date(Date.now() - STAGED_REPORT_RETENTION_MS)
+      and(
+        notExists(matchingStagedDelivery()),
+        lt(
+          providerDeliveryReports.reportedAt,
+          new Date(Date.now() - STAGED_REPORT_RETENTION_MS)
+        )
       )
     )
     .returning({ providerTransactionId: providerDeliveryReports.providerTransactionId });

@@ -44,6 +44,7 @@ mock.module("@peppol/data/deliveries", () => ({
     applied.push(report);
     return "applied";
   },
+  drainStagedDeliveryReports: async () => 0,
   pruneStagedDeliveryReports: async () => 0,
 }));
 

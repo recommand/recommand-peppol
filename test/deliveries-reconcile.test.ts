@@ -68,6 +68,7 @@ mock.module("@peppol/data/deliveries", () => ({
     applied.push(report.providerTransactionId);
     return "applied";
   },
+  drainStagedDeliveryReports: async () => 0,
   pruneStagedDeliveryReports: async () => {
     pruned.push(1);
     return 1;

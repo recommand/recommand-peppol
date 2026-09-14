@@ -329,6 +329,72 @@ describe.skipIf(!testDatabaseUrl)("document deliveries against PostgreSQL", () =
     expect(await deliveryStatusEventRows(pool)).toHaveLength(1);
   });
 
+  it("replays an acknowledged report after recording fails, without a new webhook or provider response", async () => {
+    await deliveries.applyProviderDeliveryReport(peppolReport({ providerTransactionId: "tx-recover" }));
+    await pool.query(`
+      CREATE FUNCTION refuse_staged_event() RETURNS trigger AS $$
+      BEGIN RAISE EXCEPTION 'event storage unavailable'; END;
+      $$ LANGUAGE plpgsql;
+      CREATE TRIGGER refuse_staged_event BEFORE INSERT ON rule_action_deliveries
+        FOR EACH ROW EXECUTE FUNCTION refuse_staged_event();
+    `);
+    try {
+      await record("doc_recover", "tx-recover");
+      expect((await deliveryRows(pool, "doc_recover"))[0]!.status).toBe("pending");
+      await pool.query("UPDATE peppol_provider_delivery_reports SET reported_at = now() - interval '8 days'");
+      expect(await deliveries.pruneStagedDeliveryReports()).toBe(0);
+    } finally {
+      await pool.query("DROP TRIGGER refuse_staged_event ON rule_action_deliveries; DROP FUNCTION refuse_staged_event()");
+    }
+    let providerCalls = 0;
+    mock.module("@peppol/data/at/client", () => ({
+      getArratechConfig: () => ({ orgId: "test" }),
+      fetchArratechJson: async () => { providerCalls++; throw new Error("provider unavailable"); },
+    }));
+    const { runDeliveryReconciliationTick } = await import("../../data/deliveries/reconcile");
+    const logger = { info: () => {}, warn: () => {}, error: () => {} } as never;
+    await runDeliveryReconciliationTick(logger);
+    await runDeliveryReconciliationTick(logger);
+    expect(providerCalls).toBe(0);
+    expect((await deliveryRows(pool, "doc_recover"))[0]!.status).toBe("failed");
+    expect(await deliveryStatusEventRows(pool)).toHaveLength(1);
+    expect((await pool.query("SELECT * FROM peppol_provider_delivery_reports")).rows).toEqual([]);
+  });
+
+  it("retains a failing report while applying another and only prunes unmatched expired reports", async () => {
+    for (const suffix of ["bad", "good", "missing"]) {
+      await deliveries.applyProviderDeliveryReport(emailReport({ providerTransactionId: `msg-${suffix}` }));
+    }
+    for (const suffix of ["bad", "good"]) {
+      await seedDocument(pool, { id: `doc_${suffix}` });
+      await seedDelivery(pool, { id: `dlv_${suffix}`, documentId: `doc_${suffix}`, channel: "email", provider: "postmark", providerTransactionId: `msg-${suffix}` });
+    }
+    await pool.query(`
+      UPDATE peppol_provider_delivery_reports SET reported_at = now() - interval '8 days';
+      CREATE FUNCTION refuse_one_delivery() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.id = 'dlv_bad' THEN RAISE EXCEPTION 'delivery unavailable'; END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+      CREATE TRIGGER refuse_one_delivery BEFORE UPDATE ON peppol_document_deliveries
+        FOR EACH ROW EXECUTE FUNCTION refuse_one_delivery();
+    `);
+    const errors: string[] = [];
+    const logger = { error: (message: string) => errors.push(message) } as never;
+    try {
+      expect(await deliveries.drainStagedDeliveryReports(logger)).toBe(1);
+      expect(errors).toHaveLength(1);
+      expect(await deliveries.pruneStagedDeliveryReports()).toBe(1);
+      expect((await pool.query("SELECT provider_transaction_id FROM peppol_provider_delivery_reports")).rows).toEqual([{ provider_transaction_id: "msg-bad" }]);
+    } finally {
+      await pool.query("DROP TRIGGER refuse_one_delivery ON peppol_document_deliveries; DROP FUNCTION refuse_one_delivery()");
+    }
+    await Promise.all([deliveries.drainStagedDeliveryReports(logger), deliveries.drainStagedDeliveryReports(logger)]);
+    expect(await deliveryStatusEventRows(pool)).toHaveLength(2);
+    expect((await pool.query("SELECT * FROM peppol_provider_delivery_reports")).rows).toEqual([]);
+  });
+
   it("matches a mail service report by our delivery id before the message id", async () => {
     await seedDocument(pool, { id: "doc_email", emailRecipients: ["a@example.com", "b@example.com"] });
     // The first message's id was not recorded; the second one's was.
