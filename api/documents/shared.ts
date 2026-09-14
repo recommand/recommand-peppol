@@ -84,7 +84,7 @@ export const deliveryResponse = z.object({
     }).openapi({
         description: "The identifiers the delivery is known by on its channel: the AS4 and envelope IDs for `peppol` deliveries, the mail service's `messageId` for `email` deliveries.",
     }),
-}).openapi({ ref: "Delivery" });
+}).openapi({ ref: "DocumentDelivery" });
 
 export const transmittedDocumentResponse = z.object({
     id: z.string().openapi({
