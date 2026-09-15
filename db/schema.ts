@@ -881,6 +881,10 @@ export const documentDeliveries = pgTable(
     providerPayload: jsonb("provider_payload").$type<Record<string, unknown>>(),
     // When the provider was last asked about a delivery that was still pending.
     lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    // When the asking stopped: a delivery still pending after the provider had every
+    // chance to settle it is left as it is, and reported once, instead of being asked
+    // about forever. Null while it is still asked about.
+    reconciliationEndedAt: timestamp("reconciliation_ended_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
