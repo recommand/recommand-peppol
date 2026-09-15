@@ -1,6 +1,6 @@
-import { companies, companyIdentifiers, teamExtensions } from "@peppol/db/schema";
+import { companies, companyIdentifiers, companyVerificationLog, teamExtensions } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { eq, and, or, isNull, asc } from "drizzle-orm";
+import { eq, and, or, isNull, asc, inArray } from "drizzle-orm";
 import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@directory/utils/util";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
@@ -17,6 +17,8 @@ import { enqueueS3PrefixDeletions } from "./s3-deletion";
 import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
+import { planCompanyCountryChange } from "./company-country-change";
+import { lockCompanyRow } from "./company-row-lock";
 import { getPartnerRegisteredFrenchReportingDeclarants } from "./fr-reporting-declarants";
 
 export type Company = typeof companies.$inferSelect;
@@ -160,7 +162,12 @@ function validateCompanyCountryIdentifiers({
   });
 }
 
-export async function createCompany(company: InsertCompany & { skipDefaultCompanySetup: boolean }): Promise<Company> {
+/**
+ * Creates a company on the providers its country is served by. Callers name a
+ * country, never a provider: the mapping is ours, and a company on the wrong one
+ * cannot be registered or verified.
+ */
+export async function createCompany(company: Omit<InsertCompany, "accessPointProvider" | "smpProvider"> & { skipDefaultCompanySetup: boolean }): Promise<Company> {
   const cleanedVat = cleanVatNumber(company.vatNumber);
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
   const defaultPeppolProviders = resolveDefaultPeppolProviders(company.country);
@@ -182,8 +189,8 @@ export async function createCompany(company: InsertCompany & { skipDefaultCompan
   const createdCompany = await db
     .insert(companies)
     .values({
-      ...defaultPeppolProviders,
       ...company,
+      ...defaultPeppolProviders,
     })
     .returning()
     .then((rows) => rows[0]);
@@ -277,8 +284,10 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   }
 
   const effectiveCountry = company.country ?? oldCompany.country;
-  const effectiveVat = newCleanedVatNumber ?? cleanVatNumber(oldCompany.vatNumber);
-  const effectiveEnterpriseNumber = newCleanedEnterpriseNumber ?? cleanEnterpriseNumber(oldCompany.enterpriseNumber);
+  // A number the request sets to null is being cleared, which a move to a country
+  // without VAT registration needs; only an absent field keeps the current value.
+  const effectiveVat = company.vatNumber !== undefined ? newCleanedVatNumber : cleanVatNumber(oldCompany.vatNumber);
+  const effectiveEnterpriseNumber = company.enterpriseNumber !== undefined ? newCleanedEnterpriseNumber : cleanEnterpriseNumber(oldCompany.enterpriseNumber);
 
   validateCompanyCountryIdentifiers({
     country: effectiveCountry,
@@ -305,6 +314,37 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     updatedFields.verificationProofReference = null;
   }
 
+  const useTestNetwork = teamExtension?.useTestNetwork ?? false;
+  const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
+  const verificationRequirements = teamExtension?.verificationRequirements ?? undefined;
+  const wasRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: oldCompany.isSmpRecipient, isVerified: oldCompany.isVerified, verificationRequirements });
+  const shouldBeRegistered = shouldRegisterWithSmp({
+    isPlayground: isPlaygroundTeam,
+    useTestNetwork,
+    isSmpRecipient: updatedFields.isSmpRecipient ?? oldCompany.isSmpRecipient,
+    isVerified: updatedFields.isVerified ?? oldCompany.isVerified,
+    verificationRequirements,
+  });
+
+  const newCountry = company.country && company.country !== oldCompany.country ? company.country : null;
+  if (newCountry) {
+    if (!wasRegistered && shouldBeRegistered) {
+      // The country path never talks to an SMP; a registration is a separate update.
+      throw new UserFacingError("Change the country first and register the company as a recipient in a separate update.");
+    }
+    const updatedCompany = await applyCompanyCountryChange({
+      company,
+      oldCompany,
+      newCountry,
+      updatedFields,
+      enterpriseNumber: effectiveEnterpriseNumber ?? null,
+      vatNumber: effectiveVat ?? null,
+      teamExtension,
+    });
+    await finishCompanyUpdate({ oldCompany, updatedCompany, isPlaygroundTeam, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
+    return updatedCompany;
+  }
+
   const updatedCompany = await db
     .update(companies)
     .set(updatedFields)
@@ -313,12 +353,6 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     )
     .returning()
     .then((rows) => rows[0]);
-
-  const useTestNetwork = teamExtension?.useTestNetwork ?? false;
-  const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
-  const verificationRequirements = teamExtension?.verificationRequirements ?? undefined;
-  const wasRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: oldCompany.isSmpRecipient, isVerified: oldCompany.isVerified, verificationRequirements });
-  const shouldBeRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: updatedCompany.isSmpRecipient, isVerified: updatedCompany.isVerified, verificationRequirements });
 
   if (!wasRegistered && shouldBeRegistered) {
     try {
@@ -367,6 +401,23 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     }
   }
 
+  await finishCompanyUpdate({ oldCompany, updatedCompany, isPlaygroundTeam, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
+
+  return updatedCompany;
+}
+
+/** What every successful update ends with: the alert, and the revocations a number change brings. */
+async function finishCompanyUpdate({
+  oldCompany,
+  updatedCompany,
+  isPlaygroundTeam,
+  numbersChanged,
+}: {
+  oldCompany: Company;
+  updatedCompany: Company;
+  isPlaygroundTeam: boolean;
+  numbersChanged: boolean;
+}): Promise<void> {
   if (!isPlaygroundTeam) {
     sendSystemAlert(
       "Company Updated",
@@ -374,7 +425,7 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     );
   }
 
-  if (enterpriseNumberChanged || vatNumberChanged) {
+  if (numbersChanged) {
     await revokeOpenCompanyVerificationSessions(updatedCompany.id);
 
     if (oldCompany.isVerified && !updatedCompany.isVerified) {
@@ -386,8 +437,154 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
       });
     }
   }
+}
 
-  return updatedCompany;
+/**
+ * Whether a verification session went past the empty link that is created with
+ * every company: a representative submitted the form, an identity check ran, a
+ * mandate was signed, or a decision was recorded. Such a session may have been
+ * filed with a provider under the company's country, so the country is fixed. An
+ * empty session that was revoked (for example because the enterprise number
+ * changed) is rejected without anyone having started it, so the fields a
+ * submission fills in decide, not the status alone.
+ */
+export function isStartedVerificationSession(session: {
+  status: string;
+  firstName: string | null;
+  verificationProofReference: string | null;
+  mandateAcceptedAt: Date | null;
+  arratechOnboarding: unknown;
+}): boolean {
+  return (
+    ["idVerificationRequested", "inReview", "verified"].includes(session.status) ||
+    session.firstName !== null ||
+    session.verificationProofReference !== null ||
+    session.mandateAcceptedAt !== null ||
+    session.arratechOnboarding !== null
+  );
+}
+
+/**
+ * Moves a company to another country in one transaction: the country, the
+ * providers that serve it, its default identifiers and the rest of the update land
+ * together or not at all. The company row is locked for the duration, which is
+ * the lock a representative's submission and identifier writes take too, so a
+ * verification cannot start under the old country while it moves. Nothing in here
+ * talks to an SMP: a country change is refused while the company is registered,
+ * and updateCompany refuses to combine it with a registration.
+ */
+async function applyCompanyCountryChange({
+  company,
+  oldCompany,
+  newCountry,
+  updatedFields,
+  enterpriseNumber,
+  vatNumber,
+  teamExtension,
+}: {
+  company: Partial<InsertCompany> & { id: string; teamId: string };
+  oldCompany: Company;
+  newCountry: Company["country"];
+  updatedFields: Partial<InsertCompany>;
+  enterpriseNumber: string | null;
+  vatNumber: string | null;
+  teamExtension: Awaited<ReturnType<typeof getTeamExtension>>;
+}): Promise<Company> {
+  return await db.transaction(async (tx) => {
+    const lockedCompany = await lockCompanyRow(tx, company.id, "update");
+    if (!lockedCompany || lockedCompany.teamId !== company.teamId) {
+      throw new UserFacingError("Company not found");
+    }
+    // Everything decided before the lock was decided on oldCompany. An update that
+    // slipped in between (registering the company, verifying it, changing a number)
+    // makes those decisions stale, so the request is refused rather than applied.
+    if (
+      lockedCompany.isSmpRecipient !== oldCompany.isSmpRecipient ||
+      lockedCompany.isVerified !== oldCompany.isVerified ||
+      lockedCompany.country !== oldCompany.country ||
+      lockedCompany.smpProvider !== oldCompany.smpProvider ||
+      lockedCompany.accessPointProvider !== oldCompany.accessPointProvider ||
+      lockedCompany.enterpriseNumber !== oldCompany.enterpriseNumber ||
+      lockedCompany.vatNumber !== oldCompany.vatNumber
+    ) {
+      throw new UserFacingError("The company changed while it was being updated. Please reload and try again.");
+    }
+    const networkRegistered = shouldRegisterWithSmp({
+      isPlayground: teamExtension?.isPlayground ?? false,
+      useTestNetwork: teamExtension?.useTestNetwork ?? false,
+      isSmpRecipient: lockedCompany.isSmpRecipient,
+      isVerified: lockedCompany.isVerified,
+      verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+    });
+    // A submission's claim on a session waits for the row lock above; the
+    // sessions are read after taking it so one that got there first is seen.
+    const sessions = await tx
+      .select({
+        status: companyVerificationLog.status,
+        firstName: companyVerificationLog.firstName,
+        verificationProofReference: companyVerificationLog.verificationProofReference,
+        mandateAcceptedAt: companyVerificationLog.mandateAcceptedAt,
+        arratechOnboarding: companyVerificationLog.arratechOnboarding,
+      })
+      .from(companyVerificationLog)
+      .where(eq(companyVerificationLog.companyId, company.id));
+    const identifiers = await tx
+      .select({ id: companyIdentifiers.id, scheme: companyIdentifiers.scheme, identifier: companyIdentifiers.identifier })
+      .from(companyIdentifiers)
+      .where(eq(companyIdentifiers.companyId, company.id))
+      .orderBy(asc(companyIdentifiers.scheme), asc(companyIdentifiers.identifier));
+    const plan = planCompanyCountryChange({
+      oldCompany: lockedCompany,
+      newCountry,
+      enterpriseNumber,
+      vatNumber,
+      requestedEnterpriseNumberScheme: company.enterpriseNumberScheme,
+      identifiers,
+      teamExtension,
+      verificationStarted: lockedCompany.isVerified || sessions.some(isStartedVerificationSession),
+      networkRegistered,
+    });
+    // The new default addresses must not be held by another recipient already.
+    for (const identifier of plan.createIdentifiers) {
+      if (!(await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, undefined, company.id))) {
+        throw new UserFacingError(`Identifier ${identifier.scheme}:${identifier.identifier} is already registered as recipient with another company.`);
+      }
+    }
+    if (plan.deleteIdentifierIds.length > 0) {
+      await tx
+        .delete(companyIdentifiers)
+        .where(and(eq(companyIdentifiers.companyId, company.id), inArray(companyIdentifiers.id, plan.deleteIdentifierIds)));
+    }
+    if (plan.createIdentifiers.length > 0) {
+      await tx
+        .insert(companyIdentifiers)
+        .values(plan.createIdentifiers.map((identifier) => ({ companyId: company.id, ...identifier })));
+    }
+    const updatedCompany = await tx
+      .update(companies)
+      .set({
+        ...updatedFields,
+        ...plan.providers,
+        ...(plan.enterpriseNumberScheme !== undefined ? { enterpriseNumberScheme: plan.enterpriseNumberScheme } : {}),
+      })
+      .where(and(eq(companies.teamId, company.teamId), eq(companies.id, company.id)))
+      .returning()
+      .then((rows) => rows[0]);
+    // The verification links handed out so far still work: their untouched
+    // sessions take over the company details they will be checked against.
+    await tx
+      .update(companyVerificationLog)
+      .set({
+        companyName: updatedCompany.name,
+        enterpriseNumber: updatedCompany.enterpriseNumber,
+        address: updatedCompany.address,
+        postalCode: updatedCompany.postalCode,
+        city: updatedCompany.city,
+        country: updatedCompany.country,
+      })
+      .where(and(eq(companyVerificationLog.companyId, company.id), eq(companyVerificationLog.status, "opened")));
+    return updatedCompany;
+  });
 }
 
 export async function deleteCompany({

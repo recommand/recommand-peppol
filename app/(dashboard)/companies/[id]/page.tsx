@@ -48,6 +48,7 @@ export default function CompanyDetailPage() {
   const isPlayground = useIsPlayground();
   const verificationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isVerificationRequired = verificationRequirements !== null && (verificationRequirements === "strict" || verificationRequirements === "lax") && !(isVerified ?? company?.isVerified);
+  const countryChanged = Boolean(company && formData.country !== company.country);
   const verificationIdentityChanged = Boolean(
     (isVerified ?? company?.isVerified) && company && (
       cleanEnterpriseNumber(formData.enterpriseNumber) !== cleanEnterpriseNumber(company.enterpriseNumber) ||
@@ -377,6 +378,7 @@ export default function CompanyDetailPage() {
               isEditing={true}
               showEnterpriseNumberForBelgianCompanies={true}
               showVerificationWarning={verificationIdentityChanged}
+              showCountryChangeWarning={countryChanged}
             />
           </CardContent>
         </Card>
@@ -384,6 +386,7 @@ export default function CompanyDetailPage() {
         {activeTeam && (
           <div className="space-y-4">
             <CompanyIdentifiersManager
+              key={`${company.id}:${company.country}`}
               teamId={activeTeam.id}
               companyId={company.id}
             />

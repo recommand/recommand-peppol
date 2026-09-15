@@ -13,6 +13,8 @@ import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./sm
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { submitVerificationIdentity, restartVerificationIdentity } from '@peppol/data/verification-submission';
+import { assertCompanyIdentifiersAllowed } from "./company-identifiers";
+import { lockCompanyRow, sameCompanyIdentity } from "./company-row-lock";
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
 export type CompanyVerificationStatus = CompanyVerificationLog["status"];
@@ -267,6 +269,10 @@ export async function createCompanyVerificationLog({
     throw new UserFacingError("Company not found");
   }
 
+  // An identifier the company's SMP refuses would block the onboarding after the
+  // representative has been through the identity check; it is refused here instead.
+  await assertCompanyIdentifiersAllowed(company, await getTeamExtension(teamId));
+
   const log = await db
     .insert(companyVerificationLog)
     .values({
@@ -297,6 +303,10 @@ export async function submitIdentityForm(
   if (log.status !== "opened") {
     throw new UserFacingError("This verification has already been submitted.");
   }
+
+  // Identifiers may have changed since the link was created; the mandate the
+  // representative signs lists them, so they have to be ones the SMP registers.
+  await assertCompanyIdentifiersAllowed(company, await getTeamExtension(company.teamId));
 
   // Companies filed with Arratech sign a mandate, and their identity check is
   // what signs it, so it has to be accepted before we hand over to Didit.
@@ -343,13 +353,20 @@ export async function submitIdentityForm(
     mandateAccepted,
     countrySpecific,
   }, {
-    claimOpenedSubmission: async snapshot => {
-      const rows = await db.update(companyVerificationLog)
+    claimOpenedSubmission: async snapshot => db.transaction(async tx => {
+      // The mandate and country rules above were checked against this company; a
+      // country change holds its row for update, so the claim waits for one in
+      // progress and is refused once the company is no longer the one checked.
+      const current = await lockCompanyRow(tx, company.id, 'share');
+      if (!current || !sameCompanyIdentity(current, company)) {
+        throw new UserFacingError('The company changed while submitting. Please reload the page and try again.');
+      }
+      const rows = await tx.update(companyVerificationLog)
         .set({ ...snapshot, status: 'idVerificationRequested' })
         .where(and(eq(companyVerificationLog.id, companyVerificationLogId), eq(companyVerificationLog.status, 'opened')))
         .returning({ id: companyVerificationLog.id });
       return rows.length === 1;
-    },
+    }),
     startIdentityVerification: () => createIdVerificationUrl(companyVerificationLogId, company, {
       firstName: effectiveFirstName,
       lastName: effectiveLastName,

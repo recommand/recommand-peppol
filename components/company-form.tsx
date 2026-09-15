@@ -16,9 +16,10 @@ type CompanyFormProps = {
     isEditing?: boolean;
     showEnterpriseNumberForBelgianCompanies?: boolean;
     showVerificationWarning?: boolean;
+    showCountryChangeWarning?: boolean;
 };
 
-export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing = false, showEnterpriseNumberForBelgianCompanies = false, showVerificationWarning = false }: CompanyFormProps) {
+export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing = false, showEnterpriseNumberForBelgianCompanies = false, showVerificationWarning = false, showCountryChangeWarning = false }: CompanyFormProps) {
     const { t } = useTranslation();
     const mergeCompany = (updates: Partial<Company>) => {
         onChange({ ...company, ...updates });
@@ -45,6 +46,14 @@ export function CompanyForm({ company, onChange, onSubmit, onCancel, isEditing =
                 <p className="text-xs text-pretty text-muted-foreground">{t`If enabled, the company will be registered as a recipient in our SMP (the Peppol address book). This will allow you to send and receive documents. If disabled, you will only be able to send documents via Recommand.`}</p>
             </div>
             <div className="space-y-3 pt-2">
+                {showCountryChangeWarning && (
+                    <StatusMessage
+                        tone="warning"
+                        icon={AlertTriangle}
+                        title={t`Changing the country`}
+                        description={t`The country can only be changed before verification starts and before the company is registered on the Peppol network. Saving replaces the default Peppol identifiers with those of the new country, and any identifier you added yourself has to be valid there. Enter the VAT number of the new country as well. Afterwards, create a new company instead, or contact support@recommand.eu.`}
+                    />
+                )}
                 {showVerificationWarning && (
                     <StatusMessage
                         tone="warning"

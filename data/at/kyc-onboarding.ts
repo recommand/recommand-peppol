@@ -19,7 +19,7 @@ import { db } from '@recommand/db';
 import type { Logger } from '@recommand/lib/logger';
 import { Cron } from 'croner';
 import { UserFacingError } from '@directory/utils/util';
-import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { fetchArratech, getArratechConfig } from '@peppol/data/at/client';
 import { buildArratechKycFiling } from '@peppol/data/at/kyc';
 import {
@@ -28,7 +28,13 @@ import {
   type KycRecord,
   readKycResponse,
 } from '@peppol/data/at/kyc-onboarding-client';
-import type { ArratechOnboarding } from '@peppol/data/at/kyc-onboarding-state';
+import {
+  assertBlockedOnboardingResumable,
+  sessionMatchesCompany,
+  UNSUPPORTED_IDENTIFIER_BLOCK,
+  type ArratechOnboarding,
+} from '@peppol/data/at/kyc-onboarding-state';
+import { findUnsupportedIdentifiers } from '@peppol/data/company-identifier-policy';
 import { validateVerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { getParticipantByIdentifier, upsertCompanyRegistrations } from '@peppol/data/at/smp';
 
@@ -188,15 +194,7 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
           'A signed mandate and completed identity verification are required.',
         );
       }
-      if (
-        log.enterpriseNumber !== company.enterpriseNumber ||
-        (state.identitySupplement && state.identitySupplement.verificationLogId !== log.id) ||
-        log.companyName !== company.name ||
-        log.country !== company.country ||
-        log.address !== company.address ||
-        log.postalCode !== company.postalCode ||
-        log.city !== company.city
-      ) {
+      if (!sessionMatchesCompany(log, company, state)) {
         throw new KycOnboardingError(
           'Company details changed since the mandate was signed; start a new verification.',
         );
@@ -211,9 +209,7 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
         throw new KycOnboardingError('Reviewed establishment data conflicts with the submitted verification.');
       }
       if (!identifiers.length || identifiers.some((identifier) => identifier.scheme !== '0225')) {
-        throw new KycOnboardingError(
-          'Automatic French onboarding requires 0225 participant identifiers.',
-        );
+        throw new KycOnboardingError(UNSUPPORTED_IDENTIFIER_BLOCK);
       }
       if (!state.filing) {
         const filing = await diagnostic.step('build-filing', () => buildArratechKycFiling({
@@ -300,7 +296,7 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
       const retryable = !(error instanceof UserFacingError) && (!(error instanceof KycOnboardingError) || error.retryable);
       state.attempts++;
       diagnostic.emit('warn', `attempt-failed phase=${state.phase} attempts=${state.attempts} retryable=${retryable}`);
-      const expired = Date.now() - Date.parse(state.startedAt) > 72 * 60 * 60 * 1000;
+      const expired = Date.now() - Date.parse(state.resumedAt ?? state.startedAt) > 72 * 60 * 60 * 1000;
       if (!retryable || expired || (state.phase === 'submit' && state.attempts >= 12)) {
         state.phase = 'blocked';
         await diagnostic.step('save-blocked', () => saveState(id, state, message));
@@ -322,6 +318,63 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
       }
     }
   }));
+}
+
+async function isLatestVerificationSession(id: string, companyId: string): Promise<boolean> {
+  const [latest] = await db
+    .select({ id: companyVerificationLog.id })
+    .from(companyVerificationLog)
+    .where(eq(companyVerificationLog.companyId, companyId))
+    .orderBy(desc(companyVerificationLog.createdAt), desc(companyVerificationLog.id))
+    .limit(1);
+  return latest?.id === id;
+}
+
+/**
+ * Hands a blocked onboarding back to the worker after support corrected what
+ * blocked it. The identity check and mandate stay as they are; the worker takes it
+ * from the first phase again, with the provider's own approval and activation.
+ * Refuses, without writing, anything assertBlockedOnboardingResumable does not allow.
+ */
+export async function resumeBlockedArratechOnboarding(
+  id: string,
+  context: Context,
+): Promise<{ companyId: string; teamId: string; state: ArratechOnboarding; previousError: string | null }> {
+  return withVerificationLock(id, async () => {
+    const log = await getCompanyVerificationLog(id);
+    if (!log) throw new UserFacingError('Verification session not found');
+    const company = await getCompanyById(log.companyId);
+    if (!company) throw new UserFacingError('Company not found');
+    const team = await getTeamExtension(company.teamId);
+    const identifiers = await getCompanyIdentifiers(company.id);
+    const state = assertBlockedOnboardingResumable({
+      log,
+      company,
+      team,
+      identifiers,
+      isLatest: await isLatestVerificationSession(id, company.id),
+      unsupportedIdentifiers: findUnsupportedIdentifiers(
+        { smpProvider: company.smpProvider, isPlayground: team?.isPlayground, useTestNetwork: team?.useTestNetwork },
+        identifiers,
+      ),
+    });
+    await saveState(id, state);
+    await audit(context, {
+      action: 'update',
+      subsystem: 'admin.company_verification',
+      objectType: 'peppol.company_verification',
+      objectId: id,
+      teamId: company.teamId,
+      before: { phase: 'blocked', errorMessage: log.errorMessage },
+      after: { phase: state.phase, attempts: state.attempts, nextAttemptAt: state.nextAttemptAt },
+      metadata: {
+        companyId: company.id,
+        reason: 'resume_blocked_onboarding',
+        identifiers: identifiers.map((identifier) => `${identifier.scheme}:${identifier.identifier}`),
+      },
+    });
+    return { companyId: company.id, teamId: company.teamId, state, previousError: log.errorMessage };
+  });
 }
 
 export function initializeArratechOnboardingCron(logger: Logger): void {
