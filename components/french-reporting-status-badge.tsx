@@ -13,6 +13,7 @@ export type FrenchReportingStatusValue =
 type FrenchReportingStatusBadgeProps = {
   reporting: {
     reportingStatus: FrenchReportingStatusValue;
+    final?: boolean;
     periodEnd: string | null;
     outcomeCode: string | null;
     checkedAt: string | null;
@@ -23,8 +24,8 @@ type FrenchReportingStatusBadgeProps = {
 
 /**
  * Where a filed report stands with the tax administration. A report is accepted
- * long before it is filed, so the badge tells those apart instead of showing a
- * single "sent".
+ * long before it is filed, and filed before the tax administration has answered,
+ * so the badge tells those apart instead of showing a single "sent".
  */
 export function FrenchReportingStatusBadge({ reporting, size = "md" }: FrenchReportingStatusBadgeProps) {
   const { t } = useTranslation();
@@ -49,6 +50,10 @@ export function FrenchReportingStatusBadge({ reporting, size = "md" }: FrenchRep
     rejected: "destructive",
   };
 
+  const filed =
+    reporting.reportingStatus === "filed" || reporting.reportingStatus === "filed_rectificative";
+  const awaitingOutcome = filed && !reporting.simulated && reporting.final === false;
+
   const details: string[] = [];
   if (reporting.simulated) {
     details.push(t`Simulated: this report is recorded but not filed.`);
@@ -59,13 +64,20 @@ export function FrenchReportingStatusBadge({ reporting, size = "md" }: FrenchRep
   if (reporting.outcomeCode) {
     details.push(t`Outcome code ${reporting.outcomeCode}.`);
   }
+  if (awaitingOutcome) {
+    details.push(t`The tax administration has not accepted the filing yet; the report is final once its outcome code is 300.`);
+  }
   if (reporting.checkedAt) {
     details.push(t`Last checked ${new Date(reporting.checkedAt).toLocaleString()}.`);
   }
 
   const badge = (
     <Badge variant={variants[reporting.reportingStatus]} className={size === "sm" ? "text-xs" : undefined}>
-      {reporting.simulated ? t`Simulated` : labels[reporting.reportingStatus]}
+      {reporting.simulated
+        ? t`Simulated`
+        : awaitingOutcome
+          ? t`Filed, awaiting outcome`
+          : labels[reporting.reportingStatus]}
     </Badge>
   );
 

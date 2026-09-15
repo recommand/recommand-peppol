@@ -976,6 +976,8 @@ Failed to load the e-reporting registration,Laden van de e-reporting-registratie
 Failed to register the company for e-reporting,Registreren van het bedrijf voor e-reporting mislukt
 Filed by corrective filing,Aangegeven via corrigerende aangifte
 Filed,Aangegeven
+Filed\, awaiting outcome,Aangegeven\, wacht op uitkomst
+The tax administration has not accepted the filing yet; the report is final once its outcome code is 300.,De belastingdienst heeft de aangifte nog niet aanvaard; het rapport is definitief zodra de uitkomstcode 300 is.
 Franchise en base de TVA,Franchise en base de TVA
 French e-reporting,Franse e-reporting
 Last checked {0}.,Laatst gecontroleerd op {0}.

@@ -112,6 +112,9 @@ const documentReportingStatusPayloadSchema = z.object({
   periodEnd: z.string().nullable().optional(),
   submissionId: z.string().nullable().optional(),
   outcomeCode: z.string().nullable().optional(),
+  // The outcome moves on its own, so an event can be about the outcome alone.
+  previousOutcomeCode: z.string().nullable().optional(),
+  final: z.boolean().optional(),
 });
 
 const deliveryStatusLabels: Record<(typeof deliveryStatuses)[number], string> = {
@@ -366,6 +369,7 @@ export function registerPeppolEventTypes() {
       { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
       { path: "payload.reportingStatus", label: "Reporting status", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...reportingStatuses], enumLabels: reportingStatusLabels },
       { path: "payload.outcomeCode", label: "Outcome code", valueType: "string", operators: ["eq", "neq", "exists"] },
+      { path: "payload.final", label: "Final", valueType: "boolean", operators: ["eq"] },
     ],
     webhook: {
       eventType: "document.reporting_status_changed",
@@ -381,12 +385,14 @@ export function registerPeppolEventTypes() {
           periodEnd: payload.periodEnd ?? null,
           submissionId: payload.submissionId ?? null,
           outcomeCode: payload.outcomeCode ?? null,
+          previousOutcomeCode: payload.previousOutcomeCode ?? null,
+          final: payload.final ?? false,
         };
       },
     },
     ui: {
       label: "Report status changed",
-      description: "A French e-reporting report was filed, superseded or rejected by the tax administration",
+      description: "A French e-reporting report was filed, superseded or rejected, or the tax administration's outcome code for its filing changed; the report is final once it is filed with outcome code 300 or rejected",
       group: "Documents",
     },
   });

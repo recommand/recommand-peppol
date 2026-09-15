@@ -271,12 +271,12 @@ export const frenchB2BiPaymentReportSchema = z
     ...frenchB2BiReportBaseShape,
     type: z.literal("payment").openapi({
       description:
-        "Choose `payment` to report a payment received on a cross-border invoice you reported earlier.",
+        "Choose `payment` to report a payment received on a cross-border invoice you reported earlier. One payment report per invoice: a second one replaces the first at the reporting service.",
     }),
     invoiceNumber: z.string().min(1).openapi({
       example: "INV-2026-000431",
       description:
-        "The `documentNumber` of the invoice report this payment belongs to. The invoice must have been reported before its payment can be.",
+        "The `documentNumber` of the invoice report this payment belongs to. The invoice must have been reported before its payment can be. A payment report is matched on this number: the reporting service keeps one payment report per invoice, and a later one replaces it rather than adding to it.",
     }),
     issueDate: z.string().date().openapi({
       example: "2026-01-15",
@@ -284,7 +284,8 @@ export const frenchB2BiPaymentReportSchema = z
     }),
     date: z.string().date().openapi({
       example: "2026-02-10",
-      description: "Date on which the payment was received.",
+      description:
+        "Date on which the payment was received. Not part of how the payment report is matched: the invoice number is.",
     }),
     currency: zCurrencies.default("EUR").openapi({
       example: "EUR",
@@ -300,7 +301,7 @@ export const frenchB2BiPaymentReportSchema = z
     ref: "FrenchB2BiPaymentReport",
     title: "French cross-border payment report",
     description:
-      "Reports a payment received on a cross-border invoice. Report the invoice first, then report the payment for the day it was received. Only accepted for companies registered with VAT due on payment.",
+      "Reports a payment received on a cross-border invoice. Report the invoice first, then report the payment for the day it was received. Only accepted for companies registered with VAT due on payment.\n\nThe reporting service keeps one payment report per invoice. A second payment report on the same invoice replaces the one on file instead of being added to it, so separate instalments on one invoice cannot be reported yet. A plain `submit` for an invoice that already has a payment report on file is refused and nothing is filed; use `action: \"correct\"` under a new reference to replace the report on file deliberately, or `action: \"cancel\"` to withdraw it, after which a new payment report for the invoice can be submitted. A retry of the same report under the same reference is always safe.",
   });
 
 export const frenchB2BiReportSchema = z
