@@ -1,5 +1,5 @@
 import { Cron } from "croner";
-import { and, eq, isNotNull, lt, or, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lt, or, isNull, sql } from "drizzle-orm";
 import type { Logger } from "@recommand/lib/logger";
 import { db } from "@recommand/db";
 import { documentDeliveries } from "@peppol/db/schema";
@@ -12,6 +12,7 @@ import {
   type ArratechServiceError,
 } from "@peppol/data/deliveries";
 import { resumeStalledEmailFallbacks } from "@peppol/data/deliveries/email-fallback-db";
+import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 
 // The access point that reports delivery outcomes after accepting a send, and so the
 // only one whose deliveries can be left pending by a report that never arrived.
@@ -22,6 +23,12 @@ const ARRATECH_ACCESS_POINT_PROVIDER = "at-shared-ap-fr";
 // a transaction the provider cannot answer for does not get asked about every tick.
 const PENDING_GRACE_MS = 60 * 60 * 1000;
 const BATCH_SIZE = 100;
+// A transaction the provider has not settled three days after accepting it is not
+// going to settle on its own: it is stuck in one of the provider's intermediate
+// states, and asking every hour only repeats the same answer. Such a delivery stays
+// pending, is reported once so someone can take it up with the provider, and is not
+// asked about again.
+const MAX_PENDING_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 // The deliveries are asked about one after the other, so a provider that keeps a
 // request open would hold up the whole batch and every tick after it. Each request
 // gets this long, response body included.
@@ -57,6 +64,7 @@ export async function reconcilePendingArratechDeliveries(
         eq(documentDeliveries.status, "pending"),
         eq(documentDeliveries.provider, ARRATECH_ACCESS_POINT_PROVIDER),
         isNotNull(documentDeliveries.providerTransactionId),
+        isNull(documentDeliveries.reconciliationEndedAt),
         lt(documentDeliveries.statusChangedAt, cutoff),
         or(
           isNull(documentDeliveries.lastCheckedAt),
@@ -126,11 +134,68 @@ export async function reconcilePendingArratechDeliveries(
 }
 
 /**
+ * Stops asking about the deliveries that have been pending longer than the provider
+ * could plausibly need, and reports them once. They keep their status: nothing is
+ * known about them, and saying otherwise would be a guess. Returns how many were
+ * given up on this time.
+ */
+export async function stopReconcilingExpiredDeliveries(
+  logger: Logger,
+  now: Date = new Date()
+): Promise<number> {
+  const expiredBefore = new Date(now.getTime() - MAX_PENDING_AGE_MS);
+  const expired = await db
+    .select({
+      id: documentDeliveries.id,
+      providerTransactionId: documentDeliveries.providerTransactionId,
+    })
+    .from(documentDeliveries)
+    .where(
+      and(
+        eq(documentDeliveries.channel, "peppol"),
+        eq(documentDeliveries.status, "pending"),
+        eq(documentDeliveries.provider, ARRATECH_ACCESS_POINT_PROVIDER),
+        isNotNull(documentDeliveries.providerTransactionId),
+        isNull(documentDeliveries.reconciliationEndedAt),
+        lt(documentDeliveries.statusChangedAt, expiredBefore)
+      )
+    )
+    .limit(BATCH_SIZE);
+  if (expired.length === 0) {
+    return 0;
+  }
+
+  await db
+    .update(documentDeliveries)
+    .set({ reconciliationEndedAt: now })
+    .where(
+      inArray(
+        documentDeliveries.id,
+        expired.map((delivery) => delivery.id)
+      )
+    );
+
+  const summary = expired
+    .map((delivery) => `${delivery.id} (transaction ${delivery.providerTransactionId})`)
+    .join("\n");
+  logger.warn(
+    `Stopped asking about ${expired.length} deliveries pending for over ${MAX_PENDING_AGE_MS / 86_400_000} days:\n${summary}`
+  );
+  sendSystemAlert(
+    "Delivery Reconciliation Stopped",
+    `${expired.length} Peppol deliveries have been pending for more than ${MAX_PENDING_AGE_MS / 86_400_000} days without the access point settling them. ` +
+      `They stay pending and are no longer asked about; take them up with the provider.\n${summary}`,
+    "warning"
+  );
+  return expired.length;
+}
+
+/**
  * One tick of the reconciliation: ask the access point about the deliveries it never
- * reported on, drop the reports that never found a document, and finish the email
- * fallbacks a stopped run left half done. The three are independent, so a tick does
- * all of them; only an error thrown out of one stops the rest, and the next tick
- * starts over.
+ * reported on, give up on the ones it never will, drop the reports that never found
+ * a document, and finish the email fallbacks a stopped run left half done. The steps
+ * are independent, so a tick does all of them; only an error thrown out of one stops
+ * the rest, and the next tick starts over.
  */
 export async function runDeliveryReconciliationTick(logger: Logger): Promise<void> {
   try {
@@ -148,6 +213,19 @@ export async function runDeliveryReconciliationTick(logger: Logger): Promise<voi
     if (checked > 0) {
       logger.info(`Reconciled ${applied} of ${checked} pending deliveries`);
     }
+  } catch (error) {
+    logger.error(
+      `Delivery reconciliation failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+  try {
+    await stopReconcilingExpiredDeliveries(logger);
+  } catch (error) {
+    logger.error(
+      `Could not give up on expired deliveries: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+  try {
     const pruned = await pruneStagedDeliveryReports();
     if (pruned > 0) {
       logger.info(`Dropped ${pruned} delivery reports that never found a document`);

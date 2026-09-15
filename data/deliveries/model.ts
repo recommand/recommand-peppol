@@ -259,9 +259,12 @@ export function arratechFailure(
 
 /**
  * What an Arratech transaction's status says about its delivery. `COMPLETED` is a
- * delivery; `FAILED` and `REJECTED` are failures. Every other status, including
- * `COMPLETED_NO_DELIVERY` whose meaning is not settled, leaves the delivery as it is
- * and is returned as null so the caller can log it.
+ * delivery; `FAILED` and `REJECTED` are failures. Every other status leaves the
+ * delivery as it is and is returned as null so the caller can log it: the
+ * intermediate ones are still in flight, and `COMPLETED_NO_DELIVERY` belongs to a
+ * jurisdiction the French access point does not serve, so it is not expected here.
+ * The provider sends a webhook for `COMPLETED` and `FAILED` only, which is why a
+ * `REJECTED` transaction is only ever found by asking.
  */
 export function interpretArratechTransactionStatus(transaction: {
   transactionStatus?: string | null;
