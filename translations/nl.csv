@@ -213,12 +213,12 @@ France CII Invoice + Credit Note Extended,Franse uitgebreide CII-factuur + credi
 France CII Invoice + Credit Note Extended (Non-Regulated),Franse uitgebreide CII-factuur + creditnota (niet-gereguleerd)
 France Factur-X Invoice + Credit Note,Franse Factur-X-factuur + creditnota
 France Factur-X Invoice + Credit Note (Non-Regulated),Franse Factur-X-factuur + creditnota (niet-gereguleerd)
-France Invoicing CDAR,Franse facturatie-CDAR
-France Invoicing CDAR (Non-Regulated),Franse facturatie-CDAR (niet-gereguleerd)
-France Peppol BIS Billing UBL Credit Note,Franse Peppol BIS Billing UBL-creditnota
-France Peppol BIS Billing UBL Credit Note (Non-Regulated),Franse Peppol BIS Billing UBL-creditnota (niet-gereguleerd)
-France Peppol BIS Billing UBL Invoice,Franse Peppol BIS Billing UBL-factuur
-France Peppol BIS Billing UBL Invoice (Non-Regulated),Franse Peppol BIS Billing UBL-factuur (niet-gereguleerd)
+France Invoice Lifecycle Status (CDAR),Franse factuurstatus (CDAR)
+France Invoice Lifecycle Status (CDAR) (Non-Regulated),Franse factuurstatus (CDAR) (niet-gereguleerd)
+France Peppol BIS Billing 3.0 UBL Credit Note,Franse Peppol BIS Billing 3.0 UBL-creditnota
+France Peppol BIS Billing 3.0 UBL Credit Note (Non-Regulated),Franse Peppol BIS Billing 3.0 UBL-creditnota (niet-gereguleerd)
+France Peppol BIS Billing 3.0 UBL Invoice,Franse Peppol BIS Billing 3.0 UBL-factuur
+France Peppol BIS Billing 3.0 UBL Invoice (Non-Regulated),Franse Peppol BIS Billing 3.0 UBL-factuur (niet-gereguleerd)
 France UBL Credit Note CIUS,Franse UBL-creditnota CIUS
 France UBL Credit Note CIUS (Non-Regulated),Franse UBL-creditnota CIUS (niet-gereguleerd)
 France UBL Credit Note Extended,Franse uitgebreide UBL-creditnota

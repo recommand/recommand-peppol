@@ -31,12 +31,12 @@ export const peppolUblBis3InvoiceFormat: DocumentFormat<
     { processId: billingProcessId, translatableTitle: "Invoice" },
     {
       processId: regulatedProcessId,
-      translatableTitle: "France Peppol BIS Billing UBL Invoice",
+      translatableTitle: "France Peppol BIS Billing 3.0 UBL Invoice",
     },
     {
       processId: nonRegulatedProcessId,
       translatableTitle:
-        "France Peppol BIS Billing UBL Invoice (Non-Regulated)",
+        "France Peppol BIS Billing 3.0 UBL Invoice (Non-Regulated)",
     },
   ],
 

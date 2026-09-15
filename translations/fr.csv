@@ -809,12 +809,12 @@ The integration will be notified every day to synchronize documents or perform o
 Integration Setup,Configuration de l'intégration
 Integration Teardown,Désinstallation de l'intégration
 Task Retry,Nouvelle tentative de la tâche
-France Peppol BIS Billing UBL Invoice,Facture UBL France Peppol BIS Billing
-France Peppol BIS Billing UBL Credit Note,Avoir UBL France Peppol BIS Billing
+France Peppol BIS Billing 3.0 UBL Invoice,Facture UBL France Peppol BIS Billing 3.0
+France Peppol BIS Billing 3.0 UBL Credit Note,Avoir UBL France Peppol BIS Billing 3.0
 SI-UBL 2.0 Invoice,Facture SI-UBL 2.0
 SI-UBL 2.0 Credit Note,Avoir SI-UBL 2.0
 Invoice Response,Réponse à une facture
-France Invoicing CDAR,CDAR de facturation française
+France Invoice Lifecycle Status (CDAR),Statut de facture française (CDAR)
 France UBL Invoice CIUS,Facture UBL France CIUS
 France UBL Credit Note CIUS,Avoir UBL France CIUS
 France UBL Invoice Extended,Facture UBL France Extended
@@ -841,9 +841,9 @@ France CII Invoice + Credit Note Extended,Facture + Avoir CII France Extended
 France CII Invoice + Credit Note Extended (Non-Regulated),Facture + Avoir CII France Extended (non réglementé)
 France Factur-X Invoice + Credit Note,Facture + Avoir France Factur-X
 France Factur-X Invoice + Credit Note (Non-Regulated),Facture + Avoir France Factur-X (non réglementé)
-France Invoicing CDAR (Non-Regulated),CDAR de facturation française (non réglementé)
-France Peppol BIS Billing UBL Credit Note (Non-Regulated),Avoir UBL France Peppol BIS Billing (non réglementé)
-France Peppol BIS Billing UBL Invoice (Non-Regulated),Facture UBL France Peppol BIS Billing (non réglementé)
+France Invoice Lifecycle Status (CDAR) (Non-Regulated),Statut de facture française (CDAR) (non réglementé)
+France Peppol BIS Billing 3.0 UBL Credit Note (Non-Regulated),Avoir UBL France Peppol BIS Billing 3.0 (non réglementé)
+France Peppol BIS Billing 3.0 UBL Invoice (Non-Regulated),Facture UBL France Peppol BIS Billing 3.0 (non réglementé)
 France UBL Credit Note CIUS (Non-Regulated),Avoir UBL France CIUS (non réglementé)
 France UBL Credit Note Extended (Non-Regulated),Avoir UBL France Extended (non réglementé)
 France UBL Invoice CIUS (Non-Regulated),Facture UBL France CIUS (non réglementé)

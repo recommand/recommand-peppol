@@ -14,6 +14,8 @@ let failSync: boolean;
 let failEmail: boolean;
 let failSupport: boolean;
 let mandateNotes: string[];
+let identifiers: { scheme: string; identifier: string }[];
+let latestSessionId: string;
 const state = (): ArratechOnboarding => ({
   phase: 'submit',
   attempts: 0,
@@ -23,7 +25,7 @@ const state = (): ArratechOnboarding => ({
 
 mock.module('@recommand/db', () => ({
   db: {
-    select: () => ({ from: () => ({ where: () => ({ orderBy: () => ({ limit: async () => [{ id: log.id }] }) }) }) }),
+    select: () => ({ from: () => ({ where: () => ({ orderBy: () => ({ limit: async () => [{ id: latestSessionId }] }) }) }) }),
     transaction: async (fn: any) => fn({ execute: async () => ({ rows: [{ acquired }] }) }),
     update: () => ({
       set: (patch: any) => ({
@@ -37,7 +39,7 @@ mock.module('@recommand/db', () => ({
 mock.module('@peppol/data/companies', () => ({ getCompanyById: async () => company }));
 mock.module('@peppol/data/teams', () => ({ getTeamExtension: async () => team }));
 mock.module('@peppol/data/company-identifiers', () => ({
-  getCompanyIdentifiers: async () => [{ scheme: '0225', identifier: '303265045' }],
+  getCompanyIdentifiers: async () => identifiers,
 }));
 mock.module('@peppol/data/company-verification', () => ({
   getCompanyVerificationLog: async () => structuredClone(log),
@@ -113,8 +115,9 @@ mock.module('@peppol/data/at/client', () => ({
   },
 }));
 
-const { processArratechOnboarding, notifyVerificationCompletion, VerificationBusyError, initializeArratechOnboardingCron } =
+const { processArratechOnboarding, notifyVerificationCompletion, VerificationBusyError, initializeArratechOnboardingCron, resumeBlockedArratechOnboarding } =
   await import('../../data/at/kyc-onboarding');
+const { OnboardingResumeRefused, UNSUPPORTED_IDENTIFIER_BLOCK } = await import('../../data/at/kyc-onboarding-state');
 
 beforeEach(() => {
   events.length = 0;
@@ -155,6 +158,8 @@ beforeEach(() => {
   failEmail = false;
   failSupport = false;
   mandateNotes = [];
+  identifiers = [{ scheme: '0225', identifier: '303265045' }];
+  latestSessionId = log.id;
 });
 
 describe('durable Arratech onboarding', () => {
@@ -358,6 +363,142 @@ describe('durable Arratech onboarding', () => {
     await processArratechOnboarding(log.id);
     expect(log.status).toBe('inReview');
     expect(events).not.toContain('finalize');
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+  });
+});
+
+// A company whose identifiers the French SMP refuses blocks before any filing is
+// prepared. Once the identifiers are corrected, support hands the session back to
+// the worker: the identity check and mandate stay, approval and activation still
+// run at the provider. Anything else about the block keeps needing a person.
+describe('resuming a blocked onboarding', () => {
+  const mixed = () => {
+    identifiers = [
+      { scheme: '0002', identifier: '303265045' },
+      { scheme: '0009', identifier: '30326504500011' },
+      { scheme: '0225', identifier: '303265045' },
+    ];
+  };
+  const blockOnIdentifiers = async () => {
+    mixed();
+    await processArratechOnboarding(log.id);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+    expect(log.errorMessage).toBe(UNSUPPORTED_IDENTIFIER_BLOCK);
+    expect(log.arratechOnboarding.filing).toBeUndefined();
+    expect(events).toEqual(['support']);
+    events.length = 0;
+  };
+  const resume = () => resumeBlockedArratechOnboarding(log.id, {} as any);
+  const refused = async (status: 400 | 409, message: string) => {
+    const before = structuredClone(log);
+    const error = await resume().catch((e) => e);
+    expect(error).toBeInstanceOf(OnboardingResumeRefused);
+    expect(error.status).toBe(status);
+    expect(error.message).toContain(message);
+    expect(log).toEqual(before);
+    expect(events).toEqual([]);
+  };
+
+  it('blocks a mixed 0225/0002/0009 set before preparing a filing', async () => {
+    await blockOnIdentifiers();
+  });
+
+  it('resumes once only 0225 remains and completes through the provider', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    const result = await resume();
+    expect(result.state.phase).toBe('submit');
+    expect(result.state.attempts).toBe(0);
+    expect(result.state.resumedAt).toBeDefined();
+    expect(result.state.startedAt).toBe(log.arratechOnboarding.startedAt);
+    expect(result.previousError).toBe(UNSUPPORTED_IDENTIFIER_BLOCK);
+    expect(log.errorMessage).toBeNull();
+    expect(log.mandateAcceptedAt).toEqual(log.mandateAcceptedAt);
+    expect(log.verificationProofReference).toBe('didit-session');
+    expect(events).toEqual(['audit']);
+    events.length = 0;
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['register', 'upload', 'approve']);
+    expect(log.arratechOnboarding.phase).toBe('activation');
+    participantStatus = 'ACTIVE';
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('verified');
+  });
+
+  it('refuses while unsupported identifiers remain', async () => {
+    await blockOnIdentifiers();
+    await refused(409, '0002:303265045, 0009:30326504500011');
+  });
+
+  it('refuses a session that is not blocked, not under review, or superseded', async () => {
+    await refused(400, 'phase submit');
+    await blockOnIdentifiers();
+    latestSessionId = 'newer';
+    await refused(409, 'newer verification session');
+    latestSessionId = log.id;
+    log.status = 'rejected';
+    await refused(400, 'rejected');
+  });
+
+  it('refuses when the company no longer reads as the signed mandate', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    company.address = 'Other street';
+    await refused(409, 'Company details changed');
+  });
+
+  it('refuses without a completed identity check and signed mandate', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    log.mandateAcceptedAt = null;
+    await refused(409, 'signed mandate');
+  });
+
+  it('refuses a block with another cause or a prepared filing', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    log.errorMessage = 'KYC is REJECTED: manual review required';
+    await refused(409, 'manual review');
+    log.errorMessage = UNSUPPORTED_IDENTIFIER_BLOCK;
+    log.arratechOnboarding.filing = { siren: '303265045', siret: '30326504500011', addresses: ['0225:303265045'], mandateBase64: '', fileName: 'mandate.pdf' };
+    await refused(409, 'filing was already prepared');
+  });
+
+  it('refuses send-only, test-network and non-strict companies', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    company.isSmpRecipient = false;
+    await refused(409, 'Send-only');
+    company.isSmpRecipient = true;
+    team.useTestNetwork = true;
+    await refused(409, 'no longer qualify');
+  });
+
+  it('gives a resumed session a fresh time limit while keeping when it started', async () => {
+    const startedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+    log.arratechOnboarding.startedAt = startedAt;
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    await resume();
+    events.length = 0;
+    await processArratechOnboarding(log.id);
+    // Approved, now waiting for activation: a wait that the old start date would
+    // have turned into a block.
+    expect(events).toEqual(['register', 'upload', 'approve']);
+    expect(log.arratechOnboarding.phase).toBe('activation');
+    await processArratechOnboarding(log.id);
+    expect(log.arratechOnboarding.phase).toBe('activation');
+    expect(log.arratechOnboarding.startedAt).toBe(startedAt);
+    participantStatus = 'ACTIVE';
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('verified');
+  });
+
+  it('does no work when another worker owns the session', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    acquired = false;
+    await expect(resume()).rejects.toBeInstanceOf(VerificationBusyError);
     expect(log.arratechOnboarding.phase).toBe('blocked');
   });
 });

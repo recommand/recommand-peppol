@@ -31,12 +31,12 @@ export const peppolUblBis3CreditnoteFormat: DocumentFormat<
     { processId: billingProcessId, translatableTitle: "Credit Note" },
     {
       processId: regulatedProcessId,
-      translatableTitle: "France Peppol BIS Billing UBL Credit Note",
+      translatableTitle: "France Peppol BIS Billing 3.0 UBL Credit Note",
     },
     {
       processId: nonRegulatedProcessId,
       translatableTitle:
-        "France Peppol BIS Billing UBL Credit Note (Non-Regulated)",
+        "France Peppol BIS Billing 3.0 UBL Credit Note (Non-Regulated)",
     },
   ],
 
