@@ -976,6 +976,8 @@ Failed to load the e-reporting registration,Die E-Reporting-Registrierung konnte
 Failed to register the company for e-reporting,Das Unternehmen konnte nicht für E-Reporting registriert werden
 Filed by corrective filing,Eingereicht per Korrekturmeldung
 Filed,Eingereicht
+Filed\, awaiting outcome,Eingereicht\, Ergebnis ausstehend
+The tax administration has not accepted the filing yet; the report is final once its outcome code is 300.,Die Steuerverwaltung hat die Meldung noch nicht angenommen; die Meldung ist endgültig\, sobald ihr Ergebniscode 300 lautet.
 Franchise en base de TVA,Franchise en base de TVA
 French e-reporting,Französisches E-Reporting
 Last checked {0}.,Zuletzt geprüft am {0}.

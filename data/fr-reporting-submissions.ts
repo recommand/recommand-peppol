@@ -2,7 +2,7 @@ import { publishEvent } from "@core/data/rules/events";
 import { db } from "@recommand/db";
 import type { Logger } from "@recommand/lib/logger";
 import { Cron } from "croner";
-import { and, eq, inArray, isNotNull, lte } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lte, sql } from "drizzle-orm";
 import {
   describeFrenchReportEvent,
   FrenchReportingSubmissionError,
@@ -15,25 +15,28 @@ import type { FrenchReportingEnvironment } from "@peppol/data/fr-reporting-decla
 import { frReportingSubmissions, transmittedDocuments } from "@peppol/db/schema";
 import { isUniqueViolation } from "@peppol/utils/db-errors";
 import { readStoredFrenchReport } from "@peppol/utils/parsing/fr-reporting/duplicates";
+import type { EarlierFrenchPaymentReport } from "@peppol/utils/parsing/fr-reporting/instalments";
+import {
+  DAY,
+  describeFrenchReportingOutcome,
+  HOUR,
+  isFrenchReportingFinal,
+  planNextStatusCheck,
+} from "@peppol/utils/parsing/fr-reporting/lifecycle";
 import { createAlertSuppressor } from "@peppol/utils/system-notifications/suppression";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { isReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/keys";
 
 export type FrenchReportingSubmission = typeof frReportingSubmissions.$inferSelect;
 
-export const TERMINAL_REPORTING_STATUSES: ReadonlySet<FrenchReportingStatus> = new Set([
-  "filed",
-  "filed_rectificative",
-  "superseded",
-  "rejected",
-]);
+export {
+  isFrenchReportingFinal,
+  planNextStatusCheck,
+  wasStoppedBeforeFinal,
+} from "@peppol/utils/parsing/fr-reporting/lifecycle";
 
-/** How long after its period's cutoff an event is still expected to reach a filing. */
-const STALE_AFTER_PERIOD_END_DAYS = 45;
 /** How long to wait before asking again about an event whose status is not understood. */
 const UNKNOWN_STATUS_RETRY_HOURS = 6;
-const HOUR = 60 * 60_000;
-const DAY = 24 * HOUR;
 
 /**
  * The public view of where a filed report stands. Exposed on the document it was
@@ -41,6 +44,12 @@ const DAY = 24 * HOUR;
  */
 export type FrenchReportingStatusSummary = {
   reportingStatus: FrenchReportingStatus;
+  /**
+   * True once nothing more will be heard: filed with the tax administration's
+   * acceptance (`outcomeCode` 300), superseded, or rejected. A filed report without
+   * that outcome is still being followed.
+   */
+  final: boolean;
   receivedAt: string | null;
   periodStart: string | null;
   periodEnd: string | null;
@@ -56,6 +65,7 @@ export function toFrenchReportingStatusSummary(
 ): FrenchReportingStatusSummary {
   return {
     reportingStatus: submission.reportingStatus,
+    final: isFrenchReportingFinal(submission),
     receivedAt: submission.receivedAt?.toISOString() ?? null,
     periodStart: submission.periodStart,
     periodEnd: submission.periodEnd,
@@ -65,39 +75,6 @@ export function toFrenchReportingStatusSummary(
     checkedAt: submission.lastCheckedAt?.toISOString() ?? null,
     simulated: submission.simulated,
   };
-}
-
-/**
- * When to look at an event again. Kept pure so the cadence can be tested.
- *
- * Until the partner has placed the event in a period, the first look comes an hour
- * after filing. Inside the period nothing changes until the cutoff, so one look a
- * day is enough. After the cutoff the filing can happen at any moment, so every six
- * hours; and an event still not terminal long after its cutoff is stale and stops
- * being polled.
- */
-export function planNextStatusCheck(
-  submission: Pick<FrenchReportingSubmission, "reportingStatus" | "periodEnd" | "simulated">,
-  now: Date = new Date(),
-): Date | null {
-  if (submission.simulated || TERMINAL_REPORTING_STATUSES.has(submission.reportingStatus)) {
-    return null;
-  }
-  if (!submission.periodEnd) {
-    return new Date(now.getTime() + HOUR);
-  }
-  // The cutoff is the end of the period's last day.
-  const cutoff = new Date(`${submission.periodEnd}T23:59:59.999Z`);
-  if (Number.isNaN(cutoff.getTime())) {
-    return new Date(now.getTime() + DAY);
-  }
-  if (now < cutoff) {
-    return new Date(Math.min(cutoff.getTime() + HOUR, now.getTime() + DAY));
-  }
-  if (now.getTime() - cutoff.getTime() > STALE_AFTER_PERIOD_END_DAYS * DAY) {
-    return null;
-  }
-  return new Date(now.getTime() + 6 * HOUR);
 }
 
 /**
@@ -139,7 +116,7 @@ export async function recordFrenchReportingSubmission(input: {
       reportingStatus,
       receivedAt: now,
       nextCheckAt: planNextStatusCheck(
-        { reportingStatus, periodEnd: null, simulated: input.simulated },
+        { reportingStatus, outcomeCode: null, periodEnd: null, simulated: input.simulated },
         now,
       ),
     });
@@ -285,7 +262,10 @@ function toDate(value: string | null | undefined): Date | null {
 
 /**
  * Applies what the partner reports about an event. Returns the row patch and
- * whether the reporting status moved, which is what the customer is told about.
+ * whether anything the customer is told about moved: the reporting status, or the
+ * tax administration's outcome code. The two move on their own, so a filing whose
+ * status stays `filed` while its outcome goes from empty to 500 to 300 is progress
+ * each time, and the last of those is what makes the event final.
  *
  * A status this integration does not know is not progress. The event keeps the status
  * it had, so an unfamiliar value can never quietly retire an event or present it as
@@ -296,19 +276,25 @@ function toDate(value: string | null | undefined): Date | null {
  * report says, including the raw ledger value, is still recorded.
  */
 export function applyStatusReport(
-  submission: Pick<FrenchReportingSubmission, "reportingStatus" | "simulated">,
+  submission: Pick<FrenchReportingSubmission, "reportingStatus" | "outcomeCode" | "simulated">,
   report: FrenchReportingSubmissionStatus,
   now: Date = new Date(),
 ): {
   patch: Partial<typeof frReportingSubmissions.$inferInsert>;
   changed: boolean;
+  statusChanged: boolean;
+  outcomeChanged: boolean;
   unknownStatus: string | null;
 } {
   const known = toKnownReportingStatus(report.reportingStatus);
   const reportingStatus = known ?? submission.reportingStatus;
-  const changed = reportingStatus !== submission.reportingStatus;
+  const outcomeCode = report.outcomeCode ?? null;
+  const statusChanged = reportingStatus !== submission.reportingStatus;
+  const outcomeChanged = outcomeCode !== (submission.outcomeCode ?? null);
   return {
-    changed,
+    changed: statusChanged || outcomeChanged,
+    statusChanged,
+    outcomeChanged,
     unknownStatus: known ? null : report.reportingStatus,
     patch: {
       ledgerStatus: report.status,
@@ -318,7 +304,7 @@ export function applyStatusReport(
       periodStart: report.periodStart,
       periodEnd: report.periodEnd,
       submissionId: report.submissionId,
-      outcomeCode: report.outcomeCode,
+      outcomeCode,
       outcomeAt: toDate(report.outcomeAt),
       lastCheckedAt: now,
       checkAttempts: 0,
@@ -326,6 +312,7 @@ export function applyStatusReport(
         ? planNextStatusCheck(
             {
               reportingStatus,
+              outcomeCode,
               periodEnd: report.periodEnd,
               simulated: submission.simulated,
             },
@@ -365,30 +352,35 @@ const operationalAlerts = createAlertSuppressor({ intervalMs: 6 * HOUR });
 
 async function publishStatusChange(
   submission: FrenchReportingSubmission,
-  previous: FrenchReportingStatus,
+  previous: Pick<FrenchReportingSubmission, "reportingStatus" | "outcomeCode">,
   docType: string,
 ): Promise<void> {
   await publishEvent("peppol.document.reporting_status.v1", {
     teamId: submission.teamId,
     aggregateType: "peppol.document",
     aggregateId: submission.transmittedDocumentId,
-    idempotencyKey: `peppol.document.reporting_status:${submission.id}:${submission.reportingStatus}`,
+    // The outcome moves on its own, so it is part of what makes a change new.
+    idempotencyKey: `peppol.document.reporting_status:${submission.id}:${submission.reportingStatus}:${submission.outcomeCode ?? "none"}`,
     payload: {
       companyId: submission.companyId,
       docType,
       reportingStatus: submission.reportingStatus,
-      previousReportingStatus: previous,
+      previousReportingStatus: previous.reportingStatus,
       periodEnd: submission.periodEnd,
       submissionId: submission.submissionId,
       outcomeCode: submission.outcomeCode,
+      previousOutcomeCode: previous.outcomeCode,
+      final: isFrenchReportingFinal(submission),
     },
   });
 }
 
 /**
- * Looks one event up at the partner and records what it learns. A status change is
- * published as an event; a rejection is also brought to support, because the
- * customer will need help understanding the tax authority's outcome code.
+ * Looks one event up at the partner and records what it learns. A change of status or
+ * of outcome is published as an event; a rejection, a refused deposit and an outcome
+ * code this integration does not know are also brought to support, because the
+ * customer will need help with what the tax administration answered and none of it
+ * can be resolved through the API.
  */
 export async function refreshFrenchReportingSubmission(
   id: string,
@@ -455,7 +447,11 @@ export async function refreshFrenchReportingSubmission(
     return;
   }
 
-  const { patch, changed, unknownStatus } = applyStatusReport(submission, report, now);
+  const { patch, changed, statusChanged, outcomeChanged, unknownStatus } = applyStatusReport(
+    submission,
+    report,
+    now,
+  );
   const updated = await db
     .update(frReportingSubmissions)
     .set(patch)
@@ -483,11 +479,11 @@ export async function refreshFrenchReportingSubmission(
     }
   }
 
-  if (updated.nextCheckAt === null && !TERMINAL_REPORTING_STATUSES.has(updated.reportingStatus)) {
+  if (updated.nextCheckAt === null && !isFrenchReportingFinal(updated)) {
     if (operationalAlerts.shouldSend(operationalAlertKey("stale", updated), now)) {
       sendSystemAlert(
         "French Reporting Event Stale",
-        `E-reporting event ${updated.flowId} (reference ${updated.reference}, company ${updated.companyId}) is still ${updated.reportingStatus} long after its period ended on ${updated.periodEnd}. Ask the reporting service what happened to it.`,
+        `E-reporting event ${updated.flowId} (reference ${updated.reference}, company ${updated.companyId}) is still ${updated.reportingStatus} with outcome code ${updated.outcomeCode ?? "none"} long after its period ended on ${updated.periodEnd}. Ask the reporting service what happened to it; a final event carries outcome code 300 or is rejected.`,
         "warning",
       );
     }
@@ -497,7 +493,7 @@ export async function refreshFrenchReportingSubmission(
     return;
   }
   logger.info(
-    `French reporting event ${updated.flowId} moved from ${submission.reportingStatus} to ${updated.reportingStatus}`,
+    `French reporting event ${updated.flowId} moved from ${submission.reportingStatus}/${submission.outcomeCode ?? "none"} to ${updated.reportingStatus}/${updated.outcomeCode ?? "none"}${isFrenchReportingFinal(updated) ? " (final)" : ""}`,
   );
 
   const document = await db
@@ -506,25 +502,132 @@ export async function refreshFrenchReportingSubmission(
     .where(eq(transmittedDocuments.id, updated.transmittedDocumentId))
     .then((rows) => rows[0]);
   try {
-    await publishStatusChange(updated, submission.reportingStatus, document?.type ?? "unknown");
+    await publishStatusChange(updated, submission, document?.type ?? "unknown");
   } catch (error) {
     logger.error(
       `Could not publish reporting status change for ${updated.flowId}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
-  // The outcome is the filing's, so every event that filing carries turns rejected at
-  // the same moment. Support hears about the filing rather than about each event.
-  if (
-    updated.reportingStatus === "rejected" &&
-    operationalAlerts.shouldSend(operationalAlertKey("rejected", updated), now)
-  ) {
-    sendSystemAlert(
-      "French Reporting Filing Rejected",
-      `The tax administration rejected the filing carrying e-reporting event ${updated.flowId} (reference ${updated.reference}, company ${updated.companyId}, period ending ${updated.periodEnd}${updated.submissionId ? `, filing ${updated.submissionId}` : ""}). Outcome code: ${updated.outcomeCode ?? "unknown"}. Every event on the same filing carries this outcome, so check what the customer has to correct for that period.`,
-      "error",
-    );
+  reportOutcomeToSupport(updated, { statusChanged, outcomeChanged }, now);
+}
+
+/** Where a filing is named in a message to support: by its id and period when known. */
+function describeFiling(submission: FrenchReportingSubmission): string {
+  const period =
+    submission.periodStart && submission.periodEnd
+      ? `period ${submission.periodStart} to ${submission.periodEnd}`
+      : submission.periodEnd
+        ? `period ending ${submission.periodEnd}`
+        : "period not yet known";
+  return `${submission.submissionId ? `filing ${submission.submissionId}, ` : ""}${period}`;
+}
+
+/**
+ * What support needs to hear about a filing's outcome, when it needs to. Every event
+ * a filing carries gets the same outcome at the same moment, so the message is about
+ * the filing rather than about each event, and none of it can be resolved through
+ * the API: changing data that is already filed, or a refused deposit, goes through the
+ * reporting service's support with the flow id or the period.
+ */
+function reportOutcomeToSupport(
+  updated: FrenchReportingSubmission,
+  moved: { statusChanged: boolean; outcomeChanged: boolean },
+  now: Date,
+): void {
+  const supportHandle = `Quote flow id ${updated.flowId} or the period to the reporting service's support`;
+
+  if (updated.reportingStatus === "rejected" && moved.statusChanged) {
+    if (operationalAlerts.shouldSend(operationalAlertKey("rejected", updated), now)) {
+      sendSystemAlert(
+        "French Reporting Filing Rejected",
+        `The tax administration rejected the filing carrying e-reporting event ${updated.flowId} (reference ${updated.reference}, company ${updated.companyId}, ${describeFiling(updated)}). Outcome code: ${updated.outcomeCode ?? "unknown"}. Every event on the same filing carries this outcome. This cannot be resolved through the API: ${supportHandle}, and check what the customer has to correct for that period.`,
+        "error",
+      );
+    }
+    return;
   }
+
+  if (!moved.outcomeChanged) {
+    return;
+  }
+  switch (describeFrenchReportingOutcome(updated.outcomeCode)) {
+    case "needs_support":
+      if (operationalAlerts.shouldSend(operationalAlertKey("deposit-rejected", updated), now)) {
+        sendSystemAlert(
+          "French Reporting Deposit Refused",
+          `The tax administration refused the deposit carrying e-reporting event ${updated.flowId} (reference ${updated.reference}, company ${updated.companyId}, ${describeFiling(updated)}): outcome code ${updated.outcomeCode}, while the event is still ${updated.reportingStatus}. A refused deposit is resolved by the reporting service, not through the API: ${supportHandle}. The event stays under watch until it is final.`,
+          "error",
+        );
+      }
+      return;
+    case "unrecognised":
+      // The code is about the vocabulary rather than about one event, so it is
+      // reported per value and not per event that meets it.
+      if (
+        operationalAlerts.shouldSend(
+          `outcome-vocabulary:${updated.environment}:${updated.outcomeCode}`,
+          now,
+        )
+      ) {
+        sendSystemAlert(
+          "French Reporting Outcome Not Recognised",
+          `E-reporting event ${updated.flowId} (company ${updated.companyId}, ${describeFiling(updated)}) came back with outcome code ${updated.outcomeCode}, which this integration does not know. The service has confirmed 500 (being processed), 501 (deposit refused) and 300 (accepted); nothing is assumed about this code, so the event is neither treated as final nor as in progress and stays under watch. Ask the reporting service what it means.`,
+          "warning",
+        );
+      }
+      return;
+    default:
+      return;
+  }
+}
+
+/**
+ * The payment reports a company filed on one invoice, newest first, with where each
+ * stands. Read before a new payment report on the same invoice is filed: the reporting
+ * service keeps one payment event per invoice, so a second one would replace the first
+ * (see `assessFrenchPaymentInstalment`). Simulated reports are included, because the
+ * contract is the same for a playground team.
+ */
+export async function findFrenchPaymentReportsForInvoice(
+  companyId: string,
+  invoiceNumber: string,
+): Promise<EarlierFrenchPaymentReport[]> {
+  const rows = await db
+    .select({
+      documentId: transmittedDocuments.id,
+      parsed: transmittedDocuments.parsed,
+      reportingStatus: frReportingSubmissions.reportingStatus,
+    })
+    .from(transmittedDocuments)
+    .leftJoin(
+      frReportingSubmissions,
+      eq(frReportingSubmissions.transmittedDocumentId, transmittedDocuments.id),
+    )
+    .where(
+      and(
+        eq(transmittedDocuments.companyId, companyId),
+        eq(transmittedDocuments.direction, "outgoing"),
+        eq(transmittedDocuments.type, "frenchB2BiPaymentReport"),
+        sql`${transmittedDocuments.parsed} ->> 'invoiceNumber' = ${invoiceNumber}`,
+      ),
+    )
+    .orderBy(desc(transmittedDocuments.createdAt));
+  return rows.flatMap((row) => {
+    const stored = readStoredFrenchReport(row.parsed);
+    if (!stored || stored.type !== "payment") {
+      return [];
+    }
+    return [
+      {
+        documentId: row.documentId,
+        reference: stored.reference,
+        action: stored.action,
+        date: stored.date,
+        reportingStatus: row.reportingStatus ?? null,
+      },
+    ];
+  });
 }
 
 export function initializeFrenchReportingStatusCron(logger: Logger): void {

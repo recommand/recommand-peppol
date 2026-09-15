@@ -12,6 +12,7 @@ import {
   buildFrenchDeclarant,
   buildFrenchSeller,
   describeFrenchReportEvent,
+  describeFrenchReportingConflict,
   FrenchReportingSubmissionError,
   submitArratechB2BiReport,
   submitArratechB2CReport,
@@ -26,6 +27,7 @@ import {
 } from "@peppol/data/fr-reporting-declarants";
 import {
   ensureFrenchReportingSubmissionRecord,
+  findFrenchPaymentReportsForInvoice,
   recordFrenchReportingSubmission,
 } from "@peppol/data/fr-reporting-submissions";
 import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
@@ -47,6 +49,7 @@ import {
   type FrenchB2CReport,
 } from "@peppol/utils/parsing/b2c-reporting/france";
 import { assessFrenchReportDuplicate } from "@peppol/utils/parsing/fr-reporting/duplicates";
+import { assessFrenchPaymentInstalment } from "@peppol/utils/parsing/fr-reporting/instalments";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import type { ReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/types";
 import { Server, type Context } from "@recommand/lib/api";
@@ -62,7 +65,7 @@ const server = new Server();
 const frenchReportResponseSchema = z.object({
   id: z.string().openapi({
     description:
-      "The identifier of the document this report was recorded as. Pass it to the get document endpoint to follow the report's `reporting` block until it is filed.",
+      "The identifier of the document this report was recorded as. Pass it to the get document endpoint to follow the report's `reporting` block until `final` is true.",
   }),
   duplicate: z.boolean().openapi({
     description:
@@ -76,9 +79,13 @@ const frenchReportResponseSchema = z.object({
 
 const referenceGuidance = `Choose a new, unique \`reference\` for every report, including corrections and cancellations. Retrying the exact same request with the same reference is safe: it returns the report filed the first time instead of filing a second one. A correction or cancellation acts on the report identified by the data in the request, and carries the optional \`action\` field.
 
-A report is matched on the declarant and on the data that identifies the operation, and never on the reference: an invoice report and its payments on the invoice number, a daily sales total on the day, category and currency, and a daily payment total on the day and currency. Neither the issue date nor the payment date is part of how an invoice or its payment is matched. A correction replaces the report it matches in full, so send the complete report rather than the fields that changed, and a cancellation carries the complete report as well. Both are refused once the filing for that period has been assembled, which happens after the period ends rather than on the last day itself.
+A report is matched on the declarant and on the data that identifies the operation, and never on the reference: an invoice report and its payments on the invoice number, a daily sales total on the day, category and currency, and a daily payment total on the day and currency. Neither the issue date nor the payment date is part of how an invoice or its payment is matched. A correction replaces the report it matches in full, so send the complete report rather than the fields that changed, and a cancellation carries the complete report as well.
 
-When the reference of an earlier report is reused, the earlier report is returned with \`duplicate: true\` and a \`warning\`, and nothing is filed: the correction or cancellation still has to be sent under a new reference.`;
+Both are refused with a 409 once the filing for that period has been assembled, which happens after the period ends rather than on the last day itself, and can happen before the report shows as \`filed\`. From then on the data of that period is with the tax administration: a new report for that period can still be submitted and is carried by a corrective filing, but changing or withdrawing a report that is already filed is done by the reporting service on request. Contact support with the reference of the report on file and its period.
+
+When the reference of an earlier report is reused, the earlier report is returned with \`duplicate: true\` and a \`warning\`, and nothing is filed: the correction or cancellation still has to be sent under a new reference.
+
+Follow a report through the \`reporting\` block of its document. It is final once \`final\` is true: filed with outcome code \`300\`, superseded, or rejected. A report that shows as \`filed\` with an empty outcome code or \`500\` is still being processed by the tax administration.`;
 
 const registrationGuidance = `The company must be registered for French e-reporting first, through \`PUT /:companyId/reporting/fr/declarant\`. Reports for playground and test-network teams are recorded but not filed.`;
 
@@ -105,7 +112,10 @@ A submitted report is recorded alongside your sent documents and counts towards 
     ...describeValidationErrorResponse(
       "Invalid reporting data; the company is not registered for e-reporting, its registration is not yet registered, or it is suspended; the company is not registered in France or lacks the identifiers a report needs; a payment report was sent for a company whose VAT is due on invoicing; or the reporting service refused the report.",
     ),
-    ...describeErrorResponse(409, "The report conflicts with what was filed before"),
+    ...describeErrorResponse(
+      409,
+      "The report conflicts with what was filed before, or the filing for the period has already been assembled and the report on file can no longer be corrected or cancelled through the API",
+    ),
     ...describeErrorResponse(
       502,
       "The reporting service could not accept the report; retry with the same reference"
@@ -123,6 +133,8 @@ Use an invoice report for a single cross-border invoice or credit note. Report e
 
 Use a payment report for a payment received on a cross-border invoice. The invoice has to be reported before its payment can be, and the payment report refers back to it by \`invoiceNumber\`. Amounts on a payment report include VAT. Payment reports are only accepted for companies registered with VAT due on payment.
 
+The reporting service keeps one payment report per invoice. A second payment report on the same invoice replaces the one on file rather than being added to it, so separate instalments on one invoice cannot be reported yet. A plain \`submit\` for an invoice that already has a payment report on file is refused with a 409 and nothing is filed; send \`action: "correct"\` under a new reference to replace the report on file deliberately, or \`action: "cancel"\` to withdraw it, after which a new payment report for the invoice can be submitted.
+
 ${registrationGuidance}
 
 ${referenceGuidance}
@@ -136,7 +148,10 @@ A submitted report is recorded alongside your sent documents and counts towards 
     ...describeValidationErrorResponse(
       "Invalid reporting data; the company is not registered for e-reporting, its registration is not yet registered, or it is suspended; the company is not registered in France or lacks the identifiers a report needs; a payment report was sent for a company whose VAT is due on invoicing; or the reporting service refused the report.",
     ),
-    ...describeErrorResponse(409, "The report conflicts with what was filed before"),
+    ...describeErrorResponse(
+      409,
+      "The report conflicts with what was filed before: a payment report is already on file for the invoice and this request is not a correction or cancellation, or the filing for the period has already been assembled and the report on file can no longer be corrected or cancelled through the API",
+    ),
     ...describeErrorResponse(
       502,
       "The reporting service could not accept the report; retry with the same reference"
@@ -193,10 +208,7 @@ function toFailureResponse(c: FrenchReportingContext, error: FrenchReportingSubm
         400,
       );
     case "conflict":
-      return c.json(
-        actionFailure(`The report conflicts with what was filed before: ${error.message}`),
-        409,
-      );
+      return c.json(actionFailure(describeFrenchReportingConflict(error).message), 409);
     default:
       return c.json(
         actionFailure(
@@ -247,6 +259,35 @@ async function fileFrenchReport({
   const rejection = rejectForDeclarant(report, declarant);
   if (rejection) {
     return c.json(actionFailure(rejection), 400);
+  }
+
+  // A second payment report on an invoice would replace the one on file at the
+  // reporting service rather than add to it. That is refused before anything is
+  // filed unless the customer asked for the replacement; see the assessment.
+  if (report.type === "payment") {
+    const instalment = assessFrenchPaymentInstalment({
+      earlier: await findFrenchPaymentReportsForInvoice(company.id, report.invoiceNumber),
+      submitted: report,
+    });
+    if (instalment.refusal) {
+      await audit(c, {
+        action: report.action,
+        subsystem: "peppol.documents",
+        outcome: "failed",
+        objectType: "peppol.document",
+        reasonCode: "french_payment_report_would_replace",
+        metadata: {
+          inputFormat: "json_api",
+          companyId: company.id,
+          country: "FR",
+          documentType: profile.type,
+          reportType: report.type,
+          reference: report.reference,
+          invoiceNumber: report.invoiceNumber,
+        },
+      });
+      return c.json(actionFailure(instalment.refusal), 409);
+    }
   }
 
   const simulated = isFrenchReportingSimulated(team);

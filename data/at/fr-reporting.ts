@@ -373,7 +373,8 @@ export function toKnownReportingStatus(value: string | null): FrenchReportingSta
  * Why a submission did not go through, in the terms the API answers with:
  * `rejected` (the event itself is wrong), `unregistered` (the declarant is not
  * registered or enabled), `conflict` (the event contradicts what is on file, e.g. a
- * payment for an unknown invoice) or `unavailable` (retry later with the same
+ * payment for an unknown invoice, or a correction after the period was assembled, see
+ * `describeFrenchReportingConflict`) or `unavailable` (retry later with the same
  * reference).
  */
 export type FrenchReportingSubmissionErrorKind =
@@ -392,6 +393,43 @@ export class FrenchReportingSubmissionError extends Error {
     super(message);
     this.name = "FrenchReportingSubmissionError";
   }
+}
+
+/**
+ * The service's answer to a correction or cancellation that arrives after the period
+ * filing has been assembled. The cutoff is the assembly of the deposit, which happens
+ * after the period ends, not its transmission to the tax administration, so a
+ * correction can meet this before the event shows as filed.
+ */
+export const FRENCH_REPORTING_PERIOD_ASSEMBLED_CODE = "AT-2707";
+
+export function isFrenchReportingPeriodAssembled(error: FrenchReportingSubmissionError): boolean {
+  return error.kind === "conflict" && error.code === FRENCH_REPORTING_PERIOD_ASSEMBLED_CODE;
+}
+
+/**
+ * What a customer is told when the service refuses a report as conflicting with what
+ * is on file. A period that has already been assembled is the one conflict the
+ * customer cannot resolve by sending something else: the data of that period is with
+ * the tax administration, and changing it goes through the reporting service's
+ * support, which needs the reference of the event or the period. The service's own
+ * message and code are kept in full, because support will ask for them.
+ */
+export function describeFrenchReportingConflict(error: FrenchReportingSubmissionError): {
+  periodAssembled: boolean;
+  message: string;
+} {
+  const diagnostics = `${error.message}${error.code ? ` (${error.code})` : ""}`;
+  if (isFrenchReportingPeriodAssembled(error)) {
+    return {
+      periodAssembled: true,
+      message: `The filing for this report's period has already been assembled, so the report on file can no longer be corrected or cancelled through the API: ${diagnostics}. Nothing was changed. A new report for that period can still be submitted and will be carried by a corrective filing. To change data that is already filed, contact support with the reference of the report on file and its period; the reporting service applies such changes on request.`,
+    };
+  }
+  return {
+    periodAssembled: false,
+    message: `The report conflicts with what was filed before: ${diagnostics}`,
+  };
 }
 
 function classifySubmissionStatus(status: number): FrenchReportingSubmissionErrorKind {
