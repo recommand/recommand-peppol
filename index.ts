@@ -38,7 +38,6 @@ import { initializeFrenchReportingDeclarantCron } from "./data/fr-reporting-decl
 import { initializeFrenchReportingStatusCron } from "./data/fr-reporting-submissions";
 import { initializeDeliveryReconciliationCron } from "./data/deliveries/reconcile";
 import { initializeEmailDeliveryReconciliationCron } from "./data/deliveries/reconcile-email";
-import { initializeDeliveryBackfillCron } from "./data/deliveries/backfill";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
@@ -70,7 +69,6 @@ export async function init(app: RecommandApp, server: Server) {
   initializeFrenchReportingStatusCron(logger);
   initializeDeliveryReconciliationCron(logger);
   initializeEmailDeliveryReconciliationCron(logger);
-  initializeDeliveryBackfillCron(logger);
 
   initializeMetricsServer(logger);
 
