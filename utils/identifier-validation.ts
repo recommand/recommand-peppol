@@ -96,6 +96,23 @@ function validateDutchVatNumber(identifier: string): void {
   }
 }
 
+function validateCypriotVatNumber(identifier: string): void {
+  const cleaned = identifier.replace(/[\.\-\s]/g, "").toUpperCase();
+
+  if (!cleaned.startsWith("CY")) {
+    throw new UserFacingError("Cypriot VAT number must start with 'CY'");
+  }
+
+  const afterPrefix = cleaned.substring(2);
+
+  // The Cypriot TIC is eight digits followed by a single check letter.
+  if (!/^\d{8}[A-Z]$/.test(afterPrefix)) {
+    throw new UserFacingError(
+      "Cypriot VAT number must have the format CY + 8 digits + 1 letter (e.g. CY12345678L)"
+    );
+  }
+}
+
 function validateDanishOrganizationNumber(identifier: string): void {
   if (!/^(DK)?\d{8}$/.test(identifier.toUpperCase())) {
     throw new UserFacingError(
@@ -229,6 +246,7 @@ const schemeValidators: Record<string, IdentifierValidator> = {
   "0184": validateDanishOrganizationNumber,
   "0208": validateBelgianEnterpriseNumber,
   "9925": validateBelgianVatNumber,
+  "9928": validateCypriotVatNumber,
   "0106": validateDutchEnterpriseNumber,
   "9944": validateDutchVatNumber,
   "0002": validateFrenchSiren,
@@ -241,6 +259,9 @@ const countryValidators: Record<string, CountryIdentifierValidators> = {
   "BE": {
     vatNumber: validateBelgianVatNumber,
     enterpriseNumber: validateBelgianEnterpriseNumber,
+  },
+  "CY": {
+    vatNumber: validateCypriotVatNumber,
   },
   "NL": {
     vatNumber: validateDutchVatNumber,

@@ -243,16 +243,16 @@ export function validateIdentifierAgainstCompany({
     if (cleanedIdentifier !== cleanedEnterpriseNumber) {
       throw new UserFacingError(`Company identifier with scheme 0208 must match the company enterprise number. Expected: ${cleanedEnterpriseNumber}, got: ${cleanedIdentifier}`);
     }
-  } else if (cleanedScheme === "9925") {
+  } else if (cleanedScheme === "9925" || cleanedScheme === "9928") {
     const cleanedIdentifier = cleanVatNumber(identifier);
     const cleanedVatNumber = cleanVatNumber(company.vatNumber);
     
     if (!cleanedVatNumber) {
-      throw new UserFacingError("Company identifier with scheme 9925 requires a company VAT number to be set.");
+      throw new UserFacingError(`Company identifier with scheme ${cleanedScheme} requires a company VAT number to be set.`);
     }
 
     if (cleanedIdentifier !== cleanedVatNumber) {
-      throw new UserFacingError(`Company identifier with scheme 9925 must match the company VAT number. Expected: ${cleanedVatNumber}, got: ${cleanedIdentifier}`);
+      throw new UserFacingError(`Company identifier with scheme ${cleanedScheme} must match the company VAT number. Expected: ${cleanedVatNumber}, got: ${cleanedIdentifier}`);
     }
   }
 }
