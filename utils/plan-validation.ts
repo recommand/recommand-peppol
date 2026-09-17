@@ -2,7 +2,7 @@ import type { Subscription } from "@peppol/data/subscriptions";
 
 export function canUseIntegrations(
   isPlayground: boolean,
-  subscription: Subscription | null
+  subscription: Pick<Subscription, "planId"> | null
 ): boolean {
   if (isPlayground) {
     return true;
