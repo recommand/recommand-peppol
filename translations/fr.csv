@@ -1016,3 +1016,63 @@ VAT becomes due,Exigibilité de la TVA
 VAT regime,Régime de TVA
 Verify the company first. The signed French mandate is what allows us to report on its behalf.,Vérifiez d'abord l'entreprise. Le mandat français signé est ce qui nous autorise à déclarer en son nom.
 Where this document stands with each recipient it was sent to.,Où en est ce document auprès de chaque destinataire auquel il a été envoyé.
+Add Address,Ajouter une adresse
+Address *,Adresse *
+Are you sure you want to delete customer "{0}"?,Êtes-vous sûr de vouloir supprimer le client « {0} » ?
+Are you sure you want to delete this supplier? This action cannot be undone.,Êtes-vous sûr de vouloir supprimer ce fournisseur ? Cette action est irréversible.
+Blue,Bleu
+City *,Ville *
+Country *,Pays *
+Create a new customer with the details below.,Créez un client avec les informations ci-dessous.
+Create a new supplier with the details below.,Créez un fournisseur avec les informations ci-dessous.
+Create Customer,Créer un client
+Create Label,Créer un libellé
+Create New Customer,Créer un client
+Create New Label,Créer un libellé
+Create New Supplier,Créer un fournisseur
+Create Supplier,Créer un fournisseur
+Customer created successfully,Client créé avec succès
+Customer deleted successfully,Client supprimé avec succès
+Customer updated successfully,Client mis à jour avec succès
+e.g. 0208:1012081766,p. ex. 0208:1012081766
+Edit Customer,Modifier le client
+Edit Label,Modifier le libellé
+Edit Supplier,Modifier le fournisseur
+External ID (Optional),Identifiant externe (facultatif)
+External ID,Identifiant externe
+Failed to delete customer,Échec de la suppression du client
+Failed to delete supplier,Échec de la suppression du fournisseur
+Failed to load customers,Échec du chargement des clients
+Failed to load suppliers,Échec du chargement des fournisseurs
+Failed to save customer,Échec de l'enregistrement du client
+Failed to save supplier,Échec de l'enregistrement du fournisseur
+Label created successfully,Libellé créé avec succès
+Label deleted successfully,Libellé supprimé avec succès
+Label ID copied to clipboard,Identifiant du libellé copié dans le presse-papiers
+Label Name,Nom du libellé
+Label updated successfully,Libellé mis à jour avec succès
+Manage labels for organizing and categorizing your data.,Gérez les libellés pour organiser et classer vos données.
+Name *,Nom *
+Name is required,Le nom est requis
+No active team selected,Aucune équipe active sélectionnée
+No Peppol addresses added. Click "Add Address" to add one.,Aucune adresse Peppol ajoutée. Cliquez sur « Ajouter une adresse » pour en ajouter une.
+No Peppol IDs added yet.,Aucun identifiant Peppol ajouté pour le moment.
+Optional external identifier,Identifiant externe facultatif
+Optional VAT number,Numéro de TVA facultatif
+Orange,Orange
+Peppol Addresses,Adresses Peppol
+Peppol IDs,Identifiants Peppol
+Phone,Téléphone
+Postal Code *,Code postal *
+Purple,Violet
+Remove,Supprimer
+Search suppliers...,Rechercher des fournisseurs...
+Select {0} color,Sélectionner la couleur {0}
+Supplier created successfully,Fournisseur créé avec succès
+Supplier deleted successfully,Fournisseur supprimé avec succès
+Supplier updated successfully,Fournisseur mis à jour avec succès
+Update the customer details below.,Mettez à jour les informations du client ci-dessous.
+Update the supplier details below.,Mettez à jour les informations du fournisseur ci-dessous.
+View and manage your customers (supporting data).,Afficher et gérer vos clients (données de référence).
+View and manage your suppliers (supporting data).,Afficher et gérer vos fournisseurs (données de référence).
+Yellow,Jaune

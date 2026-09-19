@@ -11,7 +11,7 @@ const events: string[] = [];
 const secret = crypto.randomUUID();
 mock.module('@recommand/lib/api', () => ({ Server: Hono }));
 mock.module('@recommand/lib/utils', () => ({ actionSuccess: (value: unknown) => value, actionFailure: (value: unknown) => ({error: String(value)}) }));
-mock.module('@directory/utils/util', () => ({ UserFacingError: class extends Error {} }));
+mock.module('@peppol/utils/util', () => ({ UserFacingError: class extends Error {} }));
 mock.module('@peppol/db/schema', () => ({companyVerificationLog: {id:'id'}}));
 mock.module('@recommand/db', () => ({db: {update: () => { events.push('update'); return {set: () => ({where: async () => {}})}; }}}));
 mock.module('@peppol/data/company-verification', () => ({

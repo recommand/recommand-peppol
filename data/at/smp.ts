@@ -1,4 +1,4 @@
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { type Company, getCompanyById, type InsertCompany } from "@peppol/data/companies";
 import { type CompanyDocumentType, getCompanyDocumentTypes } from "@peppol/data/company-document-types";
 import { type CompanyIdentifier, canUpsertCompanyIdentifier, getCompanyIdentifiers } from "@peppol/data/company-identifiers";

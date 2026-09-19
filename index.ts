@@ -6,7 +6,7 @@ import billingProfileServer from "./api/billing-profile";
 import billingServer from "./api/billing";
 import reportingServer from "./api/reporting";
 import companiesServer from "./api/companies";
-import labelsServer from "@directory/api/labels";
+import labelsServer from "@peppol/api/labels";
 import sendDocumentServer from "./api/send-document";
 import documentDefaultsServer from "./api/document-defaults";
 import previewDocumentServer from "./api/preview-document";
@@ -26,9 +26,9 @@ import integrationsServer from "./api/integrations";
 import recipientServer from "./api/recipients";
 import receivingCapabilitiesServer from "./api/receiving-capabilities";
 import playgroundsServer from "./api/playgrounds";
-import suppliersServer from "@directory/api/suppliers";
+import suppliersServer from "@peppol/api/suppliers";
 import teamsServer from "./api/teams/get-team-extension";
-import customersServer from "@directory/api/customers";
+import customersServer from "@peppol/api/customers";
 import { initializeIntegrationCronJobs } from "./data/integrations/cron";
 import { initializeOffloadCronJobs } from "./data/offload/cron";
 import { initializeProviderSentCronJobs } from "./data/provider-sent/cron";
@@ -43,7 +43,6 @@ import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
 import { registerPeppolEventTypes } from "./lib/event-types";
 import { initializeMetricsServer } from "./utils/metrics";
-import { registerPeppolAuthExtensions } from "./utils/auth-middleware";
 import "./lib/permissions";
 
 export let logger: Logger;
@@ -53,8 +52,6 @@ const server = new Server();
 export async function init(app: RecommandApp, server: Server) {
   logger = new Logger(app);
   logger.info("Initializing peppol app");
-
-  registerPeppolAuthExtensions();
 
   registerPeppolEventTypes();
   addBackendEventListener(CORE_BACKEND_EVENTS.TEAM_CREATED, onTeamCreated);

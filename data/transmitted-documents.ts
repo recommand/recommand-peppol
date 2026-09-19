@@ -1,8 +1,7 @@
-import { documentDeliveries, supportedDocumentTypeEnum, transmittedDocuments, transmittedDocumentLabels } from "@peppol/db/schema";
-import { labels } from "@directory/db/schema";
+import { documentDeliveries, labels, supportedDocumentTypeEnum, transmittedDocuments, transmittedDocumentLabels } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { eq, and, or, sql, desc, isNull, isNotNull, inArray, ilike, gte, lt } from "drizzle-orm";
-import type { Label } from "@directory/data/labels";
+import type { Label } from "@peppol/data/labels";
 import type { FrenchReportingStatusSummary } from "./fr-reporting-submissions";
 import type { DeliveryStatus, DeliverySummary } from "./deliveries/model";
 import { removeAttachmentsFromParsedDocument } from "@peppol/utils/parsing/remove-attachments";
