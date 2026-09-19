@@ -42,6 +42,10 @@ const createIdentifierJsonBodySchema = z.object({
     identifier: z.string().min(1, "Identifier is required").openapi({
         description: "The value of the identifier",
     }),
+    migrationKey: z.string().trim().min(8).max(24).optional().openapi({
+        description: "A Peppol migration key issued by the provider that currently publishes this identifier for receiving. With it, the identifier is taken over from that provider without a gap instead of failing because it is registered elsewhere. Ask the previous provider for the key. When the company is not yet publishable, for example because its identity check is still open, the key is kept and used the moment the company is registered.",
+        example: "Ab12$#xyZ9!kLm",
+    }),
 });
 
 const createIdentifierParamSchemaWithTeamId = createIdentifierParamSchema.extend({ teamId: z.string() });
@@ -69,13 +73,15 @@ const _createIdentifier = server.post(
 async function _createIdentifierImplementation(c: CreateIdentifierContext) {
     try {
         const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground: c.var.team.isPlayground, useTestNetwork: c.var.team.useTestNetwork, isSmpRecipient: c.var.company.isSmpRecipient, isVerified: c.var.company.isVerified, verificationRequirements: c.var.team.verificationRequirements ?? undefined });
+        const { migrationKey, ...companyIdentifier } = c.req.valid("json");
         const identifier = await createCompanyIdentifier({
             companyIdentifier: {
-                ...c.req.valid("json"),
+                ...companyIdentifier,
                 companyId: c.req.valid("param").companyId,
             },
             skipSmpRegistration,
             useTestNetwork: c.var.team.useTestNetwork ?? false,
+            migrationKey,
         });
         await audit(c, {
             action: "create",
@@ -87,7 +93,7 @@ async function _createIdentifierImplementation(c: CreateIdentifierContext) {
                 scheme: identifier.scheme,
                 identifier: identifier.identifier,
             },
-            metadata: { skipSmpRegistration },
+            metadata: { skipSmpRegistration, withMigrationKey: !!migrationKey },
         });
 
         return c.json(actionSuccess({ identifier }));

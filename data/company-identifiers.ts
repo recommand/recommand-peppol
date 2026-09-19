@@ -10,6 +10,7 @@ import type { Company } from "./companies";
 import type { AccessPointProviderId } from "./peppol-providers";
 import { assertIdentifierSchemeAllowed, assertIdentifiersAllowed } from "./company-identifier-policy";
 import { lockCompanyRow, sameCompanyIdentity, type CompanyIdentitySnapshot } from "./company-row-lock";
+import { createPendingInboundMigration } from "./participant-migrations";
 
 export type CompanyIdentifier = typeof companyIdentifiers.$inferSelect;
 export type InsertCompanyIdentifier = typeof companyIdentifiers.$inferInsert;
@@ -305,10 +306,13 @@ export async function createCompanyIdentifier({
   companyIdentifier,
   skipSmpRegistration,
   useTestNetwork,
+  migrationKey,
 }:{
   companyIdentifier: InsertCompanyIdentifier;
   skipSmpRegistration: boolean;
   useTestNetwork: boolean;
+  /** A migration key from the SMP that currently publishes the identifier; the registration then takes the identifier over instead of creating it. */
+  migrationKey?: string;
 }): Promise<CompanyIdentifier> {
   const cleanedScheme = cleanScheme(companyIdentifier.scheme);
   const cleanedIdentifierValue = cleanIdentifier(companyIdentifier.identifier);
@@ -326,6 +330,16 @@ export async function createCompanyIdentifier({
     throw new UserFacingError(
       `Company identifier with scheme '${companyIdentifier.scheme}' and value '${companyIdentifier.identifier}' already exists`
     );
+  }
+
+  if(migrationKey){
+    await createPendingInboundMigration({
+      companyId: companyIdentifier.companyId,
+      scheme: cleanedScheme,
+      identifier: cleanedIdentifierValue,
+      migrationKey,
+      useTestNetwork,
+    });
   }
 
   if(!skipSmpRegistration){
