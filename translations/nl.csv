@@ -1016,3 +1016,15 @@ VAT becomes due,Btw verschuldigd
 VAT regime,Btw-regime
 Verify the company first. The signed French mandate is what allows us to report on its behalf.,Verifieer eerst het bedrijf. Het ondertekende Franse mandaat geeft ons de bevoegdheid om namens het bedrijf te rapporteren.
 Where this document stands with each recipient it was sent to.,Waar dit document staat bij elke ontvanger waarnaar het is verzonden.
+Migration key (optional),Migratiesleutel (optioneel)
+Migration key,Migratiesleutel
+Moving this identifier from another Peppol provider? Ask them for a migration key and enter it here. The identifier then moves to Recommand without a gap in reception.,Verhuist deze identificatie van een andere Peppol-provider? Vraag hen een migratiesleutel en vul die hier in. De identificatie verhuist dan naar Recommand zonder onderbreking van de ontvangst.
+Enter the migration key your current Peppol provider issued for this identifier. The registration moves to Recommand without a gap in reception.,Vul de migratiesleutel in die uw huidige Peppol-provider voor deze identificatie heeft uitgegeven. De registratie verhuist naar Recommand zonder onderbreking van de ontvangst.
+Migrate to Recommand,Migreren naar Recommand
+Move to Recommand,Verhuizen naar Recommand
+Migration key is required,Migratiesleutel is verplicht
+Identifier moved to Recommand,Identificatie verhuisd naar Recommand
+Migration key stored. It is used as soon as the company is verified and registered.,Migratiesleutel opgeslagen. Hij wordt gebruikt zodra het bedrijf geverifieerd en geregistreerd is.
+Failed to migrate identifier: {0},Identificatie migreren mislukt: {0}
+Migration key stored and waiting for the company's registration.,Migratiesleutel opgeslagen en wacht op de registratie van het bedrijf.
+Migration failed: {0},Migratie mislukt: {0}

@@ -18,7 +18,7 @@ export function Step5Identifiers({ teamId, company, onNext }: Step5Props) {
                     {t`Peppol identifiers are the addresses your company uses on the Peppol network. By default, identifiers were created from your enterprise or VAT number. You can add additional identifiers here if needed.`}
                 </p>
             </div>
-            <CompanyIdentifiersManager teamId={teamId} companyId={company.id} />
+            <CompanyIdentifiersManager teamId={teamId} companyId={company.id} isSmpRecipient={company.isSmpRecipient} />
             <div className="flex justify-end pt-2">
                 <Button type="button" onClick={onNext}>
                     {t`Continue`}

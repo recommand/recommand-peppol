@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@core
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@core/components/ui/select";
 import { AsyncButton } from "@core/components/async-button";
 import { toast } from "@core/components/ui/sonner";
-import { Plus, Edit, Trash2, X, Check } from "lucide-react";
+import { Plus, Edit, Trash2, X, Check, ArrowRightLeft } from "lucide-react";
 import { rc } from "@recommand/lib/client";
 import type { CompanyIdentifiers } from "@peppol/api/companies/identifiers";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
+import type { ParticipantMigration } from "@peppol/data/participant-migrations";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { useTranslation } from "@core/hooks/use-translation";
 
@@ -18,12 +19,19 @@ const client = rc<CompanyIdentifiers>("peppol");
 type CompanyIdentifiersManagerProps = {
     teamId: string;
     companyId: string;
+    /** Migration keys only apply to recipient registrations; a send-only company gets no migration controls. */
+    isSmpRecipient?: boolean;
 };
 
 type IdentifierFormData = {
     scheme: string;
     identifier: string;
+    migrationKey: string;
 };
+
+type MigrationState = Pick<ParticipantMigration, "id" | "direction" | "status" | "errorMessage">;
+
+const emptyForm: IdentifierFormData = { scheme: "", identifier: "", migrationKey: "" };
 
 const SCHEME_LABELS: Record<string, string> = {
     "0225": "0225 (France, SIREN)",
@@ -33,19 +41,26 @@ function schemeLabel(scheme: string): string {
     return SCHEME_LABELS[scheme] ?? scheme;
 }
 
-export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifiersManagerProps) {
+export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = true }: CompanyIdentifiersManagerProps) {
     const { t, language } = useTranslation();
     const [identifiers, setIdentifiers] = useState<CompanyIdentifier[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [formData, setFormData] = useState<IdentifierFormData>({ scheme: "", identifier: "" });
-    const [editFormData, setEditFormData] = useState<IdentifierFormData>({ scheme: "", identifier: "" });
+    const [formData, setFormData] = useState<IdentifierFormData>(emptyForm);
+    const [editFormData, setEditFormData] = useState<IdentifierFormData>(emptyForm);
+    // The identifier whose migration key form is open, and the key typed into it.
+    const [migratingId, setMigratingId] = useState<string | null>(null);
+    const [migrationKey, setMigrationKey] = useState("");
+    // The newest migration per identifier, so a stored or refused key stays visible.
+    const [latestMigrations, setLatestMigrations] = useState<Record<string, MigrationState>>({});
     // The schemes this company's Peppol registration accepts; null when any scheme goes.
     const [supportedSchemes, setSupportedSchemes] = useState<string[] | null>(null);
     const restricted = supportedSchemes !== null;
     const defaultScheme = supportedSchemes?.length === 1 ? supportedSchemes[0] : "";
+    // A restricted scheme list means a partner SMP publishes this company, and partner SMPs have no migration keys.
+    const canMigrate = isSmpRecipient && !restricted;
 
     useEffect(() => {
         fetchIdentifiers();
@@ -79,17 +94,94 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                 return;
             }
 
-            setIdentifiers((json.identifiers || []).map(id => ({
+            const loaded = (json.identifiers || []).map(id => ({
                 ...id,
                 createdAt: new Date(id.createdAt),
                 updatedAt: new Date(id.updatedAt),
-            })));
+            }));
+            setIdentifiers(loaded);
+            fetchLatestMigrations(loaded.map((identifier) => identifier.id));
         } catch (error) {
             console.error("Error fetching identifiers:", error);
             toast.error(t`Failed to load company identifiers: ${error}`);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const fetchLatestMigrations = async (identifierIds: string[]) => {
+        const entries = await Promise.all(identifierIds.map(async (identifierId): Promise<[string, MigrationState] | null> => {
+            try {
+                const response = await client[":teamId"]["companies"][":companyId"]["identifiers"][":identifierId"]["migrations"].$get({
+                    param: { teamId, companyId, identifierId },
+                });
+                const json = await response.json();
+                const latest = json.success ? json.migrations[0] : undefined;
+                return latest ? [identifierId, latest] : null;
+            } catch (error) {
+                console.error("Error fetching identifier migrations:", error);
+                return null;
+            }
+        }));
+        setLatestMigrations(Object.fromEntries(entries.filter((entry): entry is [string, MigrationState] => entry !== null)));
+    };
+
+    const handleMigrate = async (identifierId: string) => {
+        if (!migrationKey.trim()) {
+            toast.error(t`Migration key is required`);
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const response = await client[":teamId"]["companies"][":companyId"]["identifiers"][":identifierId"]["migration"].$post({
+                param: { teamId, companyId, identifierId },
+                json: { migrationKey: migrationKey.trim() },
+            });
+
+            const json = await response.json();
+            if (!json.success) {
+                throw new Error(stringifyActionFailure(json.errors));
+            }
+
+            if (json.migration.status === "completed") {
+                toast.success(t`Identifier moved to Recommand`);
+            } else {
+                toast.success(t`Migration key stored. It is used as soon as the company is verified and registered.`);
+            }
+            setMigratingId(null);
+            setMigrationKey("");
+        } catch (error) {
+            toast.error(t`Failed to migrate identifier: ${error}`);
+        } finally {
+            setIsSubmitting(false);
+            fetchIdentifiers();
+        }
+    };
+
+    const startMigrate = (identifierId: string) => {
+        setEditingId(null);
+        setMigratingId(identifierId);
+        setMigrationKey("");
+    };
+
+    const cancelMigrate = () => {
+        setMigratingId(null);
+        setMigrationKey("");
+    };
+
+    const migrationStatus = (identifierId: string) => {
+        const latest = latestMigrations[identifierId];
+        if (!latest || latest.direction !== "inbound") {
+            return null;
+        }
+        if (latest.status === "pending") {
+            return <div className="text-xs text-amber-700 dark:text-amber-400">{t`Migration key stored and waiting for the company's registration.`}</div>;
+        }
+        if (latest.status === "failed") {
+            return <div className="text-xs text-destructive">{t`Migration failed: ${latest.errorMessage ?? ""}`}</div>;
+        }
+        return null;
     };
 
     const handleAdd = async () => {
@@ -104,9 +196,14 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
 
         try {
             setIsSubmitting(true);
+            const key = formData.migrationKey.trim();
             const response = await client[":teamId"]["companies"][":companyId"]["identifiers"].$post({
                 param: { teamId, companyId },
-                json: formData,
+                json: {
+                    scheme: formData.scheme,
+                    identifier: formData.identifier,
+                    ...(canMigrate && key ? { migrationKey: key } : {}),
+                },
             });
 
             const json = await response.json();
@@ -115,7 +212,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
             }
 
             toast.success(t`Identifier added successfully`);
-            setFormData({ scheme: "", identifier: "" });
+            setFormData(emptyForm);
             setIsAdding(false);
         } catch (error) {
             toast.error(t`Failed to add identifier: ${error}`);
@@ -143,7 +240,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
             setIsSubmitting(true);
             const response = await client[":teamId"]["companies"][":companyId"]["identifiers"][":identifierId"].$put({
                 param: { teamId, companyId, identifierId: editingId },
-                json: editFormData,
+                json: { scheme: editFormData.scheme, identifier: editFormData.identifier },
             });
 
             const json = await response.json();
@@ -153,7 +250,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
 
             toast.success(t`Identifier updated successfully`);
             setEditingId(null);
-            setEditFormData({ scheme: "", identifier: "" });
+            setEditFormData(emptyForm);
         } catch (error) {
             toast.error(t`Failed to update identifier: ${error}`);
         } finally {
@@ -182,21 +279,23 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
     };
 
     const startEdit = (identifier: CompanyIdentifier) => {
+        setMigratingId(null);
         setEditingId(identifier.id);
         setEditFormData({
             scheme: identifier.scheme,
             identifier: identifier.identifier,
+            migrationKey: "",
         });
     };
 
     const cancelEdit = () => {
         setEditingId(null);
-        setEditFormData({ scheme: "", identifier: "" });
+        setEditFormData(emptyForm);
     };
 
     const cancelAdd = () => {
         setIsAdding(false);
-        setFormData({ scheme: "", identifier: "" });
+        setFormData(emptyForm);
     };
 
     if (isLoading) {
@@ -226,7 +325,7 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                         </CardDescription>
                     </div>
                     {!isAdding && (
-                        <Button onClick={() => { setFormData({ scheme: defaultScheme, identifier: "" }); setIsAdding(true); }} size="sm">
+                        <Button onClick={() => { setFormData({ ...emptyForm, scheme: defaultScheme }); setIsAdding(true); }} size="sm">
                             <Plus className="h-4 w-4" />
                             {t`Add Identifier`}
                         </Button>
@@ -276,6 +375,21 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                                 ? t`The Peppol registration of this company only accepts the schemes listed above.`
                                 : t`Common schemes: 0208 (Belgium), 0106 (Netherlands), 0225 (France)`}
                         </p>
+                        {canMigrate && (
+                            <div className="space-y-2 mt-4">
+                                <Label htmlFor="add-migration-key">{t`Migration key (optional)`}</Label>
+                                <Input
+                                    id="add-migration-key"
+                                    placeholder="Ab12$#xyZ9!kLm"
+                                    value={formData.migrationKey}
+                                    autoComplete="off"
+                                    onChange={(e) => setFormData({ ...formData, migrationKey: e.target.value })}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    {t`Moving this identifier from another Peppol provider? Ask them for a migration key and enter it here. The identifier then moves to Recommand without a gap in reception.`}
+                                </p>
+                            </div>
+                        )}
                         <div className="flex gap-2 mt-4 justify-end">
                             <AsyncButton onClick={handleAdd} size="sm" disabled={isSubmitting}>
                                 <Check className="h-4 w-4" />
@@ -346,6 +460,35 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                                             </Button>
                                         </div>
                                     </div>
+                                ) : migratingId === identifier.id ? (
+                                    // Migration key form
+                                    <div className="flex-1 space-y-3">
+                                        <div className="font-medium">{identifier.scheme}:{identifier.identifier}</div>
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`migration-key-${identifier.id}`} className="text-xs">{t`Migration key`}</Label>
+                                            <Input
+                                                id={`migration-key-${identifier.id}`}
+                                                placeholder="Ab12$#xyZ9!kLm"
+                                                value={migrationKey}
+                                                autoComplete="off"
+                                                onChange={(e) => setMigrationKey(e.target.value)}
+                                                size={1}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {t`Enter the migration key your current Peppol provider issued for this identifier. The registration moves to Recommand without a gap in reception.`}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2 justify-end">
+                                            <AsyncButton onClick={() => handleMigrate(identifier.id)} size="sm" disabled={isSubmitting}>
+                                                <ArrowRightLeft className="h-4 w-4" />
+                                                {t`Move to Recommand`}
+                                            </AsyncButton>
+                                            <Button onClick={cancelMigrate} size="sm" variant="outline" disabled={isSubmitting}>
+                                                <X className="h-4 w-4" />
+                                                {t`Cancel`}
+                                            </Button>
+                                        </div>
+                                    </div>
                                 ) : (
                                     // Display
                                     <div className="flex-1">
@@ -358,11 +501,22 @@ export function CompanyIdentifiersManager({ teamId, companyId }: CompanyIdentifi
                                                 {t`This scheme is not accepted by the Peppol registration of this company. Remove or change this identifier.`}
                                             </div>
                                         )}
+                                        {migrationStatus(identifier.id)}
                                     </div>
                                 )}
 
-                                {editingId === identifier.id ? null : (
+                                {editingId === identifier.id || migratingId === identifier.id ? null : (
                                     <div className="flex gap-2">
+                                        {canMigrate && (
+                                            <Button
+                                                onClick={() => startMigrate(identifier.id)}
+                                                size="sm"
+                                                variant="outline"
+                                                title={t`Migrate to Recommand`}
+                                            >
+                                                <ArrowRightLeft className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                         <Button
                                             onClick={() => startEdit(identifier)}
                                             size="sm"

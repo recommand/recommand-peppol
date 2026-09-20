@@ -1016,3 +1016,15 @@ VAT becomes due,Exigibilité de la TVA
 VAT regime,Régime de TVA
 Verify the company first. The signed French mandate is what allows us to report on its behalf.,Vérifiez d'abord l'entreprise. Le mandat français signé est ce qui nous autorise à déclarer en son nom.
 Where this document stands with each recipient it was sent to.,Où en est ce document auprès de chaque destinataire auquel il a été envoyé.
+Migration key (optional),Clé de migration (facultatif)
+Migration key,Clé de migration
+Moving this identifier from another Peppol provider? Ask them for a migration key and enter it here. The identifier then moves to Recommand without a gap in reception.,Cet identifiant vient d'un autre fournisseur Peppol ? Demandez-lui une clé de migration et saisissez-la ici. L'identifiant passe alors chez Recommand sans interruption de la réception.
+Enter the migration key your current Peppol provider issued for this identifier. The registration moves to Recommand without a gap in reception.,Saisissez la clé de migration que votre fournisseur Peppol actuel a émise pour cet identifiant. L'enregistrement passe chez Recommand sans interruption de la réception.
+Migrate to Recommand,Migrer vers Recommand
+Move to Recommand,Transférer chez Recommand
+Migration key is required,La clé de migration est obligatoire
+Identifier moved to Recommand,Identifiant transféré chez Recommand
+Migration key stored. It is used as soon as the company is verified and registered.,Clé de migration enregistrée. Elle sera utilisée dès que l'entreprise sera vérifiée et enregistrée.
+Failed to migrate identifier: {0},Échec de la migration de l'identifiant : {0}
+Migration key stored and waiting for the company's registration.,Clé de migration enregistrée et en attente de l'enregistrement de l'entreprise.
+Migration failed: {0},Échec de la migration : {0}

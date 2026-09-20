@@ -389,6 +389,7 @@ export default function CompanyDetailPage() {
               key={`${company.id}:${company.country}`}
               teamId={activeTeam.id}
               companyId={company.id}
+              isSmpRecipient={company.isSmpRecipient}
             />
             <CompanyDocumentTypesManager
               teamId={activeTeam.id}
