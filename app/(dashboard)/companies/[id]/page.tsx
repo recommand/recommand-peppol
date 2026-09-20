@@ -390,6 +390,7 @@ export default function CompanyDetailPage() {
               teamId={activeTeam.id}
               companyId={company.id}
               isSmpRecipient={company.isSmpRecipient}
+              publishedOnSmp={company.isSmpRecipient && (verificationRequirements !== "strict" || (isVerified ?? company.isVerified))}
             />
             <CompanyDocumentTypesManager
               teamId={activeTeam.id}

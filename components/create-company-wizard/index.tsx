@@ -118,6 +118,7 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
                 <Step5Identifiers
                     teamId={teamId}
                     company={createdCompany}
+                    verificationRequirements={verificationRequirements}
                     onNext={afterIdentifiers}
                 />
             )}

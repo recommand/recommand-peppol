@@ -6,10 +6,11 @@ import { useTranslation } from "@core/hooks/use-translation";
 type Step5Props = {
     teamId: string;
     company: Company;
+    verificationRequirements: "strict" | "trusted" | "lax" | null;
     onNext: () => void;
 };
 
-export function Step5Identifiers({ teamId, company, onNext }: Step5Props) {
+export function Step5Identifiers({ teamId, company, verificationRequirements, onNext }: Step5Props) {
     const { t } = useTranslation();
     return (
         <div className="space-y-4">
@@ -18,7 +19,12 @@ export function Step5Identifiers({ teamId, company, onNext }: Step5Props) {
                     {t`Peppol identifiers are the addresses your company uses on the Peppol network. By default, identifiers were created from your enterprise or VAT number. You can add additional identifiers here if needed.`}
                 </p>
             </div>
-            <CompanyIdentifiersManager teamId={teamId} companyId={company.id} isSmpRecipient={company.isSmpRecipient} />
+            <CompanyIdentifiersManager
+                teamId={teamId}
+                companyId={company.id}
+                isSmpRecipient={company.isSmpRecipient}
+                publishedOnSmp={company.isSmpRecipient && (verificationRequirements !== "strict" || company.isVerified)}
+            />
             <div className="flex justify-end pt-2">
                 <Button type="button" onClick={onNext}>
                     {t`Continue`}

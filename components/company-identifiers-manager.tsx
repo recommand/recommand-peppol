@@ -21,6 +21,13 @@ type CompanyIdentifiersManagerProps = {
     companyId: string;
     /** Migration keys only apply to recipient registrations; a send-only company gets no migration controls. */
     isSmpRecipient?: boolean;
+    /**
+     * Whether the company's identifiers are currently registered on the SMP. Until then, for
+     * example while a strict team's identity check is still open, an identifier in this list
+     * may still be published by another provider and can be taken over with a migration key.
+     * Once published here there is nothing to migrate, so the per-identifier action is hidden.
+     */
+    publishedOnSmp?: boolean;
 };
 
 type IdentifierFormData = {
@@ -41,7 +48,7 @@ function schemeLabel(scheme: string): string {
     return SCHEME_LABELS[scheme] ?? scheme;
 }
 
-export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = true }: CompanyIdentifiersManagerProps) {
+export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = true, publishedOnSmp = true }: CompanyIdentifiersManagerProps) {
     const { t, language } = useTranslation();
     const [identifiers, setIdentifiers] = useState<CompanyIdentifier[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -61,6 +68,8 @@ export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = 
     const defaultScheme = supportedSchemes?.length === 1 ? supportedSchemes[0] : "";
     // A restricted scheme list means a partner SMP publishes this company, and partner SMPs have no migration keys.
     const canMigrate = isSmpRecipient && !restricted;
+    // A new identifier is never ours yet; an existing one only needs a key while the company is not published.
+    const canMigrateExisting = canMigrate && !publishedOnSmp;
 
     useEffect(() => {
         fetchIdentifiers();
@@ -507,7 +516,7 @@ export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = 
 
                                 {editingId === identifier.id || migratingId === identifier.id ? null : (
                                     <div className="flex gap-2">
-                                        {canMigrate && (
+                                        {canMigrateExisting && (
                                             <Button
                                                 onClick={() => startMigrate(identifier.id)}
                                                 size="sm"
