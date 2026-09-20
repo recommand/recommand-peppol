@@ -4,7 +4,7 @@ import { db } from "@recommand/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { getEnterpriseData } from "./cbe-public-search/client";
 import { requiresArratechKycReview } from "./at/kyc";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { verifyCompany } from "./companies";
 import { getCompany, type Company } from "@peppol/data/companies";
 import { getTeamExtension } from "./teams";

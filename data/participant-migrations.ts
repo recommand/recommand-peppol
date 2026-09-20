@@ -1,7 +1,7 @@
 import { companies, participantMigrations } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { shouldInteractWithPeppolNetwork, shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import {

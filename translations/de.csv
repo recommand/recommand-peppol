@@ -1028,3 +1028,63 @@ Migration key stored. It is used as soon as the company is verified and register
 Failed to migrate identifier: {0},Kennung konnte nicht migriert werden: {0}
 Migration key stored and waiting for the company's registration.,Migrationsschlüssel gespeichert und wartet auf die Registrierung des Unternehmens.
 Migration failed: {0},Migration fehlgeschlagen: {0}
+Add Address,Adresse hinzufügen
+Address *,Adresse *
+Are you sure you want to delete customer "{0}"?,Möchten Sie den Kunden „{0}“ wirklich löschen?
+Are you sure you want to delete this supplier? This action cannot be undone.,Möchten Sie diesen Lieferanten wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+Blue,Blau
+City *,Stadt *
+Country *,Land *
+Create a new customer with the details below.,Erstellen Sie einen neuen Kunden mit den unten stehenden Angaben.
+Create a new supplier with the details below.,Erstellen Sie einen neuen Lieferanten mit den unten stehenden Angaben.
+Create Customer,Kunden erstellen
+Create Label,Label erstellen
+Create New Customer,Neuen Kunden erstellen
+Create New Label,Neues Label erstellen
+Create New Supplier,Neuen Lieferanten erstellen
+Create Supplier,Lieferanten erstellen
+Customer created successfully,Kunde erfolgreich erstellt
+Customer deleted successfully,Kunde erfolgreich gelöscht
+Customer updated successfully,Kunde erfolgreich aktualisiert
+e.g. 0208:1012081766,z. B. 0208:1012081766
+Edit Customer,Kunden bearbeiten
+Edit Label,Label bearbeiten
+Edit Supplier,Lieferanten bearbeiten
+External ID (Optional),Externe ID (optional)
+External ID,Externe ID
+Failed to delete customer,Kunde konnte nicht gelöscht werden
+Failed to delete supplier,Lieferant konnte nicht gelöscht werden
+Failed to load customers,Kunden konnten nicht geladen werden
+Failed to load suppliers,Lieferanten konnten nicht geladen werden
+Failed to save customer,Kunde konnte nicht gespeichert werden
+Failed to save supplier,Lieferant konnte nicht gespeichert werden
+Label created successfully,Label erfolgreich erstellt
+Label deleted successfully,Label erfolgreich gelöscht
+Label ID copied to clipboard,Label-ID in die Zwischenablage kopiert
+Label Name,Labelname
+Label updated successfully,Label erfolgreich aktualisiert
+Manage labels for organizing and categorizing your data.,Labels zum Ordnen und Kategorisieren Ihrer Daten verwalten.
+Name *,Name *
+Name is required,Name ist erforderlich
+No active team selected,Kein aktives Team ausgewählt
+No Peppol addresses added. Click "Add Address" to add one.,Keine Peppol-Adressen hinzugefügt. Klicken Sie auf „Adresse hinzufügen“\, um eine hinzuzufügen.
+No Peppol IDs added yet.,Noch keine Peppol-IDs hinzugefügt.
+Optional external identifier,Optionale externe Kennung
+Optional VAT number,Optionale USt-IdNr.
+Orange,Orange
+Peppol Addresses,Peppol-Adressen
+Peppol IDs,Peppol-IDs
+Phone,Telefon
+Postal Code *,Postleitzahl *
+Purple,Violett
+Remove,Entfernen
+Search suppliers...,Lieferanten suchen...
+Select {0} color,Farbe {0} auswählen
+Supplier created successfully,Lieferant erfolgreich erstellt
+Supplier deleted successfully,Lieferant erfolgreich gelöscht
+Supplier updated successfully,Lieferant erfolgreich aktualisiert
+Update the customer details below.,Aktualisieren Sie unten die Kundendaten.
+Update the supplier details below.,Aktualisieren Sie unten die Lieferantendaten.
+View and manage your customers (supporting data).,Kunden (Stammdaten) anzeigen und verwalten.
+View and manage your suppliers (supporting data).,Lieferanten (Stammdaten) anzeigen und verwalten.
+Yellow,Gelb

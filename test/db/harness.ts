@@ -26,8 +26,7 @@ const packagesDirectory = join(packageDirectory, "..");
 
 // The packages this one's tables need: the framework's migration bookkeeping, the
 // core tables peppol's foreign keys point at, and peppol's own. The other packages
-// are left out because they are not needed here and some of them own tables peppol
-// also creates, which the server resolves by loading only one of the two.
+// are left out because they are not needed here.
 const MIGRATED_PACKAGES = ["framework", "core", "peppol"] as const;
 
 /**

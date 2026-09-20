@@ -2,13 +2,12 @@ import { companies, companyIdentifiers, companyVerificationLog, teamExtensions }
 import { db } from "@recommand/db";
 import { eq, and, or, isNull, asc, inArray } from "drizzle-orm";
 import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
-import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@directory/utils/util";
+import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { getTeamExtension } from "./teams";
 import { createCompanyDocumentType } from "./company-document-types";
 import { canUpsertCompanyIdentifier, createCompanyIdentifier, getCompanyIdentifiers } from "./company-identifiers";
-import { COUNTRIES } from "@peppol/utils/countries";
-import { getCountrySupportLevel } from "@directory/utils/countries";
+import { COUNTRIES, getCountrySupportLevel } from "@peppol/utils/countries";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { createVerificationSession, type VerificationExpectedDetails } from "./didit/client";
 import { getCompanyVerificationLog, revokeOpenCompanyVerificationSessions } from "./company-verification";

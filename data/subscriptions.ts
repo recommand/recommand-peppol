@@ -4,7 +4,7 @@ import { eq, isNull, and, or, gte, lte, asc, gt, sql, type ExtractTablesWithRela
 import type { BillingConfig } from "./plans";
 import { addMilliseconds, endOfMonth } from "date-fns";
 import { TZDate } from "@date-fns/tz";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import type { PgTransaction } from "drizzle-orm/pg-core";
 import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import {

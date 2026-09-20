@@ -1028,3 +1028,63 @@ Migration key stored. It is used as soon as the company is verified and register
 Failed to migrate identifier: {0},Identificatie migreren mislukt: {0}
 Migration key stored and waiting for the company's registration.,Migratiesleutel opgeslagen en wacht op de registratie van het bedrijf.
 Migration failed: {0},Migratie mislukt: {0}
+Add Address,Adres toevoegen
+Address *,Adres *
+Are you sure you want to delete customer "{0}"?,Weet je zeker dat je klant "{0}" wilt verwijderen?
+Are you sure you want to delete this supplier? This action cannot be undone.,Weet je zeker dat je deze leverancier wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+Blue,Blauw
+City *,Stad *
+Country *,Land *
+Create a new customer with the details below.,Maak een nieuwe klant aan met de onderstaande gegevens.
+Create a new supplier with the details below.,Maak een nieuwe leverancier aan met de onderstaande details.
+Create Customer,Klant aanmaken
+Create Label,Label aanmaken
+Create New Customer,Nieuwe klant aanmaken
+Create New Label,Nieuw label aanmaken
+Create New Supplier,Nieuwe leverancier aanmaken
+Create Supplier,Leverancier aanmaken
+Customer created successfully,Klant succesvol aangemaakt
+Customer deleted successfully,Klant succesvol verwijderd
+Customer updated successfully,Klant succesvol bijgewerkt
+e.g. 0208:1012081766,bijv. 0208:1012081766
+Edit Customer,Klant bewerken
+Edit Label,Label bewerken
+Edit Supplier,Leverancier bewerken
+External ID (Optional),Externe ID (optioneel)
+External ID,Externe ID
+Failed to delete customer,Klant verwijderen mislukt
+Failed to delete supplier,Leverancier verwijderen mislukt
+Failed to load customers,Klanten laden mislukt
+Failed to load suppliers,Leveranciers laden mislukt
+Failed to save customer,Klant opslaan mislukt
+Failed to save supplier,Leverancier opslaan mislukt
+Label created successfully,Label succesvol aangemaakt
+Label deleted successfully,Label succesvol verwijderd
+Label ID copied to clipboard,Label-ID gekopieerd naar klembord
+Label Name,Labelnaam
+Label updated successfully,Label succesvol bijgewerkt
+Manage labels for organizing and categorizing your data.,Beheer labels voor het organiseren en categoriseren van je gegevens.
+Name *,Naam *
+Name is required,Naam is verplicht
+No active team selected,Geen actief team geselecteerd
+No Peppol addresses added. Click "Add Address" to add one.,Geen Peppol-adressen toegevoegd. Klik op "Adres toevoegen" om er een toe te voegen.
+No Peppol IDs added yet.,Nog geen Peppol-ID's toegevoegd.
+Optional external identifier,Optionele externe identificator
+Optional VAT number,Optioneel btw-nummer
+Orange,Oranje
+Peppol Addresses,Peppol-adressen
+Peppol IDs,Peppol-ID's
+Phone,Telefoon
+Postal Code *,Postcode *
+Purple,Paars
+Remove,Verwijderen
+Search suppliers...,Zoek leveranciers...
+Select {0} color,Kleur {0} selecteren
+Supplier created successfully,Leverancier succesvol aangemaakt
+Supplier deleted successfully,Leverancier succesvol verwijderd
+Supplier updated successfully,Leverancier succesvol bijgewerkt
+Update the customer details below.,Werk de onderstaande klantgegevens bij.
+Update the supplier details below.,Werk de onderstaande leveranciersgegevens bij.
+View and manage your customers (supporting data).,Bekijk en beheer je klanten (ondersteunende gegevens).
+View and manage your suppliers (supporting data).,Bekijk en beheer je leveranciers (ondersteunende gegevens).
+Yellow,Geel

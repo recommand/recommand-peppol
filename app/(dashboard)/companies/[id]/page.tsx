@@ -25,7 +25,7 @@ import { BUILT_IN_INTEGRATIONS } from "@peppol/utils/integrations";
 import type { Subscription as SubscriptionType } from "@peppol/data/subscriptions";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { StatusMessage } from "@recommand/components/status-feedback";
-import { cleanEnterpriseNumber, cleanVatNumber } from "@directory/utils/util";
+import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");

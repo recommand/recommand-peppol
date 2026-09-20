@@ -1,4 +1,4 @@
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { XMLParser } from "fast-xml-parser";
 import { fetchSmp } from "./client";
 import { PARTICIPANT_SCHEME } from "./service-metadata";

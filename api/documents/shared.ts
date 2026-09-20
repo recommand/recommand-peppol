@@ -8,7 +8,7 @@ import { messageLevelResponseSchema } from "@peppol/utils/parsing/message-level-
 import { franceCdarSchema } from "@peppol/utils/parsing/france-cdar/schemas";
 import { frenchB2CReportSchema } from "@peppol/utils/parsing/b2c-reporting/france";
 import { storedFrenchB2BiReportSchema } from "@peppol/utils/parsing/b2bi-reporting/france";
-import { labelResponse } from "@directory/api/labels/shared";
+import { labelResponse } from "@peppol/api/labels/shared";
 import { validationResponse } from "@peppol/types/validation";
 import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/document-types/keys";
 import {

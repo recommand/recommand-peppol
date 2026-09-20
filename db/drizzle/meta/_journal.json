@@ -775,8 +775,15 @@
     {
       "idx": 110,
       "version": "7",
-      "when": 1789843961999,
-      "tag": "20260919185241_participant_migrations",
+      "when": 1789843095992,
+      "tag": "20260919183815_restore_directory_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1789897397343,
+      "tag": "20260920094317_participant_migrations",
       "breakpoints": true
     }
   ]

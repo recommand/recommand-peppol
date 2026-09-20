@@ -16,7 +16,7 @@ mock.module("@recommand/lib/utils", () => ({
   actionSuccess: (value: unknown) => ({ success: true, ...(value as object) }),
   actionFailure: (value: unknown) => ({ success: false, error: String(value) }),
 }));
-mock.module("@directory/utils/util", () => ({ UserFacingError: class extends Error {} }));
+mock.module("@peppol/utils/util", () => ({ UserFacingError: class extends Error {} }));
 mock.module("@peppol/db/schema", () => ({ transmittedDocuments: { id: "id", apTransactionId: "ap", direction: "direction" } }));
 mock.module("@recommand/db", () => ({ db: {} }));
 mock.module("@peppol/data/at/ap", () => ({ downloadBusinessDocument: async () => null }));

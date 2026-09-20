@@ -1,4 +1,4 @@
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { getCompanyById, type Company, type InsertCompany } from "@peppol/data/companies";
 import { deleteServiceGroup, registerServiceGroup } from "./service-group";
 import { deleteServiceMetadata, registerServiceMetadata } from "./service-metadata";

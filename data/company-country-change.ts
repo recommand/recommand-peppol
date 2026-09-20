@@ -1,4 +1,4 @@
-import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@directory/utils/util";
+import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { COUNTRIES } from "@peppol/utils/countries";
 import { validateIdentifier } from "@peppol/utils/identifier-validation";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";

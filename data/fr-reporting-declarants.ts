@@ -2,7 +2,7 @@ import { db } from "@recommand/db";
 import type { Logger } from "@recommand/lib/logger";
 import { Cron } from "croner";
 import { and, desc, eq, isNotNull, lte, sql } from "drizzle-orm";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import type { Company } from "@peppol/data/companies";
 import {
   ArratechDeclarantError,
