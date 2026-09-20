@@ -469,6 +469,61 @@ export const companyIdentifiers = pgTable(
   ]
 );
 
+export const participantMigrationDirections = ["inbound", "outbound"] as const;
+export const zodParticipantMigrationDirections = z.enum(participantMigrationDirections);
+export const participantMigrationDirectionEnum = pgEnum(
+  "peppol_participant_migration_direction",
+  participantMigrationDirections
+);
+
+// A participant moves between SMPs with a one-time migration key from the Peppol SML.
+// pending: an inbound key is stored and waits for the moment the company is registered
+// in the SMP. inProgress: an outbound key was handed out and the SML waits for the
+// receiving SMP to claim the participant. The other statuses are final.
+export const participantMigrationStatuses = [
+  "pending",
+  "inProgress",
+  "completed",
+  "cancelled",
+  "failed",
+] as const;
+export const zodParticipantMigrationStatuses = z.enum(participantMigrationStatuses);
+export const participantMigrationStatusEnum = pgEnum(
+  "peppol_participant_migration_status",
+  participantMigrationStatuses
+);
+
+export const participantMigrations = pgTable(
+  "peppol_participant_migrations",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "pm_" + ulid()),
+    companyId: text("company_id")
+      .references(() => companies.id, { onDelete: "cascade" })
+      .notNull(),
+    scheme: text("scheme").notNull(),
+    identifier: text("identifier").notNull(),
+    direction: participantMigrationDirectionEnum("direction").notNull(),
+    status: participantMigrationStatusEnum("status").notNull(),
+    migrationKey: text("migration_key").notNull(),
+    useTestNetwork: boolean("use_test_network").notNull().default(false),
+    errorMessage: text("error_message"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    index("peppol_participant_migrations_company_idx").on(table.companyId),
+    // One open migration per participant per network.
+    uniqueIndex("peppol_participant_migrations_open_unique")
+      .on(table.companyId, table.scheme, table.identifier, table.useTestNetwork)
+      .where(sql`${table.status} in ('pending', 'inProgress')`),
+  ]
+);
+
 export const companyDocumentTypes = pgTable(
   "peppol_company_document_types",
   {

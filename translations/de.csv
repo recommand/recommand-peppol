@@ -1016,6 +1016,18 @@ VAT becomes due,Steuerentstehung
 VAT regime,MwSt.-Regime
 Verify the company first. The signed French mandate is what allows us to report on its behalf.,Verifizieren Sie zuerst das Unternehmen. Das unterzeichnete französische Mandat berechtigt uns\, in seinem Namen zu melden.
 Where this document stands with each recipient it was sent to.,Wo dieses Dokument bei jedem Empfänger steht\, an den es gesendet wurde.
+Migration key (optional),Migrationsschlüssel (optional)
+Migration key,Migrationsschlüssel
+Moving this identifier from another Peppol provider? Ask them for a migration key and enter it here. The identifier then moves to Recommand without a gap in reception.,Ziehen Sie diese Kennung von einem anderen Peppol-Anbieter um? Fragen Sie dort nach einem Migrationsschlüssel und geben Sie ihn hier ein. Die Kennung wechselt dann ohne Empfangsunterbrechung zu Recommand.
+Enter the migration key your current Peppol provider issued for this identifier. The registration moves to Recommand without a gap in reception.,Geben Sie den Migrationsschlüssel ein\, den Ihr aktueller Peppol-Anbieter für diese Kennung ausgestellt hat. Die Registrierung wechselt ohne Empfangsunterbrechung zu Recommand.
+Migrate to Recommand,Zu Recommand migrieren
+Move to Recommand,Zu Recommand wechseln
+Migration key is required,Migrationsschlüssel ist erforderlich
+Identifier moved to Recommand,Kennung zu Recommand gewechselt
+Migration key stored. It is used as soon as the company is verified and registered.,Migrationsschlüssel gespeichert. Er wird verwendet\, sobald das Unternehmen verifiziert und registriert ist.
+Failed to migrate identifier: {0},Kennung konnte nicht migriert werden: {0}
+Migration key stored and waiting for the company's registration.,Migrationsschlüssel gespeichert und wartet auf die Registrierung des Unternehmens.
+Migration failed: {0},Migration fehlgeschlagen: {0}
 Add Address,Adresse hinzufügen
 Address *,Adresse *
 Are you sure you want to delete customer "{0}"?,Möchten Sie den Kunden „{0}“ wirklich löschen?
