@@ -6,7 +6,6 @@ import {
   type AuthenticatedUserContext,
   type TeamAccessOptions,
 } from "@core/lib/auth-middleware";
-import { registerIntegrationSupportedAuthExtension } from "@directory/utils/auth-middleware";
 import { verifySession, type SessionVerificationExtension } from "@core/lib/session";
 import { getBillingProfile } from "@peppol/data/billing-profile";
 import { getCompanyById, type Company } from "@peppol/data/companies";
@@ -138,7 +137,7 @@ export function requireValidSubscription() {
   );
 }
 
-export const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
+const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
   // Also allow access if the user is authenticated via an integration JWT
   async (c) => {
     const authorizationHeader = c.req.header("Authorization")?.split(" ");
@@ -172,12 +171,6 @@ export const integrationSupportedAuthExtensions: SessionVerificationExtension[] 
     }
   }
 ]
-
-export function registerPeppolAuthExtensions() {
-  for (const extension of integrationSupportedAuthExtensions) {
-    registerIntegrationSupportedAuthExtension(extension);
-  }
-}
 
 export function requireIntegrationSupportedAuth() {
   return requireAuth({

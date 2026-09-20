@@ -18,7 +18,7 @@ import { companyVerificationLog } from '@peppol/db/schema';
 import { db } from '@recommand/db';
 import type { Logger } from '@recommand/lib/logger';
 import { Cron } from 'croner';
-import { UserFacingError } from '@directory/utils/util';
+import { UserFacingError } from '@peppol/utils/util';
 import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import { fetchArratech, getArratechConfig } from '@peppol/data/at/client';
 import { buildArratechKycFiling } from '@peppol/data/at/kyc';

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isSiren, isSiret } from '@peppol/utils/identifier-validation';
-import { UserFacingError } from '@directory/utils/util';
+import { UserFacingError } from '@peppol/utils/util';
 
 export const verificationCountrySpecificSchema = z.object({
   country: z.literal('FR'),

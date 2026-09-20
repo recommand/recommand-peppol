@@ -6,7 +6,7 @@ import { describe, expect, it, mock } from "bun:test";
 
 import { validateCountryIdentifier, validateIdentifier } from "../utils/identifier-validation";
 import { COUNTRIES } from "../utils/countries";
-import { COUNTRIES as DIRECTORY_COUNTRIES } from "@directory/utils/countries";
+import { COUNTRIES as DIRECTORY_COUNTRIES } from "@peppol/utils/countries";
 
 const validVatNumbers = ["CY12345678L", "cy12345678l", "CY 123.456-78 L"];
 const invalidVatNumbers = [

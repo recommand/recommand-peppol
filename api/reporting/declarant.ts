@@ -26,7 +26,7 @@ import {
   requireValidSubscription,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { zodValidator } from "@recommand/lib/zod-validator";

@@ -1,5 +1,5 @@
 import type { accessPointProviderIds, smpProviderIds } from "@peppol/db/schema";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 
 export type AccessPointProviderId = (typeof accessPointProviderIds)[number];
 export type SmpProviderId = (typeof smpProviderIds)[number];

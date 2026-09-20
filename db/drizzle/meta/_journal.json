@@ -771,6 +771,13 @@
       "when": 1789544155080,
       "tag": "20260916073555_motionless_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 110,
+      "version": "7",
+      "when": 1789843095992,
+      "tag": "20260919183815_restore_directory_tables",
+      "breakpoints": true
     }
   ]
 }
