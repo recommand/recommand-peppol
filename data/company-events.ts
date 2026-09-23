@@ -65,7 +65,10 @@ export async function publishCompanyUpdatedEvent(company: Company): Promise<void
   await publishCompanyStateEvent("peppol.company.updated.v1", company.id);
 }
 
-export async function publishCompanyDeletedEvent(company: Company): Promise<void> {
+export async function publishCompanyDeletedEvent(
+  company: Company,
+  tx: Tx
+): Promise<void> {
   await publishEvent("peppol.company.deleted.v1", {
     teamId: company.teamId,
     streamId: company.id,
@@ -73,5 +76,6 @@ export async function publishCompanyDeletedEvent(company: Company): Promise<void
     aggregateId: company.id,
     idempotencyKey: `peppol.company.deleted:${company.id}`,
     payload: { companyId: company.id },
+    tx,
   });
 }

@@ -16,6 +16,7 @@ import { enqueueS3PrefixDeletions } from "./s3-deletion";
 import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import { publishCompanyCreatedEvent, publishCompanyDeletedEvent, publishCompanyUpdatedEvent } from "./company-events";
+import type { Tx } from "@core/data/rules/db";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
 import { planCompanyCountryChange } from "./company-country-change";
 import { lockCompanyRow } from "./company-row-lock";
@@ -633,6 +634,8 @@ export async function deleteCompany({
   // all live under the company's prefix and are removed by the background
   // deletion worker. Enqueueing in the same transaction as the delete means
   // the objects can never be orphaned, and the request doesn't wait on S3.
+  // The deleted event is appended in the same transaction, so consumers never
+  // miss a delete that committed.
   await db.transaction(async (tx) => {
     await enqueueS3PrefixDeletions(tx, [
       companyDocumentsS3Prefix(teamId, companyId),
@@ -640,9 +643,8 @@ export async function deleteCompany({
     await tx
       .delete(companies)
       .where(and(eq(companies.teamId, teamId), eq(companies.id, companyId)));
+    await publishCompanyDeletedEvent(company, tx as Tx);
   });
-
-  await publishCompanyDeletedEvent(company);
 }
 
 export async function verifyCompany({
