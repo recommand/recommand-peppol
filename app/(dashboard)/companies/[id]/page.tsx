@@ -15,6 +15,7 @@ import { CompanyIdentifiersManager } from "../../../../components/company-identi
 import { CompanyDocumentTypesManager } from "../../../../components/company-document-types-manager";
 import { CompanyNotificationsManager } from "../../../../components/company-notifications-manager";
 import { CompanyIntegrationsManager } from "../../../../components/company-integrations-manager";
+import { CompanyFrenchReportingManager } from "../../../../components/company-french-reporting-manager";
 import type { Company, CompanyFormData } from "@peppol/types/company";
 import { defaultCompanyFormData } from "@peppol/types/company";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@core/components/ui/card";
@@ -24,7 +25,7 @@ import { BUILT_IN_INTEGRATIONS } from "@peppol/utils/integrations";
 import type { Subscription as SubscriptionType } from "@peppol/data/subscriptions";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { StatusMessage } from "@recommand/components/status-feedback";
-import { cleanEnterpriseNumber, cleanVatNumber } from "@directory/utils/util";
+import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
@@ -47,6 +48,7 @@ export default function CompanyDetailPage() {
   const isPlayground = useIsPlayground();
   const verificationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isVerificationRequired = verificationRequirements !== null && (verificationRequirements === "strict" || verificationRequirements === "lax") && !(isVerified ?? company?.isVerified);
+  const countryChanged = Boolean(company && formData.country !== company.country);
   const verificationIdentityChanged = Boolean(
     (isVerified ?? company?.isVerified) && company && (
       cleanEnterpriseNumber(formData.enterpriseNumber) !== cleanEnterpriseNumber(company.enterpriseNumber) ||
@@ -376,6 +378,7 @@ export default function CompanyDetailPage() {
               isEditing={true}
               showEnterpriseNumberForBelgianCompanies={true}
               showVerificationWarning={verificationIdentityChanged}
+              showCountryChangeWarning={countryChanged}
             />
           </CardContent>
         </Card>
@@ -383,8 +386,11 @@ export default function CompanyDetailPage() {
         {activeTeam && (
           <div className="space-y-4">
             <CompanyIdentifiersManager
+              key={`${company.id}:${company.country}`}
               teamId={activeTeam.id}
               companyId={company.id}
+              isSmpRecipient={company.isSmpRecipient}
+              publishedOnSmp={company.isSmpRecipient && (verificationRequirements !== "strict" || (isVerified ?? company.isVerified))}
             />
             <CompanyDocumentTypesManager
               teamId={activeTeam.id}
@@ -394,6 +400,12 @@ export default function CompanyDetailPage() {
               teamId={activeTeam.id}
               companyId={company.id}
             />
+            {company.country === "FR" && (
+              <CompanyFrenchReportingManager
+                companyId={company.id}
+                isVerified={isVerified ?? company.isVerified}
+              />
+            )}
             {canUseIntegrations(isPlayground, subscription) ? (
               <CompanyIntegrationsManager
                 teamId={activeTeam.id}

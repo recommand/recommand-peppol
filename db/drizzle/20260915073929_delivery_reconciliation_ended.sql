@@ -1,0 +1,1 @@
+ALTER TABLE "peppol_document_deliveries" ADD COLUMN "reconciliation_ended_at" timestamp with time zone;

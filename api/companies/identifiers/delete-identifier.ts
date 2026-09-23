@@ -10,7 +10,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { audit } from "@core/lib/audit";
 
@@ -18,7 +18,7 @@ const server = new Server();
 
 const deleteIdentifierRouteDescription = describeRoute({
     operationId: "deleteCompanyIdentifier",
-    description: "Delete a company identifier",
+    description: "Remove an identifier from the company and unregister it from the SMP, so documents can no longer be routed to that address. Documents already received under it are kept.",
     summary: "Delete Company Identifier",
     tags: ["Company Identifiers"],
     responses: {

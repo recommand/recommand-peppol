@@ -8,13 +8,14 @@ import {
 } from "@peppol/data/offload/storage";
 import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
 import { sendIncomingDocumentNotifications } from "@peppol/data/send-document-notifications";
-import { findSupplierByVatAndPeppolId } from "@directory/data/suppliers";
+import { findSupplierByVatAndPeppolId } from "@peppol/data/suppliers";
 import { validateXmlDocument } from "@peppol/data/validation/client";
 import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
+import { isBillableDocument } from "@peppol/utils/type-repository/document-types/billing";
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { db } from "@recommand/db";
 import { ulid } from "ulid";
 import { prepareIncomingDocument } from "./prepare-document";
@@ -168,7 +169,9 @@ export async function receivingPipeline(
     },
   });
 
-  if (!options.skipBilling) {
+  // Transport receipts and platform-level lifecycle statuses are not charged; see
+  // isBillableDocument for the rule.
+  if (!options.skipBilling && isBillableDocument(type, parsedDocument)) {
     await db.insert(transferEvents).values({
       teamId: company.teamId,
       companyId: company.id,

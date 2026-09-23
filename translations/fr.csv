@@ -581,7 +581,11 @@ Fill in the required fields to see a preview.,Renseignez les champs obligatoires
 Flat UBLs (all XMLs in root),UBL non imbriqués (tous les fichiers XML à la racine)
 For Belgian businesses\, the VAT number will be used to infer the enterprise number.,Pour les entreprises belges\, le numéro de TVA servira à déduire le numéro d'entreprise.
 For Dutch businesses\, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).,Pour les entreprises néerlandaises\, le format du numéro de TVA est NL + 9 chiffres + B + 2 chiffres (p. ex. NL123456789B01).
-For French businesses\, the enterprise number is the 9 digit SIREN. A SIRET can be added as an extra Peppol identifier.,Pour les entreprises françaises\, le numéro d'entreprise est le numéro SIREN à 9 chiffres. Un numéro SIRET peut être ajouté comme identifiant Peppol supplémentaire.
+For French businesses\, select scheme 0002 and enter the 9 digit SIREN. The establishment SIRET is requested during verification.,Pour les entreprises françaises\, sélectionnez le schéma 0002 et saisissez le SIREN à 9 chiffres. Le SIRET de l'établissement sera demandé lors de la vérification.
+Establishment SIRET,SIRET de l'établissement
+Establishment SIRET (Optional),SIRET de l'établissement (facultatif)
+Invalid verification details,Informations de vérification invalides
+The 14 digit SIRET identifies the establishment for verification. It does not add a receiving address.,Le SIRET à 14 chiffres identifie l'établissement pour la vérification. Il n'ajoute pas d'adresse de réception.
 For Dutch sellers\, the scheme identifier is required to be able to send invoices and credit notes.,Pour les vendeurs néerlandais\, l'identifiant de schéma est requis afin de pouvoir envoyer des factures et des avoirs.
 For growing businesses with higher volumes,Pour les entreprises en croissance avec des volumes plus élevés
 For small businesses sending every month,Pour les petites entreprises qui envoient des documents chaque mois
@@ -805,12 +809,12 @@ The integration will be notified every day to synchronize documents or perform o
 Integration Setup,Configuration de l'intégration
 Integration Teardown,Désinstallation de l'intégration
 Task Retry,Nouvelle tentative de la tâche
-France Peppol BIS Billing UBL Invoice,Facture UBL France Peppol BIS Billing
-France Peppol BIS Billing UBL Credit Note,Avoir UBL France Peppol BIS Billing
+France Peppol BIS Billing 3.0 UBL Invoice,Facture UBL France Peppol BIS Billing 3.0
+France Peppol BIS Billing 3.0 UBL Credit Note,Avoir UBL France Peppol BIS Billing 3.0
 SI-UBL 2.0 Invoice,Facture SI-UBL 2.0
 SI-UBL 2.0 Credit Note,Avoir SI-UBL 2.0
 Invoice Response,Réponse à une facture
-France Invoicing CDAR,CDAR de facturation française
+France Invoice Lifecycle Status (CDAR),Statut de facture française (CDAR)
 France UBL Invoice CIUS,Facture UBL France CIUS
 France UBL Credit Note CIUS,Avoir UBL France CIUS
 France UBL Invoice Extended,Facture UBL France Extended
@@ -837,9 +841,9 @@ France CII Invoice + Credit Note Extended,Facture + Avoir CII France Extended
 France CII Invoice + Credit Note Extended (Non-Regulated),Facture + Avoir CII France Extended (non réglementé)
 France Factur-X Invoice + Credit Note,Facture + Avoir France Factur-X
 France Factur-X Invoice + Credit Note (Non-Regulated),Facture + Avoir France Factur-X (non réglementé)
-France Invoicing CDAR (Non-Regulated),CDAR de facturation française (non réglementé)
-France Peppol BIS Billing UBL Credit Note (Non-Regulated),Avoir UBL France Peppol BIS Billing (non réglementé)
-France Peppol BIS Billing UBL Invoice (Non-Regulated),Facture UBL France Peppol BIS Billing (non réglementé)
+France Invoice Lifecycle Status (CDAR) (Non-Regulated),Statut de facture française (CDAR) (non réglementé)
+France Peppol BIS Billing 3.0 UBL Credit Note (Non-Regulated),Avoir UBL France Peppol BIS Billing 3.0 (non réglementé)
+France Peppol BIS Billing 3.0 UBL Invoice (Non-Regulated),Facture UBL France Peppol BIS Billing 3.0 (non réglementé)
 France UBL Credit Note CIUS (Non-Regulated),Avoir UBL France CIUS (non réglementé)
 France UBL Credit Note Extended (Non-Regulated),Avoir UBL France Extended (non réglementé)
 France UBL Invoice CIUS (Non-Regulated),Facture UBL France CIUS (non réglementé)
@@ -955,3 +959,132 @@ to resolve this issue.,pour résoudre ce problème.
 {0} was removed from {1} {2},{0} a été retiré de {1} {2}
 {0} sent successfully to {1},Document envoyé avec succès à {1} : {0}
 {0} filed successfully with {1},Document déposé avec succès auprès de {1} : {0}
+Company activation in progress,Activation de l'entreprise en cours
+Your identity has been verified. We are completing your company's network registration. This page will update automatically when activation is complete.,Votre identité a été vérifiée. Nous finalisons l'inscription de votre entreprise sur le réseau. Cette page sera automatiquement mise à jour une fois l'activation terminée.
+Your request is being processed by our support team. You will receive a message when there is an update.,Notre équipe d’assistance traite votre demande. Vous recevrez un message dès qu’une mise à jour sera disponible.
+Accepted\, awaiting filing,Acceptée\, en attente de dépôt
+Change VAT settings,Modifier les paramètres de TVA
+Changing the regime during a reporting period can leave that period unfiled. Coordinate such a change with support.,Modifier le régime pendant une période de déclaration peut laisser cette période sans dépôt. Coordonnez ce changement avec le support.
+Choose the VAT regime and when VAT becomes due first,Choisissez d'abord le régime de TVA et le moment d'exigibilité de la TVA
+Daily B2C totals and cross-border invoices are reported to the French tax administration on the company's behalf. Register the company once\, then submit reports through the API.,Les totaux B2C journaliers et les factures transfrontalières sont transmis à l'administration fiscale française au nom de l'entreprise. Enregistrez l'entreprise une fois\, puis soumettez les déclarations via l'API.
+Delivered,Livré
+Deliveries,Livraisons
+Delivery failed,Livraison échouée
+Email delivery to {0} failed.,La livraison par e-mail à {0} a échoué.
+Error code {0}.,Code d'erreur {0}.
+Failed to load the e-reporting registration,Impossible de charger l'enregistrement e-reporting
+Failed to register the company for e-reporting,Impossible d'enregistrer l'entreprise pour l'e-reporting
+Filed by corrective filing,Déposée par dépôt rectificatif
+Filed,Déposée
+Filed\, awaiting outcome,Déposée\, en attente du résultat
+The tax administration has not accepted the filing yet; the report is final once its outcome code is 300.,L'administration fiscale n'a pas encore accepté le dépôt ; la déclaration est définitive dès que son code de résultat est 300.
+Franchise en base de TVA,Franchise en base de TVA
+French e-reporting,E-reporting France
+Last checked {0}.,Dernière vérification le {0}.
+Late\, awaiting corrective filing,En retard\, en attente de dépôt rectificatif
+Needs support,Support requis
+No deliveries recorded for this document.,Aucune livraison enregistrée pour ce document.
+On invoicing (TVA sur les débits),À la facturation (TVA sur les débits)
+On payment (TVA sur les encaissements),À l'encaissement (TVA sur les encaissements)
+Our support team has been notified and will contact you. You can also reach us at support@recommand.eu.,Notre équipe support a été informée et vous contactera. Vous pouvez aussi nous joindre à support@recommand.eu.
+Outcome code {0}.,Code de résultat {0}.
+Payment reports are only filed when VAT becomes due on payment.,Les déclarations de paiement ne sont déposées que lorsque la TVA est exigible à l'encaissement.
+Peppol,Peppol
+Peppol delivery to {0} failed.,La livraison Peppol à {0} a échoué.
+Playground and test-network teams do not file with the tax administration. Reports are accepted and recorded\, but simulated.,Les équipes playground et réseau de test ne déposent rien auprès de l'administration fiscale. Les déclarations sont acceptées et enregistrées\, mais simulées.
+Register for e-reporting,S'enregistrer pour l'e-reporting
+Registered,Enregistrée
+Reporting period ends {0}.,La période de déclaration se termine le {0}.
+Régime réel normal (monthly),Régime réel normal (mensuel)
+Régime réel simplifié,Régime réel simplifié
+SIREN {0},SIREN {0}
+Select the VAT regime,Sélectionnez le régime de TVA
+Select when VAT becomes due,Sélectionnez le moment d'exigibilité de la TVA
+Simulated,Simulée
+Simulated: this report is recorded but not filed.,Simulée : cette déclaration est enregistrée mais non déposée.
+Status since {0},Statut depuis le {0}
+Superseded,Remplacée
+Suspended,Suspendue
+The company is registered for French e-reporting,L'entreprise est enregistrée pour l'e-reporting France
+The regime determines how often the reports are filed with the tax administration.,Le régime détermine la fréquence de dépôt des déclarations auprès de l'administration fiscale.
+The registration could not be completed.,L'enregistrement n'a pas pu être finalisé.
+The registration is being completed in the background,L'enregistrement est finalisé en arrière-plan
+The registration is being completed with our French reporting partner. Reports can be submitted once it is registered.,L'enregistrement est en cours de finalisation auprès de notre partenaire de déclaration français. Les déclarations pourront être soumises une fois l'enregistrement effectué.
+The registration needs support; see the details below,L'enregistrement nécessite le support ; voir les détails ci-dessous
+Update registration,Mettre à jour l'enregistrement
+VAT becomes due,Exigibilité de la TVA
+VAT regime,Régime de TVA
+Verify the company first. The signed French mandate is what allows us to report on its behalf.,Vérifiez d'abord l'entreprise. Le mandat français signé est ce qui nous autorise à déclarer en son nom.
+Where this document stands with each recipient it was sent to.,Où en est ce document auprès de chaque destinataire auquel il a été envoyé.
+Migration key (optional),Clé de migration (facultatif)
+Migration key,Clé de migration
+Moving this identifier from another Peppol provider? Ask them for a migration key and enter it here. The identifier then moves to Recommand without a gap in reception.,Cet identifiant vient d'un autre fournisseur Peppol ? Demandez-lui une clé de migration et saisissez-la ici. L'identifiant passe alors chez Recommand sans interruption de la réception.
+Enter the migration key your current Peppol provider issued for this identifier. The registration moves to Recommand without a gap in reception.,Saisissez la clé de migration que votre fournisseur Peppol actuel a émise pour cet identifiant. L'enregistrement passe chez Recommand sans interruption de la réception.
+Migrate to Recommand,Migrer vers Recommand
+Move to Recommand,Transférer chez Recommand
+Migration key is required,La clé de migration est obligatoire
+Identifier moved to Recommand,Identifiant transféré chez Recommand
+Migration key stored. It is used as soon as the company is verified and registered.,Clé de migration enregistrée. Elle sera utilisée dès que l'entreprise sera vérifiée et enregistrée.
+Failed to migrate identifier: {0},Échec de la migration de l'identifiant : {0}
+Migration key stored and waiting for the company's registration.,Clé de migration enregistrée et en attente de l'enregistrement de l'entreprise.
+Migration failed: {0},Échec de la migration : {0}
+Add Address,Ajouter une adresse
+Address *,Adresse *
+Are you sure you want to delete customer "{0}"?,Êtes-vous sûr de vouloir supprimer le client « {0} » ?
+Are you sure you want to delete this supplier? This action cannot be undone.,Êtes-vous sûr de vouloir supprimer ce fournisseur ? Cette action est irréversible.
+Blue,Bleu
+City *,Ville *
+Country *,Pays *
+Create a new customer with the details below.,Créez un client avec les informations ci-dessous.
+Create a new supplier with the details below.,Créez un fournisseur avec les informations ci-dessous.
+Create Customer,Créer un client
+Create Label,Créer un libellé
+Create New Customer,Créer un client
+Create New Label,Créer un libellé
+Create New Supplier,Créer un fournisseur
+Create Supplier,Créer un fournisseur
+Customer created successfully,Client créé avec succès
+Customer deleted successfully,Client supprimé avec succès
+Customer updated successfully,Client mis à jour avec succès
+e.g. 0208:1012081766,p. ex. 0208:1012081766
+Edit Customer,Modifier le client
+Edit Label,Modifier le libellé
+Edit Supplier,Modifier le fournisseur
+External ID (Optional),Identifiant externe (facultatif)
+External ID,Identifiant externe
+Failed to delete customer,Échec de la suppression du client
+Failed to delete supplier,Échec de la suppression du fournisseur
+Failed to load customers,Échec du chargement des clients
+Failed to load suppliers,Échec du chargement des fournisseurs
+Failed to save customer,Échec de l'enregistrement du client
+Failed to save supplier,Échec de l'enregistrement du fournisseur
+Label created successfully,Libellé créé avec succès
+Label deleted successfully,Libellé supprimé avec succès
+Label ID copied to clipboard,Identifiant du libellé copié dans le presse-papiers
+Label Name,Nom du libellé
+Label updated successfully,Libellé mis à jour avec succès
+Manage labels for organizing and categorizing your data.,Gérez les libellés pour organiser et classer vos données.
+Name *,Nom *
+Name is required,Le nom est requis
+No active team selected,Aucune équipe active sélectionnée
+No Peppol addresses added. Click "Add Address" to add one.,Aucune adresse Peppol ajoutée. Cliquez sur « Ajouter une adresse » pour en ajouter une.
+No Peppol IDs added yet.,Aucun identifiant Peppol ajouté pour le moment.
+Optional external identifier,Identifiant externe facultatif
+Optional VAT number,Numéro de TVA facultatif
+Orange,Orange
+Peppol Addresses,Adresses Peppol
+Peppol IDs,Identifiants Peppol
+Phone,Téléphone
+Postal Code *,Code postal *
+Purple,Violet
+Remove,Supprimer
+Search suppliers...,Rechercher des fournisseurs...
+Select {0} color,Sélectionner la couleur {0}
+Supplier created successfully,Fournisseur créé avec succès
+Supplier deleted successfully,Fournisseur supprimé avec succès
+Supplier updated successfully,Fournisseur mis à jour avec succès
+Update the customer details below.,Mettez à jour les informations du client ci-dessous.
+Update the supplier details below.,Mettez à jour les informations du fournisseur ci-dessous.
+View and manage your customers (supporting data).,Afficher et gérer vos clients (données de référence).
+View and manage your suppliers (supporting data).,Afficher et gérer vos fournisseurs (données de référence).
+Yellow,Jaune

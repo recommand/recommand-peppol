@@ -16,7 +16,7 @@ const server = new Server();
 
 const getCompaniesRouteDescription = describeRoute({
     operationId: "getCompanies",
-    description: "Get a list of all companies for a team",
+    description: "List every company registered under the team, with its verification and SMP registration status. This response is not paginated.",
     summary: "List Companies",
     tags: ["Companies"],
     responses: {

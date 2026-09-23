@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "peppol_transmitted_documents_external_reference_id_idx" ON "peppol_transmitted_documents" USING btree ("external_reference_id") WHERE "peppol_transmitted_documents"."external_reference_id" is not null;

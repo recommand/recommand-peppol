@@ -1,0 +1,1 @@
+ALTER TABLE "company_verification_log" ADD COLUMN "arratech_onboarding" jsonb;

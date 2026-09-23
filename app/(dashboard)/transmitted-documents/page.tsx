@@ -20,7 +20,7 @@ import { stringifyActionFailure } from "@recommand/lib/utils";
 import type { TransmittedDocumentWithoutBody } from "@peppol/data/transmitted-documents";
 import type { TransmittedDocuments } from "@peppol/api/documents";
 import type { Companies } from "@peppol/api/companies";
-import type { Labels } from "@directory/api/labels";
+import type { Labels } from "@peppol/api/labels";
 import { DataTablePagination } from "@core/components/data-table/pagination";
 import {
   DataTableToolbar,
@@ -29,14 +29,16 @@ import {
 import { PartyInfoTooltip } from "@peppol/components/party-info-tooltip";
 import { TransmissionStatusIcons } from "@peppol/components/transmission-status-icons";
 import { DocumentTypeCell } from "@peppol/components/document-type-cell";
-import { LabelBadge } from "@directory/components/label-badge";
+import { LabelBadge } from "@peppol/components/label-badge";
+import { FrenchReportingStatusBadge } from "../../../components/french-reporting-status-badge";
+import { DeliveryFailedBadge } from "../../../components/delivery-failed-badge";
 import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@core/components/ui/popover";
-import type { Label } from "@directory/types/label";
+import type { Label } from "@peppol/types/label";
 import { Link } from "react-router-dom";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { ExportDocumentsDialog } from "@peppol/components/export-documents-dialog";
@@ -891,6 +893,7 @@ export default function Page() {
                     emailRecipients={emailRecipients || undefined}
                     isReporting={isReporting}
                   />
+                  <DeliveryFailedBadge deliveries={document.deliveries} size="sm" />
                 </div>
               </div>
             );
@@ -907,6 +910,8 @@ export default function Page() {
               emailRecipients={emailRecipients || undefined}
               isReporting={isReporting}
             />
+            {isReporting && <FrenchReportingStatusBadge reporting={document.reporting} size="sm" />}
+            <DeliveryFailedBadge deliveries={document.deliveries} size="sm" />
           </div>
         );
       },

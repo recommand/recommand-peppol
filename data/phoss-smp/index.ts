@@ -1,4 +1,4 @@
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { getCompanyById, type Company, type InsertCompany } from "@peppol/data/companies";
 import { deleteServiceGroup, registerServiceGroup } from "./service-group";
 import { deleteServiceMetadata, registerServiceMetadata } from "./service-metadata";
@@ -6,6 +6,8 @@ import { registerBusinessCard } from "./business-card";
 import { canUpsertCompanyIdentifier, getCompanyIdentifiers, type CompanyIdentifier } from "../company-identifiers";
 import { getCompanyDocumentTypes, type CompanyDocumentType } from "../company-document-types";
 import { verifyRecipient } from "../recipient";
+import { migrateInbound } from "./migration";
+import { completeParticipantMigration, failParticipantMigration, getPendingInboundMigration } from "../participant-migrations";
 
 type MinimalCompanyIdentifier = {
   scheme: string;
@@ -73,26 +75,62 @@ async function registerCompanyIdentifier({company, identifier, documentTypes, us
   }
 
   const address = `${company.address}, ${company.postalCode} ${company.city}, ${company.country}`;
-  try{
-    await registerServiceGroup({
-      peppolIdentifierEas: identifier.scheme,
-      peppolIdentifierAddress: identifier.identifier,
-      useTestNetwork,
-    });
-  }catch(error){
-    console.error(error);
-    // Try to get the SMP hostnames so we can make a more descriptive error message
-    let smpHostnames: string[] = [];
+
+  // A participant that is still published by another SMP can only be taken over with
+  // the migration key that SMP handed out. When the customer stored one, claim the
+  // participant with it instead of creating the service group ourselves; the SML would
+  // refuse a plain create for a participant that belongs to another SMP.
+  const pendingMigration = await getPendingInboundMigration({
+    companyId: company.id,
+    scheme: identifier.scheme,
+    identifier: identifier.identifier,
+    useTestNetwork,
+  });
+  let claimedByMigration = false;
+  if(pendingMigration){
     try{
-      const recipientVerification = await verifyRecipient({recipientAddress: identifier.scheme + ":" + identifier.identifier, useTestNetwork});
-      smpHostnames = recipientVerification.smpHostnames;
+      const outcome = await migrateInbound({
+        peppolIdentifierEas: identifier.scheme,
+        peppolIdentifierAddress: identifier.identifier,
+        migrationKey: pendingMigration.migrationKey,
+        useTestNetwork,
+      });
+      if(outcome === "migrated"){
+        await completeParticipantMigration(pendingMigration.id);
+        claimedByMigration = true;
+      }else{
+        await failParticipantMigration(pendingMigration.id, `${identifier.scheme}:${identifier.identifier} is already published through Recommand, so there was nothing to migrate.`);
+      }
     }catch(error){
-      // Ignore the error
+      console.error(error);
+      await failParticipantMigration(pendingMigration.id, error instanceof Error ? error.message : String(error));
+      throw error;
     }
-    if(smpHostnames.length > 0){
-      throw new UserFacingError(`Failed to register company identifier ${identifier.scheme}:${identifier.identifier}, it might already be registered with another SMP (${smpHostnames.join(", ")}). Please revoke your registration with the other SMP and try again. Feel free to contact support@recommand.eu if you are unsure about how to proceed.`);
-    }else{
-      throw new UserFacingError(`Failed to register company identifier ${identifier.scheme}:${identifier.identifier}, it might already be registered with another SMP. Please ensure this is not the case. Feel free to contact support@recommand.eu if you are unsure about how to proceed.`);
+  }
+
+  if(!claimedByMigration){
+    try{
+      await registerServiceGroup({
+        peppolIdentifierEas: identifier.scheme,
+        peppolIdentifierAddress: identifier.identifier,
+        useTestNetwork,
+      });
+    }catch(error){
+      console.error(error);
+      // Try to get the SMP hostnames so we can make a more descriptive error message
+      let smpHostnames: string[] = [];
+      try{
+        const recipientVerification = await verifyRecipient({recipientAddress: identifier.scheme + ":" + identifier.identifier, useTestNetwork});
+        smpHostnames = recipientVerification.smpHostnames;
+      }catch(error){
+        // Ignore the error
+      }
+      const migrationHint = "If that provider gives you a migration key, submit it through the company identifier migration endpoint and the registration moves over without a gap.";
+      if(smpHostnames.length > 0){
+        throw new UserFacingError(`Failed to register company identifier ${identifier.scheme}:${identifier.identifier}, it might already be registered with another SMP (${smpHostnames.join(", ")}). Please revoke your registration with the other SMP and try again. ${migrationHint} Feel free to contact support@recommand.eu if you are unsure about how to proceed.`);
+      }else{
+        throw new UserFacingError(`Failed to register company identifier ${identifier.scheme}:${identifier.identifier}, it might already be registered with another SMP. Please ensure this is not the case. ${migrationHint} Feel free to contact support@recommand.eu if you are unsure about how to proceed.`);
+      }
     }
   }
 

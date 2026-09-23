@@ -47,6 +47,12 @@ export const FRANCE_B2BI_REPORT_TEMPLATE = `<!DOCTYPE html>
                 <dt class="text-xs text-slate-500">Issue date</dt>
                 <dd class="text-slate-700">{{issueDate}}</dd>
               </div>
+              {{#billingMode}}
+                <div>
+                  <dt class="text-xs text-slate-500">Invoicing framework</dt>
+                  <dd class="text-slate-700">{{billingMode}}</dd>
+                </div>
+              {{/billingMode}}
               {{#dueDate}}
                 <div>
                   <dt class="text-xs text-slate-500">Due date</dt>
@@ -68,13 +74,19 @@ export const FRANCE_B2BI_REPORT_TEMPLATE = `<!DOCTYPE html>
             <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">Buyer</p>
             <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
               <div>
-                <dt class="text-xs text-slate-500">Company number</dt>
-                <dd class="text-slate-700">{{buyerScheme}}:{{buyerCompanyId}}</dd>
+                <dt class="text-xs text-slate-500">Name</dt>
+                <dd class="text-slate-700">{{buyerName}}</dd>
               </div>
               <div>
                 <dt class="text-xs text-slate-500">Country</dt>
                 <dd class="text-slate-700">{{buyerCountry}}</dd>
               </div>
+              {{#buyerCompanyId}}
+                <div>
+                  <dt class="text-xs text-slate-500">Company number</dt>
+                  <dd class="text-slate-700">{{#buyerScheme}}{{buyerScheme}}:{{/buyerScheme}}{{buyerCompanyId}}</dd>
+                </div>
+              {{/buyerCompanyId}}
               {{#buyerVatNumber}}
                 <div>
                   <dt class="text-xs text-slate-500">VAT number</dt>

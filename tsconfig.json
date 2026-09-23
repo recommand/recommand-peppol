@@ -24,13 +24,11 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-    "baseUrl": ".",
     "paths": {
       "@recommand": ["../framework/index.ts"],
       "@recommand/*": ["../framework/*"],
       "@core/*": ["../core/*"],
-      "@peppol/*": ["*"],
-      "@directory/*": ["../directory/*"],
+      "@peppol/*": ["./*"],
     }
   }
 }

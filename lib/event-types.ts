@@ -13,6 +13,11 @@ import {
   STORED_DOCUMENT_TYPE_KEYS,
   type StoredDocumentType,
 } from "@peppol/utils/type-repository/document-types/keys";
+import {
+  deliveryChannels,
+  deliveryFailureCategories,
+  deliveryStatuses,
+} from "@peppol/db/schema";
 
 const receivedDocumentTypes = STORED_DOCUMENT_TYPE_KEYS;
 
@@ -65,6 +70,9 @@ const documentSentPayloadSchema = z.object({
   peppolConversationId: z.string().nullable().optional(),
   envelopeId: z.string().nullable().optional(),
   countryC1: z.string(),
+  // Where the document stood when it was recorded: delivered when the receipt came
+  // with the send, pending when the access point confirms later, null for a report.
+  deliveryStatus: z.enum(deliveryStatuses).nullable().optional(),
 });
 
 // Point-in-time snapshot stored alongside document events, so consumers read
@@ -87,6 +95,78 @@ const documentLabelPayloadSchema = z.object({
   // Label events are emitted from stored transmitted documents, whose receiverId
   // can be null for non-Peppol or email-only document rows.
   receiverId: z.string().nullable(),
+});
+
+const reportingStatuses = [
+  "accepted",
+  "pending_rectificative",
+  "filed",
+  "filed_rectificative",
+  "superseded",
+  "rejected",
+] as const;
+
+const reportingStatusLabels: Record<(typeof reportingStatuses)[number], string> = {
+  accepted: "Accepted",
+  pending_rectificative: "Awaiting corrective filing",
+  filed: "Filed",
+  filed_rectificative: "Filed by corrective filing",
+  superseded: "Superseded",
+  rejected: "Rejected",
+};
+
+const documentReportingStatusPayloadSchema = z.object({
+  companyId: z.string(),
+  docType: z.string(),
+  reportingStatus: z.enum(reportingStatuses),
+  previousReportingStatus: z.enum(reportingStatuses),
+  periodEnd: z.string().nullable().optional(),
+  submissionId: z.string().nullable().optional(),
+  outcomeCode: z.string().nullable().optional(),
+  // The outcome moves on its own, so an event can be about the outcome alone.
+  previousOutcomeCode: z.string().nullable().optional(),
+  final: z.boolean().optional(),
+});
+
+const deliveryStatusLabels: Record<(typeof deliveryStatuses)[number], string> = {
+  pending: "Pending",
+  delivered: "Delivered",
+  failed: "Failed",
+};
+
+const deliveryFailureCategoryLabels: Record<(typeof deliveryFailureCategories)[number], string> = {
+  recipient_not_found: "Recipient not found",
+  document_not_supported: "Document not supported by recipient",
+  validation: "Validation",
+  transport: "Transport",
+  recipient_rejected: "Rejected by recipient",
+  duplicate: "Duplicate",
+  other: "Other",
+};
+
+// One delivery of a document moved to a new status: a channel confirmed arrival, or
+// failed a document it had accepted. Sent once per change.
+const documentDeliveryStatusPayloadSchema = z.object({
+  companyId: z.string(),
+  docType: z.string(),
+  senderId: z.string(),
+  receiverId: z.string().nullable(),
+  envelopeId: z.string().nullable().optional(),
+  deliveryId: z.string(),
+  channel: z.enum(deliveryChannels),
+  address: z.string(),
+  status: z.enum(deliveryStatuses),
+  // Null for a delivery that did not exist before, such as an email sent as the
+  // fallback for a Peppol transmission that failed after it was accepted.
+  previousStatus: z.enum(deliveryStatuses).nullable(),
+  failure: z
+    .object({
+      category: z.enum(deliveryFailureCategories),
+      message: z.string().nullable(),
+      providerCode: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
 });
 
 const companyVerificationPayloadSchema = z.object({
@@ -154,15 +234,20 @@ export function registerPeppolEventTypes() {
       documentTypeField,
       { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
       { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+      { path: "payload.deliveryStatus", label: "Delivery status", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...deliveryStatuses], enumLabels: deliveryStatusLabels },
     ],
     webhook: {
       eventType: "document.sent",
-      project: (event) => ({
-        eventType: "document.sent",
-        documentId: event.aggregateId,
-        teamId: event.teamId,
-        companyId: (event.payload as z.infer<typeof documentSentPayloadSchema>).companyId,
-      }),
+      project: (event) => {
+        const payload = event.payload as z.infer<typeof documentSentPayloadSchema>;
+        return {
+          eventType: "document.sent",
+          documentId: event.aggregateId,
+          teamId: event.teamId,
+          companyId: payload.companyId,
+          deliveryStatus: payload.deliveryStatus ?? null,
+        };
+      },
     },
     email: {
       template: "document-outgoing-notification",
@@ -172,7 +257,7 @@ export function registerPeppolEventTypes() {
     },
     ui: {
       label: "Document sent",
-      description: "A document was sent by a company",
+      description: "A document was handed to the network or mailed; its delivery status says whether the recipient has confirmed it yet",
       group: "Documents",
     },
   });
@@ -247,6 +332,80 @@ export function registerPeppolEventTypes() {
     },
     ui: {
       label: "Document label unassigned",
+      group: "Documents",
+    },
+  });
+
+  registerEventType({
+    type: "peppol.document.delivery_status.v1",
+    aggregateType: "peppol.document",
+    payload: documentDeliveryStatusPayloadSchema,
+    conditionFields: [
+      { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
+      documentTypeField,
+      { path: "payload.senderId", label: "Sender address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+      { path: "payload.receiverId", label: "Receiver address", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+      { path: "payload.channel", label: "Channel", valueType: "enum", operators: ["eq", "neq"], enumValues: [...deliveryChannels] },
+      { path: "payload.status", label: "Delivery status", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...deliveryStatuses], enumLabels: deliveryStatusLabels },
+      { path: "payload.failure.category", label: "Failure category", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...deliveryFailureCategories], enumLabels: deliveryFailureCategoryLabels },
+    ],
+    webhook: {
+      eventType: "document.delivery_status_changed",
+      project: (event) => {
+        const payload = event.payload as z.infer<typeof documentDeliveryStatusPayloadSchema>;
+        return {
+          eventType: "document.delivery_status_changed",
+          documentId: event.aggregateId,
+          teamId: event.teamId,
+          companyId: payload.companyId,
+          deliveryId: payload.deliveryId,
+          channel: payload.channel,
+          address: payload.address,
+          status: payload.status,
+          previousStatus: payload.previousStatus,
+          failure: payload.failure ?? null,
+        };
+      },
+    },
+    ui: {
+      label: "Delivery status changed",
+      description: "A delivery of a sent document was confirmed, or failed after the channel had accepted it: the recipient's access point acknowledged or refused a Peppol transmission, or an email was accepted by the recipient's mail server or bounced",
+      group: "Documents",
+    },
+  });
+
+  registerEventType({
+    type: "peppol.document.reporting_status.v1",
+    aggregateType: "peppol.document",
+    payload: documentReportingStatusPayloadSchema,
+    conditionFields: [
+      { path: "payload.companyId", label: "Company", valueType: "string", operators: ["eq", "neq", "in"], picker: "company" },
+      { path: "payload.reportingStatus", label: "Reporting status", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...reportingStatuses], enumLabels: reportingStatusLabels },
+      { path: "payload.outcomeCode", label: "Outcome code", valueType: "string", operators: ["eq", "neq", "exists"] },
+      { path: "payload.final", label: "Final", valueType: "boolean", operators: ["eq"] },
+    ],
+    webhook: {
+      eventType: "document.reporting_status_changed",
+      project: (event) => {
+        const payload = event.payload as z.infer<typeof documentReportingStatusPayloadSchema>;
+        return {
+          eventType: "document.reporting_status_changed",
+          documentId: event.aggregateId,
+          teamId: event.teamId,
+          companyId: payload.companyId,
+          reportingStatus: payload.reportingStatus,
+          previousReportingStatus: payload.previousReportingStatus,
+          periodEnd: payload.periodEnd ?? null,
+          submissionId: payload.submissionId ?? null,
+          outcomeCode: payload.outcomeCode ?? null,
+          previousOutcomeCode: payload.previousOutcomeCode ?? null,
+          final: payload.final ?? false,
+        };
+      },
+    },
+    ui: {
+      label: "Report status changed",
+      description: "A French e-reporting report was filed, superseded or rejected, or the tax administration's outcome code for its filing changed; the report is final once it is filed with outcome code 300 or rejected",
       group: "Documents",
     },
   });

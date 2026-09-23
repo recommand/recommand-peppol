@@ -26,7 +26,7 @@ const playgroundOpenapiSchema = {
 
 const getPlaygroundRouteDescription = describeRoute({
   operationId: "getPlayground",
-  description: "Get the playground information for a team (if it is a playground).",
+  description: "Get the playground settings of the current team, including whether it sends over the Peppol test network. Returns a 404 for a team that is not a playground, which is how you tell the two apart.",
   summary: "Get Playground",
   tags: ["Playgrounds"],
   responses: {
@@ -69,7 +69,7 @@ async function _getPlaygroundImplementation(c: GetPlaygroundContext) {
 
 const createPlaygroundRouteDescription = describeRoute({
   operationId: "createPlayground",
-  description: "Create a new playground team and add the current user as a member.",
+  description: "Create a playground team to develop against and add the calling user to it. A playground behaves like a normal team, but nothing it sends leaves Recommand: transmissions are simulated, no company is registered in the SMP, and usage is free. Set `useTestNetwork` to send over the Peppol test network instead of simulating, which is what you want to exchange documents with another provider before going live. Switch to the playground team to use its API keys.",
   summary: "Create Playground",
   tags: ["Playgrounds"],
   responses: {

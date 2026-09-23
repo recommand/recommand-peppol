@@ -1,4 +1,4 @@
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import {
   detectDocumentFormat,
   getDocumentFormatByDocTypeId,

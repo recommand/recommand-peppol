@@ -55,8 +55,9 @@ describe("French B2C reporting", () => {
     });
 
     expect(report.action).toBe("submit");
-    expect(toArratechB2CFlow(report, declarant)).toEqual({
+    expect(toArratechB2CFlow(report, declarant, "PROD")).toEqual({
       profile: "FR-F10",
+      environment: "PROD",
       event: {
         declarant,
         clientOperationRef: "SALES-2026-07-01-GOODS",
@@ -84,7 +85,7 @@ describe("French B2C reporting", () => {
 
   it("maps cash-basis payment corrections without exposing provider fields", () => {
     const report = frenchB2CReportSchema.parse({
-      reference: "PAYMENTS-2026-07-01",
+      reference: "PAYMENTS-2026-07-01-C1",
       action: "correct",
       type: "payments",
       date: "2026-07-01",
@@ -96,11 +97,12 @@ describe("French B2C reporting", () => {
       ],
     });
 
-    expect(toArratechB2CFlow(report, declarant)).toEqual({
+    expect(toArratechB2CFlow(report, declarant, "TEST")).toEqual({
       profile: "FR-F10",
+      environment: "TEST",
       event: {
         declarant,
-        clientOperationRef: "PAYMENTS-2026-07-01",
+        clientOperationRef: "PAYMENTS-2026-07-01-C1",
         transmissionType: "RE",
         operation: "SUBMIT",
         subFlux: "10.4",
@@ -118,9 +120,11 @@ describe("French B2C reporting", () => {
     });
   });
 
-  it("cancels under the reference of the report it cancels", () => {
+  it("cancels under a reference of its own, naming the day it cancels", () => {
+    // The reference is the idempotency handle, so a cancellation needs a new one;
+    // the day and category in the payload identify the report being cancelled.
     const report = frenchB2CReportSchema.parse({
-      reference: "SALES-2026-07-01-SERVICES",
+      reference: "SALES-2026-07-01-SERVICES-CANCEL",
       action: "cancel",
       type: "sales",
       date: "2026-07-01",
@@ -141,8 +145,47 @@ describe("French B2C reporting", () => {
     expect(providerPayload.event.operation).toBe("CANCEL");
     expect(providerPayload.event.transmissionType).toBe("IN");
     expect(providerPayload.event.clientOperationRef).toBe(
-      "SALES-2026-07-01-SERVICES"
+      "SALES-2026-07-01-SERVICES-CANCEL"
     );
+    expect(providerPayload.event.payload).toMatchObject({
+      date: "2026-07-01",
+      categoryCode: "TPS1",
+    });
+  });
+
+  it("reports payments in the currency of the report", () => {
+    const report = frenchB2CReportSchema.parse({
+      reference: "PAYMENTS-2026-07-02-CHF",
+      type: "payments",
+      date: "2026-07-02",
+      currency: "CHF",
+      vatBreakdown: [{ percentage: "8.10", amount: "1081.00" }],
+    });
+
+    const payload = toArratechB2CFlow(report, declarant).event.payload as {
+      subTotals: { currencyCode: string }[];
+    };
+    expect(payload.subTotals[0]!.currencyCode).toBe("CHF");
+  });
+
+  it("rejects what the tax administration would reject", () => {
+    const negative = frenchB2CReportSchema.safeParse({
+      ...salesReport,
+      taxAmount: "-2000.00",
+    });
+    expect(negative.success).toBe(false);
+
+    const overlongReference = frenchB2CReportSchema.safeParse({
+      ...salesReport,
+      reference: "S".repeat(129),
+    });
+    expect(overlongReference.success).toBe(false);
+
+    const noTransactions = frenchB2CReportSchema.safeParse({
+      ...salesReport,
+      transactionCount: 0,
+    });
+    expect(noTransactions.success).toBe(false);
   });
 
   it("rejects unsupported sales categories and empty VAT breakdowns", () => {
@@ -206,16 +249,25 @@ describe("French B2C reporting", () => {
     }
   });
 
-  it("derives the declarant SIREN from the enterprise number only", () => {
+  it("derives the declarant SIREN from a SIREN or SIRET enterprise number", () => {
+    const acme = { siren: "303265045", name: "ACME SARL", role: "SE" } as const;
     expect(
       buildFrenchDeclarant({
         name: "ACME SARL",
-        enterpriseNumber: "123 456 789",
+        enterpriseNumber: "303 265 045",
       })
-    ).toEqual(declarant);
+    ).toEqual(acme);
+    // An establishment's SIRET carries the SIREN in its first nine digits.
+    expect(
+      buildFrenchDeclarant({
+        name: "ACME SARL",
+        enterpriseNumber: "30326504500011",
+      })
+    ).toEqual(acme);
 
-    // A SIREN is exactly nine digits; anything else cannot stand in for one.
-    for (const enterpriseNumber of [null, "12345678", "1234567890", "FR123456789"]) {
+    // Anything else, including a number that fails its check digit, cannot stand
+    // in for a SIREN.
+    for (const enterpriseNumber of [null, "12345678", "1234567890", "FR303265045", "303265046"]) {
       expect(
         buildFrenchDeclarant({ name: "ACME SARL", enterpriseNumber })
       ).toBeNull();

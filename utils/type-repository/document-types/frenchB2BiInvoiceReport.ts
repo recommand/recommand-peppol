@@ -54,6 +54,7 @@ export const frenchB2BiInvoiceReportDocumentType: DocumentType<
     [
       frenchB2BiInvoiceReportDocumentType.extractDocumentNumber(document),
       normalize(document.documentNumber),
+      normalize(document.buyer.name),
       normalize(document.buyer.enterpriseNumber),
       normalize(document.buyer.vatNumber),
     ]

@@ -14,7 +14,7 @@ const server = new Server();
 
 const getWebhooksRouteDescription = describeRoute({
     operationId: "getWebhooks",
-    description: "Get a list of all webhooks for a team",
+    description: "List the webhooks configured for the team, with their signing secrets. Use it to check what is subscribed before adding another endpoint.",
     summary: "List Webhooks",
     tags: ["Webhooks"],
     responses: {
@@ -24,7 +24,10 @@ const getWebhooksRouteDescription = describeRoute({
 });
 
 const getWebhooksQuerySchema = z.object({
-    companyId: z.string().nullish(),
+    companyId: z.string().nullish().openapi({
+        description: "Return the webhooks that deliver this company's events: the ones limited to it, plus the team-wide webhooks that receive every company's events. Leave it out to list all of the team's webhooks.",
+        example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    }),
 });
 
 const getWebhooksParamSchemaWithTeamId = z.object({

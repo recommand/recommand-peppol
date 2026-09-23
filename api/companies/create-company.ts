@@ -10,10 +10,10 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod, describeValidationErrorResponse } from "@core/lib/api-docs";
 import { companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
-import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@directory/utils/util";
+import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { zodValidCountryCodes } from "@peppol/db/schema";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { audit } from "@core/lib/audit";
@@ -22,12 +22,17 @@ const server = new Server();
 
 const createCompanyRouteDescription = describeRoute({
     operationId: "createCompany",
-    description: "Create a new company",
+    description: "Register a business you want to send or receive Peppol documents for. Unless `skipDefaultCompanySetup` is set, the company is given the default Peppol identifiers and document types for its country, and is registered in the SMP so it can receive documents. The response carries a `verificationUrl`: a company has to pass the identity check before it can exchange documents.",
     summary: "Create Company",
     tags: ["Companies"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created company", z.object({ company: companyResponse, verificationUrl: z.string() })),
-        ...describeErrorResponse(400, "Invalid request data"),
+        ...describeSuccessResponseWithZod("Successfully created company", z.object({
+            company: companyResponse,
+            verificationUrl: z.string().openapi({
+                description: "A one-time URL where an authorised representative completes the company's identity check. Present it to your user immediately. Call the verify company endpoint if you need a fresh one.",
+            }),
+        })),
+        ...describeValidationErrorResponse("Invalid request data"),
         ...describeErrorResponse(500, "Failed to create company"),
     },
 });
@@ -37,7 +42,10 @@ const createCompanyJsonBodySchema = z.object({
     address: z.string(),
     postalCode: z.string(),
     city: z.string(),
-    country: zodValidCountryCodes,
+    country: zodValidCountryCodes.openapi({
+        description: "The country the company is registered in, in ISO 3166-1 alpha-2 format. Only countries Recommand supports are accepted; any other country is rejected with a 400.",
+        example: "BE",
+    }),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish(),
     enterpriseNumber: z.string().nullish().transform(cleanEnterpriseNumber).openapi({ description: "The enterprise number of the company. Can only contain alphanumeric characters. For Belgian businesses it will be inferred from the VAT number if not provided." }),
     vatNumber: z.string().nullish().transform(cleanVatNumber),

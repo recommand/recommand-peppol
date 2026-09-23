@@ -1,51 +1,21 @@
-import { billingProfiles, subscriptionBillingEventLines, subscriptionBillingEvents, subscriptions, transferEvents } from "@peppol/db/schema";
-import { companies } from "@peppol/db/schema";
+import { billingProfiles, subscriptionBillingEventLines, subscriptionBillingEvents, subscriptions } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { and, eq, isNull, lt, or, gt, count, gte, lte, inArray, max } from "drizzle-orm";
-import {
-  differenceInMinutes,
-  isSameDay,
-  startOfMonth,
-  addMilliseconds,
-  endOfMonth,
-  formatISO,
-} from "date-fns";
+import { and, eq, isNull, lt, or, gt, inArray, max } from "drizzle-orm";
 import Decimal from "decimal.js";
 import { getBillingProfile } from "../billing-profile";
 import { getMandate, requestPayment } from "../mollie";
 import { sendTelegramNotification } from "@peppol/utils/system-notifications/telegram";
-import { BillingConfigSchema } from "../plans";
 import type { Mandate } from "@mollie/api-client";
 import { type SubscriptionBillingLine, type TeamBillingResult, TeamBillingResultError, ERROR_TEAM_BILLING_RESULT } from "./billing-types";
 import { generateTeamBillingResult } from "./helpers";
 import { determineVatStrategy } from "./vat";
 import { sendInvoiceAsBRBX } from "./invoicing";
-import { TZDate } from '@date-fns/tz'
+import { calculateSubscriptionByMonthlyPeriods, describeBillingOutcome, selectBillableSubscriptions, summarizeBillingLines } from "./calculate";
 
 export async function endBillingCycle(billingDate: Date, dryRun: boolean = false, teamIds?: string[]): Promise<TeamBillingResult[]> {
-  const toBeBilled = await db
-    .select()
-    .from(subscriptions)
-    .innerJoin(billingProfiles, eq(subscriptions.teamId, billingProfiles.teamId))
-    .where(
-      and(
-        (teamIds && teamIds.length > 0) ? inArray(subscriptions.teamId, teamIds) : undefined,
-        lt(subscriptions.startDate, billingDate),
-        or(
-          isNull(subscriptions.lastBilledAt), // Subscription has not been billed yet
-          lt(subscriptions.lastBilledAt, billingDate) // Subscription has been billed, but should be billed again
-        ),
-        or(
-          isNull(subscriptions.endDate), // Subscription is still active
-          isNull(subscriptions.lastBilledAt), // Subscription has not been billed yet
-          gt(subscriptions.endDate, subscriptions.lastBilledAt) // Subscription has been ended, but not fully billed yet
-        )
-      )
-    )
-    .orderBy(subscriptions.teamId, subscriptions.startDate);
+  const toBeBilled = await selectBillableSubscriptions(billingDate, teamIds);
 
-  const groupedByTeam = toBeBilled.reduce((acc, row) => {
-    const subscription = row.peppol_subscriptions
+  const groupedByTeam = toBeBilled.reduce((acc, subscription) => {
     acc[subscription.teamId] = [...(acc[subscription.teamId] || []), subscription];
     return acc;
   }, {} as Record<string, typeof subscriptions.$inferSelect[]>);
@@ -146,22 +116,11 @@ async function billTeam({
     // Determine VAT strategy
     const vatStrategy = determineVatStrategy(billingProfile);
 
-    // Calculate totals
-    const totalAmountExcl = billingLines.reduce((acc, curr) => acc.plus(curr.lineTotalExcl), new Decimal(0)).toNearest(0.01);
-    const totalVatAmount = totalAmountExcl.times(vatStrategy.percentage).div(100).toNearest(0.01);
-    const totalAmountIncl = totalAmountExcl.plus(totalVatAmount).toNearest(0.01);
-
-    // Determine billing period
-    let billingPeriodStart: Date | null = null;
-    let billingPeriodEnd: Date | null = null;
-    for (const result of billingLines) {
-      if (!billingPeriodStart || result.billingPeriodStart < billingPeriodStart) {
-        billingPeriodStart = result.billingPeriodStart;
-      }
-      if (!billingPeriodEnd || result.billingPeriodEnd && billingPeriodEnd && result.billingPeriodEnd > billingPeriodEnd) {
-        billingPeriodEnd = result.billingPeriodEnd;
-      }
-    }
+    // Calculate totals, billing period and usage totals
+    const summary = summarizeBillingLines(billingLines, vatStrategy.percentage);
+    const { totalAmountExcl, totalVatAmount, totalAmountIncl } = summary;
+    const billingPeriodStart = summary.billingPeriodStart;
+    let billingPeriodEnd = summary.billingPeriodEnd;
 
     if (!billingPeriodStart) {
       throw new TeamBillingResultError(
@@ -175,21 +134,20 @@ async function billTeam({
     }
 
     // Gather usage totals
-    let usedQty = new Decimal(0);
-    let usedQtyIncoming = new Decimal(0);
-    let usedQtyOutgoing = new Decimal(0);
-    let overageQtyIncoming = new Decimal(0);
-    let overageQtyOutgoing = new Decimal(0);
-    for (const result of billingLines) {
-      usedQty = usedQty.plus(result.usedQty);
-      usedQtyIncoming = usedQtyIncoming.plus(result.usedQtyIncoming);
-      usedQtyOutgoing = usedQtyOutgoing.plus(result.usedQtyOutgoing);
-      overageQtyIncoming = overageQtyIncoming.plus(result.overageQtyIncoming);
-      overageQtyOutgoing = overageQtyOutgoing.plus(result.overageQtyOutgoing);
-    }
+    const { usedQty, usedQtyIncoming, usedQtyOutgoing, overageQtyIncoming, overageQtyOutgoing } = summary;
+
+    // The same decision the read-only preview reports
+    const decision = describeBillingOutcome({
+      profileStanding: billingProfile.profileStanding,
+      isManuallyBilled: billingProfile.isManuallyBilled,
+      hasBillingProfile: true,
+      hasLines: billingLines.length > 0,
+      totalAmountIncl,
+      hasMollieCustomer: Boolean(billingProfile.mollieCustomerId),
+    });
 
     // If total amount incl == 0, mark as billed
-    if (totalAmountIncl.eq(0)) {
+    if (decision.outcome === "marked_billed_only") {
       if (!dryRun) {
         await db
           .update(subscriptions)
@@ -226,17 +184,30 @@ async function billTeam({
       }));
     }
 
-    if (!billingProfile.isManuallyBilled) {
-      // Get the customer mandate
-      if (!billingProfile.mollieCustomerId) {
-        throw new TeamBillingResultError(
-          "Billing profile has no Mollie customer id",
-          billingLines.map(x => generateTeamBillingResult(x, billingProfile, { isInvoiceSent: "", isPaymentRequested: "" }))
-        );
+    if (decision.outcome === "blocked_no_payment_customer") {
+      throw new TeamBillingResultError(
+        "Billing profile has no Mollie customer id",
+        billingLines.map(x => generateTeamBillingResult(x, billingProfile, { isInvoiceSent: "", isPaymentRequested: "" }))
+      );
+    }
+
+    if (decision.outcome !== "manually_billed" && decision.outcome !== "invoice_and_payment") {
+      throw new TeamBillingResultError(
+        decision.message,
+        billingLines.map(x => generateTeamBillingResult(x, billingProfile, { isInvoiceSent: "", isPaymentRequested: "" }))
+      );
+    }
+
+    if (decision.outcome === "invoice_and_payment") {
+      const mollieCustomerId = billingProfile.mollieCustomerId;
+      if (!mollieCustomerId) {
+        throw new Error(`Billing decision for team ${teamId} expects a payment customer that is missing`);
       }
+
+      // Get the customer mandate
       let mandate: Mandate | null = null;
       try {
-        mandate = await getMandate(billingProfile.mollieCustomerId);
+        mandate = await getMandate(mollieCustomerId);
       } catch (error) {
         console.error(`Error getting mandate for billing profile ${billingProfile.id}: ${error}`);
       }
@@ -387,7 +358,7 @@ async function billTeam({
         // Send payment request to mollie (on webhook, update billing event with payment result, notify admin on failure)
         try {
           await requestPayment({
-            mollieCustomerId: billingProfile.mollieCustomerId!,
+            mollieCustomerId,
             mollieMandateId: mandate?.id ?? null,
             billingProfileId: billingProfile.id,
             billingEventId: billingEventId!,
@@ -459,261 +430,4 @@ async function billTeam({
     }
     throw error;
   }
-}
-
-async function calculateSubscriptionByMonthlyPeriods({
-  subscription,
-  billingDate,
-}: {
-  subscription: typeof subscriptions.$inferSelect;
-  billingDate: Date;
-}): Promise<SubscriptionBillingLine[]> {
-  // Get billing period
-  const subscriptionHasEnded = (subscription.endDate && subscription.endDate < billingDate) ?? false;
-  const billingPeriodStartInclusive = addMilliseconds(
-    TZDate.tz("UTC", subscription.lastBilledAt || subscription.startDate),
-    1
-  );
-  const billingPeriodEndInclusive = TZDate.tz("UTC", subscriptionHasEnded ? subscription.endDate! : billingDate);
-
-  if (billingPeriodStartInclusive > billingPeriodEndInclusive) {
-    throw new Error(
-      `Billing period start is after billing period end for subscription ${subscription.id}`
-    );
-  }
-
-  // Split billing period into months [start of billing period, end of month 1], [beginning of month 2, end of month 2], ... [beginning of month n, end of billing period]
-  const billingPeriodMonths = [];
-  let nextStart = billingPeriodStartInclusive;
-  while (nextStart <= billingPeriodEndInclusive) {
-    let startOfPeriod = startOfMonth(nextStart);
-    let endOfPeriod = endOfMonth(nextStart);
-    if (endOfPeriod > billingPeriodEndInclusive) {
-      endOfPeriod = billingPeriodEndInclusive;
-    }
-    billingPeriodMonths.push([startOfPeriod, nextStart, endOfPeriod]);
-    nextStart = addMilliseconds(endOfPeriod, 1);
-  }
-
-  const results: SubscriptionBillingLine[] = [];
-
-  for (const [startOfPeriodInclusive, startInclusive, endInclusive] of billingPeriodMonths) {
-    results.push(await calculateSubscription({
-      subscription,
-      startOfPeriodInclusive,
-      startInclusive,
-      endInclusive,
-    }))
-  }
-
-  return results;
-}
-
-async function calculateSubscription({
-  subscription,
-  startOfPeriodInclusive,
-  startInclusive,
-  endInclusive,
-}: {
-  subscription: typeof subscriptions.$inferSelect;
-  startOfPeriodInclusive: Date;
-  startInclusive: Date;
-  endInclusive: Date;
-}): Promise<SubscriptionBillingLine> {
-
-  // Validate billing config
-  if (!subscription.billingConfig) {
-    throw new Error(
-      `Billing config is missing for subscription ${subscription.id}`
-    );
-  }
-  if (typeof subscription.billingConfig.basePrice !== "number") {
-    throw new Error(
-      `Invalid basePrice in billing config for subscription ${subscription.id}`
-    );
-  }
-  if (typeof subscription.billingConfig.includedMonthlyDocuments !== "number") {
-    throw new Error(
-      `Invalid includedMonthlyDocuments in billing config for subscription ${subscription.id}`
-    );
-  }
-  if (typeof subscription.billingConfig.documentOveragePrice !== "number") {
-    throw new Error(
-      `Invalid documentOveragePrice in billing config for subscription ${subscription.id}`
-    );
-  }
-
-  const billingConfigCheck = BillingConfigSchema.safeParse(subscription.billingConfig);
-  if (!billingConfigCheck.success) {
-    throw new Error(
-      `Invalid billing config for subscription ${subscription.id}: ${billingConfigCheck.error.message}`
-    );
-  }
-  const billingConfig = billingConfigCheck.data;
-
-  // If the start is the first day of the month, and the end is the last day of the month, it's a full month
-  const isEntireMonth =
-    isSameDay(
-      startInclusive,
-      startOfMonth(startInclusive)
-    ) &&
-    isSameDay(endInclusive, endOfMonth(endInclusive));
-
-  // Get usage before the subscription start date
-  let usageBeforeSubscriptionStart = 0;
-  if(startInclusive > startOfPeriodInclusive) {
-    usageBeforeSubscriptionStart = (await db
-      .select({ usage: count() })
-      .from(transferEvents)
-      .where(
-        and(
-          eq(transferEvents.teamId, subscription.teamId),
-          gte(transferEvents.createdAt, startOfPeriodInclusive),
-          lt(transferEvents.createdAt, startInclusive)
-        )
-      ))[0].usage ?? 0;
-  }
-
-  // If the billing period has ended, calculate the maximum included usage, otherwise assume full period allowance
-  let includedUsage = Math.max(billingConfig.includedMonthlyDocuments - usageBeforeSubscriptionStart, 0);
-  const minutesInPeriod = differenceInMinutes(
-    endInclusive,
-    startInclusive
-  );
-  const monthlyMinutes = new Decimal(31).times(24).times(60); // 31 days * 24 hours * 60 minutes
-  let billingRatio = new Decimal(minutesInPeriod).div(monthlyMinutes);
-  if (isEntireMonth || billingRatio.gt(1)) {
-    billingRatio = new Decimal(1);
-  }
-
-  // Get usage for the billing period
-  const incomingUsageByCompany = await db
-    .select({ companyId: companies.id, companyName: companies.name, incomingUsage: count() })
-    .from(transferEvents)
-    .leftJoin(companies, eq(transferEvents.companyId, companies.id))
-    .where(
-      and(
-        eq(transferEvents.teamId, subscription.teamId),
-        gte(transferEvents.createdAt, startInclusive),
-        lte(transferEvents.createdAt, endInclusive),
-        eq(transferEvents.direction, "incoming")
-      )
-    )
-    .groupBy(companies.id);
-  const outgoingUsageByCompany = await db
-    .select({ companyId: companies.id, companyName: companies.name, outgoingUsage: count() })
-    .from(transferEvents)
-    .leftJoin(companies, eq(transferEvents.companyId, companies.id))
-    .where(
-      and(
-        eq(transferEvents.teamId, subscription.teamId),
-        gte(transferEvents.createdAt, startInclusive),
-        lte(transferEvents.createdAt, endInclusive),
-        eq(transferEvents.direction, "outgoing")
-      )
-    )
-    .groupBy(companies.id);
-
-  let incomingUsageDecimal = new Decimal(0);
-  let outgoingUsageDecimal = new Decimal(0);
-  const perCompanyUsage: Record<string, { companyName: string, incomingUsage: Decimal, outgoingUsage: Decimal }> = {};
-  for (const company of incomingUsageByCompany) {
-    if (!perCompanyUsage[company.companyId ?? "unknown"]) {
-      perCompanyUsage[company.companyId ?? "unknown"] = { companyName: company.companyName ?? "Deleted companies", incomingUsage: new Decimal(0), outgoingUsage: new Decimal(0) };
-    }
-    perCompanyUsage[company.companyId ?? "unknown"].incomingUsage = perCompanyUsage[company.companyId ?? "unknown"].incomingUsage.plus(company.incomingUsage);
-    incomingUsageDecimal = incomingUsageDecimal.plus(company.incomingUsage);
-  }
-  for (const company of outgoingUsageByCompany) {
-    if (!perCompanyUsage[company.companyId ?? "unknown"]) {
-      perCompanyUsage[company.companyId ?? "unknown"] = { companyName: company.companyName ?? "Deleted companies", incomingUsage: new Decimal(0), outgoingUsage: new Decimal(0) };
-    }
-    perCompanyUsage[company.companyId ?? "unknown"].outgoingUsage = perCompanyUsage[company.companyId ?? "unknown"].outgoingUsage.plus(company.outgoingUsage);
-    outgoingUsageDecimal = outgoingUsageDecimal.plus(company.outgoingUsage);
-  }
-
-  const usageDecimal = incomingUsageDecimal.plus(outgoingUsageDecimal);
-
-  // Calculate billing amount
-  const baseAmount = new Decimal(billingConfig.basePrice).times(billingRatio);
-
-  const incomingDocumentOveragePrice = billingConfig.incomingDocumentOveragePrice !== undefined ? billingConfig.incomingDocumentOveragePrice : billingConfig.documentOveragePrice;
-  const outgoingDocumentOveragePrice = billingConfig.outgoingDocumentOveragePrice !== undefined ? billingConfig.outgoingDocumentOveragePrice : billingConfig.documentOveragePrice;
-
-  // We have to determine how many documents have to be billed for the overage
-  let toBeBilledIncoming: Decimal = incomingUsageDecimal;
-  let toBeBilledOutgoing: Decimal = outgoingUsageDecimal;
-  // First subtract from the incoming documents
-  let remainingIncludedUsage = new Decimal(includedUsage);
-  if (incomingUsageDecimal.gt(remainingIncludedUsage)) {
-    toBeBilledIncoming = incomingUsageDecimal.minus(remainingIncludedUsage);
-    remainingIncludedUsage = new Decimal(0);
-  } else {
-    toBeBilledIncoming = new Decimal(0);
-    remainingIncludedUsage = remainingIncludedUsage.minus(incomingUsageDecimal);
-  }
-  // Then subtract from the outgoing documents
-  if (outgoingUsageDecimal.gt(remainingIncludedUsage)) {
-    toBeBilledOutgoing = outgoingUsageDecimal.minus(remainingIncludedUsage);
-    remainingIncludedUsage = new Decimal(0);
-  } else {
-    toBeBilledOutgoing = new Decimal(0);
-    remainingIncludedUsage = remainingIncludedUsage.minus(outgoingUsageDecimal);
-  }
-
-  const overageAmountExcl = toBeBilledIncoming.times(incomingDocumentOveragePrice).plus(toBeBilledOutgoing.times(outgoingDocumentOveragePrice));
-
-  // Add the base amount and the overage amount
-  let totalAmountExcl = baseAmount.plus(overageAmountExcl).toNearest(0.01);
-
-  // If a minimum price is set, and the total amount is less than the minimum price, set the total amount to the minimum price
-  let minimumPrice: Decimal | null = null;
-  if ("minimumPrice" in billingConfig && billingConfig.minimumPrice && billingConfig.minimumPrice > 0) {
-    minimumPrice = new Decimal(billingConfig.minimumPrice).times(billingRatio);
-    totalAmountExcl = Decimal.max(totalAmountExcl, minimumPrice).toNearest(0.01);
-  }
-
-  // Generate description for invoice line
-  let lineDescription = `${formatISO(startInclusive, { representation: "date" })} - ${formatISO(endInclusive, { representation: "date" })}\n\n`;
-  lineDescription += `Incoming: ${incomingUsageDecimal.toString()} documents\n`;
-  lineDescription += `Outgoing: ${outgoingUsageDecimal.toString()} documents\n`;
-  lineDescription += `Included in subscription: ${includedUsage} documents\n`;
-  lineDescription += `Base price: € ${baseAmount.toNearest(0.01).toString()}\n`;
-  if(minimumPrice) {
-    lineDescription += `Minimum price: € ${minimumPrice.toNearest(0.01).toString()}\n`;
-  }
-  lineDescription += `Overage: ${toBeBilledIncoming.toString()} in, ${toBeBilledOutgoing.toString()} out\n`;
-  lineDescription += `Overage price per document: € ${incomingDocumentOveragePrice.toString()} in, € ${outgoingDocumentOveragePrice.toString()} out\n`;
-  lineDescription += `\n`;
-  lineDescription += `Per company usage:\n`;
-  // Add document usage per company
-  for (const companyId in perCompanyUsage) {
-    const company = perCompanyUsage[companyId];
-    lineDescription += `- ${company.companyName}: ${company.incomingUsage.toString()} in, ${company.outgoingUsage.toString()} out\n`;
-  }
-
-  return {
-    subscriptionId: subscription.id,
-    billingConfig: subscription.billingConfig,
-    subscriptionStartDate: subscription.startDate,
-    subscriptionEndDate: subscription.endDate,
-    billingPeriodStart: startInclusive,
-    billingPeriodEnd: endInclusive,
-    subscriptionLastBilledAt: subscription.lastBilledAt?.toISOString() ?? null,
-    planId: subscription.planId,
-    includedMonthlyDocuments: billingConfig.includedMonthlyDocuments,
-    basePrice: billingConfig.basePrice,
-    incomingDocumentOveragePrice,
-    outgoingDocumentOveragePrice,
-
-    // Invoice line
-    lineName: "Recommand " + billingConfig.name,
-    lineDescription: lineDescription,
-    lineTotalExcl: totalAmountExcl.toNumber(),
-    usedQty: usageDecimal.toNumber(),
-    usedQtyIncoming: incomingUsageDecimal.toNumber(),
-    usedQtyOutgoing: outgoingUsageDecimal.toNumber(),
-    overageQtyIncoming: toBeBilledIncoming.toNumber(),
-    overageQtyOutgoing: toBeBilledOutgoing.toNumber(),
-  };
 }

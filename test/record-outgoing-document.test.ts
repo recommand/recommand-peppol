@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
+  buildOutgoingDocumentDeliveries,
   buildOutgoingDocumentRow,
   buildOutgoingTransferEvents,
   type OutgoingDocumentDelivery,
@@ -139,21 +140,36 @@ describe("outgoing document recording", () => {
     });
   });
 
+  it("keeps the email asked for on failure with the document until the outcome is known", () => {
+    const row = buildOutgoingDocumentRow({
+      id: "doc_invoice",
+      teamId: "team_1",
+      company,
+      document: peppolDocument,
+      delivery: { ...peppolDelivery, emailFallback: { to: ["a@example.com"], subject: "Invoice 1" } },
+      storage,
+    });
+    expect(row.emailFallback).toEqual({ to: ["a@example.com"], subject: "Invoice 1" });
+    expect(row.sentOverEmail).toBe(false);
+    expect(row.emailRecipients).toEqual([]);
+  });
+
   it("bills a report exactly once, like a transmission", () => {
     const base = {
       teamId: "team_1",
       companyId: company.id,
       transmittedDocumentId: "doc_1",
+      document: { type: "invoice" as const, parsed: null },
     };
 
     expect(
       buildOutgoingTransferEvents({ ...base, delivery: reportingDelivery })
     ).toEqual([
-      { ...base, direction: "outgoing", type: "reporting" },
+      { teamId: base.teamId, companyId: base.companyId, transmittedDocumentId: base.transmittedDocumentId, direction: "outgoing", type: "reporting" },
     ]);
     expect(
       buildOutgoingTransferEvents({ ...base, delivery: peppolDelivery })
-    ).toEqual([{ ...base, direction: "outgoing", type: "peppol" }]);
+    ).toEqual([{ teamId: base.teamId, companyId: base.companyId, transmittedDocumentId: base.transmittedDocumentId, direction: "outgoing", type: "peppol" }]);
   });
 
   it("bills one event per email recipient alongside the Peppol transmission", () => {
@@ -161,6 +177,7 @@ describe("outgoing document recording", () => {
       teamId: "team_1",
       companyId: company.id,
       transmittedDocumentId: "doc_1",
+      document: { type: "invoice", parsed: null },
       delivery: {
         kind: "peppol",
         sentPeppol: true,
@@ -182,6 +199,7 @@ describe("outgoing document recording", () => {
         teamId: "team_1",
         companyId: company.id,
         transmittedDocumentId: "doc_1",
+        document: { type: "invoice", parsed: null },
         delivery: {
           kind: "peppol",
           sentPeppol: false,
@@ -190,5 +208,184 @@ describe("outgoing document recording", () => {
         },
       })
     ).toEqual([]);
+  });
+});
+
+describe("outgoing document deliveries", () => {
+  const now = new Date("2026-09-09T10:00:00Z");
+  const build = (
+    delivery: OutgoingDocumentDelivery,
+    overrides: { accessPointProvider?: Company["accessPointProvider"]; receiverId?: string | null } = {}
+  ) =>
+    buildOutgoingDocumentDeliveries({
+      transmittedDocumentId: "doc_1",
+      teamId: "team_1",
+      company: { id: company.id, accessPointProvider: overrides.accessPointProvider ?? "recommand-ap1" },
+      document: { receiverId: overrides.receiverId === undefined ? "0208:987654321" : overrides.receiverId },
+      delivery,
+      useTestNetwork: false,
+      now,
+    });
+
+  it("records a transmission through our own access point as delivered: the receipt came with the send", () => {
+    const rows = build(peppolDelivery);
+    expect(rows).toEqual([
+      {
+        transmittedDocumentId: "doc_1",
+        teamId: "team_1",
+        companyId: company.id,
+        statusChangedAt: now,
+        useTestNetwork: false,
+        channel: "peppol",
+        address: "0208:987654321",
+        status: "delivered",
+        failureCategory: null,
+        failureMessage: null,
+        failureProviderCode: null,
+        provider: "recommand-ap1",
+        providerTransactionId: "tx-1",
+      },
+    ]);
+  });
+
+  it("leaves a transmission through a shared access point pending until it reports the outcome", () => {
+    const [row] = build(peppolDelivery, { accessPointProvider: "at-shared-ap-fr" });
+    expect(row).toMatchObject({ status: "pending", provider: "at-shared-ap-fr", providerTransactionId: "tx-1" });
+  });
+
+  it("records a simulated transmission as delivered without a provider, whatever the company's access point", () => {
+    const simulated: OutgoingDocumentDelivery = { kind: "peppol", sentPeppol: true, emailRecipients: [], as4Response: null };
+    const [row] = build(simulated, { accessPointProvider: "at-shared-ap-fr" });
+    expect(row).toMatchObject({ status: "delivered", provider: null, providerTransactionId: null });
+  });
+
+  it("records a refused transmission that fell back to email as failed, with the refusal's reason", () => {
+    const rows = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["a@example.com", "b@example.com"],
+      as4Response: null,
+      peppolFailure: { category: "document_not_supported", message: "Not registered for invoices", providerCode: null },
+    });
+    expect(rows.map((row) => [row.channel, row.address, row.status])).toEqual([
+      ["peppol", "0208:987654321", "failed"],
+      ["email", "a@example.com", "pending"],
+      ["email", "b@example.com", "pending"],
+    ]);
+    expect(rows[0]).toMatchObject({
+      failureCategory: "document_not_supported",
+      failureMessage: "Not registered for invoices",
+      provider: null,
+    });
+  });
+
+  it("creates no Peppol delivery for an email-only document", () => {
+    const rows = build(
+      { kind: "peppol", sentPeppol: false, emailRecipients: ["a@example.com"], as4Response: null },
+      { receiverId: null }
+    );
+    expect(rows.map((row) => row.channel)).toEqual(["email"]);
+  });
+
+  it("creates no deliveries for a filed report", () => {
+    expect(build(reportingDelivery, { receiverId: null })).toEqual([]);
+  });
+});
+
+describe("email deliveries of a recorded document", () => {
+  const now = new Date("2026-09-09T10:00:00Z");
+  const build = (delivery: OutgoingDocumentDelivery) =>
+    buildOutgoingDocumentDeliveries({
+      transmittedDocumentId: "doc_1",
+      teamId: "team_1",
+      company: { id: company.id, accessPointProvider: "recommand-ap1" },
+      document: { receiverId: null },
+      delivery,
+      useTestNetwork: false,
+      now,
+    });
+
+  it("keep the id each message was sent under and the mail service's id for it", () => {
+    const rows = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["a@example.com", "b@example.com"],
+      emailMessages: [
+        { deliveryId: "dlv_a", address: "a@example.com", providerMessageId: "msg-a" },
+        { deliveryId: "dlv_b", address: "b@example.com", providerMessageId: "msg-b" },
+      ],
+      as4Response: null,
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({ id: "dlv_a", channel: "email", address: "a@example.com", status: "pending", provider: "postmark", providerTransactionId: "msg-a" }),
+      expect.objectContaining({ id: "dlv_b", channel: "email", address: "b@example.com", status: "pending", provider: "postmark", providerTransactionId: "msg-b" }),
+    ]);
+  });
+
+  it("match an address mailed twice to its two messages in order", () => {
+    const rows = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["a@example.com", "a@example.com"],
+      emailMessages: [
+        { deliveryId: "dlv_1", address: "a@example.com", providerMessageId: "msg-1" },
+        { deliveryId: "dlv_2", address: "a@example.com", providerMessageId: "msg-2" },
+      ],
+      as4Response: null,
+    });
+
+    expect(rows.map((row) => [row.id, row.providerTransactionId])).toEqual([
+      ["dlv_1", "msg-1"],
+      ["dlv_2", "msg-2"],
+    ]);
+  });
+
+  it("carry no reference for a document recorded without message ids", () => {
+    const [row] = build({ kind: "peppol", sentPeppol: false, emailRecipients: ["a@example.com"], as4Response: null });
+
+    expect(row).toMatchObject({ channel: "email", status: "pending", provider: null, providerTransactionId: null });
+    expect(row).not.toHaveProperty("id");
+  });
+
+  it("record an address the mail service refused in the send as a failed delivery with its reason", () => {
+    const rows = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["b@example.com"],
+      emailMessages: [{ deliveryId: "dlv_b", address: "b@example.com", providerMessageId: "msg-b" }],
+      emailFailures: [{ deliveryId: "dlv_a", address: "a@example.com", message: "Invalid 'To' address" }],
+      as4Response: null,
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({ id: "dlv_b", address: "b@example.com", status: "pending", providerTransactionId: "msg-b" }),
+      {
+        transmittedDocumentId: "doc_1",
+        teamId: "team_1",
+        companyId: company.id,
+        statusChangedAt: now,
+        useTestNetwork: false,
+        id: "dlv_a",
+        channel: "email",
+        address: "a@example.com",
+        status: "failed",
+        failureCategory: "transport",
+        failureMessage: "Invalid 'To' address",
+        failureProviderCode: null,
+        provider: "postmark",
+        providerTransactionId: null,
+      },
+    ]);
+    // Billing and the document's recipients only count what went out.
+    expect(
+      buildOutgoingTransferEvents({
+        teamId: "team_1",
+        companyId: company.id,
+        transmittedDocumentId: "doc_1",
+        document: { type: "invoice", parsed: null },
+        delivery: { kind: "peppol", sentPeppol: false, emailRecipients: ["b@example.com"], emailFailures: [{ deliveryId: "dlv_a", address: "a@example.com", message: "refused" }], as4Response: null },
+      }).map((event) => event.type)
+    ).toEqual(["email"]);
   });
 });

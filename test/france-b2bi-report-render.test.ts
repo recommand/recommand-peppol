@@ -8,12 +8,16 @@ import type { FrenchB2BiReport } from "../utils/parsing/b2bi-reporting/france";
 import { getDocumentType } from "../utils/type-repository/document-types";
 import { FRANCE_B2BI_REPORT_TEMPLATE } from "../templates/france-b2bi-report";
 import {
-  frenchB2BiReportSchema,
   getFrenchB2BiReportDocumentProfile,
+  storedFrenchB2BiReportSchema,
 } from "../utils/parsing/b2bi-reporting/france";
 
+/**
+ * Documents are read back through the stored shape, which is what rows on file carry:
+ * reports filed before the invoicing framework existed have none.
+ */
 function documentFor(report: unknown): PublicTransmittedDocument {
-  const parsed = frenchB2BiReportSchema.parse(report);
+  const parsed = storedFrenchB2BiReportSchema.parse(report);
   return {
     id: "doc_report",
     type: getFrenchB2BiReportDocumentProfile(parsed.type).type,
@@ -34,9 +38,11 @@ const invoiceDocument = documentFor({
   reference: "acme-inv-2026-000431",
   type: "invoice",
   documentNumber: "INV-2026-000431",
+  billingMode: "B1",
   issueDate: "2026-01-15",
   dueDate: "2026-02-14",
   buyer: {
+    name: "Rossi Forniture S.r.l.",
     enterpriseNumber: "IT00987654321",
     enterpriseNumberScheme: "0223",
     vatNumber: "IT00987654321",
@@ -91,11 +97,13 @@ describe("French cross-border report rendering", () => {
       documentKindLabel: "Invoice",
       documentNumber: "INV-2026-000431",
       dueDate: "2026-02-14",
+      buyerName: "Rossi Forniture S.r.l.",
       buyerScheme: "0223",
       buyerCompanyId: "IT00987654321",
       buyerVatNumber: "IT00987654321",
       buyerCountry: "IT",
       currency: "EUR",
+      billingMode: "B1",
     });
     expect(data.invoiceVatBreakdown).toEqual([
       {
@@ -159,6 +167,27 @@ describe("French cross-border report rendering", () => {
       }
     }
     expect(opened).toEqual([]);
+  });
+
+  it("lays out a report filed before the invoicing framework without inventing one", () => {
+    const legacyDocument = documentFor({
+      reference: "acme-inv-2026-000200",
+      type: "invoice",
+      documentNumber: "INV-2026-000200",
+      issueDate: "2026-01-15",
+      buyer: { name: "Rossi Forniture S.r.l.", country: "IT", vatNumber: "IT00987654321" },
+      taxExclusiveAmount: "10000.00",
+      taxAmount: "0.00",
+      vatBreakdown: [
+        { percentage: "0.00", taxableAmount: "10000.00", taxAmount: "0.00", category: "K" },
+      ],
+    });
+
+    const data = templateDataFor(legacyDocument);
+    expect(data.documentNumber).toBe("INV-2026-000200");
+    expect(data.billingMode).toBeUndefined();
+    // The layout drops the row rather than showing an empty framework.
+    expect(FRANCE_B2BI_REPORT_TEMPLATE).toContain("{{#billingMode}}");
   });
 
   it("names no counterparty for a report, only the filing authority", () => {

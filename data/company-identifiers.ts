@@ -1,11 +1,16 @@
 import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
 import { isSiren, validateIdentifier } from "@peppol/utils/identifier-validation";
-import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@directory/utils/util";
+import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
 import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";
 import { getTeamExtensionAndCompanyByCompanyId } from "./teams";
+import type { Company } from "./companies";
+import type { AccessPointProviderId } from "./peppol-providers";
+import { assertIdentifierSchemeAllowed, assertIdentifiersAllowed } from "./company-identifier-policy";
+import { lockCompanyRow, sameCompanyIdentity, type CompanyIdentitySnapshot } from "./company-row-lock";
+import { createPendingInboundMigration } from "./participant-migrations";
 
 export type CompanyIdentifier = typeof companyIdentifiers.$inferSelect;
 export type InsertCompanyIdentifier = typeof companyIdentifiers.$inferInsert;
@@ -32,6 +37,26 @@ export async function getCompanyIdentifiers(companyId: string): Promise<CompanyI
     .from(companyIdentifiers)
     .where(eq(companyIdentifiers.companyId, companyId))
     .orderBy(asc(companyIdentifiers.scheme), asc(companyIdentifiers.identifier));
+}
+
+/**
+ * Refuses to go on when the company holds an identifier its SMP would not register.
+ * Called before a verification or mandate is built on the identifiers, so a
+ * customer corrects the addresses first instead of being blocked afterwards.
+ */
+export async function assertCompanyIdentifiersAllowed(
+  company: Pick<Company, "id" | "smpProvider">,
+  teamExtension: { isPlayground?: boolean | null; useTestNetwork?: boolean | null } | null | undefined
+): Promise<void> {
+  const identifiers = await getCompanyIdentifiers(company.id);
+  assertIdentifiersAllowed(
+    {
+      smpProvider: company.smpProvider,
+      isPlayground: teamExtension?.isPlayground,
+      useTestNetwork: teamExtension?.useTestNetwork,
+    },
+    identifiers
+  );
 }
 
 export async function getCompanyIdentifier(
@@ -68,7 +93,11 @@ export async function getCompanyIdentifierBySchemeAndValue(
     .then((rows) => rows[0]);
 }
 
-export async function getSendingCompanyIdentifier(companyId: string): Promise<CompanyIdentifier> {
+/**
+ * The company's first identifier by scheme: the address a document of the company is
+ * attributed to when nothing about how it travels decides otherwise.
+ */
+export async function getDefaultCompanyIdentifier(companyId: string): Promise<CompanyIdentifier> {
   const identifiers = await db
     .select()
     .from(companyIdentifiers)
@@ -81,6 +110,59 @@ export async function getSendingCompanyIdentifier(companyId: string): Promise<Co
   }
 
   return identifiers[0];
+}
+
+/** The access point that sends for French companies, and requires a particular sender address. */
+const FRENCH_ACCESS_POINT_PROVIDER: AccessPointProviderId = "at-shared-ap-fr";
+
+/**
+ * The address a company sends under: the sender of the transport envelope and the
+ * seller's endpoint in the documents we write for it.
+ *
+ * Through the French access point the sender has to be the company's SIREN under the
+ * French electronic address scheme (0225), whatever other identifiers the company
+ * registered: that is the address the access point recognises the sender by. A
+ * SIRET or a suffixed electronic address under that scheme names an establishment
+ * rather than the company and is not accepted in its place. Every other access point
+ * takes the company's default identifier, as before.
+ */
+export async function getSendingCompanyIdentifier(
+  company: Pick<Company, "id" | "accessPointProvider">
+): Promise<CompanyIdentifier> {
+  if (company.accessPointProvider !== FRENCH_ACCESS_POINT_PROVIDER) {
+    return await getDefaultCompanyIdentifier(company.id);
+  }
+
+  return chooseSendingCompanyIdentifier(company, await getCompanyIdentifiers(company.id));
+}
+
+/**
+ * The choice getSendingCompanyIdentifier makes, given the company's identifiers in
+ * the order getCompanyIdentifiers lists them. Separate so the choice can be asserted
+ * without a database.
+ */
+export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier, "scheme" | "identifier">>(
+  company: Pick<Company, "accessPointProvider">,
+  identifiers: T[]
+): T {
+  if (identifiers.length === 0) {
+    throw new UserFacingError("No sending company identifier found. Ensure you have added a company identifier to your company.");
+  }
+
+  if (company.accessPointProvider !== FRENCH_ACCESS_POINT_PROVIDER) {
+    return identifiers[0]!;
+  }
+
+  const sirenAddress = identifiers.find(
+    (identifier) => identifier.scheme === "0225" && isSiren(identifier.identifier)
+  );
+  if (!sirenAddress) {
+    throw new UserFacingError(
+      "Sending through the French access point requires a company identifier with scheme 0225 and the company's 9 digit SIREN as identifier (for example 0225:123456789). Add it to your company to send documents."
+    );
+  }
+
+  return sirenAddress;
 }
 
 /**
@@ -115,31 +197,45 @@ function validateProtectedFrenchIdentifier({
   }
 }
 
-async function validateProtectedIdentifier({
+/**
+ * Holds an identifier against the company it is registered for: the SMP's scheme
+ * policy first, then the schemes whose value has to be the company's own number.
+ * Pure so a planned change to the company can be checked against its identifiers
+ * before anything is written.
+ */
+export function validateIdentifierAgainstCompany({
   scheme,
   identifier,
-  companyId,
+  company,
+  teamExtension,
 }: {
   scheme: string;
   identifier: string;
-  companyId: string;
-}): Promise<void> {
-  const teamInfo = await getTeamExtensionAndCompanyByCompanyId(companyId);
-  if (!teamInfo) {
-    throw new Error("Company is not associated with a team");
-  }
-
+  company: Pick<Company, "smpProvider" | "enterpriseNumber" | "vatNumber">;
+  teamExtension: { isPlayground?: boolean | null; useTestNetwork?: boolean | null } | null | undefined;
+}): void {
   const cleanedScheme = cleanScheme(scheme);
+
+  // The company's SMP decides which schemes it registers at all; checked before the
+  // value is held against the company so a refused scheme is named as such.
+  assertIdentifierSchemeAllowed(
+    {
+      smpProvider: company.smpProvider,
+      isPlayground: teamExtension?.isPlayground,
+      useTestNetwork: teamExtension?.useTestNetwork,
+    },
+    cleanedScheme
+  );
 
   if (cleanedScheme === "0225" || cleanedScheme === "0002" || cleanedScheme === "0009") {
     validateProtectedFrenchIdentifier({
       scheme: cleanedScheme,
       identifier,
-      enterpriseNumber: teamInfo.company.enterpriseNumber,
+      enterpriseNumber: company.enterpriseNumber,
     });
   } else if (cleanedScheme === "0208") {
     const cleanedIdentifier = cleanEnterpriseNumber(identifier);
-    const cleanedEnterpriseNumber = cleanEnterpriseNumber(teamInfo.company.enterpriseNumber);
+    const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
     
     if (!cleanedEnterpriseNumber) {
       throw new UserFacingError("Company identifier with scheme 0208 requires a company enterprise number to be set.");
@@ -148,35 +244,82 @@ async function validateProtectedIdentifier({
     if (cleanedIdentifier !== cleanedEnterpriseNumber) {
       throw new UserFacingError(`Company identifier with scheme 0208 must match the company enterprise number. Expected: ${cleanedEnterpriseNumber}, got: ${cleanedIdentifier}`);
     }
-  } else if (cleanedScheme === "9925") {
+  } else if (cleanedScheme === "9925" || cleanedScheme === "9928") {
     const cleanedIdentifier = cleanVatNumber(identifier);
-    const cleanedVatNumber = cleanVatNumber(teamInfo.company.vatNumber);
+    const cleanedVatNumber = cleanVatNumber(company.vatNumber);
     
     if (!cleanedVatNumber) {
-      throw new UserFacingError("Company identifier with scheme 9925 requires a company VAT number to be set.");
+      throw new UserFacingError(`Company identifier with scheme ${cleanedScheme} requires a company VAT number to be set.`);
     }
 
     if (cleanedIdentifier !== cleanedVatNumber) {
-      throw new UserFacingError(`Company identifier with scheme 9925 must match the company VAT number. Expected: ${cleanedVatNumber}, got: ${cleanedIdentifier}`);
+      throw new UserFacingError(`Company identifier with scheme ${cleanedScheme} must match the company VAT number. Expected: ${cleanedVatNumber}, got: ${cleanedIdentifier}`);
     }
   }
+}
+
+/** Validates against the company as it is now and returns what it validated against. */
+async function validateProtectedIdentifier({
+  scheme,
+  identifier,
+  companyId,
+}: {
+  scheme: string;
+  identifier: string;
+  companyId: string;
+}): Promise<CompanyIdentitySnapshot> {
+  const teamInfo = await getTeamExtensionAndCompanyByCompanyId(companyId);
+  if (!teamInfo) {
+    throw new Error("Company is not associated with a team");
+  }
+
+  validateIdentifierAgainstCompany({
+    scheme,
+    identifier,
+    company: teamInfo.company,
+    teamExtension: teamInfo.teamExtension,
+  });
+  return teamInfo.company;
+}
+
+/**
+ * Runs an identifier write while holding the company row for share, after making
+ * sure the company still is what the identifier was validated against. A country
+ * change holds the same row for update, so the write either lands before the move
+ * or is refused once the move has changed what is allowed.
+ */
+async function writeIdentifierAgainst<T>(
+  validatedAgainst: CompanyIdentitySnapshot,
+  companyId: string,
+  write: (tx: Parameters<Parameters<typeof db.transaction>[0]>[0]) => Promise<T>
+): Promise<T> {
+  return await db.transaction(async (tx) => {
+    const current = await lockCompanyRow(tx, companyId, "share");
+    if (!current || !sameCompanyIdentity(current, validatedAgainst)) {
+      throw new UserFacingError("The company changed while the identifier was being saved. Please try again.");
+    }
+    return await write(tx);
+  });
 }
 
 export async function createCompanyIdentifier({
   companyIdentifier,
   skipSmpRegistration,
   useTestNetwork,
+  migrationKey,
 }:{
   companyIdentifier: InsertCompanyIdentifier;
   skipSmpRegistration: boolean;
   useTestNetwork: boolean;
+  /** A migration key from the SMP that currently publishes the identifier; the registration then takes the identifier over instead of creating it. */
+  migrationKey?: string;
 }): Promise<CompanyIdentifier> {
   const cleanedScheme = cleanScheme(companyIdentifier.scheme);
   const cleanedIdentifierValue = cleanIdentifier(companyIdentifier.identifier);
 
   validateIdentifier(cleanedScheme, cleanedIdentifierValue);
 
-  await validateProtectedIdentifier({
+  const validatedAgainst = await validateProtectedIdentifier({
     scheme: companyIdentifier.scheme,
     identifier: companyIdentifier.identifier,
     companyId: companyIdentifier.companyId,
@@ -189,11 +332,21 @@ export async function createCompanyIdentifier({
     );
   }
 
+  if(migrationKey){
+    await createPendingInboundMigration({
+      companyId: companyIdentifier.companyId,
+      scheme: cleanedScheme,
+      identifier: cleanedIdentifierValue,
+      migrationKey,
+      useTestNetwork,
+    });
+  }
+
   if(!skipSmpRegistration){
     await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: companyIdentifier, useTestNetwork: useTestNetwork});
   }
 
-  const createdIdentifier = await db
+  const createdIdentifier = await writeIdentifierAgainst(validatedAgainst, companyIdentifier.companyId, (tx) => tx
     .insert(companyIdentifiers)
     .values({
       companyId: companyIdentifier.companyId,
@@ -201,7 +354,7 @@ export async function createCompanyIdentifier({
       identifier: cleanedIdentifierValue,
     })
     .returning()
-    .then((rows) => rows[0]);
+    .then((rows) => rows[0]));
   
   return createdIdentifier;
 }
@@ -229,7 +382,7 @@ export async function updateCompanyIdentifier({
 
   validateIdentifier(cleanedScheme, cleanedIdentifierValue);
 
-  await validateProtectedIdentifier({
+  const validatedAgainst = await validateProtectedIdentifier({
     scheme: companyIdentifier.scheme,
     identifier: companyIdentifier.identifier,
     companyId: companyIdentifier.companyId,
@@ -253,7 +406,7 @@ export async function updateCompanyIdentifier({
     await unregisterCompanyIdentifier({identifier: oldIdentifier, useTestNetwork: useTestNetwork}); // Unregister the old identifier
   }
 
-  const updatedIdentifier = await db
+  const updatedIdentifier = await writeIdentifierAgainst(validatedAgainst, companyIdentifier.companyId, (tx) => tx
     .update(companyIdentifiers)
     .set({
       scheme: cleanedScheme,
@@ -266,7 +419,7 @@ export async function updateCompanyIdentifier({
       )
     )
     .returning()
-    .then((rows) => rows[0]);
+    .then((rows) => rows[0]));
 
   return updatedIdentifier;
 }

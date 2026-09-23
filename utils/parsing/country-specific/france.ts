@@ -70,6 +70,8 @@ export const frenchBillingModeSchema = z.enum([
   example: "S1",
 });
 
+export type FrenchBillingMode = z.infer<typeof frenchBillingModeSchema>;
+
 export const frenchCountrySpecificSchema = z.object({
   country: z.literal("FR").openapi({
     description:

@@ -8,10 +8,10 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod, describeValidationErrorResponse } from "@core/lib/api-docs";
 import { companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
-import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@directory/utils/util";
+import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { zodValidCountryCodes } from "@peppol/db/schema";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { audit } from "@core/lib/audit";
@@ -20,12 +20,12 @@ const server = new Server();
 
 const updateCompanyRouteDescription = describeRoute({
     operationId: "updateCompany",
-    description: "Update an existing company. Changing the VAT number or enterprise number revokes any open verification sessions for the company. If the company was already verified, its verification status is also revoked and the company must be verified again.",
+    description: "Update an existing company. Changing the VAT number or enterprise number revokes any open verification sessions for the company. If the company was already verified, its verification status is also revoked and the company must be verified again. Changing the country is only possible while no verification of the company has started and it is not registered on the Peppol network; the company then moves to the network registration of the new country, its default identifiers are replaced with the new country's, and any identifier you added yourself has to be valid for the new country. Afterwards, create a new company instead, or contact support@recommand.eu.",
     summary: "Update Company",
     tags: ["Companies"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully updated company", z.object({ company: companyResponse })),
-        ...describeErrorResponse(400, "Invalid request data"),
+        ...describeValidationErrorResponse("Invalid request data"),
         ...describeErrorResponse(404, "Company not found"),
         ...describeErrorResponse(500, "Failed to update company"),
     },
@@ -46,7 +46,9 @@ const updateCompanyJsonBodySchema = z.object({
     address: z.string().optional(),
     postalCode: z.string().optional(),
     city: z.string().optional(),
-    country: zodValidCountryCodes.optional(),
+    country: zodValidCountryCodes.optional().openapi({
+        description: "The country the company is registered in, in ISO 3166-1 alpha-2 format. Can only be changed before verification starts and before the company is registered on the Peppol network; rejected with a 400 otherwise.",
+    }),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish(),
     enterpriseNumber: z.string().nullish().transform(cleanEnterpriseNumber).openapi({
         description: "The enterprise number of the company. Changing its value revokes open verification sessions, and also revokes verification status if the company was verified.",

@@ -1,0 +1,504 @@
+import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import type { ArratechOnboarding } from '../../data/at/kyc-onboarding-state';
+import { scheduledJobs } from 'croner';
+import type { Logger } from '@recommand/lib/logger';
+
+const events: string[] = [];
+let log: any;
+let participantStatus: string;
+let kycStatus: string;
+let company: any;
+let team: any;
+let acquired: boolean;
+let failSync: boolean;
+let failEmail: boolean;
+let failSupport: boolean;
+let mandateNotes: string[];
+let identifiers: { scheme: string; identifier: string }[];
+let latestSessionId: string;
+const state = (): ArratechOnboarding => ({
+  phase: 'submit',
+  attempts: 0,
+  nextAttemptAt: new Date().toISOString(),
+  startedAt: new Date().toISOString(),
+});
+
+mock.module('@recommand/db', () => ({
+  db: {
+    select: () => ({ from: () => ({ where: () => ({ orderBy: () => ({ limit: async () => [{ id: latestSessionId }] }) }) }) }),
+    transaction: async (fn: any) => fn({ execute: async () => ({ rows: [{ acquired }] }) }),
+    update: () => ({
+      set: (patch: any) => ({
+        where: async () => {
+          Object.assign(log, structuredClone(patch));
+        },
+      }),
+    }),
+  },
+}));
+mock.module('@peppol/data/companies', () => ({ getCompanyById: async () => company }));
+mock.module('@peppol/data/teams', () => ({ getTeamExtension: async () => team }));
+mock.module('@peppol/data/company-identifiers', () => ({
+  getCompanyIdentifiers: async () => identifiers,
+}));
+mock.module('@peppol/data/company-verification', () => ({
+  getCompanyVerificationLog: async () => structuredClone(log),
+  isFinalVerificationStatus: (status: string) => ['verified', 'rejected', 'error'].includes(status),
+  finalizeCompanyVerification: async () => {
+    events.push('finalize');
+    log.status = 'verified';
+    return { status: 'verified', errorMessage: null };
+  },
+}));
+mock.module('@core/lib/audit', () => ({
+  audit: async () => {
+    events.push('audit');
+  },
+  writeAuditEvent: async () => {
+    events.push('audit');
+  },
+}));
+mock.module('@peppol/data/company-verification-webhooks', () => ({
+  publishCompanyVerificationEvent: async () => {},
+}));
+mock.module('@peppol/data/send-manual-verification-email', () => ({
+  sendManualVerificationEmail: async () => {
+    events.push('email');
+    if (failEmail) throw new Error('Mail unavailable');
+  },
+  sendManualVerificationDeclinedEmail: async () => {
+    events.push('declined-email');
+  },
+}));
+mock.module('@peppol/data/send-arratech-kyc-review-email', () => ({
+  sendArratechKycReviewEmail: async () => {
+    events.push('support');
+    if (failSupport) throw new Error('Support mail unavailable');
+  },
+}));
+mock.module('@peppol/data/at/kyc', () => ({
+  buildArratechKycFiling: async () => ({
+    identity: { metaData: { siren: '303265045', siret: '30326504500011' }, notes: mandateNotes },
+    electronicAddresses: ['0225:303265045'],
+    mandate: Buffer.from('%PDF signed'),
+    mandateFileName: 'mandate.pdf',
+  }),
+}));
+mock.module('@peppol/data/at/smp', () => ({
+  getParticipantByIdentifier: async () => ({ id: 'participant', status: participantStatus }),
+  upsertCompanyRegistrations: async (options: any) => {
+    if (options.includeCapabilities === false) {
+      expect(options.siret).toBe('30326504500011');
+      events.push('register');
+    } else {
+      events.push('sync');
+      if (failSync) throw new Error('SMP temporarily unavailable');
+    }
+  },
+}));
+mock.module('@peppol/data/at/client', () => ({
+  getArratechConfig: () => ({ orgId: 'org' }),
+  fetchArratech: async (path: string, options: RequestInit) => {
+    if (path.endsWith('/approve')) {
+      events.push('approve');
+      kycStatus = 'APPROVED';
+    } else if (path.endsWith('/documents')) {
+      events.push('upload');
+      return Response.json({ docId: 'doc' }, { status: 201 });
+    } else expect(options.method).toBe('GET');
+    return Response.json({
+      status: kycStatus,
+      jurisdiction: 'FR',
+      metaData: { siren: '303265045', siret: '30326504500011' },
+      documents: [],
+    });
+  },
+}));
+
+const { processArratechOnboarding, notifyVerificationCompletion, VerificationBusyError, initializeArratechOnboardingCron, resumeBlockedArratechOnboarding } =
+  await import('../../data/at/kyc-onboarding');
+const { OnboardingResumeRefused, UNSUPPORTED_IDENTIFIER_BLOCK } = await import('../../data/at/kyc-onboarding-state');
+
+beforeEach(() => {
+  events.length = 0;
+  log = {
+    id: 'verification',
+    companyId: 'company',
+    status: 'inReview',
+    firstName: 'Jean',
+    lastName: 'Dupont',
+    companyName: 'Company',
+    enterpriseNumber: '303265045',
+    countrySpecific: { country: 'FR', siret: '30326504500011' },
+    country: 'FR',
+    address: 'Street',
+    postalCode: '75001',
+    city: 'Paris',
+    mandateAcceptedAt: new Date(),
+    verificationProofReference: 'didit-session',
+    arratechOnboarding: state(),
+  };
+  company = {
+    id: 'company',
+    teamId: 'team',
+    country: 'FR',
+    smpProvider: 'at-shared-smp-fr',
+    isSmpRecipient: true,
+    name: log.companyName,
+    enterpriseNumber: log.enterpriseNumber,
+    address: log.address,
+    postalCode: log.postalCode,
+    city: log.city,
+  };
+  team = { verificationRequirements: 'strict', useTestNetwork: false, isPlayground: false };
+  participantStatus = 'PENDING_TAX_REGISTRATION';
+  kycStatus = 'PENDING';
+  acquired = true;
+  failSync = false;
+  failEmail = false;
+  failSupport = false;
+  mandateNotes = [];
+  identifiers = [{ scheme: '0225', identifier: '303265045' }];
+  latestSessionId = log.id;
+});
+
+describe('durable Arratech onboarding', () => {
+  it('logs scheduler registration, selection and processing stages without filing contents', async () => {
+    const previous = process.env.RUN_CRON;
+    const messages: string[] = [];
+    const record = (message: string) => { messages.push(message); };
+    const logger = { info: record, warn: record, error: record } as unknown as Logger;
+    try {
+      process.env.RUN_CRON = 'false';
+      initializeArratechOnboardingCron(logger);
+      expect(messages.join()).toContain('scheduler disabled');
+      process.env.RUN_CRON = 'true';
+      initializeArratechOnboardingCron(logger);
+      const job = scheduledJobs.find(job => job.name === 'peppol.arratech-onboarding')!;
+      expect(job).toBeDefined();
+      await job.trigger();
+      const output = messages.join('\n');
+      for (const stage of ['registered', 'tick', 'select-due completed', 'selected count=1', 'lock-acquired', 'build-filing completed', 'ensure-approved-kyc completed', 'save-retry completed', 'batch-finished']) {
+        expect(output).toContain(stage);
+      }
+      for (const sensitive of ['%PDF', 'didit-session', '303265045', 'Jean', 'Dupont']) {
+        expect(output).not.toContain(sensitive);
+      }
+    } finally {
+      scheduledJobs.find(job => job.name === 'peppol.arratech-onboarding')?.stop();
+      if (previous === undefined) delete process.env.RUN_CRON;
+      else process.env.RUN_CRON = previous;
+    }
+  });
+
+  it('blocks a mismatched country before any provider writes', async () => {
+    log.countrySpecific = { country: 'BE', siret: '30326504500011' };
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+  });
+
+  it('does not let a supplement override submitted country data', async () => {
+    log.arratechOnboarding.identitySupplement = {
+      countrySpecific: { country: 'FR', siret: '00000001800002' }, source: 'confirmation', reviewedBy: 'support',
+      reviewedAt: new Date().toISOString(), verificationLogId: log.id,
+    };
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+  });
+
+  it('blocks a cached filing that differs from the submitted establishment', async () => {
+    await processArratechOnboarding(log.id);
+    events.length = 0;
+    log.arratechOnboarding.filing.siret = '00000001800002';
+    participantStatus = 'ACTIVE';
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(log.status).toBe('inReview');
+  });
+  it('uses the verification SIRET without a SIRET field on the company', async () => {
+    await processArratechOnboarding(log.id);
+    expect(events).toContain('approve');
+    expect(company).not.toHaveProperty('siret');
+  });
+
+  it('blocks missing establishment data before any provider writes', async () => {
+    delete log.countrySpecific;
+    await processArratechOnboarding(log.id);
+    expect(events).not.toContain('approve');
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+  });
+
+  it('accepts a reviewed legacy supplement without changing the signed snapshot', async () => {
+    delete log.countrySpecific;
+    log.arratechOnboarding.identitySupplement = {
+      countrySpecific: { country: 'FR', siret: '30326504500011' }, source: 'customer-confirmation', reviewedBy: 'support',
+      reviewedAt: new Date().toISOString(), verificationLogId: log.id,
+    };
+    await processArratechOnboarding(log.id);
+    expect(events).toContain('approve');
+    expect(log.countrySpecific).toBeUndefined();
+  });
+
+  it('rejects a supplement belonging to another session', async () => {
+    delete log.countrySpecific;
+    log.arratechOnboarding.identitySupplement = {
+      countrySpecific: { country: 'FR', siret: '30326504500011' }, source: 'customer-confirmation', reviewedBy: 'support',
+      reviewedAt: new Date().toISOString(), verificationLogId: 'other',
+    };
+    await processArratechOnboarding(log.id);
+    expect(events).not.toContain('approve');
+  });
+  it('routes send-only to support once without registration or approval', async () => {
+    delete log.countrySpecific;
+    company.isSmpRecipient = false;
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(log.status).toBe('inReview');
+    expect(log.errorMessage).toBeNull();
+    expect(log.arratechOnboarding.phase).toBe('support');
+    expect(log.arratechOnboarding.supportNotifiedAt).toBeDefined();
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(company.isSmpRecipient).toBe(false);
+  });
+
+  it('retries a failed send-only support notification without provider writes', async () => {
+    company.isSmpRecipient = false;
+    failSupport = true;
+    await processArratechOnboarding(log.id);
+    expect(log.arratechOnboarding.supportNotifiedAt).toBeUndefined();
+    failSupport = false;
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support', 'support']);
+    expect(log.arratechOnboarding.supportNotifiedAt).toBeDefined();
+  });
+
+  it('keeps completion and audit when the success email fails', async () => {
+    participantStatus = 'ACTIVE';
+    failEmail = true;
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('verified');
+    expect(log.arratechOnboarding.phase).toBe('complete');
+    expect(events.slice(-2)).toEqual(['audit', 'email']);
+    await processArratechOnboarding(log.id);
+    expect(events.filter((e) => e === 'email')).toHaveLength(1);
+  });
+
+  it('uses the same completion cleanup and audit for an admin rejection', async () => {
+    await notifyVerificationCompletion(
+      log.id,
+      company,
+      log.arratechOnboarding,
+      'rejected',
+      {} as any,
+    );
+    expect(log.arratechOnboarding.phase).toBe('complete');
+    expect(events).toEqual(['audit', 'declined-email']);
+  });
+  it('approves then waits for ACTIVE before syncing or finalizing', async () => {
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['register', 'upload', 'approve']);
+    expect(log.status).toBe('inReview');
+    expect(log.arratechOnboarding.phase).toBe('activation');
+    participantStatus = 'ACTIVE';
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['register', 'upload', 'approve', 'sync', 'finalize', 'audit', 'email']);
+    expect(log.status).toBe('verified');
+    await processArratechOnboarding(log.id);
+    expect(events.filter((event) => event === 'email')).toHaveLength(1);
+  });
+
+  it('retries a capability synchronization failure without approving again', async () => {
+    await processArratechOnboarding(log.id);
+    participantStatus = 'ACTIVE';
+    failSync = true;
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('inReview');
+    failSync = false;
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('verified');
+    expect(events.filter((event) => event === 'approve')).toHaveLength(1);
+  });
+
+  it('does no work when another worker owns the verification', async () => {
+    acquired = false;
+    await expect(processArratechOnboarding(log.id)).rejects.toThrow('already being processed');
+    await expect(processArratechOnboarding(log.id)).rejects.toBeInstanceOf(VerificationBusyError);
+    expect(events).toEqual([]);
+  });
+
+  it('keeps an assumed SIRET for manual review before any provider writes', async () => {
+    mandateNotes = ['SIRET assumed'];
+    await processArratechOnboarding(log.id);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+    expect(events).toEqual(['support']);
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+  });
+
+  it('requires the actual mandate acceptance timestamp', async () => {
+    log.mandateAcceptedAt = null;
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(log.errorMessage).toContain('signed mandate');
+  });
+
+  it('does not process test or non-French companies', async () => {
+    team.useTestNetwork = true;
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+  });
+
+  it('does not act on a revoked verification', async () => {
+    log.status = 'rejected';
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual([]);
+  });
+
+  it('does not finalize active participants whose KYC is rejected', async () => {
+    await processArratechOnboarding(log.id);
+    kycStatus = 'REJECTED';
+    participantStatus = 'ACTIVE';
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('inReview');
+    expect(events).not.toContain('finalize');
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+  });
+});
+
+// A company whose identifiers the French SMP refuses blocks before any filing is
+// prepared. Once the identifiers are corrected, support hands the session back to
+// the worker: the identity check and mandate stay, approval and activation still
+// run at the provider. Anything else about the block keeps needing a person.
+describe('resuming a blocked onboarding', () => {
+  const mixed = () => {
+    identifiers = [
+      { scheme: '0002', identifier: '303265045' },
+      { scheme: '0009', identifier: '30326504500011' },
+      { scheme: '0225', identifier: '303265045' },
+    ];
+  };
+  const blockOnIdentifiers = async () => {
+    mixed();
+    await processArratechOnboarding(log.id);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+    expect(log.errorMessage).toBe(UNSUPPORTED_IDENTIFIER_BLOCK);
+    expect(log.arratechOnboarding.filing).toBeUndefined();
+    expect(events).toEqual(['support']);
+    events.length = 0;
+  };
+  const resume = () => resumeBlockedArratechOnboarding(log.id, {} as any);
+  const refused = async (status: 400 | 409, message: string) => {
+    const before = structuredClone(log);
+    const error = await resume().catch((e) => e);
+    expect(error).toBeInstanceOf(OnboardingResumeRefused);
+    expect(error.status).toBe(status);
+    expect(error.message).toContain(message);
+    expect(log).toEqual(before);
+    expect(events).toEqual([]);
+  };
+
+  it('blocks a mixed 0225/0002/0009 set before preparing a filing', async () => {
+    await blockOnIdentifiers();
+  });
+
+  it('resumes once only 0225 remains and completes through the provider', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    const result = await resume();
+    expect(result.state.phase).toBe('submit');
+    expect(result.state.attempts).toBe(0);
+    expect(result.state.resumedAt).toBeDefined();
+    expect(result.state.startedAt).toBe(log.arratechOnboarding.startedAt);
+    expect(result.previousError).toBe(UNSUPPORTED_IDENTIFIER_BLOCK);
+    expect(log.errorMessage).toBeNull();
+    expect(log.mandateAcceptedAt).toEqual(log.mandateAcceptedAt);
+    expect(log.verificationProofReference).toBe('didit-session');
+    expect(events).toEqual(['audit']);
+    events.length = 0;
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['register', 'upload', 'approve']);
+    expect(log.arratechOnboarding.phase).toBe('activation');
+    participantStatus = 'ACTIVE';
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('verified');
+  });
+
+  it('refuses while unsupported identifiers remain', async () => {
+    await blockOnIdentifiers();
+    await refused(409, '0002:303265045, 0009:30326504500011');
+  });
+
+  it('refuses a session that is not blocked, not under review, or superseded', async () => {
+    await refused(400, 'phase submit');
+    await blockOnIdentifiers();
+    latestSessionId = 'newer';
+    await refused(409, 'newer verification session');
+    latestSessionId = log.id;
+    log.status = 'rejected';
+    await refused(400, 'rejected');
+  });
+
+  it('refuses when the company no longer reads as the signed mandate', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    company.address = 'Other street';
+    await refused(409, 'Company details changed');
+  });
+
+  it('refuses without a completed identity check and signed mandate', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    log.mandateAcceptedAt = null;
+    await refused(409, 'signed mandate');
+  });
+
+  it('refuses a block with another cause or a prepared filing', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    log.errorMessage = 'KYC is REJECTED: manual review required';
+    await refused(409, 'manual review');
+    log.errorMessage = UNSUPPORTED_IDENTIFIER_BLOCK;
+    log.arratechOnboarding.filing = { siren: '303265045', siret: '30326504500011', addresses: ['0225:303265045'], mandateBase64: '', fileName: 'mandate.pdf' };
+    await refused(409, 'filing was already prepared');
+  });
+
+  it('refuses send-only, test-network and non-strict companies', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    company.isSmpRecipient = false;
+    await refused(409, 'Send-only');
+    company.isSmpRecipient = true;
+    team.useTestNetwork = true;
+    await refused(409, 'no longer qualify');
+  });
+
+  it('gives a resumed session a fresh time limit while keeping when it started', async () => {
+    const startedAt = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+    log.arratechOnboarding.startedAt = startedAt;
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    await resume();
+    events.length = 0;
+    await processArratechOnboarding(log.id);
+    // Approved, now waiting for activation: a wait that the old start date would
+    // have turned into a block.
+    expect(events).toEqual(['register', 'upload', 'approve']);
+    expect(log.arratechOnboarding.phase).toBe('activation');
+    await processArratechOnboarding(log.id);
+    expect(log.arratechOnboarding.phase).toBe('activation');
+    expect(log.arratechOnboarding.startedAt).toBe(startedAt);
+    participantStatus = 'ACTIVE';
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('verified');
+  });
+
+  it('does no work when another worker owns the session', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    acquired = false;
+    await expect(resume()).rejects.toBeInstanceOf(VerificationBusyError);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+  });
+});

@@ -9,13 +9,13 @@ import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/a
 import { companyNotificationEmailAddressResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { createCompanyNotificationEmailAddress } from "@peppol/data/company-notification-emails";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 
 const server = new Server();
 
 const createAddressRouteDescription = describeRoute({
     operationId: "createCompanyNotificationEmailAddress",
-    description: "Create a new company notification email address",
+    description: "Have a person or a shared mailbox emailed whenever the company sends or receives a document. Choose the directions to notify, and whether each notification carries a rendered PDF and the document as JSON. These emails are for people; use a webhook to drive an integration.",
     summary: "Create Company Notification Email Address",
     tags: ["Company Notification Email Addresses"],
     responses: {

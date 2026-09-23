@@ -1,9 +1,8 @@
-import { transmittedDocumentLabels, transmittedDocuments } from "@peppol/db/schema";
-import { labels } from "@directory/db/schema";
+import { labels, transmittedDocumentLabels, transmittedDocuments } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { eq, and, inArray } from "drizzle-orm";
-import { UserFacingError } from "@directory/utils/util";
-import { getLabelsForSuppliers } from "@directory/data/suppliers";
+import { UserFacingError } from "@peppol/utils/util";
+import { getLabelsForSuppliers } from "@peppol/data/suppliers";
 import { publishEvent } from "@core/data/rules/events";
 
 export async function assignLabelToDocument(

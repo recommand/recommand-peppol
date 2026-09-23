@@ -15,7 +15,7 @@ const server = new Server();
 
 const updateWebhookRouteDescription = describeRoute({
     operationId: "updateWebhook",
-    description: "Update an existing webhook",
+    description: "Replace a webhook's configuration. `url` is required, so send the current value for anything you are not changing. The secret is the exception: omit it to keep the one in place, or send null to stop signing deliveries. Events already queued for delivery are sent to the new URL.",
     summary: "Update Webhook",
     tags: ["Webhooks"],
     responses: {
@@ -33,8 +33,14 @@ const updateWebhookParamSchema = z.object({
 });
 
 const updateWebhookJsonBodySchema = z.object({
-    url: z.string().url(),
-    companyId: z.string().nullish(),
+    url: z.string().url().openapi({
+        description: "The HTTPS endpoint to deliver events to.",
+        example: "https://example.com/hooks/recommand",
+    }),
+    companyId: z.string().nullish().openapi({
+        description: "Limit the webhook to one company's events. Leave it out to receive the events of every company in the team.",
+        example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    }),
     secret: z.preprocess(
         (value) => value === "" ? undefined : value,
         z.string().min(1).nullable().optional()

@@ -1,4 +1,6 @@
 import type { BillingConfig } from "../data/plans";
+import type { ArratechOnboarding } from "@peppol/data/at/kyc-onboarding-state";
+import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { teams } from "@core/db/schema";
 import {
   timestamp,
@@ -13,6 +15,7 @@ import {
   primaryKey,
   serial,
   date,
+  integer,
 } from "drizzle-orm/pg-core";
 import { ulid } from "ulid";
 import { isNotNull, SQL, sql } from "drizzle-orm";
@@ -30,7 +33,7 @@ import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/documen
 import type { ParsedDocument } from "@peppol/utils/type-repository/document-types/parsed";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
-import { labels } from "@directory/db/schema";
+import type { EmailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
 
 export const paymentStatusEnum = pgEnum("peppol_payment_status", [
   "none",
@@ -308,6 +311,7 @@ export const companyVerificationLog = pgTable(
     lastName: text("last_name"),
     companyName: text("company_name"),
     enterpriseNumber: text("enterprise_number"),
+    countrySpecific: jsonb('country_specific').$type<VerificationCountrySpecific>(),
     address: text("address"),
     postalCode: text("postal_code"),
     city: text("city"),
@@ -316,10 +320,97 @@ export const companyVerificationLog = pgTable(
     // When the representative signed the mandate that is filed with the KYC.
     mandateAcceptedAt: timestamp("mandate_accepted_at", { withTimezone: true }),
     errorMessage: text("error_message"),
+    arratechOnboarding: jsonb("arratech_onboarding").$type<ArratechOnboarding>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
   },
+);
+
+// French e-reporting (DGFiP Flux 10) is filed through our reporting partner, which
+// only accepts events for a SIREN that was registered to us as a declarant first.
+// One registration per company and environment: the partner keeps TEST and PROD
+// registrations apart, and a SIREN can be held by a single organisation per
+// environment.
+export const frReportingEnvironments = ["PROD", "TEST"] as const;
+export const zodFrReportingEnvironments = z.enum(frReportingEnvironments);
+export const frReportingEnvironmentEnum = pgEnum(
+  "peppol_fr_reporting_environment",
+  frReportingEnvironments
+);
+
+// The VAT regime drives the filing cadence and period boundaries of the declarant.
+export const frVatRegimes = [
+  "REEL_NORMAL_MENSUEL",
+  "REEL_SIMPLIFIE",
+  "FRANCHISE_EN_BASE",
+] as const;
+export const zodFrVatRegimes = z.enum(frVatRegimes);
+export const frVatRegimeEnum = pgEnum("peppol_fr_vat_regime", frVatRegimes);
+
+// VAT point of taxation. Payment events (sub-fluxes 10.2 and 10.4) only exist under
+// ENCAISSEMENTS; under DEBITS they are out of scope.
+export const frVatExigibilities = ["ENCAISSEMENTS", "DEBITS"] as const;
+export const zodFrVatExigibilities = z.enum(frVatExigibilities);
+export const frVatExigibilityEnum = pgEnum(
+  "peppol_fr_vat_exigibility",
+  frVatExigibilities
+);
+
+// pending: waiting for (or retrying) the registration with the partner.
+// registered: the partner accepted the registration, or the registration is
+// simulated because the team never reaches the partner.
+// blocked: the partner refused it or retries ran out; support has to intervene.
+export const frReportingDeclarantStates = ["pending", "registered", "blocked"] as const;
+export const zodFrReportingDeclarantStates = z.enum(frReportingDeclarantStates);
+export const frReportingDeclarantStateEnum = pgEnum(
+  "peppol_fr_reporting_declarant_state",
+  frReportingDeclarantStates
+);
+
+export const frReportingDeclarants = pgTable(
+  "peppol_fr_reporting_declarants",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "frd_" + ulid()),
+    companyId: text("company_id")
+      .references(() => companies.id, { onDelete: "cascade" })
+      .notNull(),
+    environment: frReportingEnvironmentEnum("environment").notNull(),
+    siren: text("siren").notNull(),
+    // Legal name carried as the issuer on every report filed for this declarant.
+    issuerName: text("issuer_name").notNull(),
+    vatRegime: frVatRegimeEnum("vat_regime").notNull(),
+    vatExigibility: frVatExigibilityEnum("vat_exigibility").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    // Playground and test-network teams never reach the partner: their registration
+    // is recorded here only, and their reports are simulated.
+    simulated: boolean("simulated").notNull().default(false),
+    state: frReportingDeclarantStateEnum("state").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    lastError: text("last_error"),
+    registeredAt: timestamp("registered_at", { withTimezone: true }),
+    // The partner's last view of the registration, kept for support.
+    partnerSnapshot: jsonb("partner_snapshot").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    uniqueIndex("peppol_fr_reporting_declarants_company_environment_idx").on(
+      table.companyId,
+      table.environment
+    ),
+    index("peppol_fr_reporting_declarants_due_idx").on(
+      table.state,
+      table.nextAttemptAt
+    ),
+  ]
 );
 
 export const enterpriseDataCache = pgTable(
@@ -375,6 +466,61 @@ export const companyIdentifiers = pgTable(
       lower(table.scheme),
       lower(table.identifier)
     ),
+  ]
+);
+
+export const participantMigrationDirections = ["inbound", "outbound"] as const;
+export const zodParticipantMigrationDirections = z.enum(participantMigrationDirections);
+export const participantMigrationDirectionEnum = pgEnum(
+  "peppol_participant_migration_direction",
+  participantMigrationDirections
+);
+
+// A participant moves between SMPs with a one-time migration key from the Peppol SML.
+// pending: an inbound key is stored and waits for the moment the company is registered
+// in the SMP. inProgress: an outbound key was handed out and the SML waits for the
+// receiving SMP to claim the participant. The other statuses are final.
+export const participantMigrationStatuses = [
+  "pending",
+  "inProgress",
+  "completed",
+  "cancelled",
+  "failed",
+] as const;
+export const zodParticipantMigrationStatuses = z.enum(participantMigrationStatuses);
+export const participantMigrationStatusEnum = pgEnum(
+  "peppol_participant_migration_status",
+  participantMigrationStatuses
+);
+
+export const participantMigrations = pgTable(
+  "peppol_participant_migrations",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "pm_" + ulid()),
+    companyId: text("company_id")
+      .references(() => companies.id, { onDelete: "cascade" })
+      .notNull(),
+    scheme: text("scheme").notNull(),
+    identifier: text("identifier").notNull(),
+    direction: participantMigrationDirectionEnum("direction").notNull(),
+    status: participantMigrationStatusEnum("status").notNull(),
+    migrationKey: text("migration_key").notNull(),
+    useTestNetwork: boolean("use_test_network").notNull().default(false),
+    errorMessage: text("error_message"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    index("peppol_participant_migrations_company_idx").on(table.companyId),
+    // One open migration per participant per network.
+    uniqueIndex("peppol_participant_migrations_open_unique")
+      .on(table.companyId, table.scheme, table.identifier, table.useTestNetwork)
+      .where(sql`${table.status} in ('pending', 'inProgress')`),
   ]
 );
 
@@ -531,6 +677,12 @@ export const transmittedDocuments = pgTable(
     sentOverPeppol: boolean("sent_over_peppol").notNull().default(true),
     sentOverEmail: boolean("sent_over_email").notNull().default(false),
     emailRecipients: text("email_recipients").notNull().array().default([]),
+    // The email the sender asked for in case the Peppol transmission fails, when the
+    // access point accepted the transmission and has not yet said whether it arrived.
+    // Marked started when it is acted on and cleared when that is done, so a failure
+    // reported twice sends it once and a run that stops can be resumed (see
+    // data/deliveries/email-fallback).
+    emailFallback: jsonb("email_fallback").$type<EmailFallbackRequest>(),
 
     type: supportedDocumentTypeEnum("type").notNull().default("unknown"),
     parsed: jsonb("parsed").$type<ParsedDocument>(),
@@ -574,9 +726,94 @@ export const transmittedDocuments = pgTable(
     // sending pipeline and the provider webhooks write this id, and the
     // constraint is what makes a transaction impossible to record twice
     // instead of merely unlikely to be.
+    // The few documents with a fallback waiting or under way, for the drain that
+    // resumes stopped runs.
+    index("peppol_transmitted_documents_email_fallback_idx")
+      .on(table.id)
+      .where(isNotNull(table.emailFallback)),
     uniqueIndex("peppol_transmitted_documents_ap_transaction_id_idx")
       .on(table.apTransactionId)
       .where(isNotNull(table.apTransactionId)),
+    // Unique: one document per filing. A report retried under the same reference
+    // comes back from the filing service with the same reference id, and the
+    // constraint is what turns that retry into the existing document instead of a
+    // second one with its own billing.
+    uniqueIndex("peppol_transmitted_documents_external_reference_id_idx")
+      .on(table.externalReferenceId)
+      .where(isNotNull(table.externalReferenceId)),
+  ]
+);
+
+// Where a filed e-reporting event stands with the tax administration. The first two
+// are the states an event is accepted into; the other four are reached later and
+// are terminal. `pending_rectificative` means the event arrived after its period
+// was filed and will be carried by a corrective filing: it is not on any report yet.
+export const frReportingStatuses = [
+  "accepted",
+  "pending_rectificative",
+  "filed",
+  "filed_rectificative",
+  "superseded",
+  "rejected",
+] as const;
+export const zodFrReportingStatuses = z.enum(frReportingStatuses);
+export const frReportingStatusEnum = pgEnum(
+  "peppol_fr_reporting_status",
+  frReportingStatuses
+);
+
+// One row per e-reporting event we filed, keyed by the partner's flow id. The
+// partner sends no webhook for reporting, so the status is polled from here until
+// it is terminal; the document itself only knows the flow id.
+export const frReportingSubmissions = pgTable(
+  "peppol_fr_reporting_submissions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "frs_" + ulid()),
+    transmittedDocumentId: text("transmitted_document_id")
+      .references(() => transmittedDocuments.id, { onDelete: "cascade" })
+      .notNull(),
+    declarantId: text("declarant_id").references(() => frReportingDeclarants.id, {
+      onDelete: "set null",
+    }),
+    teamId: text("team_id").notNull(),
+    companyId: text("company_id").notNull(),
+    environment: frReportingEnvironmentEnum("environment").notNull(),
+    // The partner's handle for the event; the document's external reference id.
+    flowId: text("flow_id").notNull(),
+    reference: text("reference").notNull(),
+    subFlux: text("sub_flux").notNull(),
+    operation: text("operation").notNull(),
+    transmissionType: text("transmission_type").notNull(),
+    // Simulated filings never reach the partner and are never polled.
+    simulated: boolean("simulated").notNull().default(false),
+    // The partner's internal ledger state, kept for support.
+    ledgerStatus: text("ledger_status"),
+    reportingStatus: frReportingStatusEnum("reporting_status").notNull().default("accepted"),
+    receivedAt: timestamp("received_at", { withTimezone: true }),
+    operationDate: text("operation_date"),
+    periodStart: text("period_start"),
+    periodEnd: text("period_end"),
+    submissionId: text("submission_id"),
+    outcomeCode: text("outcome_code"),
+    outcomeAt: timestamp("outcome_at", { withTimezone: true }),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    // Null once there is nothing left to learn: terminal status, simulated, or
+    // given up on.
+    nextCheckAt: timestamp("next_check_at", { withTimezone: true }),
+    checkAttempts: integer("check_attempts").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    uniqueIndex("peppol_fr_reporting_submissions_flow_id_idx").on(table.flowId),
+    uniqueIndex("peppol_fr_reporting_submissions_document_idx").on(
+      table.transmittedDocumentId
+    ),
+    index("peppol_fr_reporting_submissions_due_idx").on(table.nextCheckAt),
   ]
 );
 
@@ -626,6 +863,131 @@ export const outgoingEnvelopeClaims = pgTable("peppol_outgoing_envelope_claims",
   index("peppol_outgoing_envelope_claims_created_at_idx").on(table.createdAt),
 ]);
 
+// How a document was handed to one recipient. A document is the content; a delivery
+// is one attempt to get it to one address over one channel, so a document sent over
+// Peppol and to two email addresses has three. New channels are added here.
+export const deliveryChannels = ["peppol", "email"] as const;
+export const deliveryChannelEnum = pgEnum("peppol_delivery_channel", deliveryChannels);
+
+// Where a delivery stands, in the same words for every channel. `pending` means the
+// channel accepted the document and has not said whether it arrived; `delivered`
+// means it confirmed arrival (for Peppol the recipient's access point acknowledged
+// the message, for email the recipient's mail server accepted it); `failed` is final.
+// A recipient-side rejection, reported after delivery, is a later addition.
+export const deliveryStatuses = ["pending", "delivered", "failed"] as const;
+export const deliveryStatusEnum = pgEnum("peppol_delivery_status", deliveryStatuses);
+
+// Why a delivery failed, in the channel's own terms rather than a provider's. The
+// provider's own code is kept next to it.
+export const deliveryFailureCategories = [
+  "recipient_not_found",
+  "document_not_supported",
+  "validation",
+  "transport",
+  "recipient_rejected",
+  "duplicate",
+  "other",
+] as const;
+export const deliveryFailureCategoryEnum = pgEnum(
+  "peppol_delivery_failure_category",
+  deliveryFailureCategories
+);
+
+// One row per delivery of an outgoing document (see data/deliveries). Written with
+// the document, and moved on by what the channel reports afterwards: an access point
+// that only confirms or fails a transmission later does so through its webhook or
+// the reconciliation poll. Incoming documents and filed reports have none. The
+// transport references (message, conversation and envelope ids) stay on the document.
+export const documentDeliveries = pgTable(
+  "peppol_document_deliveries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "dlv_" + ulid()),
+    transmittedDocumentId: text("transmitted_document_id")
+      .references(() => transmittedDocuments.id, { onDelete: "cascade" })
+      .notNull(),
+    teamId: text("team_id").notNull(),
+    companyId: text("company_id").notNull(),
+    channel: deliveryChannelEnum("channel").notNull(),
+    // The Peppol address or email address the document was delivered to.
+    address: text("address").notNull(),
+    status: deliveryStatusEnum("status").notNull(),
+    statusChangedAt: timestamp("status_changed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    failureCategory: deliveryFailureCategoryEnum("failure_category"),
+    failureMessage: text("failure_message"),
+    failureProviderCode: text("failure_provider_code"),
+    // The service that carried the delivery: the access point provider for Peppol,
+    // the mail service for email. Null for a simulated transmission.
+    provider: text("provider"),
+    useTestNetwork: boolean("use_test_network").notNull().default(false),
+    // The provider's own reference for the transmission, which is what its later
+    // reports are matched on: the access point's transaction id, the mail service's
+    // message id. Unique within a provider so a report can only ever land on one
+    // delivery.
+    providerTransactionId: text("provider_transaction_id"),
+    // The provider's id and name for the last report applied, and that report's
+    // payload as received, for support.
+    providerEventId: text("provider_event_id"),
+    providerEventType: text("provider_event_type"),
+    providerPayload: jsonb("provider_payload").$type<Record<string, unknown>>(),
+    // When the provider was last asked about a delivery that was still pending.
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    // When the asking stopped: a delivery still pending after the provider had every
+    // chance to settle it is left as it is, and reported once, instead of being asked
+    // about forever. Null while it is still asked about.
+    reconciliationEndedAt: timestamp("reconciliation_ended_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    index("peppol_document_deliveries_document_idx").on(table.transmittedDocumentId),
+    uniqueIndex("peppol_document_deliveries_provider_reference_idx")
+      .on(table.provider, table.providerTransactionId)
+      .where(isNotNull(table.providerTransactionId)),
+    index("peppol_document_deliveries_pending_idx").on(
+      table.status,
+      table.channel,
+      table.statusChangedAt
+    ),
+  ]
+);
+
+// A delivery outcome a provider reported for a transaction that has no delivery yet.
+// The report can arrive before the send that produced the transaction has recorded
+// its document, so it waits here, keyed by the transaction, and is applied when the
+// document's deliveries are written (see data/deliveries). One row per transaction
+// of a provider, however many times the provider retries the report.
+export const providerDeliveryReports = pgTable(
+  "peppol_provider_delivery_reports",
+  {
+    provider: text("provider").notNull(),
+    providerTransactionId: text("provider_transaction_id").notNull(),
+    channel: deliveryChannelEnum("channel").notNull(),
+    useTestNetwork: boolean("use_test_network").notNull().default(false),
+    status: deliveryStatusEnum("status").notNull(),
+    failureCategory: deliveryFailureCategoryEnum("failure_category"),
+    failureMessage: text("failure_message"),
+    failureProviderCode: text("failure_provider_code"),
+    eventId: text("event_id"),
+    eventType: text("event_type"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    reportedAt: timestamp("reported_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "peppol_provider_delivery_reports_pkey",
+      columns: [table.provider, table.providerTransactionId],
+    }),
+  ]
+);
+
 export const transmittedDocumentLabels = pgTable(
   "peppol_transmitted_document_labels",
   {
@@ -654,6 +1016,107 @@ export const teamExtensions = pgTable("peppol_team_extensions", {
   companyVerificationExtensionUntil: timestamp("company_verification_extension_until", { withTimezone: true }),
   supportEmailAddress: text("support_email_address"),
 });
+
+export const labels = pgTable(
+  "peppol_labels",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "lbl_" + ulid()),
+    teamId: text("team_id")
+      .references(() => teams.id, { onDelete: "cascade" })
+      .notNull(),
+    externalId: text("external_id"),
+    name: text("name").notNull(),
+    colorHex: text("color_hex").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    uniqueIndex("peppol_labels_external_id_unique")
+      .on(table.teamId, table.externalId)
+      .where(isNotNull(table.externalId)),
+  ]
+);
+
+export const supportingDataSuppliers = pgTable(
+  "supporting_data_suppliers",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "sd_supp_" + ulid()), // Supporting Data Supplier
+    teamId: text("team_id")
+      .references(() => teams.id, { onDelete: "cascade" })
+      .notNull(),
+    externalId: text("external_id"),
+    name: text("name").notNull(),
+    vatNumber: text("vat_number"),
+    peppolAddresses: text("peppol_addresses").notNull().array().default([]),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    index("supporting_suppliers_team_id_idx").on(table.teamId),
+    uniqueIndex("supporting_suppliers_external_id_unique")
+      .on(table.teamId, table.externalId)
+      .where(isNotNull(table.externalId)),
+  ]
+);
+
+export const supportingDataSupplierLabels = pgTable(
+  "supporting_data_supplier_labels",
+  {
+    supportingDataSupplierId: text("supporting_data_supplier_id")
+      .references(() => supportingDataSuppliers.id, { onDelete: "cascade" })
+      .notNull(),
+    labelId: text("label_id")
+      .references(() => labels.id, { onDelete: "cascade" })
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "supporting_data_supplier_labels_pkey",
+      columns: [table.supportingDataSupplierId, table.labelId],
+    }),
+  ]
+);
+
+export const supportingDataCustomers = pgTable(
+  "supporting_data_customers",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "sd_cust_" + ulid()),
+    teamId: text("team_id")
+      .references(() => teams.id, { onDelete: "cascade" })
+      .notNull(),
+    externalId: text("external_id"),
+    name: text("name").notNull(),
+    vatNumber: text("vat_number"),
+    enterpriseNumber: text("enterprise_number"),
+    peppolAddresses: text("peppol_addresses").notNull().array().default([]),
+    address: text("address").notNull(),
+    city: text("city").notNull(),
+    postalCode: text("postal_code").notNull(),
+    country: text("country").notNull(),
+    email: text("email"),
+    phone: text("phone"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    index("supporting_customers_team_id_idx").on(table.teamId),
+    uniqueIndex("supporting_customers_external_id_unique")
+      .on(table.teamId, table.externalId)
+      .where(isNotNull(table.externalId)),
+  ]
+);
 
 export const activatedIntegrations = pgTable(
   "activated_integrations",

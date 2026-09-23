@@ -1,9 +1,10 @@
 import { getCompanyIdentifiers } from "@peppol/data/company-identifiers";
 import type { Company } from "@peppol/data/companies";
 import { getTeamExtension } from "@peppol/data/teams";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 import { getParticipantByIdentifier } from "./smp";
+import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import {
   getMandateDocument,
   renderMandatePdf,
@@ -12,11 +13,6 @@ import {
   type MandateInput,
 } from "./mandate";
 
-/**
- * Companies on the Arratech SMP are only verified once Arratech accepts their
- * KYC, and that KYC is filed with a mandate the representative signs. Playground
- * teams never reach Arratech, so they neither sign nor get filed.
- */
 export async function requiresArratechKycReview(company: Company): Promise<boolean> {
   if (company.smpProvider !== "at-shared-smp-fr") {
     return false;
@@ -32,12 +28,14 @@ export async function requiresArratechKycReview(company: Company): Promise<boole
  */
 export async function buildMandateInput({
   company,
+  countrySpecific,
   signatory,
   signedAt,
   proofReference,
   reference,
 }: {
   company: Company;
+  countrySpecific?: VerificationCountrySpecific | null;
   signatory: { firstName: string; lastName: string; role?: string };
   signedAt: Date;
   proofReference: string | null;
@@ -54,7 +52,7 @@ export async function buildMandateInput({
     reference,
     company,
     identifiers,
-    identity: resolveCompanyKycIdentity(company, identifiers),
+    identity: resolveCompanyKycIdentity(company, identifiers, countrySpecific),
     signatory: {
       firstName: signatory.firstName,
       lastName: signatory.lastName,
@@ -144,6 +142,7 @@ export type ArratechKycFiling = {
  */
 export async function buildArratechKycFiling({
   company,
+  countrySpecific,
   signatory,
   signedAt,
   proofReference,
@@ -154,9 +153,11 @@ export async function buildArratechKycFiling({
   signedAt: Date;
   proofReference: string;
   reference: string;
+  countrySpecific?: VerificationCountrySpecific | null;
 }): Promise<ArratechKycFiling> {
   const input = await buildMandateInput({
     company,
+    countrySpecific,
     signatory,
     signedAt,
     proofReference,
@@ -178,10 +179,6 @@ export async function buildArratechKycFiling({
   };
 }
 
-/**
- * Files the KYC and its mandate against every Arratech participant of the
- * company. Arratech reviews it before the participant can operate.
- */
 export async function submitArratechCompanyKyc({
   companyId,
   filing,
@@ -192,6 +189,9 @@ export async function submitArratechCompanyKyc({
   useTestNetwork: boolean;
 }): Promise<void> {
   const identifiers = await getCompanyIdentifiers(companyId);
+  if (filing.jurisdiction === 'FR' && (!filing.identity.metaData?.siret || filing.identity.notes.length)) {
+    throw new UserFacingError('An explicit establishment SIRET is required before submitting KYC');
+  }
 
   for (const identifier of identifiers) {
     const participant = await getParticipantByIdentifier({

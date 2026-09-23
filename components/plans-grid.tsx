@@ -15,7 +15,7 @@ import { availablePlans, type Plan } from "@peppol/data/plans";
 import type { Subscription as SubscriptionType } from "@peppol/data/subscriptions";
 import { toast } from "@core/components/ui/sonner";
 import { rc } from "@recommand/lib/client";
-import type { Subscription } from "api/subscription";
+import type { Subscription } from "@peppol/api/subscription";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { Check } from "lucide-react";
 import { cn } from "@core/lib/utils";

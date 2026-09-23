@@ -68,9 +68,7 @@ async function _previewDocumentImplementation(c: PreviewDocumentContext) {
       );
     }
 
-    const senderIdentifier = await getSendingCompanyIdentifier(
-      c.var.company.id,
-    );
+    const senderIdentifier = await getSendingCompanyIdentifier(c.var.company);
     const senderAddress = `${senderIdentifier.scheme}:${senderIdentifier.identifier}`;
     let recipientAddress = input.recipient ?? "0000:0000";
     if (!recipientAddress.includes(":")) {

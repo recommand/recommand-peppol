@@ -1,9 +1,14 @@
-function shouldInteractWithPeppolNetwork({
+/**
+ * Whether a company in this team ever reaches a Peppol network. A playground team
+ * simulates the network unless it was put on the test network; every other team is
+ * on the production network.
+ */
+export function shouldInteractWithPeppolNetwork({
     isPlayground,
     useTestNetwork,
 }: {
-    isPlayground?: boolean;
-    useTestNetwork?: boolean;
+    isPlayground?: boolean | null;
+    useTestNetwork?: boolean | null;
 }): boolean {
     isPlayground = isPlayground ?? false;
     useTestNetwork = useTestNetwork ?? false;

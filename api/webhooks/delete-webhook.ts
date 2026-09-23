@@ -14,7 +14,7 @@ const server = new Server();
 
 const deleteWebhookRouteDescription = describeRoute({
     operationId: "deleteWebhook",
-    description: "Delete a webhook",
+    description: "Stop delivering events to this endpoint and remove it. Deleting an ID that does not exist also succeeds, so the call is safe to repeat. Deliveries already in flight may still arrive.",
     summary: "Delete Webhook",
     tags: ["Webhooks"],
     responses: {

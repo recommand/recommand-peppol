@@ -11,7 +11,7 @@ import type {
   FranceCdarStatusCode,
 } from "@peppol/utils/parsing/france-cdar/schemas";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
-import type { FrenchB2BiReport } from "@peppol/utils/parsing/b2bi-reporting/france";
+import type { StoredFrenchB2BiReport } from "@peppol/utils/parsing/b2bi-reporting/france";
 import type { FrenchB2CReport } from "@peppol/utils/parsing/b2c-reporting/france";
 import type { StoredDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import { FRANCE_B2BI_REPORT_TEMPLATE } from "@peppol/templates/france-b2bi-report";
@@ -214,9 +214,12 @@ type FranceB2BiReportTemplateData = {
   currency: string;
   documentKindLabel?: string;
   documentNumber?: string;
+  /** Left out for reports filed before the invoicing framework was part of a report. */
+  billingMode?: string;
   invoiceNumber?: string;
   issueDate: string;
   dueDate?: string;
+  buyerName?: string;
   buyerScheme?: string;
   buyerCompanyId?: string;
   buyerVatNumber?: string;
@@ -608,7 +611,7 @@ export function buildFranceB2CReportTemplateData(
 }
 
 export function buildFranceB2BiReportTemplateData(
-  parsed: FrenchB2BiReport,
+  parsed: StoredFrenchB2BiReport,
   context: DocumentRenderContext,
 ): FranceB2BiReportTemplateData {
   const isInvoice = parsed.type === "invoice";
@@ -638,10 +641,12 @@ export function buildFranceB2BiReportTemplateData(
         : "Invoice"
       : undefined,
     documentNumber: isInvoice ? parsed.documentNumber : undefined,
+    billingMode: (isInvoice && parsed.billingMode) || undefined,
     invoiceNumber: isInvoice ? undefined : parsed.invoiceNumber,
     dueDate: (isInvoice && parsed.dueDate) || undefined,
-    buyerScheme: isInvoice ? parsed.buyer.enterpriseNumberScheme : undefined,
-    buyerCompanyId: isInvoice ? parsed.buyer.enterpriseNumber : undefined,
+    buyerName: isInvoice ? parsed.buyer.name : undefined,
+    buyerScheme: (isInvoice && parsed.buyer.enterpriseNumberScheme) || undefined,
+    buyerCompanyId: (isInvoice && parsed.buyer.enterpriseNumber) || undefined,
     buyerVatNumber: (isInvoice && parsed.buyer.vatNumber) || undefined,
     buyerCountry: isInvoice ? parsed.buyer.country : undefined,
     taxExclusiveAmount: isInvoice ? parsed.taxExclusiveAmount : undefined,
@@ -740,7 +745,7 @@ export async function renderFranceB2CReport<F extends "html" | "pdf">(
 }
 
 export async function renderFranceB2BiReport<F extends "html" | "pdf">(
-  parsed: FrenchB2BiReport,
+  parsed: StoredFrenchB2BiReport,
   options: { format: F; pdfa?: boolean },
   context: DocumentRenderContext,
 ): Promise<F extends "pdf" ? Buffer : string> {

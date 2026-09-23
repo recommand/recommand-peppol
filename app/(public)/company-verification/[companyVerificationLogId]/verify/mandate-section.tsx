@@ -8,6 +8,7 @@ import { StatusMessage } from "@recommand/components/status-feedback";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { AlertCircle, ArrowLeft, Download, FileText, Loader2, PenLine, ShieldCheck } from "lucide-react";
 import { useTranslation } from "@core/hooks/use-translation";
+import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 
 const client = rc<Companies>("v1");
 
@@ -18,6 +19,7 @@ type MandateSectionProps = {
     mandateTitle: string | null;
     firstName: string;
     lastName: string;
+    countrySpecific?: VerificationCountrySpecific | null;
     isSigning: boolean;
     signError: string | null;
     onBack: () => void;
@@ -30,6 +32,7 @@ export function MandateSection({
     mandateTitle,
     firstName,
     lastName,
+    countrySpecific,
     isSigning,
     signError,
     onBack,
@@ -55,7 +58,7 @@ export function MandateSection({
             setDownloadError(null);
             const response = await client["companies"]["verification"][":companyVerificationLogId"]["mandate-draft"].$post({
                 param: { companyVerificationLogId },
-                json: { firstName, lastName },
+                json: { firstName, lastName, countrySpecific },
             });
             if (!response.ok) {
                 const json = (await response.json().catch(() => null)) as { errors?: unknown } | null;
@@ -90,6 +93,7 @@ export function MandateSection({
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {countrySpecific?.country === 'FR' && <p className="text-sm">{t`Establishment SIRET`}: {countrySpecific.siret}</p>}
                     <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4">
                         <FileText className="h-8 w-8 shrink-0 text-muted-foreground" />
                         <div className="min-w-0 flex-1">

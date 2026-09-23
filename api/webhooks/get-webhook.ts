@@ -14,7 +14,7 @@ const server = new Server();
 
 const getWebhookRouteDescription = describeRoute({
     operationId: "getWebhook",
-    description: "Get a specific webhook by ID",
+    description: "Get one webhook, including its signing secret. Use it to read back the secret you need to verify deliveries.",
     summary: "Get Webhook",
     tags: ["Webhooks"],
     responses: {

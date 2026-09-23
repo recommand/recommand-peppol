@@ -20,7 +20,7 @@ const server = new Server();
 
 const renderDocumentRouteDescription = describeRoute({
   operationId: "renderDocument",
-  description: "Render a document preview as HTML or PDF",
+  description: "Render a stored document as a human-readable page. Ask for `html` to embed the preview in your own interface, or `pdf` to hand the recipient something to file or print. The rendering is generated from the document's contents, so it is a readable presentation of the data rather than the sender's own layout; a document the sender attached a PDF to carries that PDF as an attachment instead. Document types that have no rendering, and documents whose contents could not be parsed, fail with a 500.",
   summary: "Render Document Preview",
   tags: ["Documents"],
   responses: {

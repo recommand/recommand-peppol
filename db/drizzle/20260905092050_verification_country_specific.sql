@@ -1,0 +1,1 @@
+ALTER TABLE "company_verification_log" ADD COLUMN "country_specific" jsonb;

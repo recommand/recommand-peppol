@@ -112,15 +112,14 @@ function resolveFrench(
 }
 
 describe("French company identity", () => {
-  it("assumes the head office SIRET when only a SIREN is known", () => {
+  it("does not invent an establishment SIRET when only a SIREN is known", () => {
     const identity = resolveFrench("303265045");
 
     expect(identity.metaData).toEqual({
       siren: "303265045",
-      siret: "30326504500001",
     });
     expect(identity.notes).toEqual([
-      "SIRET 30326504500001 assumed to be the head office, the company only gave us its SIREN",
+      "An explicit establishment SIRET is required before submitting KYC",
     ]);
   });
 
@@ -132,6 +131,21 @@ describe("French company identity", () => {
       { label: "SIREN", value: "303265045" },
       { label: "SIRET", value: "30326504500011" },
     ]);
+  });
+
+  it('uses a separate establishment SIRET with only a 0225 receiving identifier', () => {
+    const identity = resolveCompanyKycIdentity({
+      country: 'FR', enterpriseNumber: '303265045', enterpriseNumberScheme: '0002',
+      vatNumber: null,
+    }, [{ scheme: '0225', identifier: '303265045' }] as CompanyIdentifier[], { country: 'FR', siret: '30326504500011' });
+    expect(identity.metaData).toEqual({ siren: '303265045', siret: '30326504500011' });
+    expect(identity.notes).toEqual([]);
+  });
+
+  it('rejects a conflicting or malformed explicit establishment', () => {
+    const company = { country: 'FR', enterpriseNumber: '303265045', enterpriseNumberScheme: '0002', vatNumber: null } as const;
+    expect(() => resolveCompanyKycIdentity(company, [], { country: 'FR', siret: '303265045' })).toThrow('14 digit');
+    expect(() => resolveCompanyKycIdentity(company, [], { country: 'FR', siret: '00000001800002' })).toThrow('must match');
   });
 
   it("keeps a SIRET that is stored as the enterprise number", () => {

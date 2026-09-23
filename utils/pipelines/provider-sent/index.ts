@@ -52,6 +52,7 @@ export async function providerSentPipeline(
     // Only playground teams are on the test network, and their documents are not
     // billed there either when they send through our own API.
     isPlayground: options.useTestNetwork ?? false,
+    useTestNetwork: options.useTestNetwork ?? false,
     inputFormat: "access_point",
     document: {
       senderId,

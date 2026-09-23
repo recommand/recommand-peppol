@@ -462,8 +462,9 @@ e2eDescribe("send document: route aliases", () => {
 });
 
 e2eDescribe("send document: request validation", () => {
-  // The request schema validator answers with its own shape: an `errors` map
-  // keyed by field path plus `invalidInputDetails`, and no `success` field.
+  // The request schema validator answers with the same `success: false` plus
+  // `errors` shape as the rest of the API, with `invalidInputDetails` added:
+  // one entry per issue, giving the field path and the message on its own.
   async function expectSchemaError(
     body: unknown,
     field: string,
@@ -471,7 +472,7 @@ e2eDescribe("send document: request validation", () => {
   ): Promise<void> {
     const response = await sendDocument(body);
     expect(response.status).toBe(400);
-    expect(response.body.success).toBeUndefined();
+    expect(response.body.success).toBe(false);
     expect(Array.isArray(response.body.invalidInputDetails)).toBe(true);
     expect(response.body.errors[field]).toBeDefined();
     if (message) {
@@ -608,7 +609,7 @@ e2eDescribe("send document: document does not match the document type", () => {
         });
 
         expect(response.status).toBe(400);
-        expect(response.body.success).toBeUndefined();
+        expect(response.body.success).toBe(false);
         expect(Array.isArray(response.body.invalidInputDetails)).toBe(true);
         for (const field of fields) {
           expect(response.body.errors[field]).toBeDefined();

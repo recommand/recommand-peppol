@@ -5,7 +5,18 @@ import {
 } from "@peppol/data/access-point-providers";
 import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import { sendDocumentEmail } from "@peppol/data/email/send-email";
-import { simulateSendAs4 } from "@peppol/data/playground/simulate-ap";
+import {
+  sendDocumentEmails,
+  type FailedDocumentEmail,
+  type SentDocumentEmail,
+} from "@peppol/data/email/send-document-emails";
+import {
+  PlaygroundRecipientNotFoundError,
+  simulateSendAs4,
+} from "@peppol/data/playground/simulate-ap";
+import type { DeliveryFailureCategory } from "@peppol/data/deliveries/model";
+import { sendDocumentResponseBody } from "./response";
+import { emailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
 import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
 import { getRecipientCapabilities } from "@peppol/data/recipient-capabilities";
 import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
@@ -57,7 +68,7 @@ export async function sendingPipeline(c: SendingContext) {
       );
     }
 
-    const senderIdentifier = await getSendingCompanyIdentifier(company.id);
+    const senderIdentifier = await getSendingCompanyIdentifier(company);
     const senderAddress = `${senderIdentifier.scheme}:${senderIdentifier.identifier}`;
 
     // Raw XML already is one specific format, and states the process it belongs to, so
@@ -116,12 +127,17 @@ export async function sendingPipeline(c: SendingContext) {
     let sentPeppol = false;
     let as4Response: SendAs4Response | null = null;
     let peppolFailure = "";
+    // Why the transmission was refused, in the words the deliveries use, so a refusal
+    // in the send itself is reported the same way as one the access point reports
+    // afterwards.
+    let peppolFailureCategory: DeliveryFailureCategory | null = null;
     if (recipientAddress !== null) {
       if (prepared.peppolRoutingFailure) {
         // The recipient receives nothing this document can be written as, so the
         // transmission is skipped rather than handed to an access point that can only
         // return the same answer. Email delivery, if configured, still applies.
         peppolFailure = prepared.peppolRoutingFailure;
+        peppolFailureCategory = "document_not_supported";
       } else if (isPlayground && !useTestNetwork) {
         try {
           await simulateSendAs4({
@@ -141,6 +157,10 @@ export async function sendingPipeline(c: SendingContext) {
             error instanceof Error
               ? error.message
               : "No additional context available, please contact support@recommand.eu if you could use our help.";
+          peppolFailureCategory =
+            error instanceof PlaygroundRecipientNotFoundError
+              ? "recipient_not_found"
+              : "transport";
         }
       } else {
         as4Response = await getAccessPointProvider(
@@ -160,6 +180,8 @@ export async function sendingPipeline(c: SendingContext) {
           peppolFailure =
             as4Response.sendingException?.message ??
             "No additional context available, please contact support@recommand.eu if you could use our help.";
+          peppolFailureCategory =
+            as4Response.sendingException?.category ?? "transport";
         }
       }
 
@@ -167,39 +189,44 @@ export async function sendingPipeline(c: SendingContext) {
         throw new SendingFailure(
           `Failed to send document over Peppol network. ${peppolFailure}`,
           422,
+          { deliveryFailure: { channel: "peppol", category: peppolFailureCategory ?? "other" } },
         );
       }
     }
 
-    const emailRecipients: string[] = [];
+    let emailMessages: SentDocumentEmail[] = [];
+    let emailFailures: FailedDocumentEmail[] = [];
     let emailFailure = "";
     if (input.email && (input.email.when === "always" || !sentPeppol)) {
-      for (const recipient of input.email.to) {
-        try {
-          await sendDocumentEmail({
-            to: recipient,
-            subject: input.email.subject,
-            htmlBody: input.email.htmlBody,
+      const email = input.email;
+      const outcome = await sendDocumentEmails({
+        documentId,
+        recipients: email.to,
+        send: ({ to, metadata }) =>
+          sendDocumentEmail({
+            to,
+            subject: email.subject,
+            htmlBody: email.htmlBody,
             xmlDocument,
             type: prepared.type as any,
             parsedDocument: prepared.parsed,
             isPlayground,
-          });
-          emailRecipients.push(recipient);
-        } catch (error) {
-          console.error("Failed to send email:", error);
-          emailFailure =
-            error instanceof Error
-              ? error.message
-              : "No additional context available, please contact support@recommand.eu if you could use our help.";
-        }
-      }
+            metadata,
+          }),
+      });
+      emailMessages = outcome.sent;
+      emailFailures = outcome.failed;
+      emailFailure = outcome.failed.at(-1)?.message ?? "";
     }
+    const emailRecipients = emailMessages.map((message) => message.address);
 
     if (!sentPeppol && emailRecipients.length === 0) {
       throw new SendingFailure(
         `Failed to send document over Peppol network and email. ${peppolFailure} ${emailFailure}`,
         422,
+        peppolFailureCategory
+          ? { deliveryFailure: { channel: "peppol", category: peppolFailureCategory } }
+          : {},
       );
     }
 
@@ -209,6 +236,7 @@ export async function sendingPipeline(c: SendingContext) {
       teamId: team.id,
       company,
       isPlayground,
+      useTestNetwork,
       inputFormat,
       document: {
         senderId: senderAddress,
@@ -225,7 +253,21 @@ export async function sendingPipeline(c: SendingContext) {
         kind: "peppol",
         sentPeppol,
         emailRecipients,
+        emailMessages,
+        emailFailures,
         as4Response,
+        peppolFailure:
+          recipientAddress !== null && !sentPeppol
+            ? {
+                category: peppolFailureCategory ?? "other",
+                message: peppolFailure || null,
+                providerCode: null,
+              }
+            : null,
+        // An email asked for only on failure has not gone out when the transmission
+        // was accepted; it is kept with the document in case the access point
+        // reports the transmission failed later.
+        emailFallback: emailFallbackRequest(input.email, sentPeppol),
       },
       originalPayload: prepared.originalPayload,
     });
@@ -239,22 +281,19 @@ export async function sendingPipeline(c: SendingContext) {
     });
 
     return c.json(
-      actionSuccess({
-        teamId: team.id,
-        companyId: company.id,
-        id: transmittedDocument.id,
-        peppolMessageId: as4Response?.peppolMessageId ?? null,
-        envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
-        sentOverPeppol: sentPeppol,
-        sentOverEmail: emailRecipients.length > 0,
-        emailRecipients,
-        ...(peppolFailure
-          ? { additionalPeppolFailureContext: peppolFailure }
-          : {}),
-        ...(emailFailure
-          ? { additionalEmailFailureContext: emailFailure }
-          : {}),
-      }),
+      actionSuccess(
+        sendDocumentResponseBody({
+          teamId: team.id,
+          companyId: company.id,
+          documentId: transmittedDocument.id,
+          as4Response,
+          sentPeppol,
+          emailRecipients,
+          deliveries: transmittedDocument.deliveries,
+          peppolFailure,
+          emailFailure,
+        }),
+      ),
     );
   } catch (error) {
     if (error instanceof SendingFailure) {
@@ -262,7 +301,7 @@ export async function sendingPipeline(c: SendingContext) {
         typeof error.payload === "string"
           ? actionFailure(error.payload)
           : actionFailure(error.payload);
-      return c.json(failure, error.status);
+      return c.json({ ...failure, ...error.details }, error.status);
     }
 
     console.error(error);

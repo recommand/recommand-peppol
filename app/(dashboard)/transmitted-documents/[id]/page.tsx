@@ -1,7 +1,7 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
 import type { TransmittedDocuments } from "@peppol/api/documents";
-import type { Labels } from "@directory/api/labels";
+import type { Labels } from "@peppol/api/labels";
 import { useActiveTeam } from "@core/hooks/user";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -33,9 +33,9 @@ import type {
   TransmittedDocument,
   TransmittedDocumentWithoutBody,
 } from "@peppol/data/transmitted-documents";
-import type { Label } from "@directory/types/label";
+import type { Label } from "@peppol/types/label";
 import { Badge } from "@core/components/ui/badge";
-import { LabelBadge } from "@directory/components/label-badge";
+import { LabelBadge } from "@peppol/components/label-badge";
 import { Alert, AlertDescription, AlertTitle } from "@core/components/ui/alert";
 import {
   Tabs,
@@ -55,6 +55,11 @@ import { CsvAttachmentTable } from "@peppol/components/csv-attachment-table";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
 import { DocumentLabelPicker } from "@peppol/components/document-label-picker";
 import { isReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/keys";
+import { FrenchReportingStatusBadge } from "../../../../components/french-reporting-status-badge";
+import { DeliveryFailedBadge } from "../../../../components/delivery-failed-badge";
+import { DocumentDeliveries } from "../../../../components/document-deliveries";
+import type { FrenchReportingStatusSummary } from "@peppol/data/fr-reporting-submissions";
+import type { DeliveryStatus, DeliverySummary } from "@peppol/data/deliveries/model";
 import { useTranslation } from "@core/hooks/use-translation";
 import { getDocumentTypeLabel } from "@peppol/lib/client/document-type-labels";
 
@@ -63,6 +68,9 @@ const labelsClient = rc<Labels>("v1");
 
 type TransmittedDocumentWithLabels = TransmittedDocument & {
   labels?: Label[];
+  reporting?: FrenchReportingStatusSummary | null;
+  deliveries?: DeliverySummary[];
+  deliveryStatus?: DeliveryStatus | null;
 };
 
 export default function TransmittedDocumentDetailPage() {
@@ -536,6 +544,8 @@ export default function TransmittedDocumentDetailPage() {
                 emailRecipients={doc.emailRecipients || undefined}
                 isReporting={isReportingDocumentTypeKey(doc.type)}
               />
+              <FrenchReportingStatusBadge reporting={doc.reporting} />
+              <DeliveryFailedBadge deliveries={doc.deliveries} />
               {doc.labels &&
                 doc.labels.map((label) => (
                   <LabelBadge
@@ -547,6 +557,20 @@ export default function TransmittedDocumentDetailPage() {
             </div>
           </CardContent>
         </Card>
+
+        {doc.direction === "outgoing" && doc.deliveries && doc.deliveries.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t`Deliveries`}</CardTitle>
+              <CardDescription>
+                {t`Where this document stands with each recipient it was sent to.`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DocumentDeliveries deliveries={doc.deliveries} />
+            </CardContent>
+          </Card>
+        )}
 
         {!hasStructuredData && (
           <Alert className="border-dashed">

@@ -16,7 +16,7 @@ const server = new Server();
 
 const getIdentifierRouteDescription = describeRoute({
     operationId: "getCompanyIdentifier",
-    description: "Get a specific company identifier by ID",
+    description: "Get one of a company's Peppol identifiers.",
     summary: "Get Company Identifier",
     tags: ["Company Identifiers"],
     responses: {

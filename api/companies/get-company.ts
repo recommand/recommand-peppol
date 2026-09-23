@@ -16,7 +16,7 @@ const server = new Server();
 
 const getCompanyRouteDescription = describeRoute({
     operationId: "getCompany",
-    description: "Get a specific company by ID",
+    description: "Get one company, including whether it has been verified and whether it is registered in the SMP to receive documents.",
     summary: "Get Company",
     tags: ["Companies"],
     responses: {

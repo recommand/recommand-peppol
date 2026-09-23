@@ -15,7 +15,7 @@ const server = new Server();
 
 const createWebhookRouteDescription = describeRoute({
     operationId: "createWebhook",
-    description: "Create a new webhook",
+    description: "Register an HTTPS endpoint that Recommand posts events to as they happen, so you do not have to poll the documents endpoints. It receives every peppol event for the team: `document.received`, `document.sent`, `document.delivery_status_changed`, `document.label.assigned`, `document.label.unassigned`, `document.reporting_status_changed` and `company.verification`. There is no per-event subscription. Set a `secret` to have every delivery signed, and check that signature before acting on a request. Deliveries are retried for a while on a timeout or a 5xx; any other response is treated as final.",
     summary: "Create Webhook",
     tags: ["Webhooks"],
     responses: {
@@ -26,13 +26,19 @@ const createWebhookRouteDescription = describeRoute({
 });
 
 const createWebhookJsonBodySchema = z.object({
-    url: z.string().url(),
-    companyId: z.string().nullish(),
+    url: z.string().url().openapi({
+        description: "The HTTPS endpoint to deliver events to. Each delivery is a JSON POST carrying the event, with an `X-Idempotency-Key` header you can use to discard a redelivery. Answer with a 2xx once you have accepted the event; a timeout or a 5xx is retried, anything else is not.",
+        example: "https://example.com/hooks/recommand",
+    }),
+    companyId: z.string().nullish().openapi({
+        description: "Limit the webhook to one company's events. Leave it out to receive the events of every company in the team.",
+        example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    }),
     secret: z.preprocess(
         (value) => value === "" ? undefined : value,
         z.string().min(1).nullish()
     ).openapi({
-        description: "Optional secret used to send X-Signature: sha256=<hex>, computed with HMAC-SHA256 over the raw request body.",
+        description: "Optional secret used to send X-Signature: sha256=<hex>, computed with HMAC-SHA256 over the raw request body. Leave it out to have deliveries sent unsigned.",
     }),
 });
 

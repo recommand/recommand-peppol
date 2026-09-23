@@ -9,14 +9,14 @@ import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/a
 import { companyDocumentTypeResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { updateCompanyDocumentType } from "@peppol/data/company-document-types";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 
 const server = new Server();
 
 const updateDocumentTypeRouteDescription = describeRoute({
     operationId: "updateCompanyDocumentType",
-    description: "Update an existing company document type",
+    description: "Change the document type identifier or the process it is accepted under. The old combination is withdrawn from the SMP and the new one published, so senders stop being able to address the old one.",
     summary: "Update Company Document Type",
     tags: ["Company Document Types"],
     responses: {

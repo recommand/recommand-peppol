@@ -1,6 +1,7 @@
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
+  describeValidationErrorResponse,
 } from "@core/lib/api-docs";
 import type {
   AuthenticatedTeamContext,
@@ -59,12 +60,26 @@ const generateSchema = documentRequestSchema(
   generateDocumentTypes,
 );
 
+const generateParamSchema = z.object({
+  companyId: z.string().openapi({
+    description:
+      "The ID of the company the document is generated for. Its Peppol identifier is written into the document as the sender.",
+    example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+  }),
+});
+
 type GenerateContext = Context<
   AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext,
   string,
   {
-    in: { json: z.input<typeof generateSchema> };
-    out: { json: z.infer<typeof generateSchema> };
+    in: {
+      json: z.input<typeof generateSchema>;
+      param: z.input<typeof generateParamSchema>;
+    };
+    out: {
+      json: z.infer<typeof generateSchema>;
+      param: z.infer<typeof generateParamSchema>;
+    };
   }
 >;
 
@@ -98,8 +113,7 @@ const routeDescription = describeRoute({
       "Successfully generated document",
       generateResponse,
     ),
-    ...describeErrorResponse(
-      400,
+    ...describeValidationErrorResponse(
       "Invalid document data provided, or the generated document failed validation",
     ),
   },
@@ -112,7 +126,7 @@ async function generateImplementation(c: GenerateContext) {
     const team = c.var.team;
     const isPlayground = team.isPlayground ?? false;
     const useTestNetwork = team.useTestNetwork ?? false;
-    const senderIdentifier = await getSendingCompanyIdentifier(company.id);
+    const senderIdentifier = await getSendingCompanyIdentifier(company);
     const recipientAddress = normalizePeppolAddress(input.recipient);
 
     // The same lookup the send endpoint does, under the same condition, so the
@@ -201,6 +215,7 @@ const generateDocument = server.post(
   requireIntegrationSupportedCompanyAccess(),
   requireValidSubscription(),
   routeDescription,
+  zodValidator("param", generateParamSchema),
   zodValidator("json", generateSchema),
   generateImplementation,
 );

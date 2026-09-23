@@ -1,7 +1,12 @@
 import { z } from "zod";
 import "zod-openapi/extend";
 import { zCurrencies } from "@peppol/utils/currencies";
-import { decimalSchema } from "@peppol/utils/parsing/invoice/schemas";
+import {
+  f10ActionSchema,
+  f10AmountSchema,
+  f10PercentSchema,
+  f10ReferenceSchema,
+} from "@peppol/utils/parsing/fr-reporting/shared";
 import type { ReportingDocumentTypeKey } from "@peppol/utils/type-repository/document-types/types";
 
 const salesCurrencySchema = zCurrencies.default("EUR").openapi({
@@ -10,36 +15,25 @@ const salesCurrencySchema = zCurrencies.default("EUR").openapi({
     "Three-letter currency code for the sales amounts excluding VAT. EUR is used when this field is omitted. French VAT amounts are always reported in EUR, including when this field uses another currency.",
 });
 
-export const frenchB2CReportActionSchema = z
-  .enum(["submit", "correct", "cancel"])
-  .default("submit")
-  .openapi({
-    example: "submit",
-    description:
-      "Use `submit` for a new daily report, `correct` to replace a report sent earlier under the same reference, or `cancel` to cancel it. Defaults to `submit`.",
-  });
+export const frenchB2CReportActionSchema = f10ActionSchema;
 
 const frenchB2CReportBaseShape = {
-  reference: z.string().min(1).openapi({
-    example: "SALES-2026-07-01-GOODS",
-    description:
-      "Your unique reference for this submission. Reuse the same reference when retrying, correcting or cancelling this report; a new reference always files a new report.",
-  }),
+  reference: f10ReferenceSchema,
   action: frenchB2CReportActionSchema,
 };
 
 const frenchB2CSalesVatSchema = z
   .object({
-    percentage: decimalSchema.openapi({
+    percentage: f10PercentSchema.openapi({
       example: "20.00",
       description: "VAT rate applied to these sales.",
     }),
-    taxableAmount: decimalSchema.openapi({
+    taxableAmount: f10AmountSchema.openapi({
       example: "10000.00",
       description:
         "Sales amount excluding VAT for this VAT rate, expressed in the report's sales currency.",
     }),
-    taxAmount: decimalSchema.openapi({
+    taxAmount: f10AmountSchema.openapi({
       example: "2000.00",
       description:
         "VAT amount for this VAT rate, expressed in EUR even when the sales currency is different.",
@@ -52,19 +46,19 @@ const frenchB2CSalesVatSchema = z
 
 const frenchB2CPaymentVatSchema = z
   .object({
-    percentage: decimalSchema.openapi({
+    percentage: f10PercentSchema.openapi({
       example: "20.00",
       description: "VAT rate that applies to the received amount.",
     }),
-    amount: decimalSchema.openapi({
+    amount: f10AmountSchema.openapi({
       example: "12000.00",
       description:
-        "Amount received including VAT for this VAT rate, expressed in EUR.",
+        "Amount received including VAT for this VAT rate, expressed in the report's currency.",
     }),
   })
   .openapi({
     ref: "FrenchB2CPaymentVatBreakdown",
-    description: "Daily received payment total in EUR for one VAT rate.",
+    description: "Daily received payment total for one VAT rate.",
   });
 
 export const frenchB2CSalesReportSchema = z
@@ -72,7 +66,7 @@ export const frenchB2CSalesReportSchema = z
     ...frenchB2CReportBaseShape,
     type: z.literal("sales").openapi({
       description:
-        "Choose `sales` to report transactions with private individuals. Send one sales report per day and per category, regardless of when customers pay.",
+        "Choose `sales` to report transactions with private individuals. Send one sales report per day, category and currency, regardless of when customers pay.",
     }),
     date: z.string().date().openapi({
       example: "2026-07-01",
@@ -84,12 +78,12 @@ export const frenchB2CSalesReportSchema = z
         "Whether this daily total covers taxable goods or taxable services. Use a separate report when both were sold on the same day. These are the two categories currently supported by this API.",
     }),
     currency: salesCurrencySchema,
-    taxExclusiveAmount: decimalSchema.openapi({
+    taxExclusiveAmount: f10AmountSchema.openapi({
       example: "10000.00",
       description:
         "Total sales amount excluding VAT for this day and category.",
     }),
-    taxAmount: decimalSchema.openapi({
+    taxAmount: f10AmountSchema.openapi({
       example: "2000.00",
       description:
         "Total VAT amount for this day and category, expressed in EUR even when the sales currency is different.",
@@ -97,7 +91,7 @@ export const frenchB2CSalesReportSchema = z
     transactionCount: z.number().int().positive().openapi({
       example: 42,
       description:
-        "Number of individual sales included in this daily total.",
+        "Number of individual sales included in this daily total. At least 1; a day without sales is not reported.",
     }),
     vatBreakdown: z.array(frenchB2CSalesVatSchema).min(1).openapi({
       description:
@@ -108,7 +102,7 @@ export const frenchB2CSalesReportSchema = z
     ref: "FrenchB2CSalesReport",
     title: "French B2C sales report",
     description:
-      "The normal daily report for sales to private individuals. It records the sale date, category, transaction count, amounts excluding VAT, and VAT totals. Submit it regardless of whether customers paid immediately or will pay later. This does not send invoices to consumers. The current integration supports taxable goods and taxable services only.",
+      "The normal daily report for sales to private individuals. It records the sale date, category, transaction count, amounts excluding VAT, and VAT totals. Submit it regardless of whether customers paid immediately or will pay later. This does not send invoices to consumers. The current integration supports taxable goods and taxable services only. A day, category and currency are reported once; use `action: correct` with a new reference to replace that report.",
   });
 
 export const frenchB2CPaymentsReportSchema = z
@@ -122,16 +116,21 @@ export const frenchB2CPaymentsReportSchema = z
       example: "2026-07-01",
       description: "Day on which the reported payments were received.",
     }),
+    currency: zCurrencies.default("EUR").openapi({
+      example: "EUR",
+      description:
+        "Three-letter currency code of the received amounts. EUR is used when this field is omitted. One report covers one day in one currency.",
+    }),
     vatBreakdown: z.array(frenchB2CPaymentVatSchema).min(1).openapi({
       description:
-        "Payments received, grouped by VAT rate. Amounts include VAT and are expressed in EUR.",
+        "Payments received, grouped by VAT rate. Amounts include VAT.",
     }),
   })
   .openapi({
     ref: "FrenchB2CPaymentsReport",
     title: "French B2C payment report",
     description:
-      "An additional daily report for payments received for services using cash-basis VAT (`TVA sur les encaissements`), where VAT becomes due when the customer pays. Submit the sales report as usual, then submit this payment report for the day payment is received. Do not use this report for goods or for services where VAT becomes due when invoiced (`TVA sur les débits`).",
+      "An additional daily report for payments received for services using cash-basis VAT (`TVA sur les encaissements`), where VAT becomes due when the customer pays. Submit the sales report as usual, then submit this payment report for the day payment is received. Do not use this report for goods or for services where VAT becomes due when invoiced (`TVA sur les débits`); it is only accepted for companies registered with VAT due on payment.",
   });
 
 export const frenchB2CReportSchema = z

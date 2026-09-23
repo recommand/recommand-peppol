@@ -11,7 +11,7 @@ import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { audit } from "@core/lib/audit";
 
@@ -19,7 +19,7 @@ const server = new Server();
 
 const updateIdentifierRouteDescription = describeRoute({
     operationId: "updateCompanyIdentifier",
-    description: "Update an existing company identifier",
+    description: "Change the scheme or value of an identifier. The old address is unregistered from the SMP and the new one registered in its place, so anything routed to the old address stops arriving. Senders who stored the old address will have to be told.",
     summary: "Update Company Identifier",
     tags: ["Company Identifiers"],
     responses: {

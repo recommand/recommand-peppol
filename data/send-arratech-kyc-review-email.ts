@@ -7,10 +7,6 @@ import React from "react";
 
 const SUPPORT_EMAIL_ADDRESS = "support@recommand.eu";
 
-/**
- * Tells support that a company is waiting for Arratech to accept its KYC, so
- * the verification session can be completed manually afterwards.
- */
 export async function sendArratechKycReviewEmail({
   companyName,
   companyId,
@@ -24,6 +20,7 @@ export async function sendArratechKycReviewEmail({
   mandate,
   mandateFileName,
   submissionError,
+  sendOnly = false,
 }: {
   companyName: string;
   companyId: string;
@@ -37,11 +34,12 @@ export async function sendArratechKycReviewEmail({
   mandate?: Buffer;
   mandateFileName?: string;
   submissionError?: string | null;
+  sendOnly?: boolean;
 }): Promise<void> {
   try {
     await sendEmail({
       to: SUPPORT_EMAIL_ADDRESS,
-      subject: kycReviewSubject({ companyName, submissionError }),
+      subject: sendOnly ? `French send-only onboarding requires support: ${companyName}` : kycReviewSubject({ companyName, submissionError }),
       email: React.createElement(ArratechKycReviewNotification, {
         companyName,
         companyId,
@@ -53,6 +51,7 @@ export async function sendArratechKycReviewEmail({
         signatoryName,
         network: useTestNetwork ? "test" : "production",
         submissionError,
+        sendOnly,
       }),
       attachments:
         mandate && mandateFileName
@@ -71,5 +70,6 @@ export async function sendArratechKycReviewEmail({
       `Failed to send Arratech KYC review email for company ${companyId}:`,
       error
     );
+    if (sendOnly) throw error;
   }
 }

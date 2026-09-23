@@ -18,7 +18,7 @@ const server = new Server();
 
 const markAsReadRouteDescription = describeRoute({
     operationId: "markAsRead",
-    description: "Mark a document as read or unread",
+    description: "Mark a document as read, which is what takes it out of the inbox, or send `read: false` to put it back. Calling it again with the same value is harmless. Reading a document through the other endpoints does not mark it: this endpoint is the only thing that does, so an integration decides for itself when a document is done.",
     summary: "Mark Document as Read",
     tags: ["Documents"],
     responses: {

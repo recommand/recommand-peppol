@@ -8,13 +8,13 @@ import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { deleteCompanyNotificationEmailAddress } from "@peppol/data/company-notification-emails";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 
 const server = new Server();
 
 const deleteAddressRouteDescription = describeRoute({
     operationId: "deleteCompanyNotificationEmailAddress",
-    description: "Delete a company notification email address",
+    description: "Stop emailing this address about the company's documents and remove it.",
     summary: "Delete Company Notification Email Address",
     tags: ["Company Notification Email Addresses"],
     responses: {

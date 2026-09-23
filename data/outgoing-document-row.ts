@@ -1,13 +1,29 @@
 import type { Company } from "@peppol/data/companies";
 import type { SendAs4Response } from "@peppol/data/access-point-providers";
 import {
+  EMAIL_DELIVERY_PROVIDER,
+  type DeliveryFailure,
+  type DeliveryStatus,
+} from "@peppol/data/deliveries/model";
+import type { EmailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
+import type {
+  FailedDocumentEmail,
+  SentDocumentEmail,
+} from "@peppol/data/email/send-document-emails";
+import { accessPointConfirmsDeliveryOnSend } from "@peppol/data/peppol-providers";
+import {
   parsedHasAttachments,
   type OriginalPayloadContainerFormat,
 } from "@peppol/data/offload/storage";
-import type { transferEvents, transmittedDocuments } from "@peppol/db/schema";
+import type {
+  documentDeliveries,
+  transferEvents,
+  transmittedDocuments,
+} from "@peppol/db/schema";
 import type { ParsedDocument } from "@peppol/utils/document-filename";
 import type { ParsedOrUnknownDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
+import { isBillableDocument } from "@peppol/utils/type-repository/document-types/billing";
 import type { ValidationResponse } from "@peppol/types/validation";
 
 /**
@@ -20,7 +36,32 @@ export type OutgoingDocumentDelivery =
       kind: "peppol";
       sentPeppol: boolean;
       emailRecipients: string[];
+      /**
+       * What the mail service recorded for the messages behind `emailRecipients`:
+       * the delivery each was sent as and the service's id for it, which its later
+       * reports are matched on. Absent for documents recorded before message ids
+       * were kept, whose email deliveries carry no reference.
+       */
+      emailMessages?: SentDocumentEmail[];
+      /**
+       * The addresses the mail service refused in the send itself, with its reason.
+       * They are not in `emailRecipients`, which lists what went out, but each is
+       * a failed email delivery of the document.
+       */
+      emailFailures?: FailedDocumentEmail[];
       as4Response: SendAs4Response | null;
+      /**
+       * Why the Peppol transmission was refused, when it was and the document was
+       * still stored because an email fallback applied. Null or absent when the
+       * document went over Peppol or was never addressed on the network.
+       */
+      peppolFailure?: DeliveryFailure | null;
+      /**
+       * The email to send if the transmission fails after the access point accepted
+       * it, kept with the document until the outcome is known. Null when no such
+       * email was asked for, or when it went out in the send itself.
+       */
+      emailFallback?: EmailFallbackRequest | null;
     }
   | {
       kind: "reporting";
@@ -66,6 +107,10 @@ export function deliveryFacts(delivery: OutgoingDocumentDelivery) {
     receivedPeppolSignalMessage: as4Response?.receivedPeppolSignalMessage ?? null,
     envelopeId: as4Response?.sbdhInstanceIdentifier ?? null,
     apTransactionId: as4Response?.apTransactionId ?? null,
+    peppolFailure: isReporting ? null : delivery.peppolFailure ?? null,
+    emailFallback: isReporting ? null : delivery.emailFallback ?? null,
+    emailMessages: isReporting ? [] : delivery.emailMessages ?? [],
+    emailFailures: isReporting ? [] : delivery.emailFailures ?? [],
   };
 }
 
@@ -129,6 +174,7 @@ export function buildOutgoingDocumentRow(options: {
     sentOverPeppol: facts.sentOverPeppol,
     sentOverEmail: facts.sentOverEmail,
     emailRecipients: facts.emailRecipients,
+    emailFallback: facts.emailFallback,
 
     type: document.type,
     parsed: document.parsed,
@@ -148,14 +194,20 @@ export function buildOutgoingDocumentRow(options: {
 
 /**
  * Builds the billable transfer events for an outgoing document: one per Peppol
- * transmission, one per email recipient, and one per filed report.
+ * transmission, one per email recipient, and one per filed report. A document
+ * that is not billable (a transport receipt, a platform-level lifecycle status)
+ * produces none, however it left the platform.
  */
 export function buildOutgoingTransferEvents(options: {
   teamId: string;
   companyId: string;
   transmittedDocumentId: string;
+  document: Pick<OutgoingDocumentPayload, "type" | "parsed">;
   delivery: OutgoingDocumentDelivery;
 }): (typeof transferEvents.$inferInsert)[] {
+  if (!isBillableDocument(options.document.type, options.document.parsed)) {
+    return [];
+  }
   const facts = deliveryFacts(options.delivery);
   const base = {
     teamId: options.teamId,
@@ -175,4 +227,103 @@ export function buildOutgoingTransferEvents(options: {
     events.push({ ...base, type: "reporting" });
   }
   return events;
+}
+
+/**
+ * Builds the delivery rows for an outgoing document: one `peppol` delivery when the
+ * document was addressed on the network, and one `email` delivery per address it
+ * was mailed to. A filed report has no recipient and gets none.
+ *
+ * A Peppol delivery starts out `delivered` when the access point returned the
+ * recipient's receipt in the send itself, which our own access point and a
+ * simulated send both do, and `pending` when the access point only reports the
+ * outcome later. A transmission that was refused before it left, with the document
+ * stored because an email fallback applied, is a `failed` delivery with the reason
+ * the refusal gave. Email deliveries start out `pending`: the mail service accepted
+ * the message, and reports its arrival or bounce later under the message id and
+ * delivery id the message was sent with. An address the mail service refused in the
+ * send is a `failed` email delivery with the service's reason, as it would be had
+ * the refusal come from the deferred fallback.
+ */
+export function buildOutgoingDocumentDeliveries(options: {
+  transmittedDocumentId: string;
+  teamId: string;
+  company: Pick<Company, "id" | "accessPointProvider">;
+  document: Pick<OutgoingDocumentPayload, "receiverId">;
+  delivery: OutgoingDocumentDelivery;
+  useTestNetwork: boolean;
+  now?: Date;
+}): (typeof documentDeliveries.$inferInsert)[] {
+  const { company, document, useTestNetwork } = options;
+  const now = options.now ?? new Date();
+  const facts = deliveryFacts(options.delivery);
+  if (facts.isReporting) {
+    return [];
+  }
+
+  const base = {
+    transmittedDocumentId: options.transmittedDocumentId,
+    teamId: options.teamId,
+    companyId: company.id,
+    statusChangedAt: now,
+    useTestNetwork,
+  };
+
+  const rows: (typeof documentDeliveries.$inferInsert)[] = [];
+  if (document.receiverId) {
+    // A transmission the access point recorded has a transaction of its own; a
+    // simulated one has neither a transaction nor a provider.
+    const transmitted = options.delivery.kind === "peppol" && options.delivery.as4Response !== null;
+    let status: DeliveryStatus;
+    if (!facts.sentOverPeppol) {
+      status = "failed";
+    } else if (transmitted && !accessPointConfirmsDeliveryOnSend(company.accessPointProvider)) {
+      status = "pending";
+    } else {
+      status = "delivered";
+    }
+    const failure = status === "failed" ? facts.peppolFailure ?? { category: "other", message: null, providerCode: null } : null;
+    rows.push({
+      ...base,
+      channel: "peppol",
+      address: document.receiverId,
+      status,
+      failureCategory: failure?.category ?? null,
+      failureMessage: failure?.message ?? null,
+      failureProviderCode: failure?.providerCode ?? null,
+      provider: transmitted ? company.accessPointProvider : null,
+      providerTransactionId: facts.apTransactionId,
+    });
+  }
+  // Each message was sent as one delivery; the same address mailed twice is two
+  // messages and two deliveries, matched in order.
+  const messages = [...facts.emailMessages];
+  for (const address of facts.emailRecipients) {
+    const at = messages.findIndex((message) => message.address === address);
+    const message = at === -1 ? null : messages.splice(at, 1)[0]!;
+    rows.push({
+      ...base,
+      ...(message ? { id: message.deliveryId } : {}),
+      channel: "email",
+      address,
+      status: "pending",
+      provider: message ? EMAIL_DELIVERY_PROVIDER : null,
+      providerTransactionId: message?.providerMessageId ?? null,
+    });
+  }
+  for (const refused of facts.emailFailures) {
+    rows.push({
+      ...base,
+      id: refused.deliveryId,
+      channel: "email",
+      address: refused.address,
+      status: "failed",
+      failureCategory: "transport",
+      failureMessage: refused.message,
+      failureProviderCode: null,
+      provider: EMAIL_DELIVERY_PROVIDER,
+      providerTransactionId: null,
+    });
+  }
+  return rows;
 }

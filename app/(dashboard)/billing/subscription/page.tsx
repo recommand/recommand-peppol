@@ -1,6 +1,6 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
-import type { Subscription } from "api/subscription";
+import type { Subscription } from "@peppol/api/subscription";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@core/components/ui/button";
 import {

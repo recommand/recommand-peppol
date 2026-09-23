@@ -1,4 +1,4 @@
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 
 type IdentifierValidator = (identifier: string) => void;
 type CountryIdentifierValidators = {
@@ -92,6 +92,23 @@ function validateDutchVatNumber(identifier: string): void {
   if (!/^\d{9}B\d{2}$/.test(afterPrefix)) {
     throw new UserFacingError(
       "Dutch VAT number must have the format NL + 9 digits + B + 2 digits (e.g. NL123456789B01)"
+    );
+  }
+}
+
+function validateCypriotVatNumber(identifier: string): void {
+  const cleaned = identifier.replace(/[\.\-\s]/g, "").toUpperCase();
+
+  if (!cleaned.startsWith("CY")) {
+    throw new UserFacingError("Cypriot VAT number must start with 'CY'");
+  }
+
+  const afterPrefix = cleaned.substring(2);
+
+  // The Cypriot TIC is eight digits followed by a single check letter.
+  if (!/^\d{8}[A-Z]$/.test(afterPrefix)) {
+    throw new UserFacingError(
+      "Cypriot VAT number must have the format CY + 8 digits + 1 letter (e.g. CY12345678L)"
     );
   }
 }
@@ -229,6 +246,7 @@ const schemeValidators: Record<string, IdentifierValidator> = {
   "0184": validateDanishOrganizationNumber,
   "0208": validateBelgianEnterpriseNumber,
   "9925": validateBelgianVatNumber,
+  "9928": validateCypriotVatNumber,
   "0106": validateDutchEnterpriseNumber,
   "9944": validateDutchVatNumber,
   "0002": validateFrenchSiren,
@@ -241,6 +259,9 @@ const countryValidators: Record<string, CountryIdentifierValidators> = {
   "BE": {
     vatNumber: validateBelgianVatNumber,
     enterpriseNumber: validateBelgianEnterpriseNumber,
+  },
+  "CY": {
+    vatNumber: validateCypriotVatNumber,
   },
   "NL": {
     vatNumber: validateDutchVatNumber,
@@ -280,4 +301,21 @@ export function validateCountryIdentifier(
   if (identifiers.enterpriseNumber && validator.enterpriseNumber) {
     validator.enterpriseNumber(identifiers.enterpriseNumber);
   }
+}
+
+/**
+ * The SIREN a French company is identified by for tax purposes. Companies register
+ * either their SIREN (9 digits) or the SIRET of an establishment (14 digits, the
+ * SIREN followed by a 5-digit NIC); both name the same legal entity. Returns null
+ * when the number is neither, or fails its check digit.
+ */
+export function getFrenchSiren(enterpriseNumber: string | null | undefined): string | null {
+  const digits = enterpriseNumber?.replace(/[\s.-]/g, "") ?? "";
+  if (isSiren(digits)) {
+    return digits;
+  }
+  if (isSiret(digits)) {
+    return digits.slice(0, 9);
+  }
+  return null;
 }

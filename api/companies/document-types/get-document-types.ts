@@ -14,7 +14,7 @@ const server = new Server();
 
 const getDocumentTypesRouteDescription = describeRoute({
     operationId: "getCompanyDocumentTypes",
-    description: "Get a list of all document types for a specific company",
+    description: "List the Peppol document types the company is registered to receive. Senders look this up in the SMP to decide what they may send you.",
     summary: "List Company Document Types",
     tags: ["Company Document Types"],
     responses: {

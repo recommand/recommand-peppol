@@ -16,7 +16,7 @@ export const franceCdarFormat: DocumentFormat<
   [typeof frenchInvoicingCdarDocumentType]
 > = {
   key: "france-cdar",
-  translatableTitle: "France Invoicing CDAR",
+  translatableTitle: "France Invoice Lifecycle Status (CDAR)",
 
   docTypeId: "urn:un:unece:uncefact:data:standard:CrossDomainAcknowledgementAndResponse:100::CrossDomainAcknowledgementAndResponse##urn:peppol:france:billing:cdv:1.0::D22B",
   supportedDocumentTypes: [frenchInvoicingCdarDocumentType],
@@ -27,11 +27,11 @@ export const franceCdarFormat: DocumentFormat<
   smpRegistration: [
     {
       processId: regulatedProcessId,
-      translatableTitle: "France Invoicing CDAR",
+      translatableTitle: "France Invoice Lifecycle Status (CDAR)",
     },
     {
       processId: nonRegulatedProcessId,
-      translatableTitle: "France Invoicing CDAR (Non-Regulated)",
+      translatableTitle: "France Invoice Lifecycle Status (CDAR) (Non-Regulated)",
     },
   ],
   resolveProcessId: (document) =>

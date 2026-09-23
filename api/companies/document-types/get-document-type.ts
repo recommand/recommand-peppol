@@ -14,7 +14,7 @@ const server = new Server();
 
 const getDocumentTypeRouteDescription = describeRoute({
     operationId: "getCompanyDocumentType",
-    description: "Get a specific company document type by ID",
+    description: "Get one of the document types the company is registered to receive.",
     summary: "Get Company Document Type",
     tags: ["Company Document Types"],
     responses: {

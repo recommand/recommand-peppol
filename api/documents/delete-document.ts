@@ -19,12 +19,11 @@ const server = new Server();
 
 const deleteTransmittedDocumentRouteDescription = describeRoute({
     operationId: "deleteDocument",
-    description: "Delete a transmitted document",
+    description: "Permanently delete a document and everything stored with it: its XML, its attachments and its original payload. This cannot be undone, and the document disappears from the list, inbox and export endpoints. Deleting a document does not withdraw anything from the Peppol network; a document that was transmitted has already reached its recipient. Deleting an ID that does not exist, or that was deleted before, also succeeds, so a retried delete is safe.",
     summary: "Delete Document",
     tags: ["Documents"],
     responses: {
         ...describeSuccessResponse("Successfully deleted the document"),
-        ...describeErrorResponse(404, "Document not found"),
         ...describeErrorResponse(500, "Failed to delete document"),
     },
 });

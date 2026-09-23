@@ -16,17 +16,17 @@ const server = new Server();
 
 const verifyDocumentSupportRouteDescription = describeRoute({
     operationId: "verifyDocumentSupport",
-    description: "Verify if a recipient can receive a specific document type in the Peppol network",
+    description: "Check whether a Peppol address is registered to receive one specific document type, optionally under one specific process. Use it before sending a document type the recipient may not accept. A lookup that fails, including an address that is registered but not for this document type, is not an error: the response is `{ isValid: false }` with no further fields.",
     summary: "Verify Document Support",
     tags: ["Recipients"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully verified document support", z.object({
-            isValid: z.boolean().openapi({ description: "Whether the recipient supports the document type." }),
-            smpUrl: z.string().openapi({ description: "The SMP URL of the recipient." }),
-            serviceProvider: z.string().nullable().openapi({ description: "Service description from the endpoint metadata." }),
-            serviceEndpoint: z.string().nullable().openapi({ description: "The endpoint URL." }),
-            technicalContact: z.string().nullable().openapi({ description: "Technical contact URL." }),
-            certificateExpiry: z.string().nullable().openapi({ description: "Certificate expiry date (ISO 8601)." }),
+            isValid: z.boolean().openapi({ description: "Whether the recipient could be resolved in the Peppol network for this document type. A lookup failure also returns false." }),
+            smpUrl: z.string().optional().openapi({ description: "The SMP URL of the recipient. Absent when the lookup failed." }),
+            serviceProvider: z.string().nullable().optional().openapi({ description: "Service description from the endpoint metadata. Absent when the lookup failed." }),
+            serviceEndpoint: z.string().nullable().optional().openapi({ description: "The endpoint URL the document would be delivered to. Absent when the lookup failed." }),
+            technicalContact: z.string().nullable().optional().openapi({ description: "Technical contact URL published by the receiving access point. Absent when the lookup failed." }),
+            certificateExpiry: z.string().nullable().optional().openapi({ description: "Expiry date of the receiving access point's certificate (ISO 8601). Absent when the lookup failed." }),
         })),
     },
 });

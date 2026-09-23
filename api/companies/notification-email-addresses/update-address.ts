@@ -9,13 +9,13 @@ import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/a
 import { companyNotificationEmailAddressResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { updateCompanyNotificationEmailAddress } from "@peppol/data/company-notification-emails";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 
 const server = new Server();
 
 const updateAddressRouteDescription = describeRoute({
     operationId: "updateCompanyNotificationEmailAddress",
-    description: "Update an existing company notification email address",
+    description: "Change which documents an address is notified about and what its notifications carry. Set both `notifyIncoming` and `notifyOutgoing` to false to silence it without removing it.",
     summary: "Update Company Notification Email Address",
     tags: ["Company Notification Email Addresses"],
     responses: {

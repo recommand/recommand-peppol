@@ -8,14 +8,14 @@ import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { deleteCompanyDocumentType } from "@peppol/data/company-document-types";
-import { UserFacingError } from "@directory/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 
 const server = new Server();
 
 const deleteDocumentTypeRouteDescription = describeRoute({
     operationId: "deleteCompanyDocumentType",
-    description: "Delete a company document type",
+    description: "Stop accepting a document type. It is withdrawn from the SMP, so senders can no longer address the company for it and their transmissions will fail. Documents already received under it are kept.",
     summary: "Delete Company Document Type",
     tags: ["Company Document Types"],
     responses: {

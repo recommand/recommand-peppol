@@ -16,15 +16,15 @@ const server = new Server();
 
 const verifyRecipientRouteDescription = describeRoute({
     operationId: "verifyRecipient",
-    description: "Verify if a recipient address is registered in the Peppol network",
+    description: "Look a Peppol address up in the SMP and report what the participant behind it is registered to receive. Use it before sending to check that an address exists and to see its document types. A lookup that fails, including for an address that is not registered at all, is not an error: the response is `{ isValid: false }` with no further fields.",
     summary: "Verify Recipient",
     tags: ["Recipients"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully verified recipient", z.object({
-            isValid: z.boolean().openapi({ description: "Whether the recipient is registered in the Peppol network." }),
-            smpUrl: z.string().openapi({ description: "The SMP URL of the recipient." }),
-            serviceMetadataReferences: z.array(z.string()).openapi({ description: "The service metadata references of the recipient." }),
-            smpHostnames: z.array(z.string()).openapi({ description: "The SMP hostnames of the recipient." }),
+            isValid: z.boolean().openapi({ description: "Whether the recipient could be resolved in the Peppol network. A lookup failure also returns false." }),
+            smpUrl: z.string().optional().openapi({ description: "The SMP URL of the recipient. Absent when the lookup failed." }),
+            serviceMetadataReferences: z.array(z.string()).optional().openapi({ description: "The service metadata references of the recipient. Absent when the lookup failed." }),
+            smpHostnames: z.array(z.string()).optional().openapi({ description: "The SMP hostnames of the recipient. Absent when the lookup failed." }),
             supportedDocuments: z.array(z.object({
                 name: z.string().openapi({ description: "Human-readable document type name." }),
                 docTypeId: z.string().openapi({ description: "Full Peppol document type identifier." }),
@@ -32,7 +32,7 @@ const verifyRecipientRouteDescription = describeRoute({
                 serviceEndpoint: z.string().nullable().optional().openapi({ description: "The endpoint URL." }),
                 technicalContact: z.string().nullable().optional().openapi({ description: "Technical contact URL." }),
                 certificateExpiry: z.string().nullable().optional().openapi({ description: "Certificate expiry date (ISO 8601)." }),
-            })).openapi({ description: "Document types supported by this participant. Includes endpoint details when includeEndpointDetails is true." }),
+            })).optional().openapi({ description: "Document types supported by this participant. Includes endpoint details when includeEndpointDetails is true. Absent when the lookup failed." }),
             companyName: z.string().nullable().optional().openapi({ description: "Company name from SMP business card." }),
             countryCode: z.string().nullable().optional().openapi({ description: "Country code from SMP business card." }),
         })),

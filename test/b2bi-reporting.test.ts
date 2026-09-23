@@ -2,10 +2,13 @@ import { describe, expect, it } from "bun:test";
 import {
   buildFrenchSeller,
   toArratechB2BiFlow,
+  toFrenchReportingBuyer,
 } from "../data/at/fr-reporting";
 import {
   frenchB2BiReportSchema,
+  frenchReportingBillingModes,
   getFrenchB2BiReportDocumentProfile,
+  storedFrenchB2BiReportSchema,
 } from "../utils/parsing/b2bi-reporting/france";
 import { getDocumentFilename } from "../utils/document-filename";
 
@@ -28,11 +31,11 @@ describe("French cross-border reporting", () => {
       reference: "acme-inv-2026-000431",
       type: "invoice",
       documentNumber: "INV-2026-000431",
+      billingMode: "B1",
       issueDate: "2026-01-15",
       dueDate: "2026-02-14",
       buyer: {
-        enterpriseNumber: "IT00987654321",
-        enterpriseNumberScheme: "0223",
+        name: "Rossi Forniture S.r.l.",
         vatNumber: "IT00987654321",
         country: "IT",
       },
@@ -50,8 +53,9 @@ describe("French cross-border reporting", () => {
       ],
     });
 
-    expect(toArratechB2BiFlow(report, declarant, seller)).toEqual({
+    expect(toArratechB2BiFlow(report, declarant, seller, "PROD")).toEqual({
       profile: "FR-F10",
+      environment: "PROD",
       event: {
         declarant,
         clientOperationRef: "acme-inv-2026-000431",
@@ -64,7 +68,8 @@ describe("French cross-border reporting", () => {
           typeCode: "380",
           currencyCode: "EUR",
           dueDate: "2026-02-14",
-          cadre: "S1",
+          // The framework the report names, not a fixed one.
+          cadre: "B1",
           seller,
           buyer: {
             companyId: "IT00987654321",
@@ -89,17 +94,181 @@ describe("French cross-border reporting", () => {
     });
   });
 
+  it("files every accepted invoicing framework as the cadre of the event", () => {
+    for (const billingMode of frenchReportingBillingModes) {
+      const report = frenchB2BiReportSchema.parse({
+        reference: `acme-inv-${billingMode}`,
+        type: "invoice",
+        documentNumber: `INV-${billingMode}`,
+        billingMode,
+        issueDate: "2026-01-15",
+        buyer: { name: "Rossi", country: "IT", vatNumber: "IT00987654321" },
+        taxExclusiveAmount: "100.00",
+        taxAmount: "0.00",
+        vatBreakdown: [
+          { percentage: "0.00", taxableAmount: "100.00", taxAmount: "0.00", category: "K" },
+        ],
+      });
+
+      const payload = toArratechB2BiFlow(report, declarant, seller).event.payload as {
+        cadre: string;
+      };
+      expect(payload.cadre).toBe(billingMode);
+    }
+  });
+
+  it("refuses an invoice report without an invoicing framework, and unsupported ones", () => {
+    const base = {
+      reference: "acme-inv-2026-000450",
+      type: "invoice",
+      documentNumber: "INV-2026-000450",
+      issueDate: "2026-01-15",
+      buyer: { name: "Rossi", country: "IT", vatNumber: "IT00987654321" },
+      taxExclusiveAmount: "100.00",
+      taxAmount: "0.00",
+      vatBreakdown: [
+        { percentage: "0.00", taxableAmount: "100.00", taxAmount: "0.00", category: "K" },
+      ],
+    };
+
+    // The framework decides how the tax administration reads the invoice, so a report
+    // that does not name one is refused rather than filed under an assumed default.
+    const missing = frenchB2BiReportSchema.safeParse(base);
+    expect(missing.success).toBe(false);
+    expect(missing.success ? [] : missing.error.issues.map((issue) => issue.path.join("."))).toContain(
+      "billingMode",
+    );
+
+    // Codes an invoice can carry that are not confirmed for a report are refused here
+    // rather than sent on.
+    for (const billingMode of ["S3", "S5", "S6", "B7", "S7", "B8", "M8", "B9", "X1", "b1", ""]) {
+      expect(frenchB2BiReportSchema.safeParse({ ...base, billingMode }).success).toBe(false);
+    }
+  });
+
+  it("reads back a report that was filed before the framework was part of a report", () => {
+    // Reports already on file carry no framework. They stay readable, and the reading
+    // does not invent one for them.
+    const stored = {
+      reference: "acme-inv-2026-000200",
+      action: "submit",
+      type: "invoice",
+      documentNumber: "INV-2026-000200",
+      documentType: "invoice",
+      issueDate: "2026-01-15",
+      currency: "EUR",
+      buyer: { name: "Rossi", country: "IT", vatNumber: "IT00987654321" },
+      taxExclusiveAmount: "100.00",
+      taxAmount: "0.00",
+      vatBreakdown: [
+        { percentage: "0.00", taxableAmount: "100.00", taxAmount: "0.00", category: "K" },
+      ],
+    };
+
+    expect(frenchB2BiReportSchema.safeParse(stored).success).toBe(false);
+    const legacy = storedFrenchB2BiReportSchema.parse(stored);
+    expect(legacy.type === "invoice" && legacy.billingMode).toBeUndefined();
+  });
+
+  it("identifies buyers the way the tax administration does, not by ICD scheme", () => {
+    // EU: the intra-community VAT number is the company id, under the fiscal code
+    // 0223, whatever registry number the buyer also has.
+    expect(
+      toFrenchReportingBuyer({
+        name: "Bakkerij Janssens BV",
+        country: "be",
+        vatNumber: "BE0123456749",
+        enterpriseNumber: "0123456749",
+        enterpriseNumberScheme: "0208",
+      }),
+    ).toEqual({
+      companyId: "BE0123456749",
+      schemeId: "0223",
+      vatId: "BE0123456749",
+      countryId: "BE",
+    });
+
+    // Outside the EU: a constructed id of country code and the first 16 characters
+    // of the name, under 0227, with no VAT number required.
+    expect(
+      toFrenchReportingBuyer({
+        name: "Northwind Traders Incorporated",
+        country: "US",
+      }),
+    ).toEqual({
+      companyId: "USNorthwind Trader",
+      schemeId: "0227",
+      countryId: "US",
+    });
+
+    // The French overseas collectivities outside the EU VAT territory use their own
+    // registries.
+    expect(
+      toFrenchReportingBuyer({
+        name: "Pacifique SARL",
+        country: "NC",
+        enterpriseNumber: "1234567",
+      }),
+    ).toMatchObject({ companyId: "1234567", schemeId: "0228", countryId: "NC" });
+    expect(
+      toFrenchReportingBuyer({
+        name: "Tahiti Nui SA",
+        country: "PF",
+        enterpriseNumber: "A12345",
+      }),
+    ).toMatchObject({ companyId: "A12345", schemeId: "0229", countryId: "PF" });
+  });
+
+  it("requires the identifiers each kind of buyer is reported under", () => {
+    const base = {
+      reference: "acme-inv-2026-000440",
+      type: "invoice",
+      documentNumber: "INV-2026-000440",
+      billingMode: "S1",
+      issueDate: "2026-01-15",
+      taxExclusiveAmount: "100.00",
+      taxAmount: "0.00",
+      vatBreakdown: [
+        { percentage: "0.00", taxableAmount: "100.00", taxAmount: "0.00", category: "K" },
+      ],
+    };
+
+    const euWithoutVat = frenchB2BiReportSchema.safeParse({
+      ...base,
+      buyer: { name: "Rossi", country: "IT" },
+    });
+    expect(euWithoutVat.success).toBe(false);
+
+    const collectivityWithoutRegistry = frenchB2BiReportSchema.safeParse({
+      ...base,
+      buyer: { name: "Pacifique", country: "NC" },
+    });
+    expect(collectivityWithoutRegistry.success).toBe(false);
+
+    const nonEu = frenchB2BiReportSchema.safeParse({
+      ...base,
+      buyer: { name: "Northwind", country: "US" },
+    });
+    expect(nonEu.success).toBe(true);
+
+    const nameless = frenchB2BiReportSchema.safeParse({
+      ...base,
+      buyer: { country: "US" },
+    });
+    expect(nameless.success).toBe(false);
+  });
+
   it("reports a credit note under its own type code and omits fields it has no value for", () => {
     const report = frenchB2BiReportSchema.parse({
       reference: "acme-cn-2026-000012",
       type: "invoice",
       documentNumber: "CN-2026-000012",
       documentType: "creditNote",
+      billingMode: "S1",
       issueDate: "2026-01-20",
       currency: "USD",
       buyer: {
-        enterpriseNumber: "US123456789",
-        enterpriseNumberScheme: "0060",
+        name: "Northwind Traders",
         country: "US",
       },
       taxExclusiveAmount: "500.00",
@@ -122,8 +291,8 @@ describe("French cross-border reporting", () => {
     // A field the report has no value for is left out rather than sent as null.
     expect("dueDate" in payload).toBe(false);
     expect(payload.buyer).toEqual({
-      companyId: "US123456789",
-      schemeId: "0060",
+      companyId: "USNorthwind Trader",
+      schemeId: "0227",
       countryId: "US",
     });
     expect(payload.taxSubTotals).toEqual([
@@ -146,8 +315,9 @@ describe("French cross-border reporting", () => {
       vatBreakdown: [{ percentage: "20.00", amount: "12000.00" }],
     });
 
-    expect(toArratechB2BiFlow(report, declarant, seller)).toEqual({
+    expect(toArratechB2BiFlow(report, declarant, seller, "TEST")).toEqual({
       profile: "FR-F10",
+      environment: "TEST",
       event: {
         declarant,
         clientOperationRef: "acme-pay-2026-000431",
@@ -193,9 +363,10 @@ describe("French cross-border reporting", () => {
     ]);
   });
 
-  it("corrects and cancels under the reference of the report it acts on", () => {
+  it("corrects and cancels under a reference of their own", () => {
+    // The reference is the idempotency handle: reusing the original one would be a
+    // replay. The invoice number is what ties the correction to the earlier report.
     const base = {
-      reference: "acme-inv-2026-000431",
       type: "payment",
       invoiceNumber: "INV-2026-000431",
       issueDate: "2026-01-15",
@@ -204,21 +375,53 @@ describe("French cross-border reporting", () => {
     };
 
     const correction = toArratechB2BiFlow(
-      frenchB2BiReportSchema.parse({ ...base, action: "correct" }),
+      frenchB2BiReportSchema.parse({ ...base, reference: "acme-pay-2026-000431-c1", action: "correct" }),
       declarant,
       seller
     );
     expect(correction.event.transmissionType).toBe("RE");
     expect(correction.event.operation).toBe("SUBMIT");
-    expect(correction.event.clientOperationRef).toBe("acme-inv-2026-000431");
+    expect(correction.event.clientOperationRef).toBe("acme-pay-2026-000431-c1");
+    expect((correction.event.payload as { invoiceId: string }).invoiceId).toBe("INV-2026-000431");
 
     const cancellation = toArratechB2BiFlow(
-      frenchB2BiReportSchema.parse({ ...base, action: "cancel" }),
+      frenchB2BiReportSchema.parse({ ...base, reference: "acme-pay-2026-000431-x", action: "cancel" }),
       declarant,
       seller
     );
     expect(cancellation.event.operation).toBe("CANCEL");
-    expect(cancellation.event.clientOperationRef).toBe("acme-inv-2026-000431");
+    expect(cancellation.event.clientOperationRef).toBe("acme-pay-2026-000431-x");
+  });
+
+  it("rejects what the tax administration would reject", () => {
+    const base = {
+      type: "payment",
+      invoiceNumber: "INV-2026-000431",
+      issueDate: "2026-01-15",
+      date: "2026-02-10",
+    };
+
+    expect(
+      frenchB2BiReportSchema.safeParse({
+        ...base,
+        reference: "r".repeat(129),
+        vatBreakdown: [{ percentage: "20.00", amount: "12000.00" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      frenchB2BiReportSchema.safeParse({
+        ...base,
+        reference: "acme-pay-2026-000431",
+        vatBreakdown: [{ percentage: "20.00", amount: "-12000.00" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      frenchB2BiReportSchema.safeParse({
+        ...base,
+        reference: "r".repeat(128),
+        vatBreakdown: [{ percentage: 20, amount: 12000 }],
+      }).success,
+    ).toBe(true);
   });
 
   it("files invoice and payment reports as distinct document types", () => {
@@ -249,6 +452,13 @@ describe("French cross-border reporting", () => {
     expect(
       buildFrenchSeller({
         enterpriseNumber: "332 966 332",
+        vatNumber: "FR12332966332",
+      })
+    ).toEqual(seller);
+    // An establishment's SIRET names the same legal entity.
+    expect(
+      buildFrenchSeller({
+        enterpriseNumber: "33296633200030",
         vatNumber: "FR12332966332",
       })
     ).toEqual(seller);

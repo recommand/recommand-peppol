@@ -14,7 +14,7 @@ const server = new Server();
 
 const getAddressesRouteDescription = describeRoute({
     operationId: "getCompanyNotificationEmailAddresses",
-    description: "Get a list of all notification email addresses for a specific company",
+    description: "List the addresses that are emailed when the company sends or receives a document, and what each of them gets.",
     summary: "List Company Notification Email Addresses",
     tags: ["Company Notification Email Addresses"],
     responses: {
