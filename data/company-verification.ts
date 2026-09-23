@@ -1,3 +1,4 @@
+import { publishCompanyUpdatedEvent } from "./company-events";
 import { companyVerificationLog } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
 import { db } from "@recommand/db";
@@ -243,6 +244,15 @@ export async function finalizeCompanyVerification({
   } catch (error) {
     await rollbackSmpTransition();
     throw error;
+  }
+
+  const verifiedCompany = await db
+    .select()
+    .from(companies)
+    .where(eq(companies.id, company.id))
+    .then((rows) => rows[0]);
+  if (verifiedCompany) {
+    await publishCompanyUpdatedEvent(verifiedCompany);
   }
 
   await publishCompanyVerificationEvent({

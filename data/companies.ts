@@ -15,6 +15,7 @@ import { companyDocumentsS3Prefix } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
 import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
+import { publishCompanyCreatedEvent, publishCompanyDeletedEvent, publishCompanyUpdatedEvent } from "./company-events";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
 import { planCompanyCountryChange } from "./company-country-change";
 import { lockCompanyRow } from "./company-row-lock";
@@ -210,6 +211,8 @@ export async function createCompany(company: Omit<InsertCompany, "accessPointPro
     await db.delete(companies).where(eq(companies.id, createdCompany.id));
     throw error;
   }
+
+  await publishCompanyCreatedEvent(createdCompany);
 
   return createdCompany;
 }
@@ -417,6 +420,8 @@ async function finishCompanyUpdate({
   isPlaygroundTeam: boolean;
   numbersChanged: boolean;
 }): Promise<void> {
+  await publishCompanyUpdatedEvent(updatedCompany);
+
   if (!isPlaygroundTeam) {
     sendSystemAlert(
       "Company Updated",
@@ -636,6 +641,8 @@ export async function deleteCompany({
       .delete(companies)
       .where(and(eq(companies.teamId, teamId), eq(companies.id, companyId)));
   });
+
+  await publishCompanyDeletedEvent(company);
 }
 
 export async function verifyCompany({

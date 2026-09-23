@@ -184,7 +184,78 @@ const documentEmailAttachments = [
 
 let registered = false;
 
+
+const companyEventPayloadSchema = z.object({
+  companyId: z.string(),
+  name: z.string(),
+  address: z.string(),
+  postalCode: z.string(),
+  city: z.string(),
+  country: z.string(),
+  enterpriseNumberScheme: z.string().nullable(),
+  enterpriseNumber: z.string().nullable(),
+  vatNumber: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  isVerified: z.boolean(),
+});
+
+const companyDeletedPayloadSchema = z.object({
+  companyId: z.string(),
+});
+
+const companyIdField: ConditionField = {
+  path: "payload.companyId",
+  label: "Company",
+  valueType: "string",
+  operators: ["eq", "neq", "in"],
+  picker: "company",
+};
+
 export function registerPeppolEventTypes() {
+  registerEventType({
+    type: "peppol.company.created.v1",
+    aggregateType: "peppol.company",
+    payload: companyEventPayloadSchema,
+    conditionFields: [
+      companyIdField,
+      { path: "payload.country", label: "Country", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+    ],
+    ui: {
+      label: "Company created",
+      description: "A company was created",
+      group: "Companies",
+    },
+  });
+
+  registerEventType({
+    type: "peppol.company.updated.v1",
+    aggregateType: "peppol.company",
+    payload: companyEventPayloadSchema,
+    conditionFields: [
+      companyIdField,
+      { path: "payload.country", label: "Country", valueType: "string", operators: ["eq", "neq", "in", "notIn"] },
+      { path: "payload.isVerified", label: "Verified", valueType: "boolean", operators: ["eq"] },
+    ],
+    ui: {
+      label: "Company updated",
+      description: "A company's details or verification state changed",
+      group: "Companies",
+    },
+  });
+
+  registerEventType({
+    type: "peppol.company.deleted.v1",
+    aggregateType: "peppol.company",
+    payload: companyDeletedPayloadSchema,
+    conditionFields: [companyIdField],
+    ui: {
+      label: "Company deleted",
+      description: "A company was deleted",
+      group: "Companies",
+    },
+  });
+
   if (registered) {
     return;
   }
