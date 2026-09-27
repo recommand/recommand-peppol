@@ -1,7 +1,7 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
-import type { Entitlements } from "@core/api/entitlements";
+import type { GetTeamEntitlements } from "@peppol/api/teams/get-team-entitlements";
 import type { GetTeamExtension } from "@peppol/api/teams/get-team-extension";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@core/components/ui/button";
@@ -28,7 +28,7 @@ import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
-const entitlementsClient = rc<Entitlements>("core");
+const entitlementsClient = rc<GetTeamEntitlements>("v1");
 
 type IntegrationsEntitlement = { allowed: boolean; message: string | null; actionUrl: string | null };
 const teamsClient = rc<GetTeamExtension>("v1");
@@ -137,7 +137,7 @@ export default function CompanyDetailPage() {
     if (!activeTeam?.id) return;
 
     try {
-      const response = await entitlementsClient.teams[":teamId"].entitlements.$get({
+      const response = await entitlementsClient[":teamId"].entitlements.$get({
         param: { teamId: activeTeam.id },
       });
       const data = await response.json();
