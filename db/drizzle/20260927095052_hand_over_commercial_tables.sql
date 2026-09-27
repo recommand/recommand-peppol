@@ -1,0 +1,5 @@
+-- The subscription, billing profile, billing event and payment reminder tables,
+-- with the payment status and profile standing enums, leave this package's schema.
+-- Nothing is dropped: the tables keep their data and are adopted by the package
+-- that now owns them. This migration only moves this package's schema snapshot
+-- past them, so later generated migrations do not try to drop them.

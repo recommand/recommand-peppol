@@ -35,7 +35,7 @@ import { findOutgoingDocumentByExternalReference } from "@peppol/data/transmitte
 import {
   requireCompanyVerificationForStrictTeams,
   requireIntegrationSupportedCompanyAccess,
-  requireValidSubscription,
+  requireTransactionEntitlement,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import {
@@ -449,7 +449,7 @@ type FrenchB2CReportingContext = Context<
 const _submitFrenchB2CReport = server.post(
   "/:companyId/reporting/fr/b2c",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   b2cRouteDescription,
   zodValidator("json", frenchB2CReportSchema),
@@ -500,7 +500,7 @@ type FrenchB2BiReportingContext = Context<
 const _submitFrenchB2BiReport = server.post(
   "/:companyId/reporting/fr/b2bi",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   b2biRouteDescription,
   zodValidator("json", frenchB2BiReportSchema),

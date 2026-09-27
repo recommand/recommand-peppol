@@ -11,7 +11,7 @@ import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import { getRecipientCapabilities } from "@peppol/data/recipient-capabilities";
 import {
   requireIntegrationSupportedCompanyAccess,
-  requireValidSubscription,
+  requireTransactionEntitlement,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
@@ -213,7 +213,7 @@ async function generateImplementation(c: GenerateContext) {
 const generateDocument = server.post(
   "/:companyId/generate",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  requireTransactionEntitlement(),
   routeDescription,
   zodValidator("param", generateParamSchema),
   zodValidator("json", generateSchema),

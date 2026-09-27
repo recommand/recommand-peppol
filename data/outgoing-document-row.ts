@@ -1,4 +1,5 @@
 import type { Company } from "@peppol/data/companies";
+import { usageEventId, type UsageChannel } from "@peppol/data/usage-event-id";
 import type { SendAs4Response } from "@peppol/data/access-point-providers";
 import {
   EMAIL_DELIVERY_PROVIDER,
@@ -217,14 +218,26 @@ export function buildOutgoingTransferEvents(options: {
   } as const;
 
   const events: (typeof transferEvents.$inferInsert)[] = [];
+  const id = (channel: UsageChannel, recipient?: string, occurrence?: number) =>
+    usageEventId({
+      transmittedDocumentId: options.transmittedDocumentId,
+      direction: "outgoing",
+      channel,
+      recipient,
+      occurrence,
+    });
   if (facts.sentOverPeppol) {
-    events.push({ ...base, type: "peppol" });
+    events.push({ ...base, id: id("peppol"), type: "peppol" });
   }
-  for (const _ of facts.emailRecipients) {
-    events.push({ ...base, type: "email" });
+  const occurrences = new Map<string, number>();
+  for (const recipient of facts.emailRecipients) {
+    const key = recipient.trim().toLowerCase();
+    const occurrence = (occurrences.get(key) ?? 0) + 1;
+    occurrences.set(key, occurrence);
+    events.push({ ...base, id: id("email", recipient, occurrence), type: "email" });
   }
   if (facts.isReporting) {
-    events.push({ ...base, type: "reporting" });
+    events.push({ ...base, id: id("reporting"), type: "reporting" });
   }
   return events;
 }
