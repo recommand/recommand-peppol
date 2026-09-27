@@ -23,7 +23,7 @@ import {
 import {
   requireCompanyVerificationForStrictTeams,
   requireIntegrationSupportedCompanyAccess,
-  requireValidSubscription,
+  requireTransactionEntitlement,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
@@ -190,7 +190,7 @@ type RegisterFrenchReportingDeclarantContext = Context<
 const _registerFrenchReportingDeclarant = server.put(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   registerRouteDescription,
   zodValidator("json", registerFrenchReportingDeclarantBodySchema),

@@ -1,7 +1,7 @@
 import { PageTemplate } from "@core/components/page-template";
 import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
-import type { Subscription } from "@peppol/api/subscription";
+import type { Entitlements } from "@core/api/entitlements";
 import type { GetTeamExtension } from "@peppol/api/teams/get-team-extension";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@core/components/ui/button";
@@ -20,16 +20,17 @@ import type { Company, CompanyFormData } from "@peppol/types/company";
 import { defaultCompanyFormData } from "@peppol/types/company";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@core/components/ui/card";
 import { useIsPlayground } from "@peppol/lib/client/playgrounds";
-import { canUseIntegrations } from "@peppol/utils/plan-validation";
+import { PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlement-ids";
 import { BUILT_IN_INTEGRATIONS } from "@peppol/utils/integrations";
-import type { Subscription as SubscriptionType } from "@peppol/data/subscriptions";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { StatusMessage } from "@recommand/components/status-feedback";
 import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
-const subscriptionClient = rc<Subscription>("v1");
+const entitlementsClient = rc<Entitlements>("core");
+
+type IntegrationsEntitlement = { allowed: boolean; message: string | null; actionUrl: string | null };
 const teamsClient = rc<GetTeamExtension>("v1");
 
 export default function CompanyDetailPage() {
@@ -39,7 +40,7 @@ export default function CompanyDetailPage() {
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState<CompanyFormData>(defaultCompanyFormData);
-  const [subscription, setSubscription] = useState<SubscriptionType | null>(null);
+  const [integrationsEntitlement, setIntegrationsEntitlement] = useState<IntegrationsEntitlement | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationRequirements, setVerificationRequirements] = useState<"strict" | "trusted" | "lax" | null>(null);
@@ -59,7 +60,7 @@ export default function CompanyDetailPage() {
   useEffect(() => {
     if (id && activeTeam?.id) {
       fetchCompany();
-      fetchSubscription();
+      fetchIntegrationsEntitlement();
       fetchTeamExtension();
     }
   }, [id, activeTeam?.id]);
@@ -132,34 +133,25 @@ export default function CompanyDetailPage() {
     }
   };
 
-  const fetchSubscription = async () => {
+  const fetchIntegrationsEntitlement = async () => {
     if (!activeTeam?.id) return;
 
     try {
-      const response = await subscriptionClient[":teamId"]["subscription"].$get({
+      const response = await entitlementsClient.teams[":teamId"].entitlements.$get({
         param: { teamId: activeTeam.id },
       });
       const data = await response.json();
-
-      if (data.success && data.subscription) {
-        setSubscription({
-          ...data.subscription,
-          createdAt: new Date(data.subscription.createdAt),
-          updatedAt: new Date(data.subscription.updatedAt),
-          startDate: new Date(data.subscription.startDate),
-          endDate: data.subscription.endDate
-            ? new Date(data.subscription.endDate)
-            : null,
-          lastBilledAt: data.subscription.lastBilledAt
-            ? new Date(data.subscription.lastBilledAt)
-            : null,
-        });
-      } else {
-        setSubscription(null);
-      }
+      const entitlement = data.success
+        ? data.entitlements.find((candidate) => candidate.entitlementId === PEPPOL_ENTITLEMENTS.INTEGRATIONS)
+        : undefined;
+      setIntegrationsEntitlement(
+        entitlement
+          ? { allowed: entitlement.allowed, message: entitlement.message, actionUrl: entitlement.actionUrl }
+          : { allowed: false, message: null, actionUrl: null }
+      );
     } catch (error) {
-      console.error("Error fetching subscription:", error);
-      setSubscription(null);
+      console.error("Error fetching entitlements:", error);
+      setIntegrationsEntitlement({ allowed: false, message: null, actionUrl: null });
     }
   };
 
@@ -406,7 +398,7 @@ export default function CompanyDetailPage() {
                 isVerified={isVerified ?? company.isVerified}
               />
             )}
-            {canUseIntegrations(isPlayground, subscription) ? (
+            {integrationsEntitlement === null ? null : isPlayground || integrationsEntitlement.allowed ? (
               <CompanyIntegrationsManager
                 teamId={activeTeam.id}
                 companyId={company.id}
@@ -421,7 +413,8 @@ export default function CompanyDetailPage() {
                     <div className="flex-1">
                       <CardTitle>{t`Integrations`}</CardTitle>
                       <CardDescription>
-                        {t`Connect external services to automate document processing and workflows. Integrations are available on Starter, Professional, or Enterprise plans.`}
+                        {t`Connect external services to automate document processing and workflows.`}
+                        {integrationsEntitlement.message && <> {t(integrationsEntitlement.message)}</>}
                       </CardDescription>
                     </div>
                   </div>
@@ -449,13 +442,15 @@ export default function CompanyDetailPage() {
                         <li>{t`Streamline your document processing workflow`}</li>
                       </ul>
                     </div>
-                    <Button
-                      onClick={() => navigate("/billing/subscription")}
-                      className="w-full"
-                    >
-                      {t`View Available Plans`}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                    {integrationsEntitlement.actionUrl && (
+                      <Button
+                        onClick={() => navigate(integrationsEntitlement.actionUrl!)}
+                        className="w-full"
+                      >
+                        {t`View Available Plans`}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

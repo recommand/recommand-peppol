@@ -22,7 +22,8 @@ import {
   type DocumentDelivery,
 } from "@peppol/data/deliveries";
 import { sendOutgoingDocumentNotifications } from "@peppol/data/send-document-notifications";
-import { transferEvents, transmittedDocuments } from "@peppol/db/schema";
+import { transmittedDocuments } from "@peppol/db/schema";
+import { recordUsageEvents } from "@peppol/data/usage";
 import { isUniqueViolation } from "@peppol/utils/db-errors";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { db } from "@recommand/db";
@@ -209,9 +210,7 @@ export async function recordOutgoingDocument(options: {
       document,
       delivery,
     });
-    if (te.length > 0) {
-      await db.insert(transferEvents).values(te);
-    }
+    await recordUsageEvents(te);
   }
 
   // The access point or the mail service may already have reported what became of a

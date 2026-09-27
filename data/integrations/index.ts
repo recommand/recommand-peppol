@@ -6,9 +6,7 @@ import { stateSchema } from "@peppol/types/integration/state";
 import { type IntegrationManifest, type IntegrationConfiguration, type IntegrationState, type IntegrationEvent, taskLogSchema } from "@peppol/types/integration";
 import { UserFacingError } from "@peppol/utils/util";
 import { getCompany } from "@peppol/data/companies";
-import { getActiveSubscription } from "@peppol/data/subscriptions";
-import { isPlayground } from "@peppol/data/teams";
-import { canUseIntegrations } from "@peppol/utils/plan-validation";
+import { checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { getIntegrationManifestFromUrl, validateManifest, postToIntegration } from "./client";
 
 export type ActivatedIntegration = typeof activatedIntegrations.$inferSelect;
@@ -300,9 +298,8 @@ export async function executeCronJob(event: IntegrationEvent): Promise<void> {
 
   for (const integration of integrations) {
     try {
-      const teamIsPlayground = await isPlayground(integration.teamId);
-      const subscription = await getActiveSubscription(integration.teamId);
-      if (!canUseIntegrations(teamIsPlayground, subscription)) {
+      const entitlement = await checkPeppolEntitlementForTeamId(integration.teamId, PEPPOL_ENTITLEMENTS.INTEGRATIONS);
+      if (!entitlement.allowed) {
         console.warn(`Skipping cron job ${event} for integration ${integration.id}: team does not have access to integrations`);
         continue;
       }

@@ -785,6 +785,13 @@
       "when": 1789897397343,
       "tag": "20260920094317_participant_migrations",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1790502652833,
+      "tag": "20260927095052_hand_over_commercial_tables",
+      "breakpoints": true
     }
   ]
 }
