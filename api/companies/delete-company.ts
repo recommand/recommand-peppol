@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { audit } from "@core/lib/audit";
 
@@ -20,7 +20,7 @@ const deleteCompanyRouteDescription = describeRoute({
     summary: "Delete Company",
     tags: ["Companies"],
     responses: {
-        ...describeSuccessResponse("Successfully deleted company"),
+        ...describeSuccessResponseWithZod("Successfully deleted company"),
         ...describeErrorResponse(500, "Failed to delete company"),
     },
 });

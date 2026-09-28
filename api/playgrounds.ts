@@ -6,23 +6,24 @@ import { describeRoute } from "hono-openapi";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { z } from "zod";
 import "zod-openapi/extend";
-import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
-const playgroundOpenapiSchema = {
-  type: "object",
-  properties: {
-    id: { type: "string", description: "Team ID" },
-    name: { type: "string", description: "Team name" },
-    teamDescription: { type: "string", description: "Team description" },
-    isPlayground: { type: "boolean", description: "Whether the team is a playground" },
-    useTestNetwork: { type: "boolean", description: "Whether to use the Peppol Test Network" },
-    createdAt: { type: "string", format: "date-time" },
-    updatedAt: { type: "string", format: "date-time" },
-  },
-};
+const playgroundResponse = z
+  .object({
+    id: z.string().openapi({ description: "Team ID" }),
+    name: z.string().openapi({ description: "Team name" }),
+    teamDescription: z.string().openapi({ description: "Team description" }),
+    isPlayground: z.boolean().openapi({ description: "Whether the team is a playground" }),
+    useTestNetwork: z
+      .boolean()
+      .openapi({ description: "Whether to use the Peppol Test Network" }),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  })
+  .openapi({ ref: "Playground" });
 
 const getPlaygroundRouteDescription = describeRoute({
   operationId: "getPlayground",
@@ -30,9 +31,9 @@ const getPlaygroundRouteDescription = describeRoute({
   summary: "Get Playground",
   tags: ["Playgrounds"],
   responses: {
-    ...describeSuccessResponse("Successfully retrieved playground", {
-      playground: playgroundOpenapiSchema,
-    }),
+    ...describeSuccessResponseWithZod("Successfully retrieved playground", z.object({
+      playground: playgroundResponse,
+    })),
     ...describeErrorResponse(404, "Playground not found for this team"),
     ...describeErrorResponse(500, "Failed to fetch playground"),
   },
@@ -73,9 +74,9 @@ const createPlaygroundRouteDescription = describeRoute({
   summary: "Create Playground",
   tags: ["Playgrounds"],
   responses: {
-    ...describeSuccessResponse("Successfully created playground", {
-      playground: playgroundOpenapiSchema,
-    }),
+    ...describeSuccessResponseWithZod("Successfully created playground", z.object({
+      playground: playgroundResponse,
+    })),
     ...describeErrorResponse(400, "Invalid request data"),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to create playground"),

@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { updateIntegrationState } from "@peppol/data/integrations";
@@ -17,7 +17,7 @@ const resetIntegrationStateRouteDescription = describeRoute({
     summary: "Reset Integration State",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponse("Successfully reset integration state"),
+        ...describeSuccessResponseWithZod("Successfully reset integration state"),
         ...describeErrorResponse(500, "Failed to reset integration state"),
     },
 });

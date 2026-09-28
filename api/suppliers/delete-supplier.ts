@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierIdParamSchema } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -21,7 +21,7 @@ const deleteSupplierRouteDescription = describeRoute({
   summary: "Delete Supplier",
   tags: ["Suppliers"],
   responses: {
-    ...describeSuccessResponse("Successfully deleted supplier"),
+    ...describeSuccessResponseWithZod("Successfully deleted supplier"),
     ...describeErrorResponse(400, "Invalid request data"),
     ...describeErrorResponse(500, "Failed to delete supplier"),
   },
