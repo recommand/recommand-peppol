@@ -1,6 +1,6 @@
 {
-  "id": "72c50d6d-e0b1-4115-ac56-a44d38bfc7cc",
-  "prevId": "7c68f6d2-60f0-417c-b574-a5e062033cb4",
+  "id": "7c68f6d2-60f0-417c-b574-a5e062033cb4",
+  "prevId": "9c483ae2-c2cb-46e0-a56c-0b5c6b02c264",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2408,13 +2408,6 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-        },
-        "can_verify_companies_by_contract": {
-          "name": "can_verify_companies_by_contract",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "support_email_address": {
           "name": "support_email_address",

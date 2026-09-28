@@ -5,9 +5,8 @@ import { generateIntegrationJwt } from "./auth";
 import { getMinimalTeamMembers } from "@core/data/team-members";
 import { sendEmail } from "@core/lib/email";
 import { getCompany } from "@peppol/data/companies";
-import { getActiveSubscription } from "@peppol/data/subscriptions";
-import { getTeamExtension, isPlayground } from "@peppol/data/teams";
-import { canUseIntegrations } from "@peppol/utils/plan-validation";
+import { getTeamExtension } from "@peppol/data/teams";
+import { checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { IntegrationFailureNotification } from "@peppol/emails/integration-failure-notification";
 import { log } from "@recommand/lib/logger";
 import { getTeamNotificationT } from "@peppol/data/notification-language";
@@ -96,10 +95,9 @@ export async function postToIntegration({
         throw new UserFacingError("Integration configuration is not set, this is required to communicate with the integration.");
     }
 
-    const teamIsPlayground = await isPlayground(integration.teamId);
-    const subscription = await getActiveSubscription(integration.teamId);
-    if (!canUseIntegrations(teamIsPlayground, subscription)) {
-        throw new UserFacingError("Integrations are only available on Starter, Professional, or Enterprise plans. Please upgrade your subscription to use integrations.");
+    const entitlement = await checkPeppolEntitlementForTeamId(integration.teamId, PEPPOL_ENTITLEMENTS.INTEGRATIONS);
+    if (!entitlement.allowed) {
+        throw new UserFacingError(entitlement.message ?? "This team cannot use integrations.");
     }
 
     const body = JSON.stringify({

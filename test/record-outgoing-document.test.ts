@@ -165,11 +165,11 @@ describe("outgoing document recording", () => {
     expect(
       buildOutgoingTransferEvents({ ...base, delivery: reportingDelivery })
     ).toEqual([
-      { teamId: base.teamId, companyId: base.companyId, transmittedDocumentId: base.transmittedDocumentId, direction: "outgoing", type: "reporting" },
+      { id: "te_doc_1_outgoing_reporting", teamId: base.teamId, companyId: base.companyId, transmittedDocumentId: base.transmittedDocumentId, direction: "outgoing", type: "reporting" },
     ]);
     expect(
       buildOutgoingTransferEvents({ ...base, delivery: peppolDelivery })
-    ).toEqual([{ teamId: base.teamId, companyId: base.companyId, transmittedDocumentId: base.transmittedDocumentId, direction: "outgoing", type: "peppol" }]);
+    ).toEqual([{ id: "te_doc_1_outgoing_peppol", teamId: base.teamId, companyId: base.companyId, transmittedDocumentId: base.transmittedDocumentId, direction: "outgoing", type: "peppol" }]);
   });
 
   it("bills one event per email recipient alongside the Peppol transmission", () => {
@@ -191,6 +191,26 @@ describe("outgoing document recording", () => {
       "email",
       "email",
     ]);
+  });
+
+  it("keys each billed event so recording the same send again charges nothing more", () => {
+    const build = (emailRecipients: string[]) =>
+      buildOutgoingTransferEvents({
+        teamId: "team_1",
+        companyId: company.id,
+        transmittedDocumentId: "doc_1",
+        document: { type: "invoice", parsed: null },
+        delivery: { kind: "peppol", sentPeppol: true, emailRecipients, as4Response: null },
+      }).map((event) => event.id);
+
+    const ids = build(["a@example.com", "B@example.com", "a@example.com"]);
+    // Same send, same keys; the address is not readable from the key.
+    expect(build(["a@example.com", "B@example.com", "a@example.com"])).toEqual(ids);
+    expect(ids.some((id) => id?.includes("example.com"))).toBe(false);
+    // Every recipient is still charged, an address listed twice included.
+    expect(new Set(ids).size).toBe(4);
+    // An address is one recipient whatever its case.
+    expect(build(["b@example.com"])[1]).toBe(ids[2]);
   });
 
   it("writes no transfer event when a document reached nobody", () => {

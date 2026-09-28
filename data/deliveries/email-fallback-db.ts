@@ -8,9 +8,9 @@ import {
 import {
   documentDeliveries,
   teamExtensions,
-  transferEvents,
   transmittedDocuments,
 } from "@peppol/db/schema";
+import { recordUsageEvents } from "@peppol/data/usage";
 import { db } from "@recommand/db";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import {
@@ -138,9 +138,7 @@ const databaseDependencies: EmailFallbackDependencies = {
       if (!closed) {
         return false;
       }
-      if (billing.length) {
-        await tx.insert(transferEvents).values(billing);
-      }
+      await recordUsageEvents(billing, tx);
       for (const delivery of deliveries) {
         await publishDeliveryEvent(tx, document, delivery);
       }

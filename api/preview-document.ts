@@ -5,7 +5,7 @@ import type {
 import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import {
   requireIntegrationSupportedCompanyAccess,
-  requireValidSubscription,
+  requireTransactionEntitlement,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import {
@@ -46,7 +46,7 @@ type PreviewDocumentContext = Context<
 const _previewDocument = server.post(
   "/:companyId/previewDocument/render/:type",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  requireTransactionEntitlement(),
   describeRoute({ hide: true }),
   zodValidator("param", previewDocumentParamSchema),
   zodValidator("json", sendDocumentSchema),
