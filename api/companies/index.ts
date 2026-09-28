@@ -6,6 +6,7 @@ import createCompanyServer, { type CreateCompany } from "./create-company";
 import updateCompanyServer, { type UpdateCompany } from "./update-company";
 import deleteCompanyServer, { type DeleteCompany } from "./delete-company";
 import verifyCompanyServer, { type VerifyCompany } from "./verify-company";
+import verifyCompanyByContractServer, { type VerifyCompanyByContract } from "./verify-company-by-contract";
 import enterpriseDataServer, { type GetCompanyEnterpriseData } from "./enterprise-data";
 import vatLookupServer, { type VatLookup } from "./vat-lookup";
 import companyIdentifiersServer, { type CompanyIdentifiers } from "./identifiers";
@@ -13,7 +14,7 @@ import companyDocumentTypesServer, { type CompanyDocumentTypes } from "./documen
 import companyNotificationEmailAddressesServer, { type CompanyNotificationEmailAddresses } from "./notification-email-addresses";
 import companyVerificationServer, { type CompanyVerification } from "./verification";
 
-export type Companies = GetCompanies | GetCompany | CreateCompany | UpdateCompany | DeleteCompany | VerifyCompany | GetCompanyEnterpriseData | VatLookup | CompanyIdentifiers | CompanyDocumentTypes | CompanyNotificationEmailAddresses | CompanyVerification;
+export type Companies = GetCompanies | GetCompany | CreateCompany | UpdateCompany | DeleteCompany | VerifyCompany | VerifyCompanyByContract | GetCompanyEnterpriseData | VatLookup | CompanyIdentifiers | CompanyDocumentTypes | CompanyNotificationEmailAddresses | CompanyVerification;
 
 const server = new Server();
 server.route("/", getCompaniesServer);
@@ -22,6 +23,7 @@ server.route("/", createCompanyServer);
 server.route("/", updateCompanyServer);
 server.route("/", deleteCompanyServer);
 server.route("/", verifyCompanyServer);
+server.route("/", verifyCompanyByContractServer);
 server.route("/", enterpriseDataServer);
 server.route("/", vatLookupServer);
 server.route("/", companyIdentifiersServer);

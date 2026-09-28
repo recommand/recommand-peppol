@@ -785,6 +785,13 @@
       "when": 1789897397343,
       "tag": "20260920094317_participant_migrations",
       "breakpoints": true
+    },
+    {
+      "idx": 112,
+      "version": "7",
+      "when": 1790582630868,
+      "tag": "20260928080350_verify_companies_by_contract",
+      "breakpoints": true
     }
   ]
 }
