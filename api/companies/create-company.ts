@@ -22,14 +22,14 @@ const server = new Server();
 
 const createCompanyRouteDescription = describeRoute({
     operationId: "createCompany",
-    description: "Register a business you want to send or receive Peppol documents for. Unless `skipDefaultCompanySetup` is set, the company is given the default Peppol identifiers and document types for its country, and is registered in the SMP so it can receive documents. The response carries a `verificationUrl`: a company has to pass the identity check before it can exchange documents.",
+    description: "Create a business profile for sending or receiving Peppol documents. Unless `skipDefaultCompanySetup` is set, the company is given the default Peppol identifiers and document types for its country. The response includes a `verificationUrl`: verification is required before exchanging documents. After verification, Recommand registers the company for receiving if `isSmpRecipient` is true (the default); false enables sending only. A company can be created while registered with another provider. When onboarding a company whose identifiers are registered elsewhere, we recommend submitting migration keys before completing verification to avoid registration conflicts, or having the previous provider deregister those identifiers first. Identifiers can also be migrated after verification. A company not yet registered on Peppol needs no migration keys.",
     summary: "Create Company",
     tags: ["Companies"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully created company", z.object({
             company: companyResponse,
             verificationUrl: z.string().openapi({
-                description: "A one-time URL where an authorised representative completes the company's identity check. Present it to your user immediately. Call the verify company endpoint if you need a fresh one.",
+                description: "A one-time URL where an authorised representative completes the company's identity check. If its identifiers are registered elsewhere, we recommend preparing their migration or deregistration before completing verification to avoid registration conflicts. Identifiers can also be migrated after verification. Call the verify company endpoint if you need a fresh URL.",
             }),
         })),
         ...describeValidationErrorResponse("Invalid request data"),
