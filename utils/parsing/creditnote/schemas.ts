@@ -24,7 +24,7 @@ export const baseCreditNoteSchema = z.object({
   creditNoteNumber: z.string().openapi({ example: "CN-2024-001" }),
   issueDate: z.string().date().openapi({ example: "2024-03-20" }),
   note: z.string().nullish().openapi({ example: "Thank you for your business" }),
-  buyerReference: z.string().nullish().openapi({ example: "PO-2024-001" }),
+  buyerReference: z.string().nullish().openapi({ example: "PO-2024-001", description: "A reference the buyer asked you to put on the credit note so they can route it internally (BT-10). If neither this nor `purchaseOrderReference` is provided, the credit note number is used. For a German public authority addressed by its Leitweg-ID (recipient scheme `0204`), this must be that Leitweg-ID: it is filled in when left out, and a different value is refused." }),
   invoiceReferences: z.array(creditNoteInvoiceReferenceSchema).default([]).openapi({ description: "References to one or more invoices that are being credited" }),
   purchaseOrderReference: z.string().nullish().openapi({ example: "PO-2024-001", description: "A reference to a related purchase order" }),
   salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),

@@ -242,6 +242,125 @@ function validateFrenchVatNumber(identifier: string): void {
   }
 }
 
+/** ISO/IEC 7064 MOD 97-10 over a string of digits: 1 when its check digits are right. */
+function mod97(digits: string): number {
+  let remainder = 0;
+  for (const digit of digits) {
+    remainder = (remainder * 10 + (digit.charCodeAt(0) - 48)) % 97;
+  }
+  return remainder;
+}
+
+/** Letters as the two digit numbers MOD 97-10 reads them as: A is 10, Z is 35. */
+function lettersToDigits(value: string): string {
+  return value.toUpperCase().replace(/[A-Z]/g, (letter) => String(letter.charCodeAt(0) - 55));
+}
+
+/**
+ * The German VAT identification number (USt-IdNr.): DE followed by nine digits, the
+ * last of which is an ISO/IEC 7064 MOD 11,10 check digit over the first eight.
+ */
+function validateGermanVatNumber(identifier: string): void {
+  const cleaned = identifier.replace(/[\.\-\s]/g, "").toUpperCase();
+
+  if (!cleaned.startsWith("DE")) {
+    throw new UserFacingError("German VAT number must start with 'DE'");
+  }
+
+  const digits = cleaned.substring(2);
+
+  if (!/^\d{9}$/.test(digits)) {
+    throw new UserFacingError(
+      "German VAT number must have exactly 9 digits after the DE prefix (got " +
+        digits.length +
+        ")"
+    );
+  }
+
+  let product = 10;
+  for (let index = 0; index < 8; index++) {
+    let sum = (digits.charCodeAt(index) - 48 + product) % 10;
+    if (sum === 0) {
+      sum = 10;
+    }
+    product = (2 * sum) % 11;
+  }
+  const checkDigit = (11 - product) % 10;
+
+  if (checkDigit !== digits.charCodeAt(8) - 48) {
+    throw new UserFacingError("German VAT number has an invalid check digit");
+  }
+}
+
+/**
+ * A Leitweg-ID (ICD 0204) addresses a German public authority's invoice reception:
+ * a numeric coarse address of 2 to 12 digits, an optional alphanumeric fine address
+ * of up to 30 characters and two check digits, separated by hyphens, for example
+ * 991-33333TEST-33. The check digits are ISO/IEC 7064 MOD 97-10 over the two
+ * addresses, as the KoSIT format and check digit specification defines them.
+ */
+export function validateLeitwegId(identifier: string): void {
+  const value = identifier.trim().toUpperCase();
+  const match = /^(\d{2,12})(?:-([A-Z0-9]{1,30}))?-(\d{2})$/.exec(value);
+
+  if (!match) {
+    throw new UserFacingError(
+      "Leitweg-ID must consist of a 2 to 12 digit coarse address, an optional fine address of up to 30 letters or digits and 2 check digits, separated by hyphens (e.g. 991-33333TEST-33). Got: '" +
+        identifier +
+        "'"
+    );
+  }
+
+  const [, coarse, fine = "", checkDigits] = match;
+  if (mod97(lettersToDigits(coarse + fine) + checkDigits) !== 1) {
+    throw new UserFacingError(
+      "Leitweg-ID " + identifier + " has invalid check digits. Ask the public authority you invoice for its exact Leitweg-ID."
+    );
+  }
+}
+
+/** Scheme 9958 was the Leitweg-ID's first ICD. Peppol deprecated it in favour of 0204. */
+function rejectDeprecatedLeitwegIdScheme(): void {
+  throw new UserFacingError(
+    "Scheme 9958 is deprecated and can no longer be used on the Peppol network. German public authorities are addressed by their Leitweg-ID under scheme 0204."
+  );
+}
+
+/** A GS1 Global Location Number: 13 digits, the last a GS1 modulo 10 check digit. */
+function validateGln(identifier: string): void {
+  const digits = identifier.replace(/[\s-]/g, "");
+
+  if (!/^\d{13}$/.test(digits)) {
+    throw new UserFacingError(
+      "GLN must be exactly 13 digits (got " + digits.length + ")"
+    );
+  }
+
+  let sum = 0;
+  for (let index = 0; index < 12; index++) {
+    sum += (digits.charCodeAt(index) - 48) * (index % 2 === 0 ? 1 : 3);
+  }
+
+  if ((10 - (sum % 10)) % 10 !== digits.charCodeAt(12) - 48) {
+    throw new UserFacingError("GLN has an invalid check digit");
+  }
+}
+
+/** An IBAN: country code, two check digits and up to 30 letters or digits. */
+function validateIban(identifier: string): void {
+  const value = identifier.replace(/\s/g, "").toUpperCase();
+
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(value)) {
+    throw new UserFacingError(
+      "IBAN must start with a 2 letter country code and 2 check digits, followed by the account number (e.g. DE89370400440532013000)"
+    );
+  }
+
+  if (mod97(lettersToDigits(value.substring(4) + value.substring(0, 4))) !== 1) {
+    throw new UserFacingError("IBAN has invalid check digits");
+  }
+}
+
 const schemeValidators: Record<string, IdentifierValidator> = {
   "0184": validateDanishOrganizationNumber,
   "0208": validateBelgianEnterpriseNumber,
@@ -253,6 +372,11 @@ const schemeValidators: Record<string, IdentifierValidator> = {
   "0009": validateFrenchSiret,
   "0225": validateFrenchElectronicAddress,
   "9957": validateFrenchVatNumber,
+  "0204": validateLeitwegId,
+  "9958": rejectDeprecatedLeitwegIdScheme,
+  "9930": validateGermanVatNumber,
+  "0088": validateGln,
+  "9918": validateIban,
 };
 
 const countryValidators: Record<string, CountryIdentifierValidators> = {
@@ -270,6 +394,9 @@ const countryValidators: Record<string, CountryIdentifierValidators> = {
   "FR": {
     vatNumber: validateFrenchVatNumber,
     enterpriseNumber: validateFrenchSiren,
+  },
+  "DE": {
+    vatNumber: validateGermanVatNumber,
   },
 };
 

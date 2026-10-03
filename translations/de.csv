@@ -82,7 +82,6 @@ Choose the type of document you want to send,Wählen Sie den Dokumenttyp aus\, d
 City,Stadt
 Clear,Leeren
 Color,Farbe
-Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France),Gängige Schemata: 0208 (Belgien)\, 0106 (Niederlande)\, 0225 (Frankreich)
 Companies,Unternehmen
 Companies are the legal entities you send or receive Peppol documents for.,Unternehmen sind die juristischen Personen\, für die Sie Peppol-Dokumente senden oder empfangen.
 Companies in {0} are functional\, but some country-specific features or requirements may not be covered yet.,Unternehmen in {0} sind funktionsfähig\, einige landesspezifische Funktionen oder Anforderungen werden jedoch möglicherweise noch nicht abgedeckt.
@@ -953,3 +952,9 @@ Update the supplier details below.,Aktualisieren Sie unten die Lieferantendaten.
 View and manage your customers (supporting data).,Kunden (Stammdaten) anzeigen und verwalten.
 View and manage your suppliers (supporting data).,Lieferanten (Stammdaten) anzeigen und verwalten.
 Yellow,Gelb
+For German businesses\, the VAT number (USt-IdNr.\, e.g. DE123456788) becomes your Peppol address under scheme 9930. Without a VAT number\, add your GLN (scheme 0088) or IBAN (scheme 9918) as a company identifier after creating the company.,Bei deutschen Unternehmen wird die USt-IdNr. (z. B. DE123456788) unter dem Schema 9930 zu Ihrer Peppol-Adresse. Ohne USt-IdNr. fügen Sie nach dem Anlegen des Unternehmens Ihre GLN (Schema 0088) oder IBAN (Schema 9918) als Unternehmenskennung hinzu.
+German companies are addressed on Peppol by their VAT number (scheme 9930). Without a VAT number\, add your GLN (scheme 0088) or IBAN (scheme 9918) here. Public authorities add their Leitweg-ID under scheme 0204.,Deutsche Unternehmen werden im Peppol-Netzwerk über ihre USt-IdNr. (Schema 9930) adressiert. Ohne USt-IdNr. fügen Sie hier Ihre GLN (Schema 0088) oder IBAN (Schema 9918) hinzu. Öffentliche Auftraggeber fügen ihre Leitweg-ID unter dem Schema 0204 hinzu.
+Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France)\, 9930 (Germany\, VAT number),Gängige Schemata: 0208 (Belgien)\, 0106 (Niederlande)\, 0225 (Frankreich)\, 9930 (Deutschland\, USt-IdNr.)
+XRechnung 3.0 UBL Invoice,XRechnung-3.0-UBL-Rechnung
+XRechnung 3.0 UBL Credit Note,XRechnung-3.0-UBL-Gutschrift
+XRechnung 3.0 CII Invoice + Credit Note,XRechnung-3.0-CII-Rechnung + Gutschrift

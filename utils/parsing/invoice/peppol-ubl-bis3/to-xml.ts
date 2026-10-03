@@ -2,6 +2,7 @@ import { XMLBuilder } from "fast-xml-parser";
 import type { Invoice } from "../schemas";
 import { calculateDocumentTotals } from "../calculations";
 import { parsePeppolAddress } from "../../peppol-address";
+import { resolveBuyerReference } from "../../buyer-reference";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -54,6 +55,12 @@ export function prebuildInvoiceUBL({
 
   const supplier = parsePeppolAddress(supplierAddress);
   const customer = parsePeppolAddress(customerAddress);
+  const buyerReference = resolveBuyerReference({
+    buyerReference: invoice.buyerReference,
+    purchaseOrderReference: invoice.purchaseOrderReference,
+    documentNumber: invoice.invoiceNumber,
+    customerAddress,
+  });
   return {
     Invoice: {
       "@_xmlns": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
@@ -72,18 +79,14 @@ export function prebuildInvoiceUBL({
       "cbc:InvoiceTypeCode": "380",
       ...(invoice.note && { "cbc:Note": invoice.note }),
       "cbc:DocumentCurrencyCode": invoice.currency,
-      ...(invoice.buyerReference && {
-        "cbc:BuyerReference": invoice.buyerReference,
+      ...(buyerReference && {
+        "cbc:BuyerReference": buyerReference,
       }),
       ...((invoice.purchaseOrderReference || invoice.salesOrderReference) && {
         "cac:OrderReference": {
           "cbc:ID": invoice.purchaseOrderReference || "NA",
           ...(invoice.salesOrderReference && { "cbc:SalesOrderID": invoice.salesOrderReference }),
         },
-      }),
-      ...(!invoice.buyerReference &&
-        !invoice.purchaseOrderReference && {
-        "cbc:BuyerReference": invoice.invoiceNumber,
       }),
       ...(invoice.despatchReference && {
         "cac:DespatchDocumentReference": {

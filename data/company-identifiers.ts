@@ -1,6 +1,7 @@
 import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
 import { isSiren, validateIdentifier } from "@peppol/utils/identifier-validation";
+import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
 import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
@@ -116,6 +117,12 @@ export async function getDefaultCompanyIdentifier(companyId: string): Promise<Co
 const FRENCH_ACCESS_POINT_PROVIDER: AccessPointProviderId = "at-shared-ap-fr";
 
 /**
+ * The sender schemes German federal invoice reception names for documents addressed to
+ * a Leitweg-ID, in order of preference: the VAT number, then the GLN.
+ */
+const LEITWEG_ID_ROUTE_SENDER_SCHEMES = ["9930", "0088"];
+
+/**
  * The address a company sends under: the sender of the transport envelope and the
  * seller's endpoint in the documents we write for it.
  *
@@ -124,45 +131,60 @@ const FRENCH_ACCESS_POINT_PROVIDER: AccessPointProviderId = "at-shared-ap-fr";
  * registered: that is the address the access point recognises the sender by. A
  * SIRET or a suffixed electronic address under that scheme names an establishment
  * rather than the company and is not accepted in its place. Every other access point
- * takes the company's default identifier, as before.
+ * takes the company's default identifier; see chooseSendingCompanyIdentifier.
  */
 export async function getSendingCompanyIdentifier(
-  company: Pick<Company, "id" | "accessPointProvider">
+  company: Pick<Company, "id" | "accessPointProvider">,
+  recipientAddress?: string | null
 ): Promise<CompanyIdentifier> {
-  if (company.accessPointProvider !== FRENCH_ACCESS_POINT_PROVIDER) {
-    return await getDefaultCompanyIdentifier(company.id);
-  }
-
-  return chooseSendingCompanyIdentifier(company, await getCompanyIdentifiers(company.id));
+  return chooseSendingCompanyIdentifier(company, await getCompanyIdentifiers(company.id), recipientAddress);
 }
 
 /**
  * The choice getSendingCompanyIdentifier makes, given the company's identifiers in
  * the order getCompanyIdentifiers lists them. Separate so the choice can be asserted
  * without a database.
+ *
+ * Outside the French access point:
+ * - A document addressed to a Leitweg-ID goes out under the company's VAT number
+ *   (9930) or GLN (0088), the senders German federal reception lists, when the company
+ *   has one. A company without either, such as a supplier from another country, sends
+ *   as it otherwise would.
+ * - Otherwise the lowest scheme, as before, except that a Leitweg-ID is passed over
+ *   while the company has any other identifier: it names an authority's invoice
+ *   reception, which is never the address a supplier sends from.
  */
 export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier, "scheme" | "identifier">>(
   company: Pick<Company, "accessPointProvider">,
-  identifiers: T[]
+  identifiers: T[],
+  recipientAddress?: string | null
 ): T {
   if (identifiers.length === 0) {
     throw new UserFacingError("No sending company identifier found. Ensure you have added a company identifier to your company.");
   }
 
-  if (company.accessPointProvider !== FRENCH_ACCESS_POINT_PROVIDER) {
-    return identifiers[0]!;
-  }
-
-  const sirenAddress = identifiers.find(
-    (identifier) => identifier.scheme === "0225" && isSiren(identifier.identifier)
-  );
-  if (!sirenAddress) {
-    throw new UserFacingError(
-      "Sending through the French access point requires a company identifier with scheme 0225 and the company's 9 digit SIREN as identifier (for example 0225:123456789). Add it to your company to send documents."
+  if (company.accessPointProvider === FRENCH_ACCESS_POINT_PROVIDER) {
+    const sirenAddress = identifiers.find(
+      (identifier) => identifier.scheme === "0225" && isSiren(identifier.identifier)
     );
+    if (!sirenAddress) {
+      throw new UserFacingError(
+        "Sending through the French access point requires a company identifier with scheme 0225 and the company's 9 digit SIREN as identifier (for example 0225:123456789). Add it to your company to send documents."
+      );
+    }
+    return sirenAddress;
   }
 
-  return sirenAddress;
+  if (recipientAddress?.split(":")[0]?.trim() === LEITWEG_ID_SCHEME) {
+    for (const scheme of LEITWEG_ID_ROUTE_SENDER_SCHEMES) {
+      const accepted = identifiers.find((identifier) => identifier.scheme === scheme);
+      if (accepted) {
+        return accepted;
+      }
+    }
+  }
+
+  return identifiers.find((identifier) => identifier.scheme !== LEITWEG_ID_SCHEME) ?? identifiers[0]!;
 }
 
 /**
@@ -244,7 +266,7 @@ export function validateIdentifierAgainstCompany({
     if (cleanedIdentifier !== cleanedEnterpriseNumber) {
       throw new UserFacingError(`Company identifier with scheme 0208 must match the company enterprise number. Expected: ${cleanedEnterpriseNumber}, got: ${cleanedIdentifier}`);
     }
-  } else if (cleanedScheme === "9925" || cleanedScheme === "9928") {
+  } else if (cleanedScheme === "9925" || cleanedScheme === "9928" || cleanedScheme === "9930") {
     const cleanedIdentifier = cleanVatNumber(identifier);
     const cleanedVatNumber = cleanVatNumber(company.vatNumber);
     

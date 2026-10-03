@@ -126,8 +126,8 @@ async function generateImplementation(c: GenerateContext) {
     const team = c.var.team;
     const isPlayground = team.isPlayground ?? false;
     const useTestNetwork = team.useTestNetwork ?? false;
-    const senderIdentifier = await getSendingCompanyIdentifier(company);
     const recipientAddress = normalizePeppolAddress(input.recipient);
+    const senderIdentifier = await getSendingCompanyIdentifier(company, recipientAddress);
 
     // The same lookup the send endpoint does, under the same condition, so the
     // document comes back written as the format the recipient would have received it

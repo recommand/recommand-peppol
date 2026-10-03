@@ -8,7 +8,7 @@ export async function validateXmlDocument(
   xmlDocument: string,
 ): Promise<ValidationResponse> {
   try {
-    const response = await fetch("https://validation.recommand.dev/validate", {
+    const response = await fetch(process.env.VALIDATION_SERVICE_URL ?? "https://validation.recommand.dev/validate", {
       method: "POST",
       body: xmlDocument,
       headers: {

@@ -296,7 +296,7 @@ describe.skipIf(!testDatabaseUrl)("company country changes against PostgreSQL", 
       let settled = false;
       // Validated as a Belgian GLN while the row is held; the write has to wait.
       const write = createCompanyIdentifier({
-        companyIdentifier: { companyId: "c_ident", scheme: "0088", identifier: "5410000000012" }, skipSmpRegistration: true, useTestNetwork: false,
+        companyIdentifier: { companyId: "c_ident", scheme: "0088", identifier: "5410000000019" }, skipSmpRegistration: true, useTestNetwork: false,
       }).finally(() => { settled = true; });
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(settled).toBe(false);

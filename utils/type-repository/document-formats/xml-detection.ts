@@ -56,8 +56,8 @@ function rootElement(
  * statement are in the document already — the root element names the schema,
  * and the customization id names the specification it claims compliance with —
  * so an identifier can be written for a document no registered format
- * recognises. That is what keeps a CIUS the platform has never seen, an
- * XRechnung say, sendable at all.
+ * recognises. That is what keeps a CIUS the platform has never seen, an older
+ * XRechnung version say, sendable at all.
  * 
  * UBL only.
  */

@@ -2,6 +2,7 @@ import { XMLBuilder } from "fast-xml-parser";
 import type { CreditNote } from "../schemas";
 import { calculateDocumentTotals } from "../../invoice/calculations";
 import { parsePeppolAddress } from "../../peppol-address";
+import { resolveBuyerReference } from "../../buyer-reference";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -55,6 +56,12 @@ export function prebuildCreditNoteUBL({
 
   const supplier = parsePeppolAddress(supplierAddress);
   const buyer = parsePeppolAddress(customerAddress);
+  const buyerReference = resolveBuyerReference({
+    buyerReference: creditNote.buyerReference,
+    purchaseOrderReference: creditNote.purchaseOrderReference,
+    documentNumber: creditNote.creditNoteNumber,
+    customerAddress,
+  });
   return {
     CreditNote: {
       "@_xmlns": "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2",
@@ -72,18 +79,14 @@ export function prebuildCreditNoteUBL({
       "cbc:CreditNoteTypeCode": "381",
       ...(creditNote.note && { "cbc:Note": creditNote.note }),
       "cbc:DocumentCurrencyCode": creditNote.currency,
-      ...(creditNote.buyerReference && {
-        "cbc:BuyerReference": creditNote.buyerReference,
+      ...(buyerReference && {
+        "cbc:BuyerReference": buyerReference,
       }),
       ...((creditNote.purchaseOrderReference || creditNote.salesOrderReference) && {
         "cac:OrderReference": {
           "cbc:ID": creditNote.purchaseOrderReference || "NA",
           ...(creditNote.salesOrderReference && { "cbc:SalesOrderID": creditNote.salesOrderReference }),
         },
-      }),
-      ...(!creditNote.buyerReference &&
-        !creditNote.purchaseOrderReference && {
-        "cbc:BuyerReference": creditNote.creditNoteNumber,
       }),
       ...(creditNote.despatchReference && {
         "cac:DespatchDocumentReference": {

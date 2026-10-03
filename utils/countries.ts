@@ -94,8 +94,9 @@ const BASE_COUNTRIES: BaseCountryInfo[] = ([
         name: "Germany",
         flag: "🇩🇪",
         supportLevel: "supported",
+        // German businesses are addressed by their VAT number. 0204 is the Leitweg-ID of
+        // a public authority, not a register number, so it is never derived from one.
         defaultVatScheme: "9930",
-        defaultEnterpriseNumberScheme: "0204",
     },
     {
         code: "GR",
@@ -295,7 +296,15 @@ const FRANCE_DEFAULT_DOCUMENT_TYPES: ReceivingCapability[] = [
     getReceivingCapability("france-cdar", FRANCE_REGULATED_PROCESS_ID),
 ];
 
+const GERMANY_DEFAULT_DOCUMENT_TYPES: ReceivingCapability[] = [
+    ...DEFAULT_DOCUMENT_TYPES,
+    getReceivingCapability("xrechnung-ubl-invoice", PEPPOL_BILLING_PROCESS_ID),
+    getReceivingCapability("xrechnung-ubl-creditnote", PEPPOL_BILLING_PROCESS_ID),
+    getReceivingCapability("xrechnung-cii", PEPPOL_BILLING_PROCESS_ID),
+];
+
 const DOCUMENT_TYPES_BY_COUNTRY: Record<string, ReceivingCapability[]> = {
+    DE: GERMANY_DEFAULT_DOCUMENT_TYPES,
     FR: FRANCE_DEFAULT_DOCUMENT_TYPES,
     NL: [
         ...DEFAULT_DOCUMENT_TYPES,
