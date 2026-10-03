@@ -13,7 +13,7 @@ import { createVerificationSession, type VerificationExpectedDetails } from "./d
 import { getCompanyVerificationLog, revokeOpenCompanyVerificationSessions } from "./company-verification";
 import { companyDocumentsS3Prefix } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
-import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
+import { validateCompanyNumbers } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
 import { planCompanyCountryChange } from "./company-country-change";
@@ -137,30 +137,6 @@ export async function getCompanyByPeppolId(options: {
   return company;
 }
 
-function validateCompanyCountryIdentifiers({
-  country,
-  vatNumber,
-  enterpriseNumber,
-}: {
-  country?: string | null;
-  vatNumber?: string | null;
-  enterpriseNumber?: string | null;
-}): void {
-  if (vatNumber && !/^[A-Z]{2}/.test(vatNumber)) {
-    throw new UserFacingError("VAT number must start with a country code (e.g. BE, NL, DE)");
-  }
-  if (vatNumber && country && vatNumber.substring(0, 2).toUpperCase() !== country.toUpperCase()) {
-    throw new UserFacingError(`VAT number country code (${vatNumber.substring(0, 2)}) does not match the selected country (${country})`);
-  }
-  if (!country) {
-    return;
-  }
-  validateCountryIdentifier(country, {
-    vatNumber,
-    enterpriseNumber,
-  });
-}
-
 /**
  * Creates a company on the providers its country is served by. Callers name a
  * country, never a provider: the mapping is ours, and a company on the wrong one
@@ -175,10 +151,11 @@ export async function createCompany(company: Omit<InsertCompany, "accessPointPro
     throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be created in this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`);
   }
 
-  validateCompanyCountryIdentifiers({
+  validateCompanyNumbers({
     country: company.country,
     vatNumber: cleanedVat,
     enterpriseNumber: cleanedEnterpriseNumber,
+    enterpriseNumberScheme: company.enterpriseNumberScheme,
   });
 
   const teamExtension = await getTeamExtension(company.teamId);
@@ -292,13 +269,24 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   // both when the country changes. A stored number that predates a format check must not
   // block an unrelated change, such as a new address.
   const countryChanged = effectiveCountry !== oldCompany.country;
-  validateCompanyCountryIdentifiers({
+  // A scheme the request leaves out stays, unless the country changes and the scheme
+  // follows the new country's default.
+  const effectiveEnterpriseNumberScheme =
+    company.enterpriseNumberScheme !== undefined
+      ? company.enterpriseNumberScheme
+      : countryChanged
+        ? null
+        : oldCompany.enterpriseNumberScheme;
+  validateCompanyNumbers({
     country: effectiveCountry,
     vatNumber: countryChanged || effectiveVat !== cleanVatNumber(oldCompany.vatNumber) ? effectiveVat : null,
     enterpriseNumber:
-      countryChanged || effectiveEnterpriseNumber !== cleanEnterpriseNumber(oldCompany.enterpriseNumber)
+      countryChanged ||
+      effectiveEnterpriseNumber !== cleanEnterpriseNumber(oldCompany.enterpriseNumber) ||
+      effectiveEnterpriseNumberScheme !== oldCompany.enterpriseNumberScheme
         ? effectiveEnterpriseNumber
         : null,
+    enterpriseNumberScheme: effectiveEnterpriseNumberScheme,
   });
 
   const teamExtension = await getTeamExtension(company.teamId);

@@ -1,8 +1,8 @@
 import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
-import { isSiren, validateIdentifier } from "@peppol/utils/identifier-validation";
+import { isSiren, normalizeIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
 import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
-import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
+import { UserFacingError } from "@peppol/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
 import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";
@@ -188,40 +188,9 @@ export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier,
 }
 
 /**
- * The identifiers a company may register under a French scheme all have to name
- * the company itself: its SIREN, the SIRET of one of its establishments, or an
- * electronic address of either, all of which open with that SIREN. The form of
- * each scheme is settled by validateIdentifier before this runs.
- */
-function validateProtectedFrenchIdentifier({
-  scheme,
-  identifier,
-  enterpriseNumber,
-}: {
-  scheme: string;
-  identifier: string;
-  enterpriseNumber: string | null;
-}): void {
-  const companySiren = cleanEnterpriseNumber(enterpriseNumber);
-
-  if (!companySiren) {
-    throw new UserFacingError(`Company identifier with scheme ${scheme} requires a company enterprise number to be set.`);
-  }
-
-  if (!isSiren(companySiren)) {
-    throw new UserFacingError(`Company identifier with scheme ${scheme} requires the company enterprise number to be a valid SIREN, got: ${companySiren}`);
-  }
-
-  const cleanedIdentifier = cleanEnterpriseNumber(identifier)!;
-
-  if (!cleanedIdentifier.startsWith(companySiren)) {
-    throw new UserFacingError(`Company identifier with scheme ${scheme} must belong to the company. Expected the company SIREN ${companySiren}, or a SIRET or address starting with it. Got: ${identifier}`);
-  }
-}
-
-/**
  * Holds an identifier against the company it is registered for: the SMP's scheme
- * policy first, then the schemes whose value has to be the company's own number.
+ * policy first, then the schemes whose value has to be the company's own number
+ * (see validateIdentifierBelongsToCompany).
  * Pure so a planned change to the company can be checked against its identifiers
  * before anything is written.
  */
@@ -233,7 +202,7 @@ export function validateIdentifierAgainstCompany({
 }: {
   scheme: string;
   identifier: string;
-  company: Pick<Company, "smpProvider" | "enterpriseNumber" | "vatNumber">;
+  company: Pick<Company, "smpProvider" | "enterpriseNumber" | "vatNumber"> & Partial<Pick<Company, "country">>;
   teamExtension: { isPlayground?: boolean | null; useTestNetwork?: boolean | null } | null | undefined;
 }): void {
   const cleanedScheme = cleanScheme(scheme);
@@ -249,35 +218,7 @@ export function validateIdentifierAgainstCompany({
     cleanedScheme
   );
 
-  if (cleanedScheme === "0225" || cleanedScheme === "0002" || cleanedScheme === "0009") {
-    validateProtectedFrenchIdentifier({
-      scheme: cleanedScheme,
-      identifier,
-      enterpriseNumber: company.enterpriseNumber,
-    });
-  } else if (cleanedScheme === "0208") {
-    const cleanedIdentifier = cleanEnterpriseNumber(identifier);
-    const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
-    
-    if (!cleanedEnterpriseNumber) {
-      throw new UserFacingError("Company identifier with scheme 0208 requires a company enterprise number to be set.");
-    }
-
-    if (cleanedIdentifier !== cleanedEnterpriseNumber) {
-      throw new UserFacingError(`Company identifier with scheme 0208 must match the company enterprise number. Expected: ${cleanedEnterpriseNumber}, got: ${cleanedIdentifier}`);
-    }
-  } else if (cleanedScheme === "9925" || cleanedScheme === "9928" || cleanedScheme === "9930") {
-    const cleanedIdentifier = cleanVatNumber(identifier);
-    const cleanedVatNumber = cleanVatNumber(company.vatNumber);
-    
-    if (!cleanedVatNumber) {
-      throw new UserFacingError(`Company identifier with scheme ${cleanedScheme} requires a company VAT number to be set.`);
-    }
-
-    if (cleanedIdentifier !== cleanedVatNumber) {
-      throw new UserFacingError(`Company identifier with scheme ${cleanedScheme} must match the company VAT number. Expected: ${cleanedVatNumber}, got: ${cleanedIdentifier}`);
-    }
-  }
+  validateIdentifierBelongsToCompany({ scheme: cleanedScheme, identifier, company });
 }
 
 /** Validates against the company as it is now and returns what it validated against. */
@@ -337,17 +278,19 @@ export async function createCompanyIdentifier({
   migrationKey?: string;
 }): Promise<CompanyIdentifier> {
   const cleanedScheme = cleanScheme(companyIdentifier.scheme);
-  const cleanedIdentifierValue = cleanIdentifier(companyIdentifier.identifier);
+  const cleanedIdentifierValue = normalizeIdentifierValue(cleanedScheme, cleanIdentifier(companyIdentifier.identifier));
+  // What is checked, registered with the SMP and stored is the same value.
+  const cleanedIdentifier = { ...companyIdentifier, scheme: cleanedScheme, identifier: cleanedIdentifierValue };
 
   validateIdentifier(cleanedScheme, cleanedIdentifierValue);
 
   const validatedAgainst = await validateProtectedIdentifier({
-    scheme: companyIdentifier.scheme,
-    identifier: companyIdentifier.identifier,
+    scheme: cleanedScheme,
+    identifier: cleanedIdentifierValue,
     companyId: companyIdentifier.companyId,
   });
 
-  const canUpsert = await canUpsertCompanyIdentifier(companyIdentifier.scheme, companyIdentifier.identifier, undefined, companyIdentifier.companyId);
+  const canUpsert = await canUpsertCompanyIdentifier(cleanedScheme, cleanedIdentifierValue, undefined, companyIdentifier.companyId);
   if(!canUpsert){
     throw new UserFacingError(
       `Company identifier with scheme '${companyIdentifier.scheme}' and value '${companyIdentifier.identifier}' already exists`
@@ -365,7 +308,7 @@ export async function createCompanyIdentifier({
   }
 
   if(!skipSmpRegistration){
-    await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: companyIdentifier, useTestNetwork: useTestNetwork});
+    await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: cleanedIdentifier, useTestNetwork: useTestNetwork});
   }
 
   const createdIdentifier = await writeIdentifierAgainst(validatedAgainst, companyIdentifier.companyId, (tx) => tx
@@ -400,18 +343,20 @@ export async function updateCompanyIdentifier({
   }
 
   const cleanedScheme = cleanScheme(companyIdentifier.scheme);
-  const cleanedIdentifierValue = cleanIdentifier(companyIdentifier.identifier);
+  const cleanedIdentifierValue = normalizeIdentifierValue(cleanedScheme, cleanIdentifier(companyIdentifier.identifier));
+  // What is checked, registered with the SMP and stored is the same value.
+  const cleanedIdentifier = { ...companyIdentifier, scheme: cleanedScheme, identifier: cleanedIdentifierValue };
 
   validateIdentifier(cleanedScheme, cleanedIdentifierValue);
 
   const validatedAgainst = await validateProtectedIdentifier({
-    scheme: companyIdentifier.scheme,
-    identifier: companyIdentifier.identifier,
+    scheme: cleanedScheme,
+    identifier: cleanedIdentifierValue,
     companyId: companyIdentifier.companyId,
   });
 
   // Check if the company identifier can be upserted
-  const canUpsert = await canUpsertCompanyIdentifier(companyIdentifier.scheme, companyIdentifier.identifier, companyIdentifier.id, companyIdentifier.companyId);
+  const canUpsert = await canUpsertCompanyIdentifier(cleanedScheme, cleanedIdentifierValue, companyIdentifier.id, companyIdentifier.companyId);
   if (!canUpsert) {
     throw new UserFacingError(
       `Company identifier with scheme '${companyIdentifier.scheme}' and value '${companyIdentifier.identifier}' already exists`
@@ -424,7 +369,7 @@ export async function updateCompanyIdentifier({
   }
 
   if(!skipSmpRegistration){
-    await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: companyIdentifier, useTestNetwork: useTestNetwork}); // Register the new identifier
+    await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: cleanedIdentifier, useTestNetwork: useTestNetwork}); // Register the new identifier
     await unregisterCompanyIdentifier({identifier: oldIdentifier, useTestNetwork: useTestNetwork}); // Unregister the old identifier
   }
 
