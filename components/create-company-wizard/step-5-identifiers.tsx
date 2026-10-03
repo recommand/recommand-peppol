@@ -18,6 +18,11 @@ export function Step5Identifiers({ teamId, company, verificationRequirements, on
                 <p className="text-sm text-muted-foreground">
                     {t`Peppol identifiers are the addresses your company uses on the Peppol network. By default, identifiers were created from your enterprise or VAT number. You can add additional identifiers here if needed.`}
                 </p>
+                {company.country === "DE" && !company.vatNumber && (
+                    <p className="text-sm text-muted-foreground">
+                        {t`German companies are addressed on Peppol by their VAT number (scheme 9930). Without a VAT number, add your GLN (scheme 0088) or IBAN (scheme 9918) here. Public authorities add their Leitweg-ID under scheme 0204.`}
+                    </p>
+                )}
             </div>
             <CompanyIdentifiersManager
                 teamId={teamId}

@@ -288,10 +288,17 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   const effectiveVat = company.vatNumber !== undefined ? newCleanedVatNumber : cleanVatNumber(oldCompany.vatNumber);
   const effectiveEnterpriseNumber = company.enterpriseNumber !== undefined ? newCleanedEnterpriseNumber : cleanEnterpriseNumber(oldCompany.enterpriseNumber);
 
+  // Only a number the update changes is held against the country's formats, or
+  // both when the country changes. A stored number that predates a format check must not
+  // block an unrelated change, such as a new address.
+  const countryChanged = effectiveCountry !== oldCompany.country;
   validateCompanyCountryIdentifiers({
     country: effectiveCountry,
-    vatNumber: effectiveVat,
-    enterpriseNumber: effectiveEnterpriseNumber,
+    vatNumber: countryChanged || effectiveVat !== cleanVatNumber(oldCompany.vatNumber) ? effectiveVat : null,
+    enterpriseNumber:
+      countryChanged || effectiveEnterpriseNumber !== cleanEnterpriseNumber(oldCompany.enterpriseNumber)
+        ? effectiveEnterpriseNumber
+        : null,
   });
 
   const teamExtension = await getTeamExtension(company.teamId);

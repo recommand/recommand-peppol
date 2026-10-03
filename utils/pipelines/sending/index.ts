@@ -68,7 +68,7 @@ export async function sendingPipeline(c: SendingContext) {
       );
     }
 
-    const senderIdentifier = await getSendingCompanyIdentifier(company);
+    const senderIdentifier = await getSendingCompanyIdentifier(company, recipientAddress);
     const senderAddress = `${senderIdentifier.scheme}:${senderIdentifier.identifier}`;
 
     // Raw XML already is one specific format, and states the process it belongs to, so

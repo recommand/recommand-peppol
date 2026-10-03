@@ -461,7 +461,6 @@ Buyer details,Gegevens van de koper
 Cancel Edit,Bewerken annuleren
 Choose file,Bestand kiezen
 Clear,Wissen
-Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France),Veelgebruikte schema's: 0208 (België)\, 0106 (Nederland)\, 0225 (Frankrijk)
 Companies in {0} are functional\, but some country-specific features or requirements may not be covered yet.,Bedrijven in {0} werken\, maar sommige landspecifieke functies of vereisten worden mogelijk nog niet ondersteund.
 Company (Optional),Bedrijf (optioneel)
 Company Document Types,Documenttypen van het bedrijf
@@ -953,3 +952,9 @@ Update the supplier details below.,Werk de onderstaande leveranciersgegevens bij
 View and manage your customers (supporting data).,Bekijk en beheer je klanten (ondersteunende gegevens).
 View and manage your suppliers (supporting data).,Bekijk en beheer je leveranciers (ondersteunende gegevens).
 Yellow,Geel
+For German businesses\, the VAT number (USt-IdNr.\, e.g. DE123456788) becomes your Peppol address under scheme 9930. Without a VAT number\, add your GLN (scheme 0088) or IBAN (scheme 9918) as a company identifier after creating the company.,Voor Duitse bedrijven wordt het btw-nummer (USt-IdNr.\, bv. DE123456788) je Peppol-adres onder schema 9930. Zonder btw-nummer voeg je na het aanmaken van het bedrijf je GLN (schema 0088) of IBAN (schema 9918) toe als identificatie.
+German companies are addressed on Peppol by their VAT number (scheme 9930). Without a VAT number\, add your GLN (scheme 0088) or IBAN (scheme 9918) here. Public authorities add their Leitweg-ID under scheme 0204.,Duitse bedrijven worden op Peppol geadresseerd via hun btw-nummer (schema 9930). Zonder btw-nummer voeg je hier je GLN (schema 0088) of IBAN (schema 9918) toe. Overheidsinstanties voegen hun Leitweg-ID toe onder schema 0204.
+Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France)\, 9930 (Germany\, VAT number),Veelgebruikte schema's: 0208 (België)\, 0106 (Nederland)\, 0225 (Frankrijk)\, 9930 (Duitsland\, btw-nummer)
+XRechnung 3.0 UBL Invoice,XRechnung 3.0 UBL-factuur
+XRechnung 3.0 UBL Credit Note,XRechnung 3.0 UBL-creditnota
+XRechnung 3.0 CII Invoice + Credit Note,XRechnung 3.0 CII-factuur + creditnota

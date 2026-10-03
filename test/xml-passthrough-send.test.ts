@@ -15,8 +15,9 @@ import { sendDocumentSchema } from "../utils/parsing/send-document";
 const BILLING_PROCESS_ID = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 const MLR_CUSTOMIZATION_ID = "urn:fdc:peppol.eu:poacc:trns:mlr:3";
 const MLR_PROCESS_ID = "urn:fdc:peppol.eu:poacc:bis:mlr:3";
+// XRechnung 2.3, which no registered format reads: XRechnung 3.0 has formats of its own.
 const XRECHNUNG_CUSTOMIZATION_ID =
-  "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0";
+  "urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.3";
 
 function ublInvoice(customizationId: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>

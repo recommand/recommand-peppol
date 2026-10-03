@@ -42,6 +42,10 @@ const emptyForm: IdentifierFormData = { scheme: "", identifier: "", migrationKey
 
 const SCHEME_LABELS: Record<string, string> = {
     "0225": "0225 (France, SIREN)",
+    "9930": "9930 (Germany, VAT number)",
+    "0204": "0204 (Germany, Leitweg-ID)",
+    "0088": "0088 (GLN)",
+    "9918": "9918 (IBAN)",
 };
 
 function schemeLabel(scheme: string): string {
@@ -382,7 +386,7 @@ export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = 
                         <p className="text-xs text-muted-foreground mt-2">
                             {restricted
                                 ? t`The Peppol registration of this company only accepts the schemes listed above.`
-                                : t`Common schemes: 0208 (Belgium), 0106 (Netherlands), 0225 (France)`}
+                                : t`Common schemes: 0208 (Belgium), 0106 (Netherlands), 0225 (France), 9930 (Germany, VAT number)`}
                         </p>
                         {canMigrate && (
                             <div className="space-y-2 mt-4">

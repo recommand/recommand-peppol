@@ -408,7 +408,6 @@ Buyer details,Informations sur l'acheteur
 Cancel Edit,Annuler la modification
 Choose file,Choisir un fichier
 Clear,Effacer
-Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France),Schémas courants : 0208 (Belgique)\, 0106 (Pays-Bas)\, 0225 (France)
 Companies in {0} are functional\, but some country-specific features or requirements may not be covered yet.,Les entreprises situées en {0} sont prises en charge\, mais certaines fonctionnalités ou exigences propres au pays peuvent ne pas encore l'être.
 Company (Optional),Entreprise (facultatif)
 Company Document Types,Types de documents de l'entreprise
@@ -953,3 +952,9 @@ Update the supplier details below.,Mettez à jour les informations du fournisseu
 View and manage your customers (supporting data).,Afficher et gérer vos clients (données de référence).
 View and manage your suppliers (supporting data).,Afficher et gérer vos fournisseurs (données de référence).
 Yellow,Jaune
+For German businesses\, the VAT number (USt-IdNr.\, e.g. DE123456788) becomes your Peppol address under scheme 9930. Without a VAT number\, add your GLN (scheme 0088) or IBAN (scheme 9918) as a company identifier after creating the company.,Pour les entreprises allemandes\, le numéro de TVA (USt-IdNr.\, p. ex. DE123456788) devient votre adresse Peppol sous le schéma 9930. Sans numéro de TVA\, ajoutez votre GLN (schéma 0088) ou votre IBAN (schéma 9918) comme identifiant après la création de l'entreprise.
+German companies are addressed on Peppol by their VAT number (scheme 9930). Without a VAT number\, add your GLN (scheme 0088) or IBAN (scheme 9918) here. Public authorities add their Leitweg-ID under scheme 0204.,Les entreprises allemandes sont adressées sur Peppol par leur numéro de TVA (schéma 9930). Sans numéro de TVA\, ajoutez ici votre GLN (schéma 0088) ou votre IBAN (schéma 9918). Les administrations publiques ajoutent leur Leitweg-ID sous le schéma 0204.
+Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France)\, 9930 (Germany\, VAT number),Schémas courants : 0208 (Belgique)\, 0106 (Pays-Bas)\, 0225 (France)\, 9930 (Allemagne\, numéro de TVA)
+XRechnung 3.0 UBL Invoice,Facture XRechnung 3.0 UBL
+XRechnung 3.0 UBL Credit Note,Avoir XRechnung 3.0 UBL
+XRechnung 3.0 CII Invoice + Credit Note,Facture + Avoir XRechnung 3.0 CII

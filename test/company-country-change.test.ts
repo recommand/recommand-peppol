@@ -87,7 +87,7 @@ describe("planning a country change", () => {
   it("re-checks added identifiers against the company's new numbers", () => {
     expect(() => planCompanyCountryChange({
       ...base, oldCompany: french, newCountry: "BE", enterpriseNumber: "0123456749", vatNumber: "BE0123456749",
-      identifiers: [{ id: "fr", scheme: "0225", identifier: "303265045" }, { id: "gln", scheme: "0088", identifier: "5410000000012" }],
+      identifiers: [{ id: "fr", scheme: "0225", identifier: "303265045" }, { id: "gln", scheme: "0088", identifier: "5410000000019" }],
     })).not.toThrow();
     expect(() => planCompanyCountryChange({
       ...base, oldCompany: french, newCountry: "BE", enterpriseNumber: "0123456749", vatNumber: "BE0123456749",

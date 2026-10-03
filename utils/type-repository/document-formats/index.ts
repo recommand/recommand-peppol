@@ -11,6 +11,9 @@ import { peppolUblSelfbillingCreditnoteFormat } from "./peppol-ubl-selfbilling-c
 import { peppolUblMlrFormat } from "./peppol-ubl-mlr";
 import { siUblInvoiceFormat } from "./si-ubl-invoice";
 import { siUblCreditnoteFormat } from "./si-ubl-creditnote";
+import { xrechnungUblInvoiceFormat } from "./xrechnung-ubl-invoice";
+import { xrechnungUblCreditnoteFormat } from "./xrechnung-ubl-creditnote";
+import { xrechnungCiiFormat } from "./xrechnung-cii";
 import { ciiD22bEn16931Format } from "./cii-d22b-en16931";
 import { ciiD22bFranceCiusFormat } from "./cii-d22b-france-cius";
 import { ciiD22bFranceExtendedFormat } from "./cii-d22b-france-extended";
@@ -30,11 +33,14 @@ export const documentFormats: readonly AnyDocumentFormat[] = [
   peppolUblMlrFormat,
   siUblInvoiceFormat,
   siUblCreditnoteFormat,
+  xrechnungUblInvoiceFormat,
+  xrechnungUblCreditnoteFormat,
   ublFranceCiusInvoiceFormat,
   ublFranceCiusCreditnoteFormat,
   ublFranceExtendedInvoiceFormat,
   ublFranceExtendedCreditnoteFormat,
   ciiD22bEn16931Format,
+  xrechnungCiiFormat,
   ciiD22bFranceCiusFormat,
   ciiD22bFranceExtendedFormat,
   facturxFranceFormat,

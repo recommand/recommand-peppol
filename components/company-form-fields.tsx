@@ -126,6 +126,7 @@ export function CompanyIdentityFields({
                 />
                 {country === "BE" && <p className="text-xs text-pretty text-muted-foreground">{t`For Belgian businesses, the VAT number will be used to infer the enterprise number.`}</p>}
                 {country === "NL" && <p className="text-xs text-pretty text-muted-foreground">{t`For Dutch businesses, the VAT number format is NL + 9 digits + B + 2 digits (e.g. NL123456789B01).`}</p>}
+                {country === "DE" && <p className="text-xs text-pretty text-muted-foreground">{t`For German businesses, the VAT number (USt-IdNr., e.g. DE123456788) becomes your Peppol address under scheme 9930. Without a VAT number, add your GLN (scheme 0088) or IBAN (scheme 9918) as a company identifier after creating the company.`}</p>}
             </div>
             {(country !== "BE" || showEnterpriseNumberForBelgianCompanies) && (
                 <div className="space-y-2">

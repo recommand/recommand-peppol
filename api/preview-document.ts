@@ -68,12 +68,12 @@ async function _previewDocumentImplementation(c: PreviewDocumentContext) {
       );
     }
 
-    const senderIdentifier = await getSendingCompanyIdentifier(c.var.company);
-    const senderAddress = `${senderIdentifier.scheme}:${senderIdentifier.identifier}`;
     let recipientAddress = input.recipient ?? "0000:0000";
     if (!recipientAddress.includes(":")) {
       recipientAddress = `0208:${recipientAddress.replace(/[^0-9]/g, "")}`;
     }
+    const senderIdentifier = await getSendingCompanyIdentifier(c.var.company, recipientAddress);
+    const senderAddress = `${senderIdentifier.scheme}:${senderIdentifier.identifier}`;
 
     const documentId = `draft_${ulid()}`;
     const prepared = await prepareJsonDocument({

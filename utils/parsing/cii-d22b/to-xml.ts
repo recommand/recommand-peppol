@@ -3,6 +3,7 @@ import type { Invoice, Party } from "../invoice/schemas";
 import type { CreditNote } from "../creditnote/schemas";
 import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
+import { resolveBuyerReference } from "../buyer-reference";
 import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -397,6 +398,13 @@ export function billingDocumentToCII({
       .filter((reference): reference is string => Boolean(reference)) ?? [];
   const documentNotes = includedNotes(document, additionalNotes);
 
+  const buyerReference = resolveBuyerReference({
+    buyerReference: document.buyerReference,
+    purchaseOrderReference: document.purchaseOrderReference,
+    documentNumber,
+    customerAddress,
+  });
+
   return builder.build({
     CrossIndustryInvoice: {
       "@_xmlns": "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100",
@@ -425,13 +433,9 @@ export function billingDocumentToCII({
           lineItem(document, item, index)
         ),
         "ram:ApplicableHeaderTradeAgreement": {
-          ...(document.buyerReference && {
-            "ram:BuyerReference": document.buyerReference,
+          ...(buyerReference && {
+            "ram:BuyerReference": buyerReference,
           }),
-          ...(!document.buyerReference &&
-            !document.purchaseOrderReference && {
-              "ram:BuyerReference": documentNumber,
-            }),
           "ram:SellerTradeParty": tradeParty(document.seller, supplierAddress),
           "ram:BuyerTradeParty": tradeParty(document.buyer, customerAddress),
           ...(document.salesOrderReference && {

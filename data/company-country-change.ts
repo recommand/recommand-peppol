@@ -52,6 +52,17 @@ export type CountryChangePlan = {
 };
 
 /**
+ * Enterprise number schemes a country used to default to and no longer does. Germany
+ * registered the register number under 0204 and wrote 0204 as its BT-30 scheme, but
+ * 0204 is the Leitweg-ID of a public authority. Companies created back then still
+ * carry both, and a country change has to recognise them as the old country's
+ * defaults rather than as something the customer chose.
+ */
+const LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES: Record<string, string> = {
+  DE: "0204",
+};
+
+/**
  * The identifiers a country gives a company by default: its business register
  * number and its VAT number under the country's schemes. These are the ones a
  * country change replaces; anything else the customer added is kept and re-checked.
@@ -59,16 +70,23 @@ export type CountryChangePlan = {
 function defaultIdentifiersFor(
   country: string,
   enterpriseNumber: string | null,
-  vatNumber: string | null
+  vatNumber: string | null,
+  options: { includeLegacy?: boolean } = {}
 ): NewIdentifier[] {
   const countryInfo = COUNTRIES.find((entry) => entry.code === country);
   const defaults: NewIdentifier[] = [];
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(enterpriseNumber);
-  if (countryInfo?.defaultEnterpriseNumberScheme && cleanedEnterpriseNumber) {
-    defaults.push({
-      scheme: cleanScheme(countryInfo.defaultEnterpriseNumberScheme),
-      identifier: cleanIdentifier(cleanedEnterpriseNumber),
-    });
+  const enterpriseNumberSchemes = [
+    countryInfo?.defaultEnterpriseNumberScheme,
+    options.includeLegacy ? LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES[country] : undefined,
+  ].filter((scheme): scheme is string => !!scheme);
+  for (const scheme of enterpriseNumberSchemes) {
+    if (cleanedEnterpriseNumber) {
+      defaults.push({
+        scheme: cleanScheme(scheme),
+        identifier: cleanIdentifier(cleanedEnterpriseNumber),
+      });
+    }
   }
   const cleanedVatNumber = cleanVatNumber(vatNumber);
   if (countryInfo?.defaultVatScheme && cleanedVatNumber) {
@@ -114,7 +132,8 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
   const oldDefaults = defaultIdentifiersFor(
     input.oldCompany.country,
     input.oldCompany.enterpriseNumber,
-    input.oldCompany.vatNumber
+    input.oldCompany.vatNumber,
+    { includeLegacy: true }
   );
   const newDefaults = defaultIdentifiersFor(input.newCountry, input.enterpriseNumber, input.vatNumber);
 
@@ -168,7 +187,8 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
     enterpriseNumberScheme = input.requestedEnterpriseNumberScheme;
   } else if (
     input.oldCompany.enterpriseNumberScheme === null ||
-    input.oldCompany.enterpriseNumberScheme === defaultEnterpriseNumberSchemeFor(input.oldCompany.country)
+    input.oldCompany.enterpriseNumberScheme === defaultEnterpriseNumberSchemeFor(input.oldCompany.country) ||
+    input.oldCompany.enterpriseNumberScheme === LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES[input.oldCompany.country]
   ) {
     // The scheme followed the old country's default, so it follows the new one's.
     enterpriseNumberScheme = defaultEnterpriseNumberSchemeFor(input.newCountry);
