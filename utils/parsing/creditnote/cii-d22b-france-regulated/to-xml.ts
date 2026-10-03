@@ -20,6 +20,7 @@ export function frenchRegulatedCreditNoteToCII({
     profile,
     documentNumber: creditNote.creditNoteNumber,
     typeCode: "381",
+    dueDate: creditNote.dueDate,
     supplierAddress: senderAddress,
     customerAddress: recipientAddress,
     isDocumentValidationEnforced,
