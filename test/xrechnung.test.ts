@@ -238,35 +238,61 @@ describe("writing XRechnung", () => {
   });
 });
 
-describe("routing a JSON invoice to a German recipient", () => {
+describe("routing a JSON document to a German recipient", () => {
   const registeredFor = (registrations: Record<string, string[]>): RecipientCapabilities => ({
     supportsDocType: (docTypeId) => docTypeId in registrations,
     getProcessIds: async (docTypeId) => registrations[docTypeId] ?? [],
   });
-  const select = (capabilities: RecipientCapabilities, doctypeId?: string) =>
+  const BIS3_CREDIT_NOTE = BIS3_INVOICE.replace("Invoice-2::Invoice##", "CreditNote-2::CreditNote##");
+  const XR_CREDIT_NOTE = DOC_TYPE_IDS["xrechnung-ubl-creditnote"];
+  const select = (
+    capabilities: RecipientCapabilities | null,
+    options: { recipientAddress?: string; doctypeId?: string; documentType?: typeof invoiceDocumentType | typeof creditNoteDocumentType } = {},
+  ) =>
     selectFormatAndProcess({
-      documentType: invoiceDocumentType,
+      documentType: options.documentType ?? invoiceDocumentType,
       document: {},
-      recipientAddress: AUTHORITY,
-      doctypeId,
+      recipientAddress: options.recipientAddress ?? AUTHORITY,
+      doctypeId: options.doctypeId,
       company: { country: "DE", accessPointProvider: "recommand-ap1" },
       isPlayground: false,
       capabilities,
     });
+  const takesBoth = registeredFor({
+    [BIS3_INVOICE]: [PROCESS_ID],
+    [DOC_TYPE_IDS["xrechnung-ubl-invoice"]]: [PROCESS_ID],
+    [DOC_TYPE_IDS["xrechnung-cii"]]: [PROCESS_ID],
+    [BIS3_CREDIT_NOTE]: [PROCESS_ID],
+    [XR_CREDIT_NOTE]: [PROCESS_ID],
+  });
 
-  it("keeps Peppol BIS first when the recipient takes both", async () => {
-    const selection = await select(registeredFor({ [BIS3_INVOICE]: [PROCESS_ID], [DOC_TYPE_IDS["xrechnung-ubl-invoice"]]: [PROCESS_ID] }));
-    expect(selection.format.key).toBe("peppol-ubl-bis3-invoice");
+  it("keeps Peppol BIS first for a business that takes both", async () => {
+    expect((await select(takesBoth, { recipientAddress: BUSINESS })).format.key).toBe("peppol-ubl-bis3-invoice");
+  });
+
+  it("writes XRechnung for a public authority that takes both, UBL before CII", async () => {
+    expect((await select(takesBoth)).format.key).toBe("xrechnung-ubl-invoice");
+    expect((await select(takesBoth, { documentType: creditNoteDocumentType })).format.key).toBe("xrechnung-ubl-creditnote");
+  });
+
+  it("writes XRechnung for a public authority whose registration could not be looked up", async () => {
+    expect((await select(null)).format.key).toBe("xrechnung-ubl-invoice");
+    expect((await select(null, { recipientAddress: BUSINESS })).format.key).toBe("peppol-ubl-bis3-invoice");
+  });
+
+  it("falls back to Peppol BIS for a public authority that only takes Peppol BIS", async () => {
+    expect((await select(registeredFor({ [BIS3_INVOICE]: [PROCESS_ID] }))).format.key).toBe("peppol-ubl-bis3-invoice");
   });
 
   it("writes XRechnung for a recipient that only takes XRechnung, UBL before CII", async () => {
-    expect((await select(registeredFor({ [DOC_TYPE_IDS["xrechnung-ubl-invoice"]]: [PROCESS_ID], [DOC_TYPE_IDS["xrechnung-cii"]]: [PROCESS_ID] }))).format.key).toBe("xrechnung-ubl-invoice");
-    expect((await select(registeredFor({ [DOC_TYPE_IDS["xrechnung-cii"]]: [PROCESS_ID] }))).format.key).toBe("xrechnung-cii");
+    const recipientAddress = BUSINESS;
+    expect((await select(registeredFor({ [DOC_TYPE_IDS["xrechnung-ubl-invoice"]]: [PROCESS_ID], [DOC_TYPE_IDS["xrechnung-cii"]]: [PROCESS_ID] }), { recipientAddress })).format.key).toBe("xrechnung-ubl-invoice");
+    expect((await select(registeredFor({ [DOC_TYPE_IDS["xrechnung-cii"]]: [PROCESS_ID] }), { recipientAddress })).format.key).toBe("xrechnung-cii");
   });
 
-  it("writes XRechnung when the caller asks for it", async () => {
-    const selection = await select(registeredFor({ [BIS3_INVOICE]: [PROCESS_ID] }), DOC_TYPE_IDS["xrechnung-ubl-invoice"]);
-    expect(selection.format.key).toBe("xrechnung-ubl-invoice");
+  it("writes the format the caller asks for", async () => {
+    expect((await select(takesBoth, { recipientAddress: BUSINESS, doctypeId: DOC_TYPE_IDS["xrechnung-ubl-invoice"] })).format.key).toBe("xrechnung-ubl-invoice");
+    expect((await select(takesBoth, { doctypeId: BIS3_INVOICE })).format.key).toBe("peppol-ubl-bis3-invoice");
   });
 });
 
@@ -317,5 +343,34 @@ describe("a recipient that only takes XRechnung", () => {
       input: { ...input, doctypeId: DOC_TYPE_IDS["xrechnung-ubl-invoice"] }, company, senderAddress: SUPPLIER, recipientAddress: BUSINESS,
       documentId: "doc_x3", recipientCapabilities: capabilities,
     })).rejects.toBeInstanceOf(SendingFailure);
+  });
+});
+
+describe("a public authority that takes both Peppol BIS and XRechnung", () => {
+  it("refuses a document that misses XRechnung fields instead of sending it as Peppol BIS", async () => {
+    const { prepareJsonDocument } = await import("../utils/pipelines/sending/prepare-json-document");
+    const { SendingFailure } = await import("../utils/pipelines/sending/errors");
+    const capabilities: RecipientCapabilities = {
+      supportsDocType: (docTypeId) => docTypeId === BIS3_INVOICE || docTypeId === DOC_TYPE_IDS["xrechnung-ubl-invoice"],
+      getProcessIds: async () => [PROCESS_ID],
+    };
+    const company = {
+      id: "c_de", name: seller.name, address: seller.street, postalCode: seller.postalZone, city: seller.city, country: "DE",
+      vatNumber: seller.vatNumber, enterpriseNumber: null, enterpriseNumberScheme: null, email: null, phone: null,
+      accessPointProvider: "recommand-ap1",
+    } as any;
+    const input = {
+      documentType: "invoice",
+      recipient: AUTHORITY,
+      document: {
+        invoiceNumber: "RE-2026-004",
+        buyer,
+        lines: [{ name: "Beratung", quantity: "1", unitCode: "C62", netPriceAmount: "100.00", vat: { category: "S", percentage: "19.00" } }],
+        paymentMeans,
+      },
+    } as any;
+    const prepared = prepareJsonDocument({ input, company, senderAddress: SUPPLIER, recipientAddress: AUTHORITY, documentId: "doc_x4", recipientCapabilities: capabilities });
+    await expect(prepared).rejects.toBeInstanceOf(SendingFailure);
+    await expect(prepared).rejects.toThrow(/seller\.phone \(BT-42, BR-DE-6\)/);
   });
 });
