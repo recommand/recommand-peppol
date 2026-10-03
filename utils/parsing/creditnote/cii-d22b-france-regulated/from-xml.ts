@@ -5,10 +5,10 @@ export function parseFrenchRegulatedCreditNoteFromCII(xml: string): CreditNote {
   const { documentNumber, typeCode, dueDate, ...document } =
     parseFrenchRegulatedBillingDocumentFromCII(xml);
   void typeCode;
-  void dueDate;
 
   return creditNoteSchema.parse({
     ...document,
+    ...(dueDate && { dueDate }),
     creditNoteNumber: documentNumber,
   });
 }

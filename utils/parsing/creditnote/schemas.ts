@@ -23,6 +23,7 @@ export const creditNoteInvoiceReferenceSchema = z.object({
 export const baseCreditNoteSchema = z.object({
   creditNoteNumber: z.string().openapi({ example: "CN-2024-001" }),
   issueDate: z.string().date().openapi({ example: "2024-03-20" }),
+  dueDate: z.string().date().nullish().openapi({ example: "2024-04-20", description: "The date the credited amount is due (BT-9). Optional: when left out, the credit note states no due date. In CII, including Factur-X, it is the payment due date of the payment terms; in UBL it is stated on the first payment means, so a UBL credit note without `paymentMeans` does not carry it." }),
   note: z.string().nullish().openapi({ example: "Thank you for your business" }),
   buyerReference: z.string().nullish().openapi({ example: "PO-2024-001" }),
   invoiceReferences: z.array(creditNoteInvoiceReferenceSchema).default([]).openapi({ description: "References to one or more invoices that are being credited" }),
@@ -53,7 +54,6 @@ export const creditNoteSchema = _creditNoteSchema.openapi({ ref: "CreditNote" })
 
 export const _sendCreditNoteSchema = creditNoteSchema.extend({
   issueDate: z.string().date().nullish().openapi({ example: "2024-03-20", description: "If not provided, the issue date will be the current date." }),
-  dueDate: z.string().date().nullish().openapi({ example: "2024-04-20", description: "If not provided, the due date will be 1 month from the issue date." }),
   seller: partySchema.nullish().openapi({ description: "If not provided, the seller will be the company that is sending the credit note." }),
   vat: sendVatTotalsSchema.nullish().openapi({ description: "If not provided, the VAT totals will be calculated from the document lines." }),
 })
