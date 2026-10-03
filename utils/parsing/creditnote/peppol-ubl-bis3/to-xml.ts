@@ -240,6 +240,10 @@ export function prebuildCreditNoteUBL({
           "cbc:PaymentMeansCode": {
             "#text": getPaymentCodeByKey(payment.paymentMethod),
           },
+          // A UBL credit note has no due date of its own: BT-9 is stated per payment means.
+          ...(creditNote.dueDate && {
+            "cbc:PaymentDueDate": creditNote.dueDate,
+          }),
           ...(payment.reference && {
             "cbc:PaymentID": {
               "#text": payment.reference,

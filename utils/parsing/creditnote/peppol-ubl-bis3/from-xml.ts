@@ -126,6 +126,8 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     financialInstitutionBranch: getNullableTextContent(payment.PayeeFinancialAccount?.FinancialInstitutionBranch?.ID),
   }));
 
+  const dueDate = getNullableTextContent(creditNote.PaymentMeans?.[0]?.PaymentDueDate);
+
   // Extract payment terms if present
   const paymentTerms = creditNote.PaymentTerms ? {
     note: getTextContent(creditNote.PaymentTerms.Note),
@@ -235,6 +237,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   const parsedCreditNote: CreditNote & SelfBillingCreditNote = {
     creditNoteNumber,
     issueDate,
+    ...(dueDate && { dueDate }),
     note,
     purchaseOrderReference,
     salesOrderReference,
