@@ -126,7 +126,10 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     financialInstitutionBranch: getNullableTextContent(payment.PayeeFinancialAccount?.FinancialInstitutionBranch?.ID),
   }));
 
-  const dueDate = getNullableTextContent(creditNote.PaymentMeans?.[0]?.PaymentDueDate);
+  // UBL-SR-45 allows one PaymentDueDate, on whichever payment means carries it.
+  const dueDate = getNullableTextContent(
+    (creditNote.PaymentMeans || []).find((payment: any) => payment.PaymentDueDate)?.PaymentDueDate
+  );
 
   // Extract payment terms if present
   const paymentTerms = creditNote.PaymentTerms ? {

@@ -236,12 +236,13 @@ export function prebuildCreditNoteUBL({
         },
       }),
       ...(creditNote.paymentMeans && {
-        "cac:PaymentMeans": creditNote.paymentMeans.map((payment) => ({
+        "cac:PaymentMeans": creditNote.paymentMeans.map((payment, index) => ({
           "cbc:PaymentMeansCode": {
             "#text": getPaymentCodeByKey(payment.paymentMethod),
           },
-          // A UBL credit note has no due date of its own: BT-9 is stated per payment means.
-          ...(creditNote.dueDate && {
+          // A UBL credit note has no document-level due date, so BT-9 goes into the
+          // payment means, and only once: UBL-SR-45 allows a single PaymentDueDate.
+          ...(index === 0 && creditNote.dueDate && {
             "cbc:PaymentDueDate": creditNote.dueDate,
           }),
           ...(payment.reference && {
