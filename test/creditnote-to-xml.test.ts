@@ -29,6 +29,10 @@ function asFrenchRegulatedCreditNote(creditNote: CreditNote): CreditNote {
 
     return {
         ...creditNote,
+        // BR-FR-CO-05: a French credit note references the invoice it credits, with its date.
+        invoiceReferences: creditNote.invoiceReferences?.some((reference) => reference.issueDate)
+            ? creditNote.invoiceReferences
+            : [{ id: "INV-FR-001", issueDate: "2026-01-01" }],
         currency: "EUR",
         seller: {
             ...creditNote.seller,
