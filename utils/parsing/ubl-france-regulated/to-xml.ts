@@ -26,12 +26,26 @@ export function frenchRegulatedBillingDocumentToUBL({
 
   root["cbc:CustomizationID"] = profile.customizationId;
   root["cbc:ProfileID"] = countrySpecific.billingMode;
-  root["cbc:Note"] = [
+
+  // The builder writes elements in key order, and the UBL schema puts cbc:Note
+  // right after the type code. Assigning the key would append it after the lines
+  // when the document has no note of its own, so rebuild the element with the
+  // notes in place.
+  const notes = [
     ...(document.note ? [document.note] : []),
     `#PMT#${countrySpecific.recoveryCostsNote}`,
     `#PMD#${countrySpecific.latePaymentPenaltiesNote}`,
     `#AAB#${countrySpecific.earlyPaymentDiscountNote}`,
   ];
+  const typeCodeKey =
+    rootName === "Invoice" ? "cbc:InvoiceTypeCode" : "cbc:CreditNoteTypeCode";
+  const entries = Object.entries(root).filter(([key]) => key !== "cbc:Note");
+  const typeCodeIndex = entries.findIndex(([key]) => key === typeCodeKey);
+  if (typeCodeIndex === -1) {
+    throw new Error(`UBL ${rootName} has no ${typeCodeKey} to place the notes after`);
+  }
+  entries.splice(typeCodeIndex + 1, 0, ["cbc:Note", notes]);
+  ublDocument[rootName] = Object.fromEntries(entries);
 
   return builder.build(ublDocument);
 }
