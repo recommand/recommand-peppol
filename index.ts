@@ -14,6 +14,7 @@ import arratechWebhookServer from "./api/internal/arratech-webhook";
 import postmarkWebhookServer from "./api/internal/postmark-webhook";
 import transmittedDocumentsServer from "./api/documents";
 import { generateSpecs, type OpenApiSpecsOptions } from "hono-openapi";
+import type { Context } from "hono";
 import webhooksServer from "./api/webhooks";
 import integrationsServer from "./api/integrations";
 import recipientServer from "./api/recipients";
@@ -186,20 +187,26 @@ For additional support or questions, don't hesitate to contact our support team.
       ],
     },
   };
-  // Generated on the first request and then reused, as hono-openapi's
-  // openAPISpecs handler does.
-  let openApiDocument: Awaited<ReturnType<typeof generateSpecs>> | undefined;
-  server.get("/openapi", async (c) => {
-    openApiDocument ??= normalizeSchemaExamples(
-      await generateSpecs(server, specsOptions, undefined, c)
+  // hono-openapi builds each response schema in place the first time it
+  // generates the document, so a second generation lacks the component
+  // schemas those responses refer to. Generate the document once and serve
+  // it from both routes.
+  let openApiDocument: ReturnType<typeof generateSpecs> | undefined;
+  const getOpenApiDocument = (c: Context) => {
+    openApiDocument ??= generateSpecs(server, specsOptions, undefined, c).then(
+      normalizeSchemaExamples,
+      (error) => {
+        openApiDocument = undefined;
+        throw error;
+      }
     );
-    return c.json(openApiDocument);
-  });
+    return openApiDocument;
+  };
+  server.get("/openapi", async (c) => c.json(await getOpenApiDocument(c)));
   server.get("/llms-full.txt", async (c) => {
-    const specs = normalizeSchemaExamples(
-      await generateSpecs(server, specsOptions, undefined, c)
+    const markdown = await createMarkdownFromOpenApi(
+      await getOpenApiDocument(c)
     );
-    const markdown = await createMarkdownFromOpenApi(specs);
     return c.text(markdown);
   });
 }
