@@ -608,28 +608,48 @@ describe("France CDAR JSON sending", () => {
     );
   });
 
-  it("does not validate reason-code compatibility with the status code", () => {
-    expect(
+  it("only sends reason codes the status accepts (BR-FR-CDV-CL-09)", () => {
+    const send = (statusCode: string, reasonCode: string) =>
       sendFranceCdarSchema.safeParse({
         ...request.document,
-        statusCode: "207",
-        reasonCode: "JUSTIF_ABS",
+        statusCode,
+        reasonCode,
+        ...(reasonCode === "AUTRE" ? { reasonNote: "Motif" } : {}),
+      });
+
+    expect(send("207", "JUSTIF_ABS").success).toBe(false);
+    expect(send("207", "LIVR_INCOMP").success).toBe(true);
+    expect(send("210", "AUTRE").success).toBe(false);
+    expect(send("210", "TX_TVA_ERR").success).toBe(true);
+    expect(send("213", "AUTRE").success).toBe(false);
+    // Statuses without a list of their own accept any documented code.
+    expect(send("205", "DOUBLON").success).toBe(true);
+    expect(send("207", "UNKNOWN_REASON").success).toBe(false);
+
+    const refused = send("210", "AUTRE");
+    expect(refused.success ? [] : refused.error.issues.map((issue) => issue.message)).toContain(
+      "reasonCode AUTRE is not allowed for status 210. Allowed: TX_TVA_ERR, MONTANTTOTAL_ERR, CALCUL_ERR, NON_CONFORME, DOUBLON, DEST_ERR, TRANSAC_INC, EMMET_INC, CONTRAT_TERM, DOUBLE_FACT, CMD_ERR, ADR_ERR, REF_CT_ABSENT"
+    );
+  });
+
+  it("keeps received CDARs whose reason code the status no longer accepts", () => {
+    const sendDocument = sendFranceCdarSchema.parse({
+      ...request.document,
+      statusCode: "210",
+      reasonCode: "TX_TVA_ERR",
+    });
+
+    expect(
+      franceCdarSchema.safeParse({
+        ...sendDocument,
+        reasonCode: "AUTRE",
+        reasonNote: "Motif",
+        id: "CDAR-2026-001",
+        issueDate: "2026-07-23T14:05:09",
+        recipientElectronicAddress: "987654321_STATUTS",
+        recipientElectronicAddressScheme: "0225",
       }).success
     ).toBe(true);
-    expect(
-      sendFranceCdarSchema.safeParse({
-        ...request.document,
-        statusCode: "205",
-        reasonCode: "DOUBLON",
-      }).success
-    ).toBe(true);
-    expect(
-      sendFranceCdarSchema.safeParse({
-        ...request.document,
-        statusCode: "207",
-        reasonCode: "UNKNOWN_REASON",
-      }).success
-    ).toBe(false);
   });
 
   it("requires a reason code for status 501 (BR-FR-CDV-15)", () => {

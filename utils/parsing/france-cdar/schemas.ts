@@ -117,7 +117,9 @@ const franceCdarReasonCodeDescription = `Coded reason for the invoice lifecycle 
 | \`REJ_CONT_B2G\` | Rejected by B2G business controls |
 | \`REJ_REF_PJ\` | Rejected because of an attachment-reference error |
 | \`REJ_ASS_PJ\` | Rejected because of an attachment-association error |
-| \`NON_TRANSMISE\` | Submitted but not transmitted because the recipient has no receiving platform |`;
+| \`NON_TRANSMISE\` | Submitted but not transmitted because the recipient has no receiving platform |
+
+When sending, statuses \`200\`, \`206\`, \`207\`, \`208\`, \`210\` and \`213\` accept only the codes the French rules list for them (BR-FR-CDV-CL-09). A refusal (\`210\`) accepts \`TX_TVA_ERR\`, \`MONTANTTOTAL_ERR\`, \`CALCUL_ERR\`, \`NON_CONFORME\`, \`DOUBLON\`, \`DEST_ERR\`, \`TRANSAC_INC\`, \`EMMET_INC\`, \`CONTRAT_TERM\`, \`DOUBLE_FACT\`, \`CMD_ERR\`, \`ADR_ERR\` and \`REF_CT_ABSENT\`, so not \`AUTRE\`.`;
 
 export const franceCdarStatusCodeSchema = z.enum([
   "200", // Submitted
@@ -294,6 +296,38 @@ const statusesRequiringReason = new Set([
   "213",
   "501",
 ]);
+
+// BR-FR-CDV-CL-09: the reason codes each status accepts. A status not listed here
+// accepts any reason code. Status 210 lists the codes for a refusal sent by a platform;
+// the wider list for refusals sent by the PPF on behalf of a public buyer does not
+// apply to the CDARs sent through this API.
+const reasonCodesByStatus: Partial<
+  Record<
+    z.infer<typeof franceCdarStatusCodeSchema>,
+    readonly z.infer<typeof franceCdarReasonCodeSchema>[]
+  >
+> = {
+  "200": ["NON_TRANSMISE"],
+  "206": ["AUTRE", "CMD_ERR", "SIRET_ERR", "CODE_ROUTAGE_ERR", "REF_CT_ABSENT", "REF_ERR", "PU_ERR", "REM_ERR", "QTE_ERR", "ART_ERR", "MODPAI_ERR", "QUALITE_ERR", "LIVR_INCOMP"],
+  "207": ["AUTRE", "COORD_BANC_ERR", "TX_TVA_ERR", "MONTANTTOTAL_ERR", "CALCUL_ERR", "NON_CONFORME", "DOUBLON", "DEST_INC", "DEST_ERR", "TRANSAC_INC", "EMMET_INC", "CONTRAT_TERM", "DOUBLE_FACT", "CMD_ERR", "ADR_ERR", "SIRET_ERR", "CODE_ROUTAGE_ERR", "REF_CT_ABSENT", "REF_ERR", "PU_ERR", "REM_ERR", "QTE_ERR", "ART_ERR", "MODPAI_ERR", "QUALITE_ERR", "LIVR_INCOMP"],
+  "208": ["JUSTIF_ABS", "COORD_BANC_ERR", "CMD_ERR", "SIRET_ERR", "CODE_ROUTAGE_ERR", "REF_CT_ABSENT", "REF_ERR"],
+  "210": ["TX_TVA_ERR", "MONTANTTOTAL_ERR", "CALCUL_ERR", "NON_CONFORME", "DOUBLON", "DEST_ERR", "TRANSAC_INC", "EMMET_INC", "CONTRAT_TERM", "DOUBLE_FACT", "CMD_ERR", "ADR_ERR", "REF_CT_ABSENT"],
+  "213": ["MONTANTTOTAL_ERR", "CALCUL_ERR", "DOUBLON", "DEST_INC", "ADR_ERR", "REJ_SEMAN", "REJ_UNI", "REJ_COH", "REJ_ADR", "REJ_CONT_B2G", "REJ_REF_PJ", "REJ_ASS_PJ"],
+};
+
+function refineSendFranceCdarReasonCode(
+  data: Pick<z.infer<typeof franceCdarObjectSchema>, "statusCode" | "reasonCode">,
+  ctx: z.RefinementCtx
+) {
+  const allowed = reasonCodesByStatus[data.statusCode];
+  if (data.reasonCode && allowed && !allowed.includes(data.reasonCode)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["reasonCode"],
+      message: `reasonCode ${data.reasonCode} is not allowed for status ${data.statusCode}. Allowed: ${allowed.join(", ")}`,
+    });
+  }
+}
 
 const franceCdarTransmissionStatusCodes = new Set([
   "200",
@@ -594,7 +628,12 @@ Defaults to \`305\` for statuses \`200\`, \`201\`, \`202\`, \`203\`, \`213\`, an
     ...data,
     phase: data.phase ?? getFranceCdarPhaseForStatus(data.statusCode),
   }))
-  .superRefine((data, ctx) => refineFranceCdar(data, ctx, false))
+  .superRefine((data, ctx) => {
+    refineFranceCdar(data, ctx, false);
+    // Only on sending: a received CDAR is stored as it arrived, even when its
+    // sender used a reason code the current rules no longer accept for its status.
+    refineSendFranceCdarReasonCode(data, ctx);
+  })
   .openapi({
     ref: "SendFranceCdar",
     title: "French Invoicing CDAR to send",
