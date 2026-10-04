@@ -118,8 +118,25 @@ const franceCdarReasonCodeDescription = `Coded reason for the invoice lifecycle 
 | \`REJ_REF_PJ\` | Rejected because of an attachment-reference error |
 | \`REJ_ASS_PJ\` | Rejected because of an attachment-association error |
 | \`NON_TRANSMISE\` | Submitted but not transmitted because the recipient has no receiving platform |
+| \`IRR_VIDE_F\` | Inadmissible: a file in the submitted flow is empty |
+| \`IRR_TYPE_F\` | Inadmissible: a file in the flow has a wrong type or extension |
+| \`IRR_SYNTAX\` | Inadmissible: a file in the flow fails the syntax check |
+| \`IRR_TAILLE_PJ\` | Inadmissible: an attachment exceeds the size limit |
+| \`IRR_NOM_PJ\` | Inadmissible: an attachment name contains forbidden characters |
+| \`IRR_VID_PJ\` | Inadmissible: an attachment is empty |
+| \`IRR_EXT_DOC\` | Inadmissible: an attachment has a wrong extension |
+| \`IRR_TAILLE_F\` | Inadmissible: a file in the flow exceeds the maximum size |
+| \`IRR_ANTIVIRUS\` | Inadmissible: the flow fails the anti-virus check |
+| \`IRR_NOM_F\` | Inadmissible: a file name in the flow is invalid |
+| \`SUPPR_COMP_AVOIR\` | Public-sector refusal: withdrawn for offsetting against credit notes |
+| \`TRANSF_PMNT_REGIE\` | Public-sector refusal: transferred for payment through a régie |
+| \`CONTACT_ACHTR\` | Public-sector refusal: other reason, contact your buyer |
+| \`RETRAIT_MAN_SERV\` | Public-sector refusal reason, see the AFNOR XP Z12-012 reason code table |
+| \`ST_CT_NON_DECLAR\` | Public-sector refusal reason, see the AFNOR XP Z12-012 reason code table |
 
-When sending, statuses \`200\`, \`206\`, \`207\`, \`208\`, \`210\` and \`213\` accept only the codes the French rules list for them (BR-FR-CDV-CL-09). A refusal (\`210\`) accepts \`TX_TVA_ERR\`, \`MONTANTTOTAL_ERR\`, \`CALCUL_ERR\`, \`NON_CONFORME\`, \`DOUBLON\`, \`DEST_ERR\`, \`TRANSAC_INC\`, \`EMMET_INC\`, \`CONTRAT_TERM\`, \`DOUBLE_FACT\`, \`CMD_ERR\`, \`ADR_ERR\` and \`REF_CT_ABSENT\`, so not \`AUTRE\`.`;
+The \`IRR_*\` codes are the reasons for an inadmissible file (\`501\`). The public-sector refusal codes are set by the public invoicing portal and only appear in CDARs you receive.
+
+When sending, statuses \`200\`, \`206\`, \`207\`, \`208\`, \`210\`, \`213\` and \`501\` accept only the codes the French rules list for them (BR-FR-CDV-CL-09). A refusal (\`210\`) accepts \`TX_TVA_ERR\`, \`MONTANTTOTAL_ERR\`, \`CALCUL_ERR\`, \`NON_CONFORME\`, \`DOUBLON\`, \`DEST_ERR\`, \`TRANSAC_INC\`, \`EMMET_INC\`, \`CONTRAT_TERM\`, \`DOUBLE_FACT\`, \`CMD_ERR\`, \`ADR_ERR\` and \`REF_CT_ABSENT\`, so not \`AUTRE\`.`;
 
 export const franceCdarStatusCodeSchema = z.enum([
   "200", // Submitted
@@ -224,6 +241,21 @@ export const franceCdarReasonCodeSchema = z.enum([
   "REJ_REF_PJ", // Attachment-reference rejection
   "REJ_ASS_PJ", // Attachment-association rejection
   "NON_TRANSMISE", // Recipient has no receiving platform
+  "IRR_VIDE_F", // Inadmissible: empty file in the flow
+  "IRR_TYPE_F", // Inadmissible: wrong file type or extension
+  "IRR_SYNTAX", // Inadmissible: file fails the syntax check
+  "IRR_TAILLE_PJ", // Inadmissible: attachment too large
+  "IRR_NOM_PJ", // Inadmissible: forbidden characters in an attachment name
+  "IRR_VID_PJ", // Inadmissible: empty attachment
+  "IRR_EXT_DOC", // Inadmissible: wrong attachment extension
+  "IRR_TAILLE_F", // Inadmissible: file too large
+  "IRR_ANTIVIRUS", // Inadmissible: anti-virus check failed
+  "IRR_NOM_F", // Inadmissible: invalid file name
+  "SUPPR_COMP_AVOIR", // Public-sector refusal: offset against credit notes
+  "TRANSF_PMNT_REGIE", // Public-sector refusal: payment through a régie
+  "CONTACT_ACHTR", // Public-sector refusal: contact your buyer
+  "RETRAIT_MAN_SERV", // Public-sector refusal
+  "ST_CT_NON_DECLAR", // Public-sector refusal
 ]).openapi({ description: franceCdarReasonCodeDescription });
 
 const franceCdarAmountSchema = z
@@ -299,8 +331,8 @@ const statusesRequiringReason = new Set([
 
 // BR-FR-CDV-CL-09: the reason codes each status accepts. A status not listed here
 // accepts any reason code. Status 210 lists the codes for a refusal sent by a platform;
-// the wider list for refusals sent by the PPF on behalf of a public buyer does not
-// apply to the CDARs sent through this API.
+// the wider list for refusals sent by the PPF on behalf of a public buyer, with the
+// public-sector codes, does not apply to the CDARs sent through this API.
 const reasonCodesByStatus: Partial<
   Record<
     z.infer<typeof franceCdarStatusCodeSchema>,
@@ -312,13 +344,32 @@ const reasonCodesByStatus: Partial<
   "207": ["AUTRE", "COORD_BANC_ERR", "TX_TVA_ERR", "MONTANTTOTAL_ERR", "CALCUL_ERR", "NON_CONFORME", "DOUBLON", "DEST_INC", "DEST_ERR", "TRANSAC_INC", "EMMET_INC", "CONTRAT_TERM", "DOUBLE_FACT", "CMD_ERR", "ADR_ERR", "SIRET_ERR", "CODE_ROUTAGE_ERR", "REF_CT_ABSENT", "REF_ERR", "PU_ERR", "REM_ERR", "QTE_ERR", "ART_ERR", "MODPAI_ERR", "QUALITE_ERR", "LIVR_INCOMP"],
   "208": ["JUSTIF_ABS", "COORD_BANC_ERR", "CMD_ERR", "SIRET_ERR", "CODE_ROUTAGE_ERR", "REF_CT_ABSENT", "REF_ERR"],
   "210": ["TX_TVA_ERR", "MONTANTTOTAL_ERR", "CALCUL_ERR", "NON_CONFORME", "DOUBLON", "DEST_ERR", "TRANSAC_INC", "EMMET_INC", "CONTRAT_TERM", "DOUBLE_FACT", "CMD_ERR", "ADR_ERR", "REF_CT_ABSENT"],
+  "501": ["IRR_VIDE_F", "IRR_TYPE_F", "IRR_SYNTAX", "IRR_TAILLE_PJ", "IRR_NOM_PJ", "IRR_VID_PJ", "IRR_EXT_DOC", "IRR_TAILLE_F", "IRR_ANTIVIRUS", "IRR_NOM_F"],
   "213": ["MONTANTTOTAL_ERR", "CALCUL_ERR", "DOUBLON", "DEST_INC", "ADR_ERR", "REJ_SEMAN", "REJ_UNI", "REJ_COH", "REJ_ADR", "REJ_CONT_B2G", "REJ_REF_PJ", "REJ_ASS_PJ"],
 };
+
+// The public invoicing portal sets these when it refuses an invoice on behalf of a
+// public buyer. A platform or company never sends them.
+const publicSectorRefusalReasonCodes: readonly z.infer<typeof franceCdarReasonCodeSchema>[] = [
+  "RETRAIT_MAN_SERV",
+  "ST_CT_NON_DECLAR",
+  "SUPPR_COMP_AVOIR",
+  "TRANSF_PMNT_REGIE",
+  "CONTACT_ACHTR",
+];
 
 function refineSendFranceCdarReasonCode(
   data: Pick<z.infer<typeof franceCdarObjectSchema>, "statusCode" | "reasonCode">,
   ctx: z.RefinementCtx
 ) {
+  if (data.reasonCode && publicSectorRefusalReasonCodes.includes(data.reasonCode)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["reasonCode"],
+      message: `reasonCode ${data.reasonCode} is set by the public invoicing portal and cannot be sent`,
+    });
+    return;
+  }
   const allowed = reasonCodesByStatus[data.statusCode];
   if (data.reasonCode && allowed && !allowed.includes(data.reasonCode)) {
     ctx.addIssue({
