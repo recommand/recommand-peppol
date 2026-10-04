@@ -1,6 +1,6 @@
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { COUNTRIES } from "@peppol/utils/countries";
-import { validateIdentifier } from "@peppol/utils/identifier-validation";
+import { normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { cleanIdentifier, cleanScheme, validateIdentifierAgainstCompany } from "./company-identifiers";
 import { findUnsupportedIdentifiers } from "./company-identifier-policy";
@@ -84,7 +84,7 @@ function defaultIdentifiersFor(
     if (cleanedEnterpriseNumber) {
       defaults.push({
         scheme: cleanScheme(scheme),
-        identifier: cleanIdentifier(cleanedEnterpriseNumber),
+        identifier: normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(cleanedEnterpriseNumber)),
       });
     }
   }
@@ -103,8 +103,12 @@ function defaultEnterpriseNumberSchemeFor(country: string): string | null {
   return scheme && zodValidIsoIcdSchemeIdentifiers.safeParse(scheme).success ? scheme : null;
 }
 
+/** Stored identifiers may predate normalizeIdentifierValue, so both sides are normalised. */
 function sameIdentifier(left: NewIdentifier, right: NewIdentifier): boolean {
-  return left.scheme === right.scheme && left.identifier === right.identifier;
+  return (
+    left.scheme === right.scheme &&
+    normalizeIdentifierValue(left.scheme, left.identifier) === normalizeIdentifierValue(right.scheme, right.identifier)
+  );
 }
 
 /**
@@ -149,6 +153,7 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
   );
 
   const updatedCompany = {
+    country: input.newCountry,
     smpProvider: providers.smpProvider,
     enterpriseNumber: input.enterpriseNumber,
     vatNumber: input.vatNumber,
