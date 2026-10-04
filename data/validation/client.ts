@@ -1,14 +1,20 @@
 import {
   validationResponse,
+  type ValidationProfile,
   type ValidationResponse,
 } from "@peppol/types/validation";
 import { sendTelegramNotification } from "@peppol/utils/system-notifications/telegram";
 
 export async function validateXmlDocument(
   xmlDocument: string,
+  options: { profile?: ValidationProfile } = {},
 ): Promise<ValidationResponse> {
   try {
-    const response = await fetch(process.env.VALIDATION_SERVICE_URL ?? "https://validation.recommand.dev/validate", {
+    const url = new URL(process.env.VALIDATION_SERVICE_URL ?? "https://validation.recommand.dev/validate");
+    if (options.profile) {
+      url.searchParams.set("profile", options.profile);
+    }
+    const response = await fetch(url, {
       method: "POST",
       body: xmlDocument,
       headers: {

@@ -1,6 +1,7 @@
 import { findCompanyByPeppolId } from "@peppol/data/companies";
 import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
 import { validateXmlDocument } from "@peppol/data/validation/client";
+import { getValidationProfile } from "@peppol/utils/type-repository/document-formats";
 import { ulid } from "ulid";
 import { prepareIncomingDocument } from "../receiving/prepare-document";
 import {
@@ -42,7 +43,9 @@ export async function providerSentPipeline(
     company,
     senderId,
   });
-  const validation = await validateXmlDocument(prepared.xmlDocument);
+  const validation = await validateXmlDocument(prepared.xmlDocument, {
+    profile: getValidationProfile(docTypeId),
+  });
 
   return await recordOutgoingDocument({
     c: options.c ?? null,

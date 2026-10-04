@@ -1,3 +1,4 @@
+import type { ValidationProfile } from "@peppol/types/validation";
 import type {
   AnyDocumentType,
   ParsedDocumentOf,
@@ -64,6 +65,13 @@ export type DocumentFormat<DocumentTypes extends readonly AnyDocumentType[]> = {
   detectDocumentType: (raw: string | Buffer) => DocumentTypes[number];
 
   isFormat?: (document: ParsedXmlDocument) => boolean;
+
+  /**
+   * The validation profile to validate this format's XML with, for a format whose XML does
+   * not identify the rules that apply to it. Absent for every format the validation
+   * service recognises by content.
+   */
+  validationProfile?: ValidationProfile;
 
   /** Absent for the XML formats, which are transmitted as the bytes `encode` returns. */
   container?: DocumentContainer<ParsedDocumentOf<DocumentTypes[number]>>;

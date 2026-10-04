@@ -3,12 +3,16 @@ import {
   validateXmlDocument,
 } from "@peppol/data/validation/client";
 import type { ValidationResponse } from "@peppol/types/validation";
+import { getValidationProfile } from "@peppol/utils/type-repository/document-formats";
 import { SendingFailure } from "./errors";
 
 export async function validateDocument(
   xml: string,
+  docTypeId: string,
 ): Promise<ValidationResponse> {
-  const validation = await validateXmlDocument(xml);
+  const validation = await validateXmlDocument(xml, {
+    profile: getValidationProfile(docTypeId),
+  });
   if (validation.result !== "invalid") return validation;
 
   const grouped = groupValidationErrors(validation);
