@@ -42,6 +42,8 @@ const writeCii = (document: CreditNote) =>
 const frenchCreditNote = (overrides: Partial<CreditNote> = {}): CreditNote =>
   creditNote({
     seller: { name: "Vendeur SAS", street: "1 Rue", street2: null, city: "Paris", postalZone: "75001", country: "FR", vatNumber: "FR40303265045", enterpriseNumber: "303265045", enterpriseNumberScheme: "0002" },
+    // BR-FR-16: a French credit note carries a French VAT rate.
+    lines: [{ name: "Returned item", quantity: "1", unitCode: "C62", netPriceAmount: "100.00", netAmount: null, vat: { category: "S", percentage: "20.00" } }],
     countrySpecific: {
       country: "FR",
       billingMode: "B1",
