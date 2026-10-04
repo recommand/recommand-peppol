@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from "bun:test";
 import { COUNTRIES } from "../utils/countries";
+import { countryIdentifierRules } from "../utils/identifiers/countries";
 import {
   getVatNumberPrefixes,
   normalizeIdentifierValue,
@@ -207,6 +208,14 @@ describe("national identifier rules", () => {
           expect(() => validateIdentifier(scheme, "not-a-number"), `${country.code} ${scheme}`).toThrow();
         }
       }
+    }
+  });
+
+  it("are registered for countries countries.ts knows, once each", () => {
+    const codes = countryIdentifierRules.map((rules) => rules.country);
+    expect(new Set(codes).size).toBe(codes.length);
+    for (const code of codes) {
+      expect(COUNTRIES.some((country) => country.code === code), code).toBe(true);
     }
   });
 
