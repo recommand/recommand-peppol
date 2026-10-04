@@ -121,7 +121,7 @@ export async function sendingPipeline(c: SendingContext) {
     c.set("sendDocumentRecordingXml", xmlDocument);
 
     const validation = xmlDocument
-      ? await validateDocument(xmlDocument)
+      ? await validateDocument(xmlDocument, prepared.docTypeId)
       : undefined;
 
     let sentPeppol = false;

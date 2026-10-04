@@ -21,6 +21,13 @@ export const validationError = z.object({
     }),
 });
 
+/**
+ * Names a rule set the validation service cannot pick from the document's content. A
+ * French Factur-X carries CII that declares a plain Factur-X guideline, so only the
+ * caller knows the French rules apply to it.
+ */
+export type ValidationProfile = "fr-facturx";
+
 export const validationResult = z.enum(["valid", "invalid", "not_supported", "error"]);
 
 export const validationResponse = z.object({

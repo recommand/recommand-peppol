@@ -174,7 +174,7 @@ async function generateImplementation(c: GenerateContext) {
     //
     // The same validation the send endpoint runs, so a document that comes back is one
     // the network would accept, whoever it is eventually addressed to.
-    await validateDocument(prepared.xml);
+    await validateDocument(prepared.xml, prepared.docTypeId);
 
     // Currently not mentioned in the API docs yet, so we can still roll this back if needed
     if (c.req.header("accept")?.toLowerCase().startsWith("application/xml")) {

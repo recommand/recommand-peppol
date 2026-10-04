@@ -1,3 +1,4 @@
+import type { ValidationProfile } from "@peppol/types/validation";
 import {
   isCountrySpecificProcessIdAllowed,
   resolveCountrySpecificProcessId,
@@ -49,6 +50,11 @@ export const documentFormats: readonly AnyDocumentFormat[] = [
 
 export function getDocumentFormat(key: string): AnyDocumentFormat | undefined {
   return documentFormats.find((format) => format.key === key);
+}
+
+/** The validation profile for a document transmitted under this doc type id, if it needs one. */
+export function getValidationProfile(docTypeId: string): ValidationProfile | undefined {
+  return getDocumentFormatByDocTypeId(docTypeId)?.validationProfile;
 }
 
 /** The doc type id is what an incoming transmission names, so reception looks up by it. */

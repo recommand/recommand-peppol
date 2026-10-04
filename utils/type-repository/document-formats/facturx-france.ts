@@ -29,6 +29,8 @@ export const facturxFranceFormat: DocumentFormat<
 
   docTypeId,
   supportedDocumentTypes: [invoiceDocumentType, creditNoteDocumentType],
+  // The CII declares plain EN 16931, so the French rules apply only when asked for.
+  validationProfile: "fr-facturx",
   supportedProcessIds: [regulatedProcessId, nonRegulatedProcessId],
   smpRegistration: [
     {

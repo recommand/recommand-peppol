@@ -10,6 +10,7 @@ import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-
 import { sendIncomingDocumentNotifications } from "@peppol/data/send-document-notifications";
 import { findSupplierByVatAndPeppolId } from "@peppol/data/suppliers";
 import { validateXmlDocument } from "@peppol/data/validation/client";
+import { getValidationProfile } from "@peppol/utils/type-repository/document-formats";
 import { transmittedDocuments } from "@peppol/db/schema";
 import { recordUsageEvents, usageEventId } from "@peppol/data/usage";
 import { isBillableDocument } from "@peppol/utils/type-repository/document-types/billing";
@@ -58,7 +59,9 @@ export async function receivingPipeline(
     company,
     senderId,
   });
-  const validation = await validateXmlDocument(received.xmlDocument);
+  const validation = await validateXmlDocument(received.xmlDocument, {
+    profile: getValidationProfile(docTypeId),
+  });
   const type = received.type;
   const parsedDocument = received.parsedDocument;
   const transmittedDocumentId = `doc_${ulid()}`;
