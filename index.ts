@@ -13,11 +13,7 @@ import diditWebhookServer from "./api/internal/didit-webhook";
 import arratechWebhookServer from "./api/internal/arratech-webhook";
 import postmarkWebhookServer from "./api/internal/postmark-webhook";
 import transmittedDocumentsServer from "./api/documents";
-import {
-  generateSpecs,
-  openAPISpecs,
-  type OpenApiSpecsOptions,
-} from "hono-openapi";
+import { generateSpecs, type OpenApiSpecsOptions } from "hono-openapi";
 import webhooksServer from "./api/webhooks";
 import integrationsServer from "./api/integrations";
 import recipientServer from "./api/recipients";
@@ -37,6 +33,7 @@ import { initializeFrenchReportingStatusCron } from "./data/fr-reporting-submiss
 import { initializeDeliveryReconciliationCron } from "./data/deliveries/reconcile";
 import { initializeEmailDeliveryReconciliationCron } from "./data/deliveries/reconcile-email";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
+import { normalizeSchemaExamples } from "./utils/openapi-schema-examples";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
 import { registerPeppolEventTypes } from "./lib/event-types";
@@ -189,9 +186,19 @@ For additional support or questions, don't hesitate to contact our support team.
       ],
     },
   };
-  server.get("/openapi", openAPISpecs(server, specsOptions));
+  // Generated on the first request and then reused, as hono-openapi's
+  // openAPISpecs handler does.
+  let openApiDocument: Awaited<ReturnType<typeof generateSpecs>> | undefined;
+  server.get("/openapi", async (c) => {
+    openApiDocument ??= normalizeSchemaExamples(
+      await generateSpecs(server, specsOptions, undefined, c)
+    );
+    return c.json(openApiDocument);
+  });
   server.get("/llms-full.txt", async (c) => {
-    const specs = await generateSpecs(server, specsOptions, undefined, c);
+    const specs = normalizeSchemaExamples(
+      await generateSpecs(server, specsOptions, undefined, c)
+    );
     const markdown = await createMarkdownFromOpenApi(specs);
     return c.text(markdown);
   });
