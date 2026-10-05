@@ -52,6 +52,15 @@ export async function init(app: RecommandApp, server: Server) {
   addBackendEventListener(CORE_BACKEND_EVENTS.TEAM_CREATED, onTeamCreated);
   addBackendEventListener(CORE_BACKEND_EVENTS.TEAM_BEFORE_DELETE, onTeamBeforeDelete);
 
+  registerOpenApiRoutes(server);
+}
+
+/**
+ * Serves the OpenAPI document of every route on `server` at `/openapi`, and the
+ * same document as Markdown at `/llms-full.txt`. Exported so that tooling can
+ * build the document exactly as it is served, without the rest of `init()`.
+ */
+export function registerOpenApiRoutes(server: Server) {
   const exclude: RegExp[] = [
     /^\/api\/core(?!\/auth\/verify).*$/, // Exclude all core API endpoints except the auth/verify endpoint
     /^\/api\/peppol.*$/, // Exclude all peppol API endpoints (these have been replaced by the new v1 API)
