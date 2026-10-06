@@ -960,3 +960,6 @@ XRechnung 3.0 UBL Credit Note,Avoir XRechnung 3.0 UBL
 XRechnung 3.0 CII Invoice + Credit Note,Facture + Avoir XRechnung 3.0 CII
 Verification Link Withdrawn,Lien de vérification retiré
 This link was withdrawn because an earlier verification of {0} had already been submitted. It is not a rejection\, and you do not need to submit anything here.,Ce lien a été retiré car une vérification antérieure de {0} avait déjà été soumise. Il ne s'agit pas d'un refus et vous n'avez rien à soumettre ici.
+Set up later,Configurer plus tard
+Edit details,Modifier les informations
+Working through the API for clients? Choose ‘Set up later’ and add their companies later.,Vous travaillez via l'API pour des clients ? Choisissez « Configurer plus tard » et ajoutez leurs entreprises ensuite.

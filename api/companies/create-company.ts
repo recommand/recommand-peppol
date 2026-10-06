@@ -139,6 +139,9 @@ async function _createCompanyImplementation(c: CreateCompanyContext) {
     } catch (error) {
         console.error(error);
         if (error instanceof UserFacingError) {
+            if (error.field) {
+                return c.json(actionFailure({ [error.field]: [error.message] }), 400);
+            }
             return c.json(actionFailure(error), 400);
         }
         return c.json(actionFailure("Could not create company"), 500);

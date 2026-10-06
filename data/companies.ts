@@ -148,7 +148,7 @@ export async function createCompany(company: Omit<InsertCompany, "accessPointPro
   const defaultPeppolProviders = resolveDefaultPeppolProviders(company.country);
 
   if (getCountrySupportLevel(company.country) === "unsupported") {
-    throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be created in this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`);
+    throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be created in this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`, { field: "country" });
   }
 
   validateCompanyNumbers({
