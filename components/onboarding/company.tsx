@@ -77,6 +77,7 @@ export default function CompanyOnboarding({ onComplete }: { onComplete: () => Pr
                 initialData={initialData}
                 onComplete={handleComplete}
                 onCancel={handleCancel}
+                offerSetUpLater
             />
         </div>
         </div>

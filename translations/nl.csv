@@ -960,3 +960,6 @@ XRechnung 3.0 UBL Credit Note,XRechnung 3.0 UBL-creditnota
 XRechnung 3.0 CII Invoice + Credit Note,XRechnung 3.0 CII-factuur + creditnota
 Verification Link Withdrawn,Verificatielink ingetrokken
 This link was withdrawn because an earlier verification of {0} had already been submitted. It is not a rejection\, and you do not need to submit anything here.,Deze link is ingetrokken omdat er al een eerdere verificatie voor {0} was ingediend. Dit is geen afwijzing en je hoeft hier niets in te dienen.
+Set up later,Later instellen
+Edit details,Gegevens aanpassen
+Working through the API for clients? Choose ‘Set up later’ and add their companies later.,Werk je via de API voor klanten? Kies ‘Later instellen’ en voeg hun bedrijven later toe.

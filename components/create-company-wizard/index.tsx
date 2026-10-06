@@ -15,9 +15,15 @@ type CreateCompanyWizardProps = {
     initialData?: Partial<CompanyFormData>;
     onComplete: (company: Company) => void;
     onCancel: () => void;
+    /**
+     * Present leaving the wizard as setting the company up later rather than as
+     * cancelling, and offer it when a company cannot be created as entered. For
+     * onboarding, where a team can work without a company of its own.
+     */
+    offerSetUpLater?: boolean;
 };
 
-export function CreateCompanyWizard({ teamId, verificationRequirements, initialData, onComplete, onCancel }: CreateCompanyWizardProps) {
+export function CreateCompanyWizard({ teamId, verificationRequirements, initialData, onComplete, onCancel, offerSetUpLater = false }: CreateCompanyWizardProps) {
     const { t } = useTranslation();
     const displayStepTitles: Record<number, string> = {
         1: t`Country & VAT`,
@@ -27,6 +33,7 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
         6: t`Verification`,
     };
     const [step, setStep] = useState(1);
+    // An initial country given as undefined leaves the country unchosen.
     const [formData, setFormData] = useState<CompanyFormData>({
         ...defaultCompanyFormData,
         ...initialData,
@@ -79,6 +86,7 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
                         setStep(2);
                     }}
                     onCancel={onCancel}
+                    offerSetUpLater={offerSetUpLater}
                 />
             )}
             {step === 2 && (
@@ -88,7 +96,10 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
                         mergeData(data);
                         setStep(3);
                     }}
-                    onBack={() => setStep(1)}
+                    onBack={(data) => {
+                        mergeData(data);
+                        setStep(1);
+                    }}
                 />
             )}
             {step === 3 && (
@@ -112,6 +123,8 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
                         setStep(5);
                     }}
                     onBack={() => setStep(3)}
+                    onEdit={() => setStep(1)}
+                    onSetUpLater={offerSetUpLater ? onCancel : undefined}
                 />
             )}
             {step === 5 && createdCompany && (

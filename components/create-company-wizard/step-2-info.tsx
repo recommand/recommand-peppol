@@ -7,7 +7,7 @@ import { useTranslation } from "@core/hooks/use-translation";
 type Step2Props = {
     data: Partial<CompanyFormData>;
     onNext: (data: Partial<CompanyFormData>) => void;
-    onBack: () => void;
+    onBack: (data: Partial<CompanyFormData>) => void;
 };
 
 export function Step2Info({ data, onNext, onBack }: Step2Props) {
@@ -34,7 +34,7 @@ export function Step2Info({ data, onNext, onBack }: Step2Props) {
                 onChange={(partial) => setDetailsData((prev) => ({ ...prev, ...partial }))}
             />
             <div className="flex justify-between gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={onBack}>
+                <Button type="button" variant="outline" onClick={() => onBack(detailsData)}>
                     {t`Back`}
                 </Button>
                 <Button type="submit" disabled={!isValid}>
