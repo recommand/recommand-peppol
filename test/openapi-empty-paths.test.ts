@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Hono } from 'hono';
 import { describeRoute, generateSpecs } from 'hono-openapi';
-import { withoutEmptyPaths } from '../utils/openapi';
+import { withoutEmptyPaths, withoutUnusedSchemas } from '../utils/openapi';
 
 describe('withoutEmptyPaths', () => {
   test('drops the path items hono-openapi leaves behind for hidden routes', async () => {
@@ -50,4 +50,23 @@ describe('withoutEmptyPaths', () => {
     const specs: { openapi: string; paths?: Record<string, unknown> } = { openapi: '3.1.0' };
     expect(withoutEmptyPaths(specs)).toEqual(specs);
   });
+});
+
+test("omits hidden-only schemas while preserving transitive and recursive references", () => {
+  const document = {
+    paths: { "/visible": { get: { responses: { 200: { $ref: "#/components/responses/Visible" } } } } },
+    components: {
+      responses: { Visible: { schema: { $ref: "#/components/schemas/Parent" } } },
+      securitySchemes: { bearer: { type: "http", scheme: "bearer" } },
+      schemas: {
+        Parent: { properties: { child: { $ref: "#/components/schemas/Child" } } },
+        Child: { properties: { parent: { $ref: "#/components/schemas/Parent" } } },
+        Hidden: { type: "object" },
+      },
+    },
+  };
+  const result = withoutUnusedSchemas(document);
+  expect(Object.keys(result.components.schemas)).toEqual(["Parent", "Child"]);
+  expect(result.components.securitySchemes).toEqual(document.components.securitySchemes);
+  expect(Object.keys(document.components.schemas)).toContain("Hidden");
 });
