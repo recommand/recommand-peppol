@@ -19,7 +19,7 @@ import { db } from '@recommand/db';
 import type { Logger } from '@recommand/lib/logger';
 import { Cron } from 'croner';
 import { UserFacingError } from '@peppol/utils/util';
-import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { fetchArratech, getArratechConfig } from '@peppol/data/at/client';
 import { buildArratechKycFiling } from '@peppol/data/at/kyc';
 import {
@@ -39,6 +39,7 @@ import { validateVerificationCountrySpecific } from '@peppol/types/verification-
 import { getParticipantByIdentifier, upsertCompanyRegistrations } from '@peppol/data/at/smp';
 
 import { withVerificationLock } from '@peppol/data/verification-lock';
+import { getCurrentVerificationSession } from '@peppol/data/current-verification-session';
 import { onboardingDiagnostics, type OnboardingLogger } from '@peppol/data/at/onboarding-diagnostics';
 export { VerificationBusyError, withVerificationLock as withArratechVerificationLock } from '@peppol/data/verification-lock';
 
@@ -321,13 +322,7 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
 }
 
 async function isLatestVerificationSession(id: string, companyId: string): Promise<boolean> {
-  const [latest] = await db
-    .select({ id: companyVerificationLog.id })
-    .from(companyVerificationLog)
-    .where(eq(companyVerificationLog.companyId, companyId))
-    .orderBy(desc(companyVerificationLog.createdAt), desc(companyVerificationLog.id))
-    .limit(1);
-  return latest?.id === id;
+  return (await getCurrentVerificationSession(companyId))?.id === id;
 }
 
 /**

@@ -38,9 +38,14 @@ async function _getVerificationStatusImplementation(c: GetVerificationStatusCont
             return c.json(actionFailure("Company not found"), 404);
         }
 
+        // A withdrawn session is stored as rejected so that its link can no longer be
+        // used, but nobody was refused: support withdrew it because an earlier session
+        // already held the identity check. The page says so instead of showing a refusal.
+        const withdrawn = verificationLog.withdrawal !== null;
         return c.json(actionSuccess({
             status: verificationLog.status,
-            errorMessage: verificationLog.arratechOnboarding ? null : verificationLog.errorMessage,
+            withdrawn,
+            errorMessage: verificationLog.arratechOnboarding || withdrawn ? null : verificationLog.errorMessage,
             companyName: company.name,
             companyId: company.id,
             ...getArratechVerificationProgress(verificationLog.arratechOnboarding, company.isSmpRecipient, verificationLog.status),

@@ -958,3 +958,5 @@ Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France)\, 9930 (Germ
 XRechnung 3.0 UBL Invoice,XRechnung-3.0-UBL-Rechnung
 XRechnung 3.0 UBL Credit Note,XRechnung-3.0-UBL-Gutschrift
 XRechnung 3.0 CII Invoice + Credit Note,XRechnung-3.0-CII-Rechnung + Gutschrift
+Verification Link Withdrawn,Verifizierungslink zurückgezogen
+This link was withdrawn because an earlier verification of {0} had already been submitted. It is not a rejection\, and you do not need to submit anything here.,Dieser Link wurde zurückgezogen\, weil bereits eine frühere Verifizierung für {0} eingereicht worden war. Dies ist keine Ablehnung\, und Sie müssen hier nichts einreichen.

@@ -135,6 +135,14 @@ export const companies = pgTable("peppol_companies", {
   updatedAt: autoUpdateTimestamp(),
 });
 
+/** Who withdrew a verification session, when, why and for which earlier session. */
+export type VerificationWithdrawal = {
+  withdrawnAt: string;
+  inFavorOf: string;
+  byUserId: string;
+  reason: string;
+};
+
 export const verificationStatusEnum = pgEnum("verification_status", ["opened", "idVerificationRequested", "inReview", "verified", "rejected", "error"]);
 
 export const companyVerificationLog = pgTable(
@@ -161,6 +169,9 @@ export const companyVerificationLog = pgTable(
     mandateAcceptedAt: timestamp("mandate_accepted_at", { withTimezone: true }),
     errorMessage: text("error_message"),
     arratechOnboarding: jsonb("arratech_onboarding").$type<ArratechOnboarding>(),
+    // Set when support withdrew this session so that an earlier one, which already
+    // holds the representative's identity check, stays the company's current session.
+    withdrawal: jsonb("withdrawal").$type<VerificationWithdrawal>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

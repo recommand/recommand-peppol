@@ -13,6 +13,7 @@ import { StatusHero, StatusMessage } from "@recommand/components/status-feedback
 import { Loader2, AlertCircle, ShieldCheck, RefreshCw, XCircle, FileSignature } from "lucide-react";
 import { ForwardSection } from "./forward-section";
 import { MandateSection } from "./mandate-section";
+import { WithdrawnNotice } from "./withdrawn-notice";
 import { useTranslation } from "@core/hooks/use-translation";
 import { CountrySpecificFields } from './country-specific-fields';
 import { validateVerificationCountrySpecific, type VerificationCountrySpecific, type VerificationCountryRequirements } from '@peppol/types/verification-country-specific';
@@ -26,13 +27,14 @@ type Representative = {
     function: string;
 };
 
-type VerificationStatus = "opened" | "idVerificationRequested" | "verified" | "rejected" | "error";
+type VerificationStatus = "opened" | "idVerificationRequested" | "inReview" | "verified" | "rejected" | "error";
 type PlaygroundVerificationOutcome = "verified" | "rejected";
 
 type VerificationContext = {
     verificationLog: {
         id: string;
         status: VerificationStatus;
+        withdrawn: boolean;
         companyName: string | null;
         errorMessage: string | null;
     };
@@ -262,6 +264,10 @@ export default function Page() {
 
     const companyName = context.company.name;
 
+    if (context.verificationLog.withdrawn) {
+        return <WithdrawnNotice companyName={companyName} />;
+    }
+
     if (context.verificationLog.status === "idVerificationRequested") {
         return (
             <div className="min-h-svh flex items-center justify-center bg-muted/30 px-4 py-12">
@@ -312,6 +318,34 @@ export default function Page() {
                     </div>
 
                     <ForwardSection companyVerificationLogId={companyVerificationLogId!} />
+                </div>
+            </div>
+        );
+    }
+
+    // Asking to verify a company again continues the session already under review.
+    if (context.verificationLog.status === "inReview") {
+        return (
+            <div className="min-h-svh flex items-center justify-center bg-muted/30 px-4 py-12">
+                <div className="w-full max-w-lg space-y-8">
+                    <StatusHero
+                        tone="info"
+                        icon={ShieldCheck}
+                        title={t`Verification Under Review`}
+                        description={t`This may take some time. You can safely close this page and check back later.`}
+                    />
+
+                    {statusPageUrl && (
+                        <Button
+                            className="w-full"
+                            size="lg"
+                            onClick={() => {
+                                window.location.href = statusPageUrl;
+                            }}
+                        >
+                            {t`View Verification Status`}
+                        </Button>
+                    )}
                 </div>
             </div>
         );

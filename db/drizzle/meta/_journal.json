@@ -799,6 +799,13 @@
       "when": 1790582630868,
       "tag": "20260928080350_verify_companies_by_contract",
       "breakpoints": true
+    },
+    {
+      "idx": 114,
+      "version": "7",
+      "when": 1791281200908,
+      "tag": "20261006100640_verification_session_withdrawal",
+      "breakpoints": true
     }
   ]
 }
