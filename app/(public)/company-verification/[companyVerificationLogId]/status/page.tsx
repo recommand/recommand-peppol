@@ -9,6 +9,7 @@ import { Card, CardContent } from "@core/components/ui/card";
 import { StatusHero, StatusMessage } from "@recommand/components/status-feedback";
 import { Loader2, AlertCircle, ShieldCheck, XCircle, RefreshCw, Clock } from "lucide-react";
 import { useTranslation } from "@core/hooks/use-translation";
+import { WithdrawnNotice } from "../verify/withdrawn-notice";
 
 const client = rc<Companies>("v1");
 
@@ -23,6 +24,7 @@ type StatusData = {
     errorMessage: string | null;
     companyName: string;
     companyId: string;
+    withdrawn?: boolean;
     activationPending?: boolean;
     supportReviewPending?: boolean;
 };
@@ -70,6 +72,7 @@ export default function Page() {
                 errorMessage: string | null;
                 companyName: string;
                 companyId: string;
+                withdrawn?: boolean;
                 activationPending?: boolean;
                 supportReviewPending?: boolean;
             };
@@ -156,6 +159,10 @@ export default function Page() {
                 </div>
             </div>
         );
+    }
+
+    if (statusData.withdrawn) {
+        return <WithdrawnNotice companyName={statusData.companyName} />;
     }
 
     if (statusData.status === "idVerificationRequested") {

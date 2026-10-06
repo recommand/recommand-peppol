@@ -70,8 +70,10 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
             verificationLog: {
                 id: verificationLog.id,
                 status: verificationLog.status,
+                // Withdrawn by support in favour of an earlier session; see the status route.
+                withdrawn: verificationLog.withdrawal !== null,
                 companyName: verificationLog.companyName,
-                errorMessage: verificationLog.errorMessage,
+                errorMessage: verificationLog.withdrawal !== null ? null : verificationLog.errorMessage,
             },
             company: {
                 id: company.id,

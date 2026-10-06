@@ -15,8 +15,12 @@ import type { VerificationCountrySpecific } from '@peppol/types/verification-cou
 import { submitVerificationIdentity, restartVerificationIdentity } from '@peppol/data/verification-submission';
 import { assertCompanyIdentifiersAllowed } from "./company-identifiers";
 import { lockCompanyRow, sameCompanyIdentity } from "./company-row-lock";
+import { getCurrentVerificationSession } from "./current-verification-session";
+import { sessionMatchesCompany } from "./at/kyc-onboarding-state";
+import { namesMatch } from "@peppol/utils/names-match";
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type CompanyVerificationStatus = CompanyVerificationLog["status"];
 export type CompanyVerificationFinalStatus = Extract<CompanyVerificationStatus, "verified" | "rejected" | "error">;
 export type PlaygroundVerificationOutcome = Extract<CompanyVerificationFinalStatus, "verified" | "rejected">;
@@ -37,12 +41,7 @@ export function isFinalVerificationStatus(
   return (FINAL_VERIFICATION_STATUSES as readonly string[]).includes(status);
 }
 
-export function namesMatch(a: string, b: string): boolean {
-  const partsA = a.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const partsB = b.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const [shorter, longer] = partsA.length <= partsB.length ? [partsA, partsB] : [partsB, partsA];
-  return shorter.length > 0 && shorter.every((part) => longer.includes(part));
-}
+export { namesMatch };
 
 export async function getCompanyVerificationLog(
   id: string
@@ -255,13 +254,61 @@ export async function finalizeCompanyVerification({
   return { status, errorMessage: null };
 }
 
+/**
+ * Whether asking to verify the company again can continue its current session
+ * instead of starting a new one. A session still open for the company as it reads
+ * now is continued: a new one would hide it, and with it an identity check that
+ * may already be under review. A final session, or one taken for company details
+ * that have since changed, is replaced.
+ */
+export function canContinueVerificationSession(
+  session: CompanyVerificationLog | undefined,
+  company: Pick<Company, "enterpriseNumber" | "name" | "country" | "address" | "postalCode" | "city">
+): session is CompanyVerificationLog {
+  return (
+    !!session &&
+    (OPEN_VERIFICATION_STATUSES as readonly string[]).includes(session.status) &&
+    sessionMatchesCompany(session, company, session.arratechOnboarding)
+  );
+}
+
+/**
+ * Continues the company's current session when it can be continued, or starts a new
+ * one recording the company as it reads now. Customer and support requests share it,
+ * so both treat changed company details the same way. Runs in the caller's
+ * transaction, which holds the company row for update and read `session` under it.
+ */
+export async function continueOrStartVerificationSession(
+  tx: Transaction,
+  company: Company,
+  session: CompanyVerificationLog | undefined
+): Promise<{ log: CompanyVerificationLog; created: boolean }> {
+  if (canContinueVerificationSession(session, company)) {
+    return { log: session, created: false };
+  }
+  const log = await tx
+    .insert(companyVerificationLog)
+    .values({
+      companyId: company.id,
+      companyName: company.name,
+      enterpriseNumber: company.enterpriseNumber,
+      address: company.address,
+      postalCode: company.postalCode,
+      city: company.city,
+      country: company.country,
+    })
+    .returning()
+    .then((rows) => rows[0]);
+  return { log, created: true };
+}
+
 export async function createCompanyVerificationLog({
   teamId,
   companyId,
 }: {
   teamId: string;
   companyId: string;
-}): Promise<{ log: CompanyVerificationLog; verificationUrl: string }> {
+}): Promise<{ log: CompanyVerificationLog; verificationUrl: string; created: boolean }> {
   const baseUrl = getBaseUrlOrThrow();
 
   const company = await getCompany(teamId, companyId);
@@ -273,22 +320,18 @@ export async function createCompanyVerificationLog({
   // representative has been through the identity check; it is refused here instead.
   await assertCompanyIdentifiersAllowed(company, await getTeamExtension(teamId));
 
-  const log = await db
-    .insert(companyVerificationLog)
-    .values({
-      companyId,
-      companyName: company.name,
-      enterpriseNumber: company.enterpriseNumber,
-      address: company.address,
-      postalCode: company.postalCode,
-      city: company.city,
-      country: company.country,
-    })
-    .returning()
-    .then((rows) => rows[0]);
+  const { log, created } = await db.transaction(async (tx) => {
+    // Held for update so that two requests for the same company, such as a double
+    // click, take turns: the second continues the session the first created.
+    const current = await lockCompanyRow(tx, companyId, "update");
+    if (!current || current.teamId !== teamId) {
+      throw new UserFacingError("Company not found");
+    }
+    return continueOrStartVerificationSession(tx, current, await getCurrentVerificationSession(companyId, tx));
+  });
 
   const verificationUrl = `${baseUrl}/company-verification/${log.id}/verify`;
-  return { log, verificationUrl };
+  return { log, verificationUrl, created };
 }
 
 export async function submitIdentityForm(
