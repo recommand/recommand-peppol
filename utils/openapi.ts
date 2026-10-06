@@ -24,3 +24,40 @@ export function withoutEmptyPaths<T extends { paths?: Record<string, unknown> }>
 
   return { ...specs, paths };
 }
+
+export function withoutUnusedSchemas<T extends {
+  components?: { schemas?: Record<string, unknown>; [key: string]: unknown };
+}>(specs: T): T {
+  if (!specs.components?.schemas) return specs;
+  const reached = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (value === null || typeof value !== "object") return;
+    if (Array.isArray(value)) { value.forEach(visit); return; }
+    for (const [key, item] of Object.entries(value)) {
+      if (key === "$ref" && typeof item === "string" && item.startsWith("#/components/") && !reached.has(item)) {
+        reached.add(item);
+        const segments = item.slice(2).split("/").map(part => part.replace(/~1/g, "/").replace(/~0/g, "~"));
+        let target: unknown = specs;
+        for (const segment of segments) {
+          target = target && typeof target === "object" ? (target as Record<string, unknown>)[segment] : undefined;
+        }
+        visit(target);
+      } else {
+        visit(item);
+      }
+    }
+  };
+  const { components, ...document } = specs;
+  visit(document);
+  for (const [kind, entries] of Object.entries(components)) {
+    if (kind !== "schemas") visit(entries);
+  }
+  return {
+    ...specs,
+    components: {
+      ...components,
+      schemas: Object.fromEntries(Object.entries(components.schemas ?? {}).filter(([name]) =>
+        reached.has(`#/components/schemas/${name.replace(/~/g, "~0").replace(/\//g, "~1")}`))),
+    },
+  };
+}

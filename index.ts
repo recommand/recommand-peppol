@@ -1,7 +1,7 @@
 import type { RecommandApp } from "@recommand/lib/app";
 import { Server } from "@recommand/lib/api";
 import { Logger } from "@recommand/lib/logger";
-import { withoutEmptyPaths } from "./utils/openapi";
+import { withoutEmptyPaths, withoutUnusedSchemas } from "./utils/openapi";
 import reportingServer from "./api/reporting";
 import companiesServer from "./api/companies";
 import labelsServer from "@peppol/api/labels";
@@ -205,7 +205,7 @@ For additional support or questions, don't hesitate to contact our support team.
   let openApiDocument: ReturnType<typeof generateSpecs> | undefined;
   const getOpenApiDocument = (c: Context) => {
     openApiDocument ??= generateSpecs(server, specsOptions, undefined, c).then(
-      (document) => withoutEmptyPaths(normalizeSchemaExamples(document)),
+      (document) => withoutUnusedSchemas(withoutEmptyPaths(normalizeSchemaExamples(document))),
       (error) => {
         openApiDocument = undefined;
         throw error;
