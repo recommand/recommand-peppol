@@ -1,6 +1,7 @@
 import type { RecommandApp } from "@recommand/lib/app";
 import { Server } from "@recommand/lib/api";
 import { Logger } from "@recommand/lib/logger";
+import { withoutEmptyPaths } from "./utils/openapi";
 import reportingServer from "./api/reporting";
 import companiesServer from "./api/companies";
 import labelsServer from "@peppol/api/labels";
@@ -199,11 +200,12 @@ For additional support or questions, don't hesitate to contact our support team.
   // hono-openapi builds each response schema in place the first time it
   // generates the document, so a second generation lacks the component
   // schemas those responses refer to. Generate the document once and serve
-  // it from both routes.
+  // it from both routes. Before caching it, drop the empty path items
+  // hono-openapi leaves behind for hidden routes (see withoutEmptyPaths).
   let openApiDocument: ReturnType<typeof generateSpecs> | undefined;
   const getOpenApiDocument = (c: Context) => {
     openApiDocument ??= generateSpecs(server, specsOptions, undefined, c).then(
-      normalizeSchemaExamples,
+      (document) => withoutEmptyPaths(normalizeSchemaExamples(document)),
       (error) => {
         openApiDocument = undefined;
         throw error;
