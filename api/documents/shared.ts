@@ -8,7 +8,7 @@ import { messageLevelResponseSchema } from "@peppol/utils/parsing/message-level-
 import { franceCdarSchema } from "@peppol/utils/parsing/france-cdar/schemas";
 import { frenchB2CReportSchema } from "@peppol/utils/parsing/b2c-reporting/france";
 import { storedFrenchB2BiReportSchema } from "@peppol/utils/parsing/b2bi-reporting/france";
-import { labelResponse } from "@peppol/api/labels/shared";
+import { labelSummaryResponse } from "@peppol/api/labels/shared";
 import { validationResponse } from "@peppol/types/validation";
 import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/document-types/keys";
 import {
@@ -40,6 +40,7 @@ export const frenchReportingStatusResponse = z.object({
 export const deliveryStatusResponse = z.enum(deliveryStatuses).nullable().openapi({
     description: "Whether the document reached its recipient, summarised over its deliveries: `delivered` when at least one delivery was confirmed, `failed` when every delivery failed, `pending` while any is still awaiting the channel's confirmation. Null for documents without deliveries, such as incoming documents and filed reports.",
     example: "delivered",
+    ref: "DeliveryStatus",
 });
 
 export const deliveryFailureResponse = z.object({
@@ -86,6 +87,7 @@ export const deliveryResponse = z.object({
         messageId: z.string().nullable().optional().openapi({ description: "The mail service's message ID of the email, for `email` deliveries. It is the ID a bounce or delivery notification from the mail service refers to. Null when the delivery predates message tracking." }),
     }).openapi({
         description: "The identifiers the delivery is known by on its channel: the AS4 and envelope IDs for `peppol` deliveries, the mail service's `messageId` for `email` deliveries.",
+        ref: "DeliveryReferences",
     }),
 }).openapi({ ref: "DocumentDelivery" });
 
@@ -172,7 +174,7 @@ export const transmittedDocumentResponse = z.object({
         description: "The email addresses the document was delivered to. Empty when it was not sent by email.",
         example: [],
     }),
-    labels: z.array(labelResponse.omit({ teamId: true, createdAt: true, updatedAt: true })).openapi({
+    labels: z.array(labelSummaryResponse).openapi({
         description: "The labels assigned to this document. Manage them with the assign and unassign label endpoints.",
     }),
     peppolMessageId: z.string().nullable().openapi({
@@ -194,4 +196,4 @@ export const transmittedDocumentResponse = z.object({
     deliveries: z.array(deliveryResponse).openapi({
         description: "Where an outgoing document stands with each recipient: one entry per channel and address it was sent to. Empty for incoming documents and filed reports. `sentOverPeppol` says the document was handed to the network; a delivery says whether it arrived.",
     }),
-});
+}).openapi({ ref: "TransmittedDocument" });

@@ -27,5 +27,10 @@ export const labelResponse = z.object({
     updatedAt: z.string().datetime().openapi({
         description: "When the label was last changed.",
     }),
-});
+}).openapi({ ref: "Label" });
+
+/** A label as it appears on a resource it is assigned to. */
+export const labelSummaryResponse = labelResponse
+    .pick({ colorHex: true, externalId: true, id: true, name: true })
+    .openapi({ ref: "LabelSummary" });
 

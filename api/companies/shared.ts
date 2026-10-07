@@ -1,4 +1,5 @@
 import z from "zod";
+import "zod-openapi/extend";
 import type { Company } from "@peppol/data/companies";
 
 export const companyResponse = z.object({
@@ -64,7 +65,7 @@ export const companyResponse = z.object({
     updatedAt: z.string().datetime().openapi({
         description: "When the company was last changed.",
     }),
-});
+}).openapi({ ref: "Company" });
 
 export function toCompanyResponse(company: Company) {
     const {

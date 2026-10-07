@@ -20,6 +20,11 @@ import { withDocumentDeliveries } from "@peppol/data/deliveries";
 
 const server = new Server();
 
+/** A document as the list returns it, without the XML it was built from. */
+const transmittedDocumentSummaryResponse = transmittedDocumentResponse
+  .omit({ xml: true })
+  .openapi({ ref: "TransmittedDocumentSummary" });
+
 const getTransmittedDocumentsRouteDescription = describeRoute({
   operationId: "getDocuments",
   description: "Get a list of transmitted documents with pagination",
@@ -27,7 +32,7 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
   tags: ["Documents"],
   responses: {
     ...describeSuccessResponseWithZod("Successfully retrieved transmitted documents", z.object({
-      documents: z.array(transmittedDocumentResponse.omit({ xml: true })),
+      documents: z.array(transmittedDocumentSummaryResponse),
       pagination: z.object({
         total: z.number(),
         page: z.number(),
