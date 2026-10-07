@@ -18,7 +18,7 @@ const assignLabelRouteDescription = describeRoute({
     summary: "Assign Label to Document",
     tags: ["Documents"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully assigned label to document", z.object({})),
+        ...describeSuccessResponseWithZod("Successfully assigned label to document"),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(404, "Document or label not found"),
         ...describeErrorResponse(500, "Failed to assign label"),

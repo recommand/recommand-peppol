@@ -19,7 +19,7 @@ const assignLabelRouteDescription = describeRoute({
     summary: "Assign Label to Supplier",
     tags: ["Suppliers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully assigned label to supplier", z.object({})),
+        ...describeSuccessResponseWithZod("Successfully assigned label to supplier"),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(404, "Supplier or label not found"),
         ...describeErrorResponse(500, "Failed to assign label"),

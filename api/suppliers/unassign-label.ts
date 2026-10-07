@@ -19,7 +19,7 @@ const unassignLabelRouteDescription = describeRoute({
     summary: "Unassign Label from Supplier",
     tags: ["Suppliers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully unassigned label from supplier", z.object({})),
+        ...describeSuccessResponseWithZod("Successfully unassigned label from supplier"),
         ...describeErrorResponse(404, "Supplier or label not found"),
         ...describeErrorResponse(500, "Failed to unassign label"),
     },
