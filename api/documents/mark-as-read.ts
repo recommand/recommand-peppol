@@ -10,7 +10,7 @@ import {
 } from "@peppol/data/transmitted-documents";
 import {
     describeErrorResponse,
-    describeSuccessResponse,
+    describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 
@@ -22,7 +22,7 @@ const markAsReadRouteDescription = describeRoute({
     summary: "Mark Document as Read",
     tags: ["Documents"],
     responses: {
-        ...describeSuccessResponse("Successfully updated document read status"),
+        ...describeSuccessResponseWithZod("Successfully updated document read status"),
         ...describeErrorResponse(404, "Document not found"),
         ...describeErrorResponse(500, "Failed to update document read status"),
     },

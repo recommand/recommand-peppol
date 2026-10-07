@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { deleteIntegration } from "@peppol/data/integrations";
@@ -18,7 +18,7 @@ const deleteIntegrationRouteDescription = describeRoute({
     summary: "Delete Integration",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponse("Successfully deleted integration"),
+        ...describeSuccessResponseWithZod("Successfully deleted integration"),
         ...describeErrorResponse(500, "Failed to delete integration"),
     },
 });

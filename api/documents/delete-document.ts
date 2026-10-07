@@ -10,7 +10,7 @@ import {
 } from "@peppol/data/transmitted-documents";
 import {
     describeErrorResponse,
-    describeSuccessResponse,
+    describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { audit } from "@core/lib/audit";
@@ -23,7 +23,7 @@ const deleteTransmittedDocumentRouteDescription = describeRoute({
     summary: "Delete Document",
     tags: ["Documents"],
     responses: {
-        ...describeSuccessResponse("Successfully deleted the document"),
+        ...describeSuccessResponseWithZod("Successfully deleted the document"),
         ...describeErrorResponse(500, "Failed to delete document"),
     },
 });
