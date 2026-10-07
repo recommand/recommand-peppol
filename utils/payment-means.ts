@@ -51,11 +51,13 @@ export const PAYMENT_MEANS: { key: string, code: string, name: string }[] = [
 const CREDIT_TRANSFER_CODES = ["30", "58"];
 
 /**
- * Whether a payment means carries the payee's account (BT-84). A credit
- * transfer always does: the buyer needs the account to pay into. Other means,
- * such as a direct debit or a card payment, are collected by the seller and
- * only carry an account when one is given.
+ * Whether a payment means carries the payee's account (BT-84): only when it
+ * has one. An empty string also counts as none, except for a credit transfer,
+ * which keeps writing it as before so existing documents serialize unchanged.
  */
-export function hasPayeeAccount(payment: { paymentMethod: string; iban: string }): boolean {
+export function hasPayeeAccount<T extends { paymentMethod: string; iban?: string | null }>(
+    payment: T
+): payment is T & { iban: string } {
+    if (payment.iban == null) return false;
     return payment.iban.trim() !== "" || CREDIT_TRANSFER_CODES.includes(getPaymentCodeByKey(payment.paymentMethod));
 }
