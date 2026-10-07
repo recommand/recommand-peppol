@@ -19,7 +19,7 @@ const deleteDocumentTypeRouteDescription = describeRoute({
     summary: "Delete Company Document Type",
     tags: ["Company Document Types"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully deleted company document type", z.object({})),
+        ...describeSuccessResponseWithZod("Successfully deleted company document type"),
         ...describeErrorResponse(404, "Company document type not found"),
         ...describeErrorResponse(500, "Failed to delete company document type"),
     },

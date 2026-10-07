@@ -22,7 +22,7 @@ const deleteIdentifierRouteDescription = describeRoute({
     summary: "Delete Company Identifier",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully deleted company identifier", z.object({})),
+        ...describeSuccessResponseWithZod("Successfully deleted company identifier"),
         ...describeErrorResponse(404, "Company identifier not found"),
         ...describeErrorResponse(500, "Failed to delete company identifier"),
     },
