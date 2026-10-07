@@ -19,7 +19,7 @@ export const validationError = z.object({
     source: z.string().optional().openapi({
         description: "Which ruleset produced the finding, for example the syntax schema or a Peppol business rule set.",
     }),
-});
+}).openapi({ ref: "ValidationError" });
 
 /**
  * Names a rule set the validation service cannot pick from the document's content. A
@@ -38,6 +38,6 @@ export const validationResponse = z.object({
   errors: z.array(validationError).openapi({
     description: "The findings the validation produced. Empty when the document is valid, and also when the result is `not_supported` or `error`.",
   }),
-});
+}).openapi({ ref: "DocumentValidation" });
 
 export type ValidationResponse = z.infer<typeof validationResponse>;

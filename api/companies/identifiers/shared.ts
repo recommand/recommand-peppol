@@ -24,7 +24,7 @@ export const companyIdentifierResponse = z.object({
     updatedAt: z.string().datetime().openapi({
         description: "When the identifier was last changed.",
     }),
-});
+}).openapi({ ref: "CompanyIdentifier" });
 
 export const participantMigrationResponse = z.object({
     id: z.string().openapi({
@@ -59,4 +59,4 @@ export const participantMigrationResponse = z.object({
     completedAt: z.string().datetime().nullable().openapi({
         description: "When the migration reached a final status.",
     }),
-});
+}).openapi({ ref: "ParticipantMigration" });

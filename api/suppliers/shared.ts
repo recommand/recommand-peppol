@@ -1,12 +1,6 @@
 import { z } from "zod";
 import "zod-openapi/extend";
-
-export const labelResponse = z.object({
-  id: z.string(),
-  externalId: z.string().nullable(),
-  name: z.string(),
-  colorHex: z.string(),
-});
+import { labelSummaryResponse } from "@peppol/api/labels/shared";
 
 export const supplierResponse = z.object({
   id: z.string(),
@@ -17,8 +11,8 @@ export const supplierResponse = z.object({
   peppolAddresses: z.array(z.string()),
   createdAt: z.string(),
   updatedAt: z.string(),
-  labels: z.array(labelResponse).optional(),
-});
+  labels: z.array(labelSummaryResponse).optional(),
+}).openapi({ ref: "Supplier" });
 
 export const supplierIdParamSchema = z.object({
   supplierId: z.string().openapi({

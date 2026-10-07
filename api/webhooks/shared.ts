@@ -27,4 +27,4 @@ export const webhookResponse = z.object({
     updatedAt: z.string().datetime().nullable().openapi({
         description: "When the webhook was last changed. Null when it has not changed since it was created.",
     }),
-});
+}).openapi({ ref: "Webhook" });

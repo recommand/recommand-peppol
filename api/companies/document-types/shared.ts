@@ -24,4 +24,4 @@ export const companyDocumentTypeResponse = z.object({
     updatedAt: z.string().datetime().openapi({
         description: "When the document type was last changed.",
     }),
-});
+}).openapi({ ref: "CompanyDocumentType" });

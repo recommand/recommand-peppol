@@ -17,7 +17,7 @@ export const customerResponse = z.object({
   phone: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
-});
+}).openapi({ ref: "Customer" });
 
 export const customerIdParamSchema = z.object({
   customerId: z.string().openapi({

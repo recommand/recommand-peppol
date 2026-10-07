@@ -44,4 +44,4 @@ export const companyNotificationEmailAddressResponse = z.object({
     updatedAt: z.string().datetime().openapi({
         description: "When the address was last changed.",
     }),
-});
+}).openapi({ ref: "CompanyNotificationEmailAddress" });
