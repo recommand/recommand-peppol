@@ -48,3 +48,14 @@ export const PAYMENT_MEANS: { key: string, code: string, name: string }[] = [
         name: "SEPA direct debit",
     }
 ]
+const CREDIT_TRANSFER_CODES = ["30", "58"];
+
+/**
+ * Whether a payment means carries the payee's account (BT-84). A credit
+ * transfer always does: the buyer needs the account to pay into. Other means,
+ * such as a direct debit or a card payment, are collected by the seller and
+ * only carry an account when one is given.
+ */
+export function hasPayeeAccount(payment: { paymentMethod: string; iban: string }): boolean {
+    return payment.iban.trim() !== "" || CREDIT_TRANSFER_CODES.includes(getPaymentCodeByKey(payment.paymentMethod));
+}

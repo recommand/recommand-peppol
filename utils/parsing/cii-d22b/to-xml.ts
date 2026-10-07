@@ -4,7 +4,7 @@ import type { CreditNote } from "../creditnote/schemas";
 import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
 import { resolveBuyerReference } from "../buyer-reference";
-import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
+import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 const builder = new XMLBuilder({
@@ -474,10 +474,12 @@ export function billingDocumentToCII({
             "ram:SpecifiedTradeSettlementPaymentMeans": document.paymentMeans.map((payment) => ({
               "ram:TypeCode": getPaymentCodeByKey(payment.paymentMethod),
               ...(payment.name && { "ram:Information": payment.name }),
-              "ram:PayeePartyCreditorFinancialAccount": {
-                "ram:IBANID": payment.iban,
-                ...(payment.name && { "ram:AccountName": payment.name }),
-              },
+              ...(hasPayeeAccount(payment) && {
+                "ram:PayeePartyCreditorFinancialAccount": {
+                  "ram:IBANID": payment.iban,
+                  ...(payment.name && { "ram:AccountName": payment.name }),
+                },
+              }),
               ...(payment.financialInstitutionBranch && {
                 "ram:PayeeSpecifiedCreditorFinancialInstitution": {
                   "ram:BICID": payment.financialInstitutionBranch,

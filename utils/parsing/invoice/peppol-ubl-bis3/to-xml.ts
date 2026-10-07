@@ -3,7 +3,7 @@ import type { Invoice } from "../schemas";
 import { calculateDocumentTotals } from "../calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { resolveBuyerReference } from "../../buyer-reference";
-import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
+import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 const builder = new XMLBuilder({
@@ -244,19 +244,21 @@ export function prebuildInvoiceUBL({
               "#text": payment.reference,
             },
           }),
-          "cac:PayeeFinancialAccount": {
-            "cbc:ID": {
-              "#text": payment.iban,
-            },
-            ...(payment.name && {
-              "cbc:Name": payment.name,
-            }),
-            ...(payment.financialInstitutionBranch && {
-              "cac:FinancialInstitutionBranch": {
-                "cbc:ID": payment.financialInstitutionBranch,
+          ...(hasPayeeAccount(payment) && {
+            "cac:PayeeFinancialAccount": {
+              "cbc:ID": {
+                "#text": payment.iban,
               },
-            }),
-          },
+              ...(payment.name && {
+                "cbc:Name": payment.name,
+              }),
+              ...(payment.financialInstitutionBranch && {
+                "cac:FinancialInstitutionBranch": {
+                  "cbc:ID": payment.financialInstitutionBranch,
+                },
+              }),
+            },
+          }),
         })),
       }),
       ...(invoice.paymentTerms && {
