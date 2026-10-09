@@ -25,15 +25,17 @@ export function PartyForm({ party, onChange, required = false, disabled = false 
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
+          {/* Optional even when the party is required: an organisation without a
+              VAT number, such as a school or a non-profit, is invoiced with only its
+              name, address and Peppol address. */}
           <Label htmlFor="vatNumber">
-            {t`VAT Number`}{required && " *"}
+            {t`VAT Number`}
           </Label>
           <Input
             id="vatNumber"
             value={party.vatNumber || ""}
             onChange={(e) => handleChange("vatNumber", e.target.value)}
             placeholder="BE1234567894"
-            required={required}
             disabled={disabled}
           />
         </div>
