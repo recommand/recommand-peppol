@@ -552,13 +552,14 @@ export const baseInvoiceSchema = z.object({
     description: "A free text note about the invoice as a whole.",
   }),
   buyerReference: z.string().nullish().openapi({
-    example: "PO-2024-001",
+    example: "CC-4120",
     description:
       "A reference the buyer asked you to put on the invoice so they can route it internally (BT-10). If neither this nor `purchaseOrderReference` is provided, the invoice number is used. For a German public authority addressed by its Leitweg-ID (recipient scheme `0204`), this must be that Leitweg-ID: it is filled in when left out, and a different value is refused.",
   }),
   purchaseOrderReference: z.string().nullish().openapi({
-    example: "PO-2024-001",
-    description: "A reference to a related purchase order",
+    example: "4500012345",
+    description:
+      "The buyer's purchase order number (BT-13), written to the order reference. Give the number exactly as the buyer issued it, without a prefix such as \"PO\".",
   }),
   salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
   despatchReference: z.string().nullish().openapi({

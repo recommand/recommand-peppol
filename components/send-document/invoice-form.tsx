@@ -398,7 +398,22 @@ export function InvoiceForm({
             onChange={(e) =>
               handleFieldChange("buyerReference", e.target.value)
             }
-            placeholder="PO-2026-001"
+            placeholder={t`An identifier assigned by the buyer for internal routing purposes.`}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="purchaseOrderReference">{t`Purchase Order Reference`}</Label>
+          <Input
+            id="purchaseOrderReference"
+            value={invoice.purchaseOrderReference || ""}
+            onChange={(e) =>
+              handleFieldChange(
+                "purchaseOrderReference",
+                e.target.value.trim() ? e.target.value : null
+              )
+            }
+            placeholder="4500012345"
           />
         </div>
       </div>
