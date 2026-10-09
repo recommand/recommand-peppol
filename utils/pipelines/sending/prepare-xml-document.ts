@@ -12,7 +12,9 @@ export function prepareXmlDocument(input: SendingInput): PreparedDocument {
   const xml = input.document as string;
   const format = input.doctypeId
     ? getDocumentFormatByDocTypeId(input.doctypeId)
-    : detectDocumentFormat(xml);
+    : detectDocumentFormat(xml, {
+        processId: input.processId ? normalizeProcessId(input.processId) : undefined,
+      });
   
   const docTypeId =
     input.doctypeId ?? format?.docTypeId ?? selfDeclaredDocTypeId(xml);

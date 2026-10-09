@@ -3,10 +3,11 @@ import { parseFrenchRegulatedCreditNoteFromUBL } from "@peppol/utils/parsing/cre
 import { creditNoteDocumentType } from "../document-types/creditNote";
 import { ublCustomizationId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
-import { assertFranceBillingProcessId } from "./france-process";
-
-const customizationId =
-  "urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0";
+import {
+  assertFranceBillingProcessId,
+  FRANCE_EXTENDED_CUSTOMIZATION_ID,
+  isFranceExtendedCustomizationId,
+} from "./france-process";
 
 const docTypeId =
   "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0::2.1";
@@ -47,7 +48,7 @@ export const ublFranceExtendedCreditnoteFormat: DocumentFormat<
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-      profile: { customizationId, processId },
+      profile: { customizationId: FRANCE_EXTENDED_CUSTOMIZATION_ID, processId },
     });
   },
 
@@ -57,7 +58,7 @@ export const ublFranceExtendedCreditnoteFormat: DocumentFormat<
   detectDocumentType: () => creditNoteDocumentType,
 
   isFormat: (document) =>
-    ublCustomizationId(document.CreditNote) === customizationId,
+    isFranceExtendedCustomizationId(ublCustomizationId(document.CreditNote)),
 };
 
 export default ublFranceExtendedCreditnoteFormat;

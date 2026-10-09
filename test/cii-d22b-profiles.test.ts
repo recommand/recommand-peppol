@@ -9,6 +9,7 @@ import { ublFranceCiusInvoiceFormat } from "../utils/type-repository/document-fo
 import { ublFranceExtendedCreditnoteFormat } from "../utils/type-repository/document-formats/ubl-france-extended-creditnote";
 import { ublFranceExtendedInvoiceFormat } from "../utils/type-repository/document-formats/ubl-france-extended-invoice";
 import type { AnyDocumentFormat } from "../utils/type-repository/document-formats/types";
+import { detectDocumentFormat } from "../utils/type-repository/document-formats";
 import {
   FRANCE_NON_REGULATED_PROCESS_ID,
   FRANCE_REGULATED_PROCESS_ID,
@@ -153,7 +154,9 @@ describe("CII D22B profiles", () => {
     const xml = toXml(ciiD22bFranceCiusFormat);
 
     expect(xml).toContain("<ram:ID>S1</ram:ID>");
-    expect(xml).toContain("urn:peppol:france:billing:cius:1.0");
+    // BT-24 carries the XP Z12-012 value; the Peppol id stays in the SMP and the SBDH
+    expect(xml).toContain("<ram:ID>urn:cen.eu:en16931:2017</ram:ID>");
+    expect(xml).not.toContain("urn:peppol:france:billing:cius:1.0");
     expect(xml).toContain('<ram:URIID schemeID="0225">303265045</ram:URIID>');
     expect(xml).toContain('<ram:URIID schemeID="0225">341815675</ram:URIID>');
     expect(xml).toContain("<ram:SubjectCode>PMT</ram:SubjectCode>");
@@ -212,7 +215,7 @@ describe("CII D22B profiles", () => {
     const xml = toXml(ublFranceCiusInvoiceFormat);
 
     expect(xml).toContain(
-      "<cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0</cbc:CustomizationID>"
+      "<cbc:CustomizationID>urn:cen.eu:en16931:2017</cbc:CustomizationID>"
     );
     expect(xml).toContain("<cbc:ProfileID>S1</cbc:ProfileID>");
     expect(xml).toContain("<cbc:Note>#PMT#");
@@ -232,7 +235,7 @@ describe("CII D22B profiles", () => {
     const ublXml = toXml(ublFranceExtendedInvoiceFormat);
 
     expect(ublXml).toContain(
-      "<cbc:CustomizationID>urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0</cbc:CustomizationID>"
+      "<cbc:CustomizationID>urn:cen.eu:en16931:2017#conformant#urn.cpro.gouv.fr:1p0:extended-ctc-fr</cbc:CustomizationID>"
     );
     expect(ublXml).toContain("<cbc:ProfileID>S1</cbc:ProfileID>");
     expect(ublXml).toContain("<cbc:Note>#PMT#");
@@ -240,7 +243,7 @@ describe("CII D22B profiles", () => {
     const ciiXml = toXml(ciiD22bFranceExtendedFormat);
 
     expect(ciiXml).toContain(
-      "<ram:ID>urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0</ram:ID>"
+      "<ram:ID>urn:cen.eu:en16931:2017#conformant#urn.cpro.gouv.fr:1p0:extended-ctc-fr</ram:ID>"
     );
     expect(ciiXml).toContain("<ram:ID>S1</ram:ID>");
     expect(ciiXml).toContain("<ram:SubjectCode>PMT</ram:SubjectCode>");
@@ -255,6 +258,20 @@ describe("CII D22B profiles", () => {
       ) as Invoice;
       expect(parsed.countrySpecific).toEqual(invoice.countrySpecific);
     }
+  });
+
+  it("recognises the documents it writes as the French formats they were written in", () => {
+    // The Extended BT-24 identifies itself; the CIUS one is plain EN 16931, which only
+    // the French process tells apart from a generic EN 16931 document.
+    for (const format of [ublFranceExtendedInvoiceFormat, ciiD22bFranceExtendedFormat]) {
+      expect(detectDocumentFormat(toXml(format))?.key).toBe(format.key);
+    }
+    for (const format of [ublFranceCiusInvoiceFormat, ciiD22bFranceCiusFormat]) {
+      expect(
+        detectDocumentFormat(toXml(format), { processId: FRANCE_REGULATED_PROCESS_ID })?.key
+      ).toBe(format.key);
+    }
+    expect(detectDocumentFormat(toXml(ciiD22bFranceCiusFormat))?.key).toBe(ciiD22bEn16931Format.key);
   });
 
   it("supports credit notes for both EXTENDED syntaxes", () => {

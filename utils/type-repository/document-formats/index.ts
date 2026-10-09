@@ -3,7 +3,7 @@ import {
   isCountrySpecificProcessIdAllowed,
   resolveCountrySpecificProcessId,
 } from "@peppol/utils/parsing/country-specific/process";
-import { parseXmlForDetection } from "./xml-detection";
+import { parseXmlForDetection, type DetectionContext } from "./xml-detection";
 import type { AnyDocumentFormat } from "./types";
 import { peppolUblBis3InvoiceFormat } from "./peppol-ubl-bis3-invoice";
 import { peppolUblBis3CreditnoteFormat } from "./peppol-ubl-bis3-creditnote";
@@ -107,10 +107,22 @@ export function resolveFormatProcessIdCandidates(
   ];
 }
 
+/**
+ * The format a raw XML document is written in. When more than one format recognises it,
+ * one that travels over the requested process wins, then the order of `documentFormats`:
+ * a plain EN 16931 CII is generic EN 16931, unless it is sent over a French billing process.
+ */
 export function detectDocumentFormat(
-  xml: string
+  xml: string,
+  context: DetectionContext = {}
 ): AnyDocumentFormat | undefined {
   const parsed = parseXmlForDetection(xml);
   if (!parsed) return undefined;
-  return documentFormats.find((format) => format.isFormat?.(parsed));
+  const matches = documentFormats.filter((format) => format.isFormat?.(parsed, context));
+  const processId = context.processId;
+  return (
+    (processId
+      ? matches.find((format) => format.supportedProcessIds.includes(processId))
+      : undefined) ?? matches[0]
+  );
 }

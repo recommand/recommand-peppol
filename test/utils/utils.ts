@@ -1,11 +1,16 @@
 import { expect } from "bun:test";
 import { validateXmlDocument } from "../../data/validation/client";
+import type { ValidationProfile } from "@peppol/types/validation";
 import type { DocumentTypeKey } from "@peppol/utils/type-repository/document-types/types";
 import { SKIP_E2E } from "./skip-e2e";
 import { getTestHost } from "./dev-server";
 
-export async function validateXml(xml: string, testName: string): Promise<void> {
-  const validation = await validateXmlDocument(xml);
+export async function validateXml(
+  xml: string,
+  testName: string,
+  profile?: ValidationProfile
+): Promise<void> {
+  const validation = await validateXmlDocument(xml, { profile });
   if (validation.result !== "valid") {
     console.error(`Validation failed for ${testName}:`, validation.errors);
     console.error("XML:", xml);

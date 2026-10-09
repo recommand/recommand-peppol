@@ -3,10 +3,12 @@ import { parseFrenchRegulatedCreditNoteFromUBL } from "@peppol/utils/parsing/cre
 import { creditNoteDocumentType } from "../document-types/creditNote";
 import { ublCustomizationId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
-import { assertFranceBillingProcessId } from "./france-process";
+import {
+  assertFranceBillingProcessId,
+  FRANCE_CIUS_CUSTOMIZATION_ID,
+  isFranceCiusCustomizationId,
+} from "./france-process";
 
-const customizationId =
-  "urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0";
 const regulatedProcessId = "urn:peppol:france:billing:regulated";
 const nonRegulatedProcessId = "urn:peppol:france:billing:non-regulated";
 
@@ -45,7 +47,7 @@ export const ublFranceCiusCreditnoteFormat: DocumentFormat<
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-      profile: { customizationId, processId },
+      profile: { customizationId: FRANCE_CIUS_CUSTOMIZATION_ID, processId },
     });
   },
 
@@ -54,8 +56,8 @@ export const ublFranceCiusCreditnoteFormat: DocumentFormat<
 
   detectDocumentType: () => creditNoteDocumentType,
 
-  isFormat: (document) =>
-    ublCustomizationId(document.CreditNote) === customizationId,
+  isFormat: (document, context) =>
+    isFranceCiusCustomizationId(ublCustomizationId(document.CreditNote), context),
 };
 
 export default ublFranceCiusCreditnoteFormat;

@@ -118,7 +118,7 @@ describe("French regulated UBL notes", () => {
           `#PMD#${countrySpecific.latePaymentPenaltiesNote}`,
           `#AAB#${countrySpecific.earlyPaymentDiscountNote}`,
         ]);
-        await validateXml(xml, `${name} without note`);
+        await validateXml(xml, `${name} without note`, format.validationProfile);
       });
 
       it("keeps the document note first when there is one", async () => {
@@ -131,7 +131,7 @@ describe("French regulated UBL notes", () => {
           `#AAB#${countrySpecific.earlyPaymentDiscountNote}`,
         ]);
         expect(xml.indexOf("<cbc:Note>")).toBeLessThan(xml.indexOf("<cbc:DocumentCurrencyCode>"));
-        await validateXml(xml, `${name} with note`);
+        await validateXml(xml, `${name} with note`, format.validationProfile);
       });
     });
   }
