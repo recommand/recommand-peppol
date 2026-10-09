@@ -1,0 +1,56 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://data.brreg.no/fullmakt/enheter/923609016/signatur"
+  }
+ },
+ "enhet": {
+  "organisasjonsnummer": "923609016",
+  "navn": "NORDLYS HANDEL AS",
+  "organisasjonsform": {
+   "beskrivelse": "Aksjeselskap",
+   "kode": "AS"
+  },
+  "konkurs": "false",
+  "underAvvikling": "false",
+  "underTvangsavviklingEllerTvangsopplosning": "false"
+ },
+ "oppslagsData": {
+  "oppslagsIdent": "1",
+  "oppslagsTidspunkt": "2026-10-09T01:12:17"
+ },
+ "status": {
+  "rutineStatus": {
+   "kode": "OK",
+   "tekstforklaring": "x"
+  },
+  "kombinasjonStatus": {
+   "kode": "IK",
+   "tekstforklaring": "x"
+  },
+  "regelStatus": {
+   "kode": "RT",
+   "tekstforklaring": "x",
+   "regelIdent": null
+  }
+ },
+ "signeringsGrunnlag": {
+  "kode": "SF",
+  "muligeSigneringsRoller": {
+   "personRolleGrunnlag": [
+    {
+     "fodselsdato": "01.02.1970",
+     "navn": "Ingrid Berg",
+     "rolle": {
+      "kode": "DAGL",
+      "tekstforklaring": "Daglig leder"
+     }
+    }
+   ]
+  },
+  "tekstforklaring": "Signeringsgrunnlag finnes"
+ },
+ "signeringsKombinasjon": {
+  "kombinasjon": []
+ }
+}

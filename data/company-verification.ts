@@ -2,7 +2,6 @@ import { companyVerificationLog } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
 import { db } from "@recommand/db";
 import { and, eq, inArray } from "drizzle-orm";
-import { getEnterpriseData } from "./cbe-public-search/client";
 import { requiresArratechKycReview } from "./at/kyc";
 import { UserFacingError } from "@peppol/utils/util";
 import { verifyCompany } from "./companies";
@@ -18,6 +17,7 @@ import { lockCompanyRow, sameCompanyIdentity } from "./company-row-lock";
 import { getCurrentVerificationSession } from "./current-verification-session";
 import { sessionMatchesCompany } from "./at/kyc-onboarding-state";
 import { namesMatch } from "@peppol/utils/names-match";
+import { checkRepresentative } from "./representative-checks";
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -367,35 +367,8 @@ export async function submitIdentityForm(
     throw new UserFacingError("The mandate has to be signed before the identity check can start.");
   }
 
-  let effectiveFirstName = firstName;
-  let effectiveLastName = lastName;
-
-  if (company.country === "BE") {
-    if (!company.enterpriseNumber) {
-      throw new UserFacingError("Company does not have an enterprise number. Please complete the company details first.");
-    }
-    const lookupNumber = company.country === "BE" && company.enterpriseNumber.toUpperCase().startsWith("BE") ? company.enterpriseNumber.slice(2) : company.enterpriseNumber;
-    const enterpriseData = await getEnterpriseData(lookupNumber, company.country);
-    const validRepresentatives = enterpriseData.representatives.filter(
-      (rep): rep is typeof rep & { firstName: string; lastName: string } => Boolean(rep.firstName && rep.lastName)
-    );
-
-    if (validRepresentatives.length === 0) {
-      effectiveFirstName = "UNKNOWN";
-      effectiveLastName = "UNKNOWN";
-    } else {
-      const isRepresentative = validRepresentatives.some(
-        (rep) =>
-          namesMatch(rep.firstName, firstName) &&
-          namesMatch(rep.lastName, lastName)
-      );
-      if (!isRepresentative) {
-        throw new UserFacingError(
-          "The provided name does not match any representative of this company in the CBE registry. Please contact support@recommand.eu to proceed with the verification."
-        );
-      }
-    }
-  }
+  // Who may act for the company, where its country's register says so.
+  const { firstName: effectiveFirstName, lastName: effectiveLastName } = await checkRepresentative(company, { firstName, lastName });
 
   return submitVerificationIdentity({
     company,
