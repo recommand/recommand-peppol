@@ -969,3 +969,9 @@ Not validated,Nicht validiert
 No validation rules are available for this document type\, so its content was not checked.,Für diesen Dokumenttyp sind keine Validierungsregeln verfügbar\, daher wurde der Inhalt nicht geprüft.
 Validation unavailable,Validierung nicht verfügbar
 The validation service could not be reached when this document was processed\, so its content was not checked. This does not mean the document is wrong.,Der Validierungsdienst war bei der Verarbeitung dieses Dokuments nicht erreichbar\, daher wurde der Inhalt nicht geprüft. Das bedeutet nicht\, dass das Dokument fehlerhaft ist.
+{0} of {1} can no longer receive documents over Peppol,{0} von {1} kann keine Dokumente mehr über Peppol empfangen
+Peppol registration removed,Peppol-Registrierung entfernt
+The organisation number {0} of {1} was deleted from Enhetsregisteret\, the Norwegian register of legal entities\, on {2}.,Die Organisationsnummer {0} von {1} wurde am {2} aus Enhetsregisteret\, dem norwegischen Register der juristischen Personen\, gelöscht.
+The Peppol rules for Norway require the registration of a deleted organisation to be removed. We have removed {0} from the Peppol network and from the company\, so documents can no longer be delivered to it.,Die Peppol-Regeln für Norwegen verlangen\, dass die Registrierung einer gelöschten Organisation entfernt wird. Wir haben {0} aus dem Peppol-Netzwerk und aus dem Unternehmen entfernt\, sodass keine Dokumente mehr an diese Adresse zugestellt werden können.
+If you think this is a mistake\, contact,Wenn Sie glauben\, dass es sich um einen Fehler handelt\, wenden Sie sich an
+Peppol registration removed for {0},Peppol-Registrierung entfernt für {0}

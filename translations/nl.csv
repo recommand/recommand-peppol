@@ -969,3 +969,9 @@ Not validated,Niet gevalideerd
 No validation rules are available for this document type\, so its content was not checked.,Voor dit documenttype zijn geen validatieregels beschikbaar\, dus de inhoud werd niet gecontroleerd.
 Validation unavailable,Validatie niet beschikbaar
 The validation service could not be reached when this document was processed\, so its content was not checked. This does not mean the document is wrong.,De validatieservice was niet bereikbaar toen dit document werd verwerkt\, dus de inhoud werd niet gecontroleerd. Dat betekent niet dat het document fout is.
+{0} of {1} can no longer receive documents over Peppol,{0} van {1} kan geen documenten meer ontvangen via Peppol
+Peppol registration removed,Peppol-registratie verwijderd
+The organisation number {0} of {1} was deleted from Enhetsregisteret\, the Norwegian register of legal entities\, on {2}.,Het organisatienummer {0} van {1} is op {2} geschrapt uit Enhetsregisteret\, het Noorse register van rechtspersonen.
+The Peppol rules for Norway require the registration of a deleted organisation to be removed. We have removed {0} from the Peppol network and from the company\, so documents can no longer be delivered to it.,De Peppol-regels voor Noorwegen vereisen dat de registratie van een geschrapte organisatie wordt verwijderd. We hebben {0} van het Peppol-netwerk en uit het bedrijf verwijderd\, zodat er geen documenten meer aan kunnen worden afgeleverd.
+If you think this is a mistake\, contact,Denk je dat dit een vergissing is? Neem dan contact op met
+Peppol registration removed for {0},Peppol-registratie verwijderd voor {0}

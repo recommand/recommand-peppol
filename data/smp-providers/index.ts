@@ -19,6 +19,8 @@ import type { SmpProviderId } from "@peppol/data/peppol-providers";
 import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
 import { UserFacingError } from "@peppol/utils/util";
+import { getCompanyIdentifiers } from "@peppol/data/company-identifiers";
+import { assertNorwegianOrganisationsRegistrable } from "@peppol/data/bronnoysund/organisation-check";
 
 type MinimalCompanyIdentifier = {
   scheme: string;
@@ -67,11 +69,11 @@ const smpProviders = {
   },
 } satisfies Record<SmpProviderId, SmpProvider>;
 
-async function getSmpProviderForCompanyId(
+async function getCompanyRouting(
   companyId: string
-): Promise<SmpProvider> {
+): Promise<{ provider: SmpProvider; isSmpRecipient: boolean }> {
   const company = await db
-    .select({ smpProvider: companies.smpProvider })
+    .select({ smpProvider: companies.smpProvider, isSmpRecipient: companies.isSmpRecipient })
     .from(companies)
     .where(eq(companies.id, companyId))
     .then((rows) => rows[0]);
@@ -80,7 +82,13 @@ async function getSmpProviderForCompanyId(
     throw new UserFacingError("Company not found");
   }
 
-  return smpProviders[company.smpProvider];
+  return { provider: smpProviders[company.smpProvider], isSmpRecipient: company.isSmpRecipient };
+}
+
+async function getSmpProviderForCompanyId(
+  companyId: string
+): Promise<SmpProvider> {
+  return (await getCompanyRouting(companyId)).provider;
 }
 
 export async function upsertCompanyRegistrations(options: {
@@ -88,7 +96,10 @@ export async function upsertCompanyRegistrations(options: {
   useTestNetwork: boolean;
   includeCapabilities?: boolean;
 }) {
-  const provider = await getSmpProviderForCompanyId(options.companyId);
+  const { provider, isSmpRecipient } = await getCompanyRouting(options.companyId);
+  if (isSmpRecipient) {
+    await assertNorwegianOrganisationsRegistrable(await getCompanyIdentifiers(options.companyId));
+  }
   await provider.upsertCompanyRegistrations(options);
 }
 
@@ -105,7 +116,10 @@ export async function upsertCompanyRegistration(options: {
   identifier: MinimalCompanyIdentifier;
   useTestNetwork: boolean;
 }) {
-  const provider = await getSmpProviderForCompanyId(options.companyId);
+  const { provider, isSmpRecipient } = await getCompanyRouting(options.companyId);
+  if (isSmpRecipient) {
+    await assertNorwegianOrganisationsRegistrable([options.identifier]);
+  }
   await provider.upsertCompanyRegistration(options);
 }
 

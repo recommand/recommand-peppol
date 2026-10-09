@@ -34,6 +34,7 @@ import { initializeFrenchReportingDeclarantCron } from "./data/fr-reporting-decl
 import { initializeFrenchReportingStatusCron } from "./data/fr-reporting-submissions";
 import { initializeDeliveryReconciliationCron } from "./data/deliveries/reconcile";
 import { initializeEmailDeliveryReconciliationCron } from "./data/deliveries/reconcile-email";
+import { initializeDeletedNorwegianOrganisationsCron } from "./data/bronnoysund/deleted-organisations";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { normalizeSchemaExamples } from "./utils/openapi-schema-examples";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
@@ -232,6 +233,7 @@ export function start() {
   initializeFrenchReportingStatusCron(logger);
   initializeDeliveryReconciliationCron(logger);
   initializeEmailDeliveryReconciliationCron(logger);
+  initializeDeletedNorwegianOrganisationsCron(logger);
 
   initializeMetricsServer(logger);
 }
