@@ -964,3 +964,8 @@ Set up later,Later instellen
 Edit details,Gegevens aanpassen
 Working through the API for clients? Choose ‘Set up later’ and add their companies later.,Werk je via de API voor klanten? Kies ‘Later instellen’ en voeg hun bedrijven later toe.
 Purchase Order Reference,Bestelbonreferentie
+Invalid,Ongeldig
+Not validated,Niet gevalideerd
+No validation rules are available for this document type\, so its content was not checked.,Voor dit documenttype zijn geen validatieregels beschikbaar\, dus de inhoud werd niet gecontroleerd.
+Validation unavailable,Validatie niet beschikbaar
+The validation service could not be reached when this document was processed\, so its content was not checked. This does not mean the document is wrong.,De validatieservice was niet bereikbaar toen dit document werd verwerkt\, dus de inhoud werd niet gecontroleerd. Dat betekent niet dat het document fout is.

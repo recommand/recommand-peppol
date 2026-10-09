@@ -964,3 +964,8 @@ Set up later,Configurer plus tard
 Edit details,Modifier les informations
 Working through the API for clients? Choose ‘Set up later’ and add their companies later.,Vous travaillez via l'API pour des clients ? Choisissez « Configurer plus tard » et ajoutez leurs entreprises ensuite.
 Purchase Order Reference,Référence du bon de commande
+Invalid,Invalide
+Not validated,Non validé
+No validation rules are available for this document type\, so its content was not checked.,Aucune règle de validation n'est disponible pour ce type de document\, son contenu n'a donc pas été vérifié.
+Validation unavailable,Validation indisponible
+The validation service could not be reached when this document was processed\, so its content was not checked. This does not mean the document is wrong.,Le service de validation était injoignable lors du traitement de ce document\, son contenu n'a donc pas été vérifié. Cela ne signifie pas que le document est erroné.

@@ -34,7 +34,6 @@ import type {
   TransmittedDocumentWithoutBody,
 } from "@peppol/data/transmitted-documents";
 import type { Label } from "@peppol/types/label";
-import { Badge } from "@core/components/ui/badge";
 import { LabelBadge } from "@peppol/components/label-badge";
 import { Alert, AlertDescription, AlertTitle } from "@core/components/ui/alert";
 import {
@@ -49,7 +48,10 @@ import {
   CollapsibleTrigger,
 } from "@core/components/ui/collapsible";
 import { SyntaxHighlighter } from "@peppol/components/send-document/syntax-highlighter";
-import { ValidationDetails } from "@peppol/components/validation-details";
+import {
+  ValidationStatusBadge,
+  ValidationStatusCard,
+} from "@peppol/components/validation-details";
 import type { ValidationResponse } from "@peppol/types/validation";
 import { CsvAttachmentTable } from "@peppol/components/csv-attachment-table";
 import type { MessageLevelResponse } from "@peppol/utils/parsing/message-level-response/schemas";
@@ -448,9 +450,9 @@ export default function TransmittedDocumentDetailPage() {
     doc.validation && doc.validation.result !== "valid" ? (
       <div className="flex items-center gap-2">
         <span>{doc.id}</span>
-        <Badge variant="destructive" className="capitalize text-sm">
-          {doc.validation.result.replaceAll("_", " ")}
-        </Badge>
+        <ValidationStatusBadge
+          validation={doc.validation as ValidationResponse}
+        />
       </div>
     ) : undefined;
 
@@ -793,21 +795,9 @@ export default function TransmittedDocumentDetailPage() {
           </Card>
 
           <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-            {doc.validation && doc.validation.result !== "valid" && (
-              <Card className="border-destructive/30 bg-destructive/5 dark:border-destructive/50 dark:bg-destructive/10">
-                <CardHeader>
-                  <CardTitle>{t`Document Validation Issues`}</CardTitle>
-                  <CardDescription className="text-foreground">
-                    {t`This document has validation errors that need attention.`}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ValidationDetails
-                    validation={doc.validation as ValidationResponse}
-                  />
-                </CardContent>
-              </Card>
-            )}
+            <ValidationStatusCard
+              validation={doc.validation as ValidationResponse | null}
+            />
 
             {relatedDocuments.length > 0 && (
               <Card>
