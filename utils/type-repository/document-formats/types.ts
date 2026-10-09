@@ -68,8 +68,9 @@ export type DocumentFormat<DocumentTypes extends readonly AnyDocumentType[]> = {
 
   /**
    * The validation profile to validate this format's XML with, for a format whose XML does
-   * not identify the rules that apply to it. Absent for every format the validation
-   * service recognises by content.
+   * not reliably identify the rules that apply to it: the French formats, whose doc type
+   * decides the French rules while BT-24 may say plain EN 16931. Absent for every format
+   * the validation service recognises by content.
    */
   validationProfile?: ValidationProfile;
 

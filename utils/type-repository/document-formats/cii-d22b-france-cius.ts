@@ -22,6 +22,8 @@ export const ciiD22bFranceCiusFormat: DocumentFormat<
 
   docTypeId: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::D22B",
   supportedDocumentTypes: [invoiceDocumentType, creditNoteDocumentType],
+  // A French CIUS document may declare plain EN 16931 in BT-24, so only the doc type says the French rules apply.
+  validationProfile: "fr-cius",
   supportedProcessIds: [
     regulatedProcessId,
     nonRegulatedProcessId,

@@ -23,10 +23,12 @@ export const validationError = z.object({
 
 /**
  * Names a rule set the validation service cannot pick from the document's content. A
- * French Factur-X carries CII that declares a plain Factur-X guideline, so only the
- * caller knows the French rules apply to it.
+ * French Factur-X carries CII that declares a plain Factur-X guideline, and a French CIUS
+ * invoice declares plain EN 16931 in BT-24, so only the caller, who knows the doc type,
+ * knows the French rules apply. `fr-extended` applies the French Extended rules whatever
+ * BT-24 says.
  */
-export type ValidationProfile = "fr-facturx";
+export type ValidationProfile = "fr-facturx" | "fr-cius" | "fr-extended";
 
 export const validationResult = z.enum(["valid", "invalid", "not_supported", "error"]);
 
