@@ -212,9 +212,10 @@ export const paymentMeansSchema = z
       description:
         "The payment reference the buyer should quote when paying, such as a structured communication.",
     }),
-    iban: z.string().openapi({
+    iban: z.string().nullish().openapi({
       example: "BE1234567890",
-      description: "The account the payment is to be made to, usually an IBAN.",
+      description:
+        "The account the payment is to be made to, usually an IBAN. A credit transfer needs one. Leave it out when there is no account to pay into, as with a direct debit or a card payment.",
     }),
     financialInstitutionBranch: z.string().nullish().openapi({
       description:

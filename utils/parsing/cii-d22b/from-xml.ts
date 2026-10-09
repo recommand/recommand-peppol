@@ -208,7 +208,7 @@ export function parseBillingDocumentFromCII(xml: string) {
       (payment: any, index: number) => ({
         paymentMethod: getPaymentKeyByCode(getTextContent(payment.TypeCode)),
         reference: getTextContent(paymentReferences[index]),
-        iban: getTextContent(payment.PayeePartyCreditorFinancialAccount?.IBANID),
+        iban: getNullableTextContent(payment.PayeePartyCreditorFinancialAccount?.IBANID),
         name: getNullableTextContent(
           payment.PayeePartyCreditorFinancialAccount?.AccountName
         ),

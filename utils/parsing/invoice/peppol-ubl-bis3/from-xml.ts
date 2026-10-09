@@ -117,7 +117,7 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
   const paymentMeans = (invoice.PaymentMeans || []).map((payment: any) => ({
     paymentMethod: getPaymentKeyByCode(getTextContent(payment.PaymentMeansCode)),
     reference: getTextContent(payment.PaymentID),
-    iban: getTextContent(payment.PayeeFinancialAccount?.ID),
+    iban: getNullableTextContent(payment.PayeeFinancialAccount?.ID),
     name: getNullableTextContent(payment.PayeeFinancialAccount?.Name),
     financialInstitutionBranch: getNullableTextContent(payment.PayeeFinancialAccount?.FinancialInstitutionBranch?.ID),
   }));

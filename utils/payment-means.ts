@@ -48,3 +48,16 @@ export const PAYMENT_MEANS: { key: string, code: string, name: string }[] = [
         name: "SEPA direct debit",
     }
 ]
+const CREDIT_TRANSFER_CODES = ["30", "58"];
+
+/**
+ * Whether a payment means carries the payee's account (BT-84): only when it
+ * has one. An empty string also counts as none, except for a credit transfer,
+ * which keeps writing it as before so existing documents serialize unchanged.
+ */
+export function hasPayeeAccount<T extends { paymentMethod: string; iban?: string | null }>(
+    payment: T
+): payment is T & { iban: string } {
+    if (payment.iban == null) return false;
+    return payment.iban.trim() !== "" || CREDIT_TRANSFER_CODES.includes(getPaymentCodeByKey(payment.paymentMethod));
+}
