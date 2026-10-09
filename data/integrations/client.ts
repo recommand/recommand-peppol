@@ -1,5 +1,5 @@
 import { errorResponseSchema, manifestSchema, successResponseSchema, type IntegrationConfigurationField, type IntegrationEvent, type IntegrationManifest } from "@peppol/types/integration";
-import { createIntegrationTaskLog, updateIntegrationState, type ActivatedIntegration } from ".";
+import { createIntegrationTaskLog, recordFailedRun, recordSuccessfulRun, updateIntegrationState, type ActivatedIntegration } from ".";
 import { createCleanUrl, UserFacingError } from "@peppol/utils/util";
 import { generateIntegrationJwt } from "./auth";
 import { getMinimalTeamMembers } from "@core/data/team-members";
@@ -18,10 +18,49 @@ function flattenFieldsToObject(fields: IntegrationConfigurationField[]): Record<
     }, {} as Record<string, unknown>);
 }
 
-const FAILURE_EMAIL_EXCLUDED_TASKS = new Set(["HARVEST_API_ERROR"]);
+type FailedTask = { task: string; message: string; context?: string };
 
-function getFailureEmailTasks(failedTasks: Array<{ task: string; message: string; context?: string }>) {
-    return failedTasks.filter((failedTask) => !FAILURE_EMAIL_EXCLUDED_TASKS.has(failedTask.task));
+/**
+ * Which failures of a response to report to the team right away, and which ones mean
+ * the run as a whole did not get through. A failed task with a context concerns one
+ * item the integration can retry, such as an invoice it could not send: the team has
+ * to act on it, so it is reported at once. On a scheduled run, an error response or a
+ * failed task without a context means the run itself failed, typically because the
+ * external service was briefly unavailable; the next run usually gets past that, so
+ * such failures are only reported once they last (see `recordFailedRun`). Other events
+ * report every failure at once, because nothing retries them on a schedule.
+ */
+export function classifyFailures(event: IntegrationEvent, failedTasks: FailedTask[], isErrorResponse: boolean) {
+    if (!event.startsWith("integration.cron.")) {
+        return { immediate: failedTasks, run: [] as FailedTask[], scheduled: false };
+    }
+    return {
+        immediate: isErrorResponse ? [] : failedTasks.filter((failedTask) => failedTask.context),
+        run: isErrorResponse ? failedTasks : failedTasks.filter((failedTask) => !failedTask.context),
+        scheduled: true,
+    };
+}
+
+/** Reports what has to be reported now, and keeps the count of failed scheduled runs. */
+async function reportFailures(
+    integration: ActivatedIntegration,
+    event: IntegrationEvent,
+    failedTasks: FailedTask[],
+    isErrorResponse: boolean,
+) {
+    const { immediate, run, scheduled } = classifyFailures(event, failedTasks, isErrorResponse);
+    // An error response with a body the integration did not structure still fails the run.
+    const runFailed = run.length > 0 || (scheduled && isErrorResponse);
+    if (scheduled && !runFailed) {
+        await recordSuccessfulRun(integration.id);
+    }
+    const toReport = [...immediate];
+    if (runFailed && await recordFailedRun(integration.id)) {
+        toReport.push(...(run.length > 0 ? run : [{ task: "integration", message: "The integration returned an error without details" }]));
+    }
+    if (toReport.length > 0) {
+        await sendFailureEmailToTeam({ integration, event, failedTasks: toReport });
+    }
 }
 
 async function sendFailureEmailToTeam({
@@ -149,10 +188,7 @@ export async function postToIntegration({
             await createIntegrationTaskLog(integration.id, event, parsedResponse.error.task, false, message, parsedResponse.error.context ?? "");
         }
         
-        const emailTasks = getFailureEmailTasks(failedTasks);
-        if (emailTasks.length > 0) {
-            await sendFailureEmailToTeam({ integration, event, failedTasks: emailTasks });
-        }
+        await reportFailures(integration, event, failedTasks, true);
         
         log(["Error response from integration", integration.manifest.url, event, JSON.stringify(json, null, 2)], "error");
         throw new UserFacingError(message);
@@ -185,10 +221,9 @@ export async function postToIntegration({
             }
         }
         
-        const emailTasks = getFailureEmailTasks(failedTasks);
-        if (emailTasks.length > 0) {
-            await sendFailureEmailToTeam({ integration, event, failedTasks: emailTasks });
-        }
+        await reportFailures(integration, event, failedTasks, false);
+    } else {
+        await reportFailures(integration, event, [], false);
     }
 
 

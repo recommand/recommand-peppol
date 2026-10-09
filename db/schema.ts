@@ -985,6 +985,10 @@ export const activatedIntegrations = pgTable(
     manifest: jsonb("manifest").$type<IntegrationManifest>().notNull(),
     configuration: jsonb("configuration").$type<IntegrationConfiguration>(),
     state: jsonb("state").$type<IntegrationState>().notNull(),
+    // Scheduled runs that failed as a whole in a row, and when the team was told: a
+    // failure is only reported once it outlasts a few runs, and once per incident.
+    consecutiveFailedRuns: integer("consecutive_failed_runs").notNull().default(0),
+    failureNotifiedAt: timestamp("failure_notified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
