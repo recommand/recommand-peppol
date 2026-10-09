@@ -119,7 +119,7 @@ async function _exportDocumentsImplementation(c: ExportDocumentsContext) {
         c.header("Content-Type", "application/zip");
         c.header("Content-Disposition", `attachment; filename="${filename}"`);
 
-        return c.body(zipBuffer);
+        return c.body(new Uint8Array(zipBuffer));
     } catch (error) {
         console.error("Failed to export documents:", error);
         return c.json(actionFailure("Failed to export documents"), 500);

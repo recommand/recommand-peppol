@@ -305,7 +305,7 @@ export default function Page() {
     [companies]
   );
 
-  const downloadResponseBlob = useCallback(async (response: Response, fallbackFilename: string) => {
+  const downloadResponseBlob = useCallback(async (response: Pick<Response, "blob" | "headers" | "json" | "ok">, fallbackFilename: string) => {
     if (!response.ok) {
       const json = await response.json() as { errors?: { [key: string]: string[] | undefined } };
       throw new Error(json.errors ? stringifyActionFailure(json.errors) : t`Request failed`);
