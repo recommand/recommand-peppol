@@ -1,31 +1,46 @@
-import type { accessPointProviderIds, smpProviderIds } from "@peppol/db/schema";
+import type { accessPointProviderIds } from "@peppol/db/schema";
 import { UserFacingError } from "@peppol/utils/util";
+import { getSmpProviderDescriptor, type SmpProviderId } from "@peppol/data/smp-providers/descriptors";
 
 export type AccessPointProviderId = (typeof accessPointProviderIds)[number];
-export type SmpProviderId = (typeof smpProviderIds)[number];
+export type { SmpProviderId };
 
 export type PeppolProviders = {
   accessPointProvider: AccessPointProviderId;
   smpProvider: SmpProviderId;
 };
 
+const DEFAULT_PEPPOL_PROVIDERS: PeppolProviders = {
+  accessPointProvider: "recommand-ap1",
+  smpProvider: "recommand-smp1",
+};
+
 /**
- * The access point and SMP a company in a country is served by. The country decides:
- * French companies go through the access point and SMP that operate under the French
- * regime, every other supported country through our own. Customers never pick a
- * provider; they pick a country.
+ * Countries served by other providers than our own access point and SMP. French
+ * companies go through the access point and SMP that operate under the French
+ * regime. Norwegian companies are registered in ELMA, the Norwegian receiver
+ * register, and receive through our own access point.
  */
-export function resolveDefaultPeppolProviders(country: string): PeppolProviders {
-  if (country.toUpperCase() === "FR") {
-    return {
-      accessPointProvider: "at-shared-ap-fr",
-      smpProvider: "at-shared-smp-fr",
-    };
+const COUNTRY_PEPPOL_PROVIDERS: Partial<Record<string, PeppolProviders>> = {
+  FR: { accessPointProvider: "at-shared-ap-fr", smpProvider: "at-shared-smp-fr" },
+  NO: { accessPointProvider: "recommand-ap1", smpProvider: "elma" },
+};
+
+/**
+ * The access point and SMP a company in a country is served by. The country decides;
+ * customers never pick a provider, they pick a country. A country whose SMP is not
+ * yet switched on for the network keeps our own providers, the ones its companies
+ * had before.
+ */
+export function resolveDefaultPeppolProviders(
+  country: string,
+  network: { useTestNetwork: boolean }
+): PeppolProviders {
+  const providers = COUNTRY_PEPPOL_PROVIDERS[country.toUpperCase()];
+  if (!providers || !getSmpProviderDescriptor(providers.smpProvider).isAvailable(network.useTestNetwork)) {
+    return DEFAULT_PEPPOL_PROVIDERS;
   }
-  return {
-    accessPointProvider: "recommand-ap1",
-    smpProvider: "recommand-smp1",
-  };
+  return providers;
 }
 
 export function samePeppolProviders(
@@ -40,17 +55,12 @@ export function samePeppolProviders(
 
 /**
  * The identifier schemes an SMP accepts for the participants it registers, or null
- * when it takes any scheme. The French SMP registers participants under the French
- * electronic address scheme only: a SIREN or SIRET under 0002 or 0009 is refused
- * there, however valid the number is.
+ * when it takes any scheme.
  */
 export function getSupportedIdentifierSchemes(
   smpProvider: SmpProviderId
 ): readonly string[] | null {
-  if (smpProvider === "at-shared-smp-fr") {
-    return ["0225"];
-  }
-  return null;
+  return getSmpProviderDescriptor(smpProvider).identifierSchemes;
 }
 
 export function isIdentifierSchemeSupported(

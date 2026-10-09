@@ -24,10 +24,10 @@ const mixed = [
 
 describe("country to provider mapping", () => {
   it("routes France through the shared French providers and everything else through ours", () => {
-    expect(resolveDefaultPeppolProviders("FR")).toEqual({ accessPointProvider: "at-shared-ap-fr", smpProvider: "at-shared-smp-fr" });
-    expect(resolveDefaultPeppolProviders("fr")).toEqual(resolveDefaultPeppolProviders("FR"));
+    expect(resolveDefaultPeppolProviders("FR", { useTestNetwork: false })).toEqual({ accessPointProvider: "at-shared-ap-fr", smpProvider: "at-shared-smp-fr" });
+    expect(resolveDefaultPeppolProviders("fr", { useTestNetwork: false })).toEqual(resolveDefaultPeppolProviders("FR", { useTestNetwork: false }));
     for (const country of ["BE", "NL", "DE", "DK"]) {
-      expect(resolveDefaultPeppolProviders(country)).toEqual({ accessPointProvider: "recommand-ap1", smpProvider: "recommand-smp1" });
+      expect(resolveDefaultPeppolProviders(country, { useTestNetwork: false })).toEqual({ accessPointProvider: "recommand-ap1", smpProvider: "recommand-smp1" });
     }
   });
 });

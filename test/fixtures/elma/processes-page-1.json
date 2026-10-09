@@ -1,0 +1,108 @@
+{
+ "empty": false,
+ "first": false,
+ "last": true,
+ "number": 1,
+ "numberOfElements": 4,
+ "pageable": {
+  "offset": 0,
+  "pageNumber": 0,
+  "pageSize": 200,
+  "paged": true,
+  "sort": {
+   "empty": true,
+   "sorted": false,
+   "unsorted": true
+  },
+  "unpaged": false
+ },
+ "size": 6,
+ "sort": {
+  "empty": true,
+  "sorted": false,
+  "unsorted": true
+ },
+ "totalElements": 10,
+ "totalPages": 2,
+ "content": [
+  {
+   "identifier": "b583f6ea-deb2-4e38-b4de-a737eb19381f",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:poacc:bis:mlr:3",
+   "domain": "Post-Award",
+   "title": "Peppol_Message_Level_Response_transaction_3.0",
+   "alias": "Peppol Message Level Response transaction 3.0",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "c689bc3c-4330-4e4a-91d2-6039d0458019",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2::ApplicationResponse##urn:fdc:peppol.eu:poacc:trns:mlr:3::2.1",
+     "title": "Peppol Message Level Response transaction 3.0"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  },
+  {
+   "identifier": "2d3c3cad-9cf6-46dc-b4dd-513e19e9282f",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0",
+   "domain": "Post-Award",
+   "title": "Peppol_BIS_SelfBilling_UBL_CreditNote_V3",
+   "alias": "Peppol BIS SelfBilling UBL CreditNote V3",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "622acf71-b6c9-46be-8d49-588d647c6d3d",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0::2.1",
+     "title": "Peppol BIS Self-Billing UBL Invoice V3"
+    },
+    {
+     "identifier": "b642bfea-37d0-4755-863c-cdb1b4cd6a66",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0::2.1",
+     "title": "Peppol BIS Self-Billing UBL Credit Note V3"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  },
+  {
+   "identifier": "b3a9faf9-71e0-4328-aac4-a0f1079062f6",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.1::2.1",
+   "domain": "Post-Award",
+   "title": "XRechnung_UBL_Invoice_V2.1",
+   "alias": "XRechnung UBL Invoice V2.1",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  },
+  {
+   "identifier": "c27a4fbc-40e9-41b3-966d-57ec56238947",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:peppol:edec:mls",
+   "domain": "Operating Office",
+   "title": "Peppol Message Level Status v1.0",
+   "alias": "Peppol Message Level Status v1.0",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "b6421fca-5d5c-4116-b41e-278d16b3b37a",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2::ApplicationResponse##urn:peppol:edec:mls:1.0::2.1",
+     "title": "Peppol Message Level Status v1.0"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  }
+ ]
+}

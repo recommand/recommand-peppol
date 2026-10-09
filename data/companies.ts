@@ -16,6 +16,7 @@ import { enqueueS3PrefixDeletions } from "./s3-deletion";
 import { validateCompanyNumbers } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
+import { getSmpProviderDescriptor } from "./smp-providers/descriptors";
 import { planCompanyCountryChange } from "./company-country-change";
 import { lockCompanyRow } from "./company-row-lock";
 import { getPartnerRegisteredFrenchReportingDeclarants } from "./fr-reporting-declarants";
@@ -145,8 +146,6 @@ export async function getCompanyByPeppolId(options: {
 export async function createCompany(company: Omit<InsertCompany, "accessPointProvider" | "smpProvider"> & { skipDefaultCompanySetup: boolean }): Promise<Company> {
   const cleanedVat = cleanVatNumber(company.vatNumber);
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
-  const defaultPeppolProviders = resolveDefaultPeppolProviders(company.country);
-
   if (getCountrySupportLevel(company.country) === "unsupported") {
     throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be created in this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`, { field: "country" });
   }
@@ -161,6 +160,7 @@ export async function createCompany(company: Omit<InsertCompany, "accessPointPro
   const teamExtension = await getTeamExtension(company.teamId);
   const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
+  const defaultPeppolProviders = resolveDefaultPeppolProviders(company.country, { useTestNetwork });
 
   const createdCompany = await db
     .insert(companies)
@@ -399,6 +399,16 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     try {
       // Ensure none of the company's identifiers are already registered as recipient with another company within the same class (playground, playground with test network, production)
       await assertIdentifiersFreeForRecipient(updatedCompany.id);
+      // An SMP that keeps the company's name and contact details gets the new ones.
+      if (
+        shouldBeRegistered &&
+        getSmpProviderDescriptor(updatedCompany.smpProvider).republishOnCompanyDetailsChange &&
+        (updatedCompany.name !== oldCompany.name ||
+          updatedCompany.email !== oldCompany.email ||
+          updatedCompany.phone !== oldCompany.phone)
+      ) {
+        await upsertCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
+      }
     } catch (error) {
       // If the check fails, rollback the update of the company
       await db.update(companies).set(oldCompany).where(eq(companies.id, company.id));
