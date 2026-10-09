@@ -18,6 +18,8 @@ export const ublFranceCiusInvoiceFormat: DocumentFormat<
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::2.1",
   supportedDocumentTypes: [invoiceDocumentType],
+  // A French CIUS document may declare plain EN 16931 in BT-24, so only the doc type says the French rules apply.
+  validationProfile: "fr-cius",
   supportedProcessIds: [
     regulatedProcessId,
     nonRegulatedProcessId,

@@ -22,6 +22,8 @@ export const ublFranceExtendedCreditnoteFormat: DocumentFormat<
 
   docTypeId,
   supportedDocumentTypes: [creditNoteDocumentType],
+  // The doc type, not BT-24, decides which French rules apply.
+  validationProfile: "fr-extended",
   supportedProcessIds: [regulatedProcessId, nonRegulatedProcessId],
   smpRegistration: [
     {

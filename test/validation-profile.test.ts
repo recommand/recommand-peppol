@@ -5,13 +5,23 @@ import { facturxFranceFormat } from "../utils/type-repository/document-formats/f
 import { validateDocument } from "../utils/pipelines/sending/validate-document";
 
 describe("validation profile", () => {
-  it("is fr-facturx for French Factur-X and absent for every other format", () => {
-    expect(getValidationProfile(facturxFranceFormat.docTypeId)).toBe("fr-facturx");
+  it("names the French rules for every French invoice format and nothing for other formats", () => {
+    const expected: Record<string, string> = {
+      "facturx-france": "fr-facturx",
+      "ubl-france-cius-invoice": "fr-cius",
+      "ubl-france-cius-creditnote": "fr-cius",
+      "cii-d22b-france-cius": "fr-cius",
+      "ubl-france-extended-invoice": "fr-extended",
+      "ubl-france-extended-creditnote": "fr-extended",
+      "cii-d22b-france-extended": "fr-extended",
+    };
     for (const format of documentFormats) {
-      if (format !== facturxFranceFormat) {
-        expect(getValidationProfile(format.docTypeId)).toBeUndefined();
-      }
+      expect({ format: format.key, profile: getValidationProfile(format.docTypeId) }).toEqual({
+        format: format.key,
+        profile: expected[format.key] as any,
+      });
     }
+    expect(getValidationProfile(facturxFranceFormat.docTypeId)).toBe("fr-facturx");
     expect(getValidationProfile("unknown-doc-type-id")).toBeUndefined();
   });
 
@@ -75,6 +85,17 @@ describe("validation profile", () => {
       const cii = documentFormats.find((format) => format.key === "cii-d22b-en16931");
       expect(cii).toBeDefined();
       await expect(validateDocument("<a/>", cii!.docTypeId)).resolves.toMatchObject({ result: "valid" });
+    });
+
+    it("names the French profile of the doc type when sending French UBL and CII", async () => {
+      requests.length = 0;
+      for (const key of ["ubl-france-cius-invoice", "cii-d22b-france-extended"]) {
+        const format = documentFormats.find((candidate) => candidate.key === key);
+        expect(format).toBeDefined();
+        await validateDocument("<a/>", format!.docTypeId);
+      }
+
+      expect(requests.map((url) => url.searchParams.get("profile"))).toEqual(["fr-cius", "fr-extended"]);
     });
   });
 });

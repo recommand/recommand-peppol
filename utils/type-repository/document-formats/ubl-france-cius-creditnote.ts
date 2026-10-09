@@ -18,6 +18,8 @@ export const ublFranceCiusCreditnoteFormat: DocumentFormat<
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::2.1",
   supportedDocumentTypes: [creditNoteDocumentType],
+  // A French CIUS document may declare plain EN 16931 in BT-24, so only the doc type says the French rules apply.
+  validationProfile: "fr-cius",
   supportedProcessIds: [
     regulatedProcessId,
     nonRegulatedProcessId,

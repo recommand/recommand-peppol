@@ -26,6 +26,8 @@ export const ciiD22bFranceExtendedFormat: DocumentFormat<
 
   docTypeId,
   supportedDocumentTypes: [invoiceDocumentType, creditNoteDocumentType],
+  // The doc type, not BT-24, decides which French rules apply.
+  validationProfile: "fr-extended",
   supportedProcessIds: [regulatedProcessId, nonRegulatedProcessId],
   smpRegistration: [
     {
