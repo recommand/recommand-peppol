@@ -384,6 +384,21 @@ export function CreditNoteForm({
             placeholder={t`An identifier assigned by the buyer for internal routing purposes.`}
           />
         </div>
+
+        <div>
+          <Label htmlFor="purchaseOrderReference">{t`Purchase Order Reference`}</Label>
+          <Input
+            id="purchaseOrderReference"
+            value={creditNote.purchaseOrderReference || ""}
+            onChange={(e) =>
+              handleFieldChange(
+                "purchaseOrderReference",
+                e.target.value.trim() ? e.target.value : null
+              )
+            }
+            placeholder="4500012345"
+          />
+        </div>
       </div>
 
       <Collapsible open={openSections.creditedInvoices}>
