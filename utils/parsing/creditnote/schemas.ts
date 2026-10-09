@@ -27,7 +27,7 @@ export const baseCreditNoteSchema = z.object({
   note: z.string().nullish().openapi({ example: "Thank you for your business" }),
   buyerReference: z.string().nullish().openapi({ example: "CC-4120", description: "A reference the buyer asked you to put on the credit note so they can route it internally (BT-10). If neither this nor `purchaseOrderReference` is provided, the credit note number is used. For a German public authority addressed by its Leitweg-ID (recipient scheme `0204`), this must be that Leitweg-ID: it is filled in when left out, and a different value is refused." }),
   invoiceReferences: z.array(creditNoteInvoiceReferenceSchema).default([]).openapi({ description: "References to one or more invoices that are being credited. A French regulated credit note (`countrySpecific.country` `FR`) needs at least one reference with its `issueDate`." }),
-  purchaseOrderReference: z.string().nullish().openapi({ example: "4500012345", description: "The buyer's purchase order number (BT-13), written to the order reference. Give the number exactly as the buyer issued it, without a prefix such as \"PO\"." }),
+  purchaseOrderReference: z.string().nullish().openapi({ example: "4500012345", description: "The buyer's purchase order number (BT-13), written to the order reference." }),
   salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
   despatchReference: z.string().nullish().openapi({ example: "DE-2024-001", description: "A reference to a related despatch advice document (e.g. packing slip)" }),
   seller: partySchema,

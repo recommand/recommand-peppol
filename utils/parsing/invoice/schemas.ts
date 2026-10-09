@@ -559,7 +559,7 @@ export const baseInvoiceSchema = z.object({
   purchaseOrderReference: z.string().nullish().openapi({
     example: "4500012345",
     description:
-      "The buyer's purchase order number (BT-13), written to the order reference. Give the number exactly as the buyer issued it, without a prefix such as \"PO\".",
+      "The buyer's purchase order number (BT-13), written to the order reference.",
   }),
   salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
   despatchReference: z.string().nullish().openapi({
