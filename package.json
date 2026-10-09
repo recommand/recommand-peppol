@@ -19,7 +19,7 @@
     "@types/bun": "latest",
     "@types/pg": "^8.11.11",
     "@types/react": "^19.0.0",
-    "drizzle-kit": "^0.30.4",
+    "drizzle-kit": "^0.31.11",
     "pg": "^8.13.3",
     "react-email": "5.2.1",
     "tsx": "^4.19.3"
@@ -38,7 +38,7 @@
     "date-fns": "^4.1.0",
     "decimal.js": "^10.5.0",
     "dotenv": "^16.4.7",
-    "drizzle-orm": "0.45.2",
+    "drizzle-orm": "0.45.4",
     "fast-xml-parser": "^5.0.9",
     "hono": "^4.13.13",
     "hono-openapi": "^0.4.8",
