@@ -158,7 +158,7 @@ async function _downloadPackageImplementation(c: DownloadPackageContext) {
         c.header("Content-Type", "application/zip");
         c.header("Content-Disposition", `attachment; filename="${documentId}.zip"`);
 
-        return c.body(zipBuffer);
+        return c.body(new Uint8Array(zipBuffer));
     } catch (error) {
         return c.json(actionFailure("Failed to download document"), 500);
     }

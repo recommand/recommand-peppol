@@ -58,7 +58,7 @@ const _bulkExport = server.post(
       c.header("Content-Type", "application/zip");
       c.header("Content-Disposition", `attachment; filename="documents-selection.zip"`);
 
-      return c.body(zipBuffer);
+      return c.body(new Uint8Array(zipBuffer));
     } catch (error) {
       if (error instanceof Error && error.message === "Some documents were not found") {
         return c.json(actionFailure("Document not found"), 404);

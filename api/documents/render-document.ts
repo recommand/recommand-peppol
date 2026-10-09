@@ -100,7 +100,7 @@ async function _renderDocumentImplementation(c: RenderDocumentContext) {
       const pdf = await renderDocumentPdf(document);
       c.header("Content-Type", "application/pdf");
       c.header("Content-Disposition", `attachment; filename="${documentId}.pdf"`);
-      return c.body(pdf);
+      return c.body(new Uint8Array(pdf));
     } else {
       return c.json(actionFailure("Invalid document type"), 400);
     }
