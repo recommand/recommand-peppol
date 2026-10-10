@@ -168,8 +168,9 @@ export async function receivingPipeline(
   });
 
   // Transport receipts and platform-level lifecycle statuses are not charged; see
-  // isBillableDocument for the rule.
-  if (!options.skipBilling && isBillableDocument(type, parsedDocument)) {
+  // isBillableDocument for the rule. The detected type decides, so a lifecycle
+  // status we could not read is not charged as an unknown business document.
+  if (!options.skipBilling && isBillableDocument(received.probableType, parsedDocument)) {
     await recordUsageEvents([
       {
         id: usageEventId({

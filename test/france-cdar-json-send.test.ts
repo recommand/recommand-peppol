@@ -143,13 +143,14 @@ describe("France CDAR JSON sending", () => {
     } as const;
 
     // BR-FR-CDV-07: issuerLegalId is allowed at phase 305 when addressed to DFH.
-    expect(franceCdarSchema.safeParse(base).success).toBe(true);
+    expect(sendFranceCdarSchema.safeParse(base).success).toBe(true);
     // BR-FR-CDV-08: a DFH recipient needs no electronic address.
     expect(base).not.toHaveProperty("recipientElectronicAddress");
 
-    // A non-DFH, non-WK recipient still must omit issuerLegalId at phase 305...
+    // A CDAR we send to a non-DFH, non-WK recipient still omits issuerLegalId at
+    // phase 305...
     expect(
-      franceCdarSchema.safeParse({ ...base, recipientRole: "SE" }).success
+      sendFranceCdarSchema.safeParse({ ...base, recipientRole: "SE" }).success
     ).toBe(false);
     // ...and still requires an electronic address.
     expect(
@@ -160,6 +161,39 @@ describe("France CDAR JSON sending", () => {
         issuerLegalIdScheme: undefined,
       }).success
     ).toBe(false);
+  });
+
+  it("reads a received transmission status whose platform identifies itself as issuer", () => {
+    // The official schematron does not enforce BR-FR-CDV-07 at phase 305, and
+    // platforms fill MDT-38 with their PA matricule (0238) or their own SIREN.
+    const sent = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-203",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "305",
+      statusCode: "203",
+      issuerRole: "WK",
+      issuerLegalId: undefined,
+      issuerLegalIdScheme: undefined,
+      recipientElectronicAddress: "987654321",
+      recipientElectronicAddressScheme: "0225",
+    });
+    const xml = franceCdarToXML({ franceCdar: sent });
+
+    for (const [scheme, identifier] of [
+      ["0238", "0042"],
+      ["0002", "111222333"],
+    ] as const) {
+      const received = xml.replace(
+        "<ram:IssuerTradeParty>",
+        `<ram:IssuerTradeParty><ram:GlobalID schemeID="${scheme}">${identifier}</ram:GlobalID>`
+      );
+      expect(parseFranceCdarFromXML(received)).toEqual({
+        ...sent,
+        issuerLegalId: identifier,
+        issuerLegalIdScheme: scheme,
+      });
+    }
   });
 
   it("requires an electronic address and scheme for every non-WK recipient", () => {
