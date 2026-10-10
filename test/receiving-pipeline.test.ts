@@ -4,6 +4,11 @@ import { prepareIncomingDocument } from "@peppol/utils/pipelines/receiving/prepa
 import { peppolUblMlrFormat } from "@peppol/utils/type-repository/document-formats/peppol-ubl-mlr";
 import { siUblInvoiceFormat } from "@peppol/utils/type-repository/document-formats/si-ubl-invoice";
 import { siUblCreditnoteFormat } from "@peppol/utils/type-repository/document-formats/si-ubl-creditnote";
+import { franceCdarFormat } from "@peppol/utils/type-repository/document-formats/france-cdar";
+import { FRANCE_REGULATED_PROCESS_ID } from "@peppol/utils/type-repository/document-formats/france-process";
+import { isBillableDocument } from "@peppol/utils/type-repository/document-types/billing";
+import { franceCdarSchema } from "@peppol/utils/parsing/france-cdar/schemas";
+import { franceCdarToXML } from "@peppol/utils/parsing/france-cdar/to-xml";
 import { invoiceXmlDocument } from "./e2e/documents";
 
 const company = { name: "Receiver" } as Company;
@@ -144,5 +149,45 @@ describe("receiving pipeline", () => {
     ).rejects.toThrow(
       "Binary payloads are only supported for document types with a registered container.",
     );
+  });
+
+  it("does not charge a lifecycle status it cannot read", async () => {
+    const cdar = franceCdarSchema.parse({
+      id: "CDAR-2026-205",
+      issueDate: "2026-07-23T14:05:09",
+      businessProcess: "REGULATED",
+      phase: "23",
+      senderRole: "WK",
+      issuerRole: "BY",
+      issuerLegalId: "123456789",
+      issuerLegalIdScheme: "0002",
+      recipientRole: "SE",
+      recipientElectronicAddress: "987654321",
+      recipientElectronicAddressScheme: "0225",
+      statusCode: "205",
+      statusDate: "2026-07-23T14:05:09",
+      invoiceId: "INV-2026-001",
+      invoiceIssueDate: "2026-07-23",
+      sellerLegalId: "987654321",
+      sellerLegalIdScheme: "0002",
+    });
+    // A status code the parser does not know yet.
+    const body = franceCdarToXML({ franceCdar: cdar }).replace(
+      "<ram:ProcessConditionCode>205</ram:ProcessConditionCode>",
+      "<ram:ProcessConditionCode>220</ram:ProcessConditionCode>",
+    );
+
+    const received = await prepareIncomingDocument({
+      body,
+      contentType: "application/xml",
+      docTypeId: franceCdarFormat.docTypeId,
+      processId: FRANCE_REGULATED_PROCESS_ID,
+      company,
+      senderId: "0225:123456789",
+    });
+
+    expect(received.type).toBe("unknown");
+    expect(received.probableType).toBe("frenchInvoicingCdar");
+    expect(isBillableDocument(received.probableType, received.parsedDocument)).toBe(false);
   });
 });

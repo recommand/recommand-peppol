@@ -380,6 +380,31 @@ function refineSendFranceCdarReasonCode(
   }
 }
 
+// BR-FR-CDV-07: at phase 305 the issuer legal ID is omitted unless the CDAR is
+// addressed to the PPF (recipient role DFH). Only on sending: the official
+// schematron does not enforce this, and platforms put their PA matricule (0238) or
+// their own SIREN there in the CDARs they send.
+function refineSendFranceCdarIssuerLegalId(
+  data: Pick<
+    z.infer<typeof franceCdarObjectSchema>,
+    "phase" | "recipientRole" | "issuerLegalId"
+  >,
+  ctx: z.RefinementCtx
+) {
+  if (
+    data.phase === "305" &&
+    data.recipientRole !== "DFH" &&
+    data.issuerLegalId
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["issuerLegalId"],
+      message:
+        "issuerLegalId must be omitted when phase is 305 unless recipientRole is DFH",
+    });
+  }
+}
+
 const franceCdarTransmissionStatusCodes = new Set([
   "200",
   "201",
@@ -437,7 +462,7 @@ ${franceCdarRoleCodeDescription}`,
   }),
   issuerLegalId: franceCdarLegalIdSchema.optional().openapi({
     description:
-      "Legal identifier of the party setting the status. Required when phase is 23; must be omitted when phase is 305 unless recipientRole is DFH.",
+      "Legal identifier of the party setting the status. Required when phase is 23. When sending, it must be omitted when phase is 305 unless recipientRole is DFH; a received CDAR may carry the identifier of the platform that set a phase-305 status.",
     example: "200000008",
   }),
   issuerLegalIdScheme: franceCdarIdentifierSchemeSchema.optional().openapi({
@@ -608,21 +633,6 @@ function refineFranceCdar(
     });
   }
 
-  // BR-FR-CDV-07: at phase 305 the issuer legal ID is omitted unless the CDAR is
-  // addressed to the PPF (recipient role DFH).
-  if (
-    data.phase === "305" &&
-    data.recipientRole !== "DFH" &&
-    data.issuerLegalId
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["issuerLegalId"],
-      message:
-        "issuerLegalId must be omitted when phase is 305 unless recipientRole is DFH",
-    });
-  }
-
   // BR-FR-CDV-08: the recipient electronic address is required unless the
   // recipient is a platform (WK) or the PPF (DFH).
   if (
@@ -684,6 +694,7 @@ Defaults to \`305\` for statuses \`200\`, \`201\`, \`202\`, \`203\`, \`213\`, an
     // Only on sending: a received CDAR is stored as it arrived, even when its
     // sender used a reason code the current rules no longer accept for its status.
     refineSendFranceCdarReasonCode(data, ctx);
+    refineSendFranceCdarIssuerLegalId(data, ctx);
   })
   .openapi({
     ref: "SendFranceCdar",
