@@ -3,10 +3,11 @@ import { parseFrenchRegulatedInvoiceFromUBL } from "@peppol/utils/parsing/invoic
 import { invoiceDocumentType } from "../document-types/invoice";
 import { ublCustomizationId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
-import { assertFranceBillingProcessId } from "./france-process";
-
-const customizationId =
-  "urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0";
+import {
+  assertFranceBillingProcessId,
+  FRANCE_EXTENDED_CUSTOMIZATION_ID,
+  isFranceExtendedCustomizationId,
+} from "./france-process";
 
 const docTypeId =
   "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0::2.1";
@@ -46,7 +47,7 @@ export const ublFranceExtendedInvoiceFormat: DocumentFormat<
       senderAddress: context.senderAddress,
       recipientAddress: context.recipientAddress,
       isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-      profile: { customizationId, processId },
+      profile: { customizationId: FRANCE_EXTENDED_CUSTOMIZATION_ID, processId },
     });
   },
 
@@ -56,7 +57,7 @@ export const ublFranceExtendedInvoiceFormat: DocumentFormat<
   detectDocumentType: () => invoiceDocumentType,
 
   isFormat: (document) =>
-    ublCustomizationId(document.Invoice) === customizationId,
+    isFranceExtendedCustomizationId(ublCustomizationId(document.Invoice)),
 };
 
 export default ublFranceExtendedInvoiceFormat;

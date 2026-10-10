@@ -9,6 +9,12 @@ import { getTextContent } from "@peppol/utils/parsing/xml-helpers";
  */
 export type ParsedXmlDocument = Record<string, any>;
 
+/**
+ * What the sender says about a document beyond its content. A customization id that more
+ * than one format declares, plain EN 16931 say, is told apart by the process it travels over.
+ */
+export type DetectionContext = { processId?: string };
+
 export function parseXmlForDetection(
   xml: string
 ): ParsedXmlDocument | undefined {

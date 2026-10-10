@@ -4,7 +4,7 @@ import type {
   ParsedDocumentOf,
   RawDocumentOf,
 } from "../document-types/types";
-import type { ParsedXmlDocument } from "./xml-detection";
+import type { DetectionContext, ParsedXmlDocument } from "./xml-detection";
 
 type EncodeContext = {
   senderAddress: string;
@@ -64,7 +64,7 @@ export type DocumentFormat<DocumentTypes extends readonly AnyDocumentType[]> = {
   ) => RawDocumentOf<DocumentTypes[number]>;
   detectDocumentType: (raw: string | Buffer) => DocumentTypes[number];
 
-  isFormat?: (document: ParsedXmlDocument) => boolean;
+  isFormat?: (document: ParsedXmlDocument, context: DetectionContext) => boolean;
 
   /**
    * The validation profile to validate this format's XML with, for a format whose XML does
