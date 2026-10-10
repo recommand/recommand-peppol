@@ -57,11 +57,27 @@ describe("mapping document types to ELMA processes", () => {
     expect(() => mapDocumentTypesToElmaProcesses([documentType], catalogue)).toThrow("does not offer");
   });
 
-  it("refuses a document type that two processes carry rather than guess the role", () => {
+  it("takes the process meant for the ICD when ELMA lists the same process twice", () => {
+    // ELMA test lists Peppol BIS Billing UBL once for 0192 and once for 0007 and 0192.
     const billing = catalogue.find((process) => process.identifier === BILLING_UBL)!;
-    const twin = { ...billing, identifier: "00000000-0000-0000-0000-000000000000", title: "Twin" };
+    const wider = { ...billing, identifier: "00000000-0000-0000-0000-000000000000", requiredICDs: ["0007", "0192"] };
+    const invoice = getReceivingCapability("peppol-ubl-bis3-invoice", BILLING);
+    expect(mapDocumentTypesToElmaProcesses([invoice], [wider, ...catalogue])).toEqual([BILLING_UBL]);
+  });
+
+  it("refuses a document type that different processes carry rather than guess the role", () => {
+    const billing = catalogue.find((process) => process.identifier === BILLING_UBL)!;
+    const otherDomain = { ...billing, identifier: "00000000-0000-0000-0000-000000000000", domain: "Logistics" };
     expect(() =>
-      mapDocumentTypesToElmaProcesses([getReceivingCapability("peppol-ubl-bis3-invoice", BILLING)], [...catalogue, twin])
+      mapDocumentTypesToElmaProcesses([getReceivingCapability("peppol-ubl-bis3-invoice", BILLING)], [...catalogue, otherDomain])
+    ).toThrow("does not offer");
+  });
+
+  it("ignores a process the participant's ICD cannot be registered for", () => {
+    const billing = catalogue.find((process) => process.identifier === BILLING_UBL)!;
+    const otherIcd = { ...billing, requiredICDs: ["0007"] };
+    expect(() =>
+      mapDocumentTypesToElmaProcesses([getReceivingCapability("peppol-ubl-bis3-invoice", BILLING)], [otherIcd])
     ).toThrow("does not offer");
   });
 

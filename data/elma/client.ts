@@ -18,6 +18,8 @@ export type ElmaProcess = {
   domain?: string;
   title?: string;
   restricted?: boolean;
+  /** A participant needs one of these ICDs to be registered for the process. */
+  requiredICDs?: string[];
   documentTypes?: { identifier?: string; qualifiedIdentifier: ElmaQualifiedIdentifier; title?: string }[];
   dependencies?: { identifier?: string; qualifiedIdentifier: ElmaQualifiedIdentifier; title?: string }[];
 };

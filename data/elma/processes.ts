@@ -32,26 +32,57 @@ function carries(process: ElmaProcess, documentType: DocumentType): boolean {
   );
 }
 
+function documentTypeSet(process: ElmaProcess): string {
+  return (process.documentTypes ?? [])
+    .map((documentType) => qualifiedIdentifierToString(documentType.qualifiedIdentifier))
+    .sort()
+    .join("|");
+}
+
+/**
+ * Picks one process from those that carry a document type. ELMA can list the same
+ * process more than once, with the same document types and domain but different
+ * ICD requirements (its test environment does so for Peppol BIS Billing); those
+ * are the same process, and the one meant for the participant's ICD alone is
+ * taken. Matches that differ in their document types or domain are different
+ * processes, for example the buyer's and the seller's side of a transaction, and
+ * yield null rather than a guess.
+ */
+function pickProcess(matches: readonly ElmaProcess[], icd: string): ElmaProcess | null {
+  const eligible = matches.filter((process) => !process.requiredICDs?.length || process.requiredICDs.includes(icd));
+  if (eligible.length === 0) {
+    return null;
+  }
+  const [first] = eligible;
+  if (eligible.some((process) => process.domain !== first.domain || documentTypeSet(process) !== documentTypeSet(first))) {
+    return null;
+  }
+  return [...eligible].sort(
+    (left, right) =>
+      (left.requiredICDs?.length ?? 0) - (right.requiredICDs?.length ?? 0) || left.identifier.localeCompare(right.identifier)
+  )[0];
+}
+
 /**
  * The ELMA process identifiers to register for the given document types. A
- * document type that no current ELMA process carries, or that more than one does,
- * is refused rather than guessed: the second case would publish the company in a
- * role (buyer or seller, for example) we cannot tell apart.
+ * document type that no current ELMA process carries, or that different processes
+ * carry, is refused rather than guessed.
  */
 export function mapDocumentTypesToElmaProcesses(
   documentTypes: readonly DocumentType[],
-  catalogue: readonly ElmaProcess[]
+  catalogue: readonly ElmaProcess[],
+  icd = "0192"
 ): string[] {
   const processIds: string[] = [];
   const refused: string[] = [];
   for (const documentType of documentTypes) {
-    const matches = catalogue.filter((process) => carries(process, documentType));
-    if (matches.length !== 1) {
+    const process = pickProcess(catalogue.filter((candidate) => carries(candidate, documentType)), icd);
+    if (!process) {
       refused.push(`${documentType.docTypeId} (process ${documentType.processId})`);
       continue;
     }
-    if (!processIds.includes(matches[0].identifier)) {
-      processIds.push(matches[0].identifier);
+    if (!processIds.includes(process.identifier)) {
+      processIds.push(process.identifier);
     }
   }
   if (refused.length > 0) {
