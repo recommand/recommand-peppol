@@ -44,7 +44,7 @@ const teamsClient = rc<GetTeamExtension>("v1");
 
 // Utility function to handle API responses
 const handleApiResponse = async (
-  response: Response,
+  response: Pick<Response, "json">,
   successMessage: string
 ) => {
   const json = await response.json();
