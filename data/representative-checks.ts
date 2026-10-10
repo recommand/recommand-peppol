@@ -1,6 +1,9 @@
 import { UserFacingError } from "@peppol/utils/util";
 import { namesMatch } from "@peppol/utils/names-match";
+import React from "react";
+import { sendEmail } from "@core/lib/email";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
+import { NorwegianVerificationReviewNotification } from "@peppol/emails/norwegian-verification-review-notification";
 import { getEnterpriseData } from "./cbe-public-search/client";
 import { BronnoysundUnavailableError } from "./bronnoysund/client";
 import { assessSigningAuthority, fetchSigningAuthority } from "./bronnoysund/signing-authority";
@@ -12,18 +15,52 @@ import type { Company } from "./companies";
 // company. Countries without a check here rely on the identity check alone.
 
 type RepresentativeName = { firstName: string; lastName: string };
-type CheckedCompany = Pick<Company, "id" | "name" | "country" | "enterpriseNumber">;
+type CheckedCompany = Pick<Company, "id" | "teamId" | "name" | "country" | "enterpriseNumber">;
+
+export type ManualReviewRequest = {
+  company: CheckedCompany;
+  organisationNumber: string;
+  representativeName: string;
+  finding: string;
+};
 
 export type RepresentativeCheckDependencies = {
   getEnterpriseData: typeof getEnterpriseData;
   fetchSigningAuthority: (organisationNumber: string) => ReturnType<typeof fetchSigningAuthority>;
-  alert: typeof sendSystemAlert;
+  /** Hands a verification the register cannot settle to support. */
+  requestManualReview: (request: ManualReviewRequest) => Promise<void>;
 };
+
+/** Support hears of it twice: in the alert channel, and by mail to work it from. */
+async function requestManualReview(request: ManualReviewRequest): Promise<void> {
+  const { company, organisationNumber, representativeName, finding } = request;
+  await sendSystemAlert(
+    "Norwegian Verification Needs Manual Review",
+    `${representativeName} tried to verify ${company.name} (${company.id}, 0192:${organisationNumber}). ${finding} Check https://data.brreg.no/fullmakt/enheter/${organisationNumber}/signatur and decide the verification by hand.`,
+    "warning"
+  );
+  try {
+    await sendEmail({
+      to: "support@recommand.eu",
+      subject: `Manual review: Norwegian verification of ${company.name}`,
+      email: React.createElement(NorwegianVerificationReviewNotification, {
+        companyName: company.name,
+        companyId: company.id,
+        teamId: company.teamId,
+        organisationNumber,
+        representativeName,
+        finding,
+      }),
+    });
+  } catch (error) {
+    console.error(`Failed to email support about the Norwegian verification of company ${company.id}:`, error);
+  }
+}
 
 const defaultDependencies: RepresentativeCheckDependencies = {
   getEnterpriseData,
   fetchSigningAuthority: (organisationNumber) => fetchSigningAuthority(organisationNumber),
-  alert: sendSystemAlert,
+  requestManualReview,
 };
 
 /** Resolves to the name the identity check should expect, or throws a UserFacingError. */
@@ -114,11 +151,12 @@ const checkNorwegianSignatory: RepresentativeCheck = async (company, name, depen
   const finding = assessment.kind === "joint"
     ? `They may only sign jointly with others (${assessment.rule}).`
     : `Their signing authority could not be confirmed: ${assessment.reason}.`;
-  await dependencies.alert(
-    "Norwegian Verification Needs Manual Review",
-    `${name.firstName} ${name.lastName} tried to verify ${company.name} (${company.id}, 0192:${organisationNumber}). ${finding} Check https://data.brreg.no/fullmakt/enheter/${organisationNumber}/signatur and decide the verification by hand.`,
-    "warning"
-  );
+  await dependencies.requestManualReview({
+    company,
+    organisationNumber,
+    representativeName: `${name.firstName} ${name.lastName}`,
+    finding,
+  });
   throw new UserFacingError(NORWEGIAN_MANUAL_REVIEW_MESSAGE);
 };
 

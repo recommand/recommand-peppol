@@ -94,7 +94,7 @@ describe("assessing who may act for a Norwegian organisation", () => {
 });
 
 describe("checking the representative of a Norwegian company", () => {
-  const company = { id: "c_no", name: "Nordlys Handel AS", country: "NO", enterpriseNumber: "923609016" };
+  const company = { id: "c_no", teamId: "team_1", name: "Nordlys Handel AS", country: "NO", enterpriseNumber: "923609016" };
 
   function dependencies(signingAuthority: SigningAuthority | Error) {
     const alerts: string[] = [];
@@ -106,7 +106,9 @@ describe("checking the representative of a Norwegian company", () => {
         if (signingAuthority instanceof Error) throw signingAuthority;
         return signingAuthority;
       },
-      alert: async (title, message) => { alerts.push(`${title}: ${message}`); },
+      requestManualReview: async (request) => {
+        alerts.push(`${request.company.id} ${request.organisationNumber} ${request.representativeName}: ${request.finding}`);
+      },
     };
     return { deps, alerts, lookups };
   }
@@ -118,13 +120,12 @@ describe("checking the representative of a Norwegian company", () => {
     expect(alerts).toEqual([]);
   });
 
-  it("sends someone who may only sign jointly to manual review", async () => {
+  it("sends someone who may only sign jointly to support for manual review", async () => {
     const { deps, alerts } = dependencies(soleOrBoard);
     await expect(checkRepresentative(company, name("Kari", "Nordmann"), deps)).rejects.toThrow(
       "We could not confirm automatically that you may sign for this company on your own."
     );
-    expect(alerts).toHaveLength(1);
-    expect(alerts[0]).toContain("They may only sign jointly with others (Styret i fellesskap).");
+    expect(alerts).toEqual(["c_no 923609016 Kari Nordmann: They may only sign jointly with others (Styret i fellesskap)."]);
   });
 
   it("sends an undetermined case to manual review", async () => {
@@ -155,7 +156,7 @@ describe("checking the representative of a Norwegian company", () => {
 });
 
 describe("the representative check per country", () => {
-  const belgian = { id: "c_be", name: "Acme BV", country: "BE", enterpriseNumber: "BE0123456749" };
+  const belgian = { id: "c_be", teamId: "team_1", name: "Acme BV", country: "BE", enterpriseNumber: "BE0123456749" };
 
   function belgianDependencies(representatives: { firstName?: string; lastName?: string }[]) {
     const lookups: string[] = [];
@@ -165,7 +166,7 @@ describe("the representative check per country", () => {
         return { representatives } as any;
       },
       fetchSigningAuthority: async () => { throw new Error("must not be called"); },
-      alert: async () => {},
+      requestManualReview: async () => {},
     } satisfies Dependencies;
     return { deps, lookups };
   }
