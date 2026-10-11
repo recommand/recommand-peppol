@@ -1,0 +1,40 @@
+{
+ "identifier": "010cdcbc-c410-44ab-92b4-0a1a7fea0e2c",
+ "qualifiedIdentifier": "iso6523-actorid-upis::0192:923609016",
+ "icd": "0192",
+ "organizationIdentifier": "923609016",
+ "name": "NORDLYS HANDEL AS",
+ "registrationDate": "2026-10-11",
+ "lastModificationDate": "2026-10-11",
+ "contact": {
+  "name": "NORDLYS HANDEL AS",
+  "email": "peppol@recommand.eu"
+ },
+ "processes": [
+  {
+   "identifier": "8c6b15f6-6845-46b1-9ff1-92e226d7670a",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+   "domain": "Post-Award",
+   "title": "PEPPOLBIS_3_0_BILLING_01_UBL",
+   "alias": "PEPPOL BIS Billing 3.0 (01, UBL)",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "26d183b5-689a-4d9e-8edc-3ed65e77ddf0",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+     "title": "Peppol BIS Billing UBL Credit Note V3"
+    },
+    {
+     "identifier": "dfc096eb-950f-439c-87d1-d37cd14ae594",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+     "title": "Peppol BIS Billing UBL Invoice V3"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  }
+ ]
+}

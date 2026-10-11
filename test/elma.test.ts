@@ -187,6 +187,33 @@ describe("publishing a participant in ELMA", () => {
     ]);
   });
 
+  it("updates a participant ELMA serves without a provider, as it does in practice", async () => {
+    const { client, calls } = fakeElma({
+      [`GET ${PARTICIPANT}`]: () => json(fixture("participant-as-served.json")),
+      [`PUT ${PARTICIPANT}`]: () => json(fixture("participant-as-served.json")),
+    });
+    expect(await publish(client)).toBe("updated");
+    expect(calls.map((call) => call.method)).toEqual(["GET", "PUT"]);
+  });
+
+  it("transfers when ELMA refuses to update a participant it serves without a provider", async () => {
+    const { client, calls } = fakeElma({
+      [`GET ${PARTICIPANT}`]: () => json(fixture("participant-as-served.json")),
+      [`PUT ${PARTICIPANT}`]: (() => {
+        let attempts = 0;
+        return () => (++attempts === 1 ? new Response("Forbidden", { status: 403 }) : json(fixture("participant-as-served.json")));
+      })(),
+      [`PUT ${PARTICIPANT}/transfer/sp-recommand`]: () => new Response(null, { status: 200 }),
+    });
+    expect(await publish(client)).toBe("transferred");
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `GET ${PARTICIPANT}`,
+      `PUT ${PARTICIPANT}`,
+      `PUT ${PARTICIPANT}/transfer/sp-recommand`,
+      `PUT ${PARTICIPANT}`,
+    ]);
+  });
+
   it("transfers when ELMA only reveals the other registration on add", async () => {
     const { client, calls } = fakeElma({
       "POST /api/participants": () => new Response("Participant already exists", { status: 409 }),

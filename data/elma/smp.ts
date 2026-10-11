@@ -27,9 +27,18 @@ function isAlreadyRegistered(error: unknown): boolean {
   return error instanceof ElmaApiError && (error.status === 409 || (error.status === 400 && /exist/i.test(error.body)));
 }
 
-/** A participant ELMA serves without naming its provider is taken to be ours. */
-function isOurs(participant: ElmaParticipant, client: ElmaClient): boolean {
-  return !participant.provider?.identifier || participant.provider.identifier === client.serviceProviderId;
+/** Whether ELMA refused an update because the participant is not ours to change. */
+function isNotOurs(error: unknown): boolean {
+  return error instanceof ElmaApiError && (error.status === 403 || error.status === 404);
+}
+
+/**
+ * Whether ELMA names another service provider for the participant. ELMA does not
+ * return the provider of a participant at all (unlike its API description says),
+ * so a participant without one may be anyone's; a refused update tells.
+ */
+function namesOtherProvider(participant: ElmaParticipant, client: ElmaClient): boolean {
+  return !!participant.provider?.identifier && participant.provider.identifier !== client.serviceProviderId;
 }
 
 /**
@@ -61,9 +70,15 @@ export async function publishParticipant({
         throw error;
       }
     }
-  } else if (isOurs(existing, client)) {
-    await client.updateParticipant(ELMA_ICD, organisationNumber, form);
-    return "updated";
+  } else if (!namesOtherProvider(existing, client)) {
+    try {
+      await client.updateParticipant(ELMA_ICD, organisationNumber, form);
+      return "updated";
+    } catch (error) {
+      if (!isNotOurs(error)) {
+        throw error;
+      }
+    }
   }
 
   try {
@@ -210,8 +225,16 @@ export async function unregisterCompanyDocumentType({
       continue;
     }
     const participant = await client.getParticipant(ELMA_ICD, identifier.identifier);
-    if (participant && isOurs(participant, client)) {
+    if (!participant || namesOtherProvider(participant, client)) {
+      continue;
+    }
+    try {
       await client.updateParticipant(ELMA_ICD, identifier.identifier, form);
+    } catch (error) {
+      // Another provider's participant is theirs to change.
+      if (!isNotOurs(error)) {
+        throw error;
+      }
     }
   }
 }
