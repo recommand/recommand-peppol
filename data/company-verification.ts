@@ -13,7 +13,7 @@ import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./sm
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { submitVerificationIdentity, restartVerificationIdentity } from '@peppol/data/verification-submission';
-import { assertCompanyIdentifiersAllowed } from "./company-identifiers";
+import { assertCompanyIdentifiersAllowed, assertIdentifiersFreeForRecipient } from "./company-identifiers";
 import { lockCompanyRow, sameCompanyIdentity } from "./company-row-lock";
 import { getCurrentVerificationSession } from "./current-verification-session";
 import { sessionMatchesCompany } from "./at/kyc-onboarding-state";
@@ -180,10 +180,18 @@ export async function finalizeCompanyVerification({
   };
 
   if (smpTransition === "register") {
+    // A refusal before anything was registered must not be rolled back: the
+    // rollback unregisters, which would reach the participant of the company that
+    // holds the identifier.
+    let registrationStarted = false;
     try {
+      await assertIdentifiersFreeForRecipient(company.id);
+      registrationStarted = true;
       await upsertCompanyRegistrations({ companyId: company.id, useTestNetwork });
     } catch (error) {
-      await rollbackSmpTransition();
+      if (registrationStarted) {
+        await rollbackSmpTransition();
+      }
       console.error(`Failed to register company ${company.id} with SMP while finalizing verification:`, error);
       const errorMessage = getCompanyVerificationErrorMessage({ error, status });
       await setCompanyVerificationError({

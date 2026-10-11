@@ -3,6 +3,7 @@ import { companies } from "@peppol/db/schema";
 import { isSiren, normalizeIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
 import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
 import { UserFacingError } from "@peppol/utils/util";
+import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { db } from "@recommand/db";
 import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
 import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";
@@ -477,4 +478,72 @@ export async function canUpsertCompanyIdentifier(scheme: string, identifier: str
       )
     )
     .then((rows) => rows.length === 0);
+}
+
+/**
+ * Refuses a registration before anything is written to the SMP when another
+ * recipient already holds one of the company's identifiers. A registration refused
+ * halfway would be rolled back by unregistering, and that rollback must not touch
+ * the other company's participant.
+ */
+export async function assertIdentifiersFreeForRecipient(companyId: string): Promise<void> {
+  const identifiers = await getCompanyIdentifiers(companyId);
+  for (const identifier of identifiers) {
+    if (!await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, identifier.id, companyId)) {
+      throw new UserFacingError("Company cannot be registered as SMP recipient, it has identifiers that are already registered as recipient with another company.");
+    }
+  }
+}
+
+/**
+ * Whether another company is published on the same SMP and network with this
+ * identifier. An SMP keeps one participant per identifier, whichever company holds
+ * it, so that participant is the other company's registration: unregistering this
+ * company, for instance a send-only one with the same identifiers or one whose own
+ * registration was refused, must leave it alone.
+ */
+export async function isIdentifierPublishedByAnotherCompany({
+  identifier,
+  smpProvider,
+  useTestNetwork,
+}: {
+  identifier: CompanyIdentifier;
+  smpProvider: Company["smpProvider"];
+  useTestNetwork: boolean;
+}): Promise<boolean> {
+  const holders = await db
+    .select({
+      isSmpRecipient: companies.isSmpRecipient,
+      isVerified: companies.isVerified,
+      isPlayground: teamExtensions.isPlayground,
+      useTestNetwork: teamExtensions.useTestNetwork,
+      verificationRequirements: teamExtensions.verificationRequirements,
+    })
+    .from(companyIdentifiers)
+    .innerJoin(companies, eq(companies.id, companyIdentifiers.companyId))
+    .leftJoin(teamExtensions, eq(companies.teamId, teamExtensions.id))
+    .where(
+      and(
+        ne(companies.id, identifier.companyId),
+        eq(companies.smpProvider, smpProvider),
+        eq(companies.isSmpRecipient, true),
+        eq(companyIdentifiers.scheme, identifier.scheme.toLowerCase().trim()),
+        eq(companyIdentifiers.identifier, identifier.identifier.toLowerCase().trim()),
+      )
+    );
+
+  const published = holders.some((holder) =>
+    (holder.useTestNetwork ?? false) === useTestNetwork &&
+    shouldRegisterWithSmp({
+      isPlayground: holder.isPlayground ?? false,
+      useTestNetwork: holder.useTestNetwork ?? false,
+      isSmpRecipient: holder.isSmpRecipient,
+      isVerified: holder.isVerified,
+      verificationRequirements: holder.verificationRequirements ?? undefined,
+    })
+  );
+  if (published) {
+    console.warn(`Left ${identifier.scheme}:${identifier.identifier} on the SMP for company ${identifier.companyId}: another published company holds it`);
+  }
+  return published;
 }

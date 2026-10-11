@@ -1,7 +1,7 @@
 import { UserFacingError } from "@peppol/utils/util";
 import { type Company, getCompanyById, type InsertCompany } from "@peppol/data/companies";
 import { type CompanyDocumentType, getCompanyDocumentTypes } from "@peppol/data/company-document-types";
-import { type CompanyIdentifier, canUpsertCompanyIdentifier, getCompanyIdentifiers } from "@peppol/data/company-identifiers";
+import { type CompanyIdentifier, canUpsertCompanyIdentifier, getCompanyIdentifiers, isIdentifierPublishedByAnotherCompany } from "@peppol/data/company-identifiers";
 import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
 import { getTeamExtension } from "@peppol/data/teams";
 import { fetchArratechJson, getArratechConfig } from "./client";
@@ -450,6 +450,9 @@ export async function unregisterCompanyDocumentType({
   const documentTypeToRemove = await resolveArratechDocumentType(documentType, useTestNetwork);
 
   for (const identifier of identifiers) {
+    if (await isIdentifierPublishedByAnotherCompany({ identifier, smpProvider: "at-shared-smp-fr", useTestNetwork })) {
+      continue;
+    }
     const participant = await getParticipantByIdentifier({ identifier, useTestNetwork });
     if (!participant) {
       continue;
@@ -479,6 +482,11 @@ export async function unregisterCompanyIdentifier({
   identifier: CompanyIdentifier;
   useTestNetwork: boolean;
 }) {
+  // Arratech's organisation has one participant per identifier, shared by every
+  // company that holds it; another published company's participant stays.
+  if (await isIdentifierPublishedByAnotherCompany({ identifier, smpProvider: "at-shared-smp-fr", useTestNetwork })) {
+    return;
+  }
   const participant = await getParticipantByIdentifier({ identifier, useTestNetwork });
   if (!participant) {
     return;

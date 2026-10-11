@@ -3,11 +3,12 @@ import { getCompanyById, type Company, type InsertCompany } from "@peppol/data/c
 import { deleteServiceGroup, registerServiceGroup } from "./service-group";
 import { deleteServiceMetadata, registerServiceMetadata } from "./service-metadata";
 import { registerBusinessCard } from "./business-card";
-import { canUpsertCompanyIdentifier, getCompanyIdentifiers, type CompanyIdentifier } from "../company-identifiers";
+import { canUpsertCompanyIdentifier, getCompanyIdentifiers, isIdentifierPublishedByAnotherCompany, type CompanyIdentifier } from "../company-identifiers";
 import { getCompanyDocumentTypes, type CompanyDocumentType } from "../company-document-types";
 import { verifyRecipient } from "../recipient";
 import { migrateInbound } from "./migration";
-import { completeParticipantMigration, failParticipantMigration, getPendingInboundMigration } from "../participant-migrations";
+import { completeParticipantMigration, failParticipantMigration, getPendingInboundMigration, isPublishedByRecommand } from "../participant-migrations";
+import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 
 type MinimalCompanyIdentifier = {
   scheme: string;
@@ -55,6 +56,9 @@ export async function unregisterCompanyDocumentType({documentType, useTestNetwor
   const identifiers = await getCompanyIdentifiers(documentType.companyId);
 
   for (const identifier of identifiers) {
+    if(await isIdentifierPublishedByAnotherCompany({identifier, smpProvider: "recommand-smp1", useTestNetwork})){
+      continue;
+    }
     await deleteServiceMetadata({
       peppolIdentifierEas: identifier.scheme,
       peppolIdentifierAddress: identifier.identifier,
@@ -157,9 +161,33 @@ async function registerCompanyIdentifier({company, identifier, documentTypes, us
 }
 
 export async function unregisterCompanyIdentifier({identifier, useTestNetwork}: {identifier: CompanyIdentifier, useTestNetwork: boolean}) {
-  await deleteServiceGroup({
+  if(await isIdentifierPublishedByAnotherCompany({identifier, smpProvider: "recommand-smp1", useTestNetwork})){
+    return;
+  }
+  const result = await deleteServiceGroup({
     peppolIdentifierEas: identifier.scheme,
     peppolIdentifierAddress: identifier.identifier,
     useTestNetwork,
   });
+  if(result === "missing" && await isStillPublishedByRecommand(identifier, useTestNetwork)){
+    await sendSystemAlert(
+      "Participant Left In SML Without Service Group",
+      `${identifier.scheme}:${identifier.identifier} was unregistered while our ${useTestNetwork ? "test " : ""}SMP no longer had its service group, but the SML still points to our SMP. Nobody can deliver to it, and no other SMP can take it over, until that SML entry is removed.`,
+      "warning"
+    );
+  }
+}
+
+/**
+ * The SMP only takes a participant out of the SML together with its service group.
+ * A service group that was already gone can leave an SML entry pointing to us; one
+ * that never existed here, such as a registration another SMP refused, does not.
+ */
+async function isStillPublishedByRecommand(identifier: CompanyIdentifier, useTestNetwork: boolean): Promise<boolean> {
+  try {
+    return await isPublishedByRecommand({ scheme: identifier.scheme, identifier: identifier.identifier, useTestNetwork });
+  } catch (error) {
+    console.error(`Could not look up ${identifier.scheme}:${identifier.identifier} in the SML: ${error}`);
+    return true;
+  }
 }

@@ -6,7 +6,7 @@ import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { getTeamExtension } from "./teams";
 import { createCompanyDocumentType } from "./company-document-types";
-import { canUpsertCompanyIdentifier, createCompanyIdentifier, getCompanyIdentifiers } from "./company-identifiers";
+import { assertIdentifiersFreeForRecipient, canUpsertCompanyIdentifier, createCompanyIdentifier } from "./company-identifiers";
 import { COUNTRIES, getCountrySupportLevel } from "@peppol/utils/countries";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { createVerificationSession, type VerificationExpectedDetails } from "./didit/client";
@@ -350,6 +350,13 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
 
   if (!wasRegistered && shouldBeRegistered) {
     try {
+      await assertIdentifiersFreeForRecipient(updatedCompany.id);
+    } catch (error) {
+      // Nothing was registered yet, so only the update of the company is rolled back
+      await db.update(companies).set(oldCompany).where(eq(companies.id, company.id));
+      throw error;
+    }
+    try {
       await upsertCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
     } catch (error) {
       // If registration fails, unregister any company registrations that might have been registered
@@ -381,13 +388,7 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   } else {
     try {
       // Ensure none of the company's identifiers are already registered as recipient with another company within the same class (playground, playground with test network, production)
-      const identifiers = await getCompanyIdentifiers(updatedCompany.id);
-      for (const identifier of identifiers) {
-        const canUpsert = await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, identifier.id, updatedCompany.id);
-        if (!canUpsert) {
-          throw new UserFacingError("Company cannot be registered as SMP recipient, it has identifiers that are already registered as recipient with another company.");
-        }
-      }
+      await assertIdentifiersFreeForRecipient(updatedCompany.id);
     } catch (error) {
       // If the check fails, rollback the update of the company
       await db.update(companies).set(oldCompany).where(eq(companies.id, company.id));
