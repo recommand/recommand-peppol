@@ -48,7 +48,7 @@ async function _getVerificationStatusImplementation(c: GetVerificationStatusCont
             errorMessage: verificationLog.arratechOnboarding || withdrawn ? null : verificationLog.errorMessage,
             companyName: company.name,
             companyId: company.id,
-            ...getArratechVerificationProgress(verificationLog.arratechOnboarding, company.isSmpRecipient, verificationLog.status),
+            ...getArratechVerificationProgress(verificationLog.arratechOnboarding, verificationLog.status),
         }));
     } catch (error) {
         console.error(error);

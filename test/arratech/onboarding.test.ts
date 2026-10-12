@@ -16,6 +16,11 @@ let failSupport: boolean;
 let mandateNotes: string[];
 let identifiers: { scheme: string; identifier: string }[];
 let latestSessionId: string;
+let orgParticipants: any[];
+let networkRegistered: boolean;
+let createdClass: string;
+let externalStatus: string;
+let kycMetaData: Record<string, string>;
 const state = (): ArratechOnboarding => ({
   phase: 'submit',
   attempts: 0,
@@ -99,6 +104,32 @@ mock.module('@peppol/data/at/smp', () => ({
 mock.module('@peppol/data/at/client', () => ({
   getArratechConfig: () => ({ orgId: 'org' }),
   fetchArratech: async (path: string, options: RequestInit) => {
+    if (path.startsWith('/lookup?')) {
+      events.push('lookup');
+      return networkRegistered
+        ? Response.json([{ participantIdentifier: '0225:303265045', accessPoints: [{ apUrl: 'https://ap.example' }] }])
+        : Response.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (path.startsWith('/orgs/org/participants?')) {
+      return Response.json({ items: orgParticipants, pagination: { hasMore: false } });
+    }
+    if (path === '/orgs/org/participants') {
+      const body = JSON.parse(options.body as string);
+      expect(body.allowExternal).toBe(true);
+      expect(body).not.toHaveProperty('siret');
+      events.push('create');
+      const participant = { id: 'ext', participantIdentifier: body.participantIdentifier, status: 'PENDING_MANDATE', participantClass: createdClass };
+      orgParticipants.push(participant);
+      return Response.json(participant, { status: 201 });
+    }
+    if (path.endsWith('/batch-delete')) {
+      events.push('delete');
+      orgParticipants = [];
+      return Response.json({ deleted: JSON.parse(options.body as string).ids });
+    }
+    if (path === '/orgs/org/participants/ext') {
+      return Response.json({ id: 'ext', participantIdentifier: '0225:303265045', participantClass: 'EXTERNAL', status: externalStatus });
+    }
     if (path.endsWith('/approve')) {
       events.push('approve');
       kycStatus = 'APPROVED';
@@ -109,7 +140,7 @@ mock.module('@peppol/data/at/client', () => ({
     return Response.json({
       status: kycStatus,
       jurisdiction: 'FR',
-      metaData: { siren: '303265045', siret: '30326504500011' },
+      metaData: kycMetaData,
       documents: [],
     });
   },
@@ -117,7 +148,8 @@ mock.module('@peppol/data/at/client', () => ({
 
 const { processArratechOnboarding, notifyVerificationCompletion, VerificationBusyError, initializeArratechOnboardingCron, resumeBlockedArratechOnboarding } =
   await import('../../data/at/kyc-onboarding');
-const { OnboardingResumeRefused, UNSUPPORTED_IDENTIFIER_BLOCK } = await import('../../data/at/kyc-onboarding-state');
+const { OnboardingResumeRefused, UNSUPPORTED_IDENTIFIER_BLOCK, SEND_ONLY_NOT_ON_NETWORK_BLOCK, SEND_ONLY_OWN_PARTICIPANT_BLOCK } =
+  await import('../../data/at/kyc-onboarding-state');
 
 beforeEach(() => {
   events.length = 0;
@@ -160,7 +192,19 @@ beforeEach(() => {
   mandateNotes = [];
   identifiers = [{ scheme: '0225', identifier: '303265045' }];
   latestSessionId = log.id;
+  orgParticipants = [];
+  networkRegistered = true;
+  createdClass = 'EXTERNAL';
+  externalStatus = 'ACTIVE';
+  kycMetaData = { siren: '303265045', siret: '30326504500011' };
 });
+
+const sendOnly = () => {
+  company.isSmpRecipient = false;
+  company.accessPointProvider = 'at-shared-ap-fr';
+  delete log.countrySpecific;
+  kycMetaData = { siren: '303265045' };
+};
 
 describe('durable Arratech onboarding', () => {
   it('logs scheduler registration, selection and processing stages without filing contents', async () => {
@@ -249,29 +293,79 @@ describe('durable Arratech onboarding', () => {
     await processArratechOnboarding(log.id);
     expect(events).not.toContain('approve');
   });
-  it('routes send-only to support once without registration or approval', async () => {
-    delete log.countrySpecific;
-    company.isSmpRecipient = false;
+  it('registers a send-only company as EXTERNAL and verifies it once active', async () => {
+    sendOnly();
+    externalStatus = 'PENDING_MANDATE';
     await processArratechOnboarding(log.id);
-    expect(events).toEqual(['support']);
+    expect(events).toEqual(['lookup', 'create', 'upload', 'approve']);
+    expect(log.arratechOnboarding.phase).toBe('activation');
+    expect(log.arratechOnboarding.external).toEqual({ participantId: 'ext' });
+    expect(log.arratechOnboarding.filing.siret).toBeUndefined();
     expect(log.status).toBe('inReview');
-    expect(log.errorMessage).toBeNull();
-    expect(log.arratechOnboarding.phase).toBe('support');
-    expect(log.arratechOnboarding.supportNotifiedAt).toBeDefined();
+    events.length = 0;
+    externalStatus = 'ACTIVE';
     await processArratechOnboarding(log.id);
-    expect(events).toEqual(['support']);
-    expect(company.isSmpRecipient).toBe(false);
+    expect(events).toEqual(['finalize', 'audit', 'email']);
+    expect(log.status).toBe('verified');
+    expect(log.arratechOnboarding.phase).toBe('complete');
   });
 
-  it('retries a failed send-only support notification without provider writes', async () => {
-    company.isSmpRecipient = false;
-    failSupport = true;
+  it('reuses an EXTERNAL participant our organisation already holds', async () => {
+    sendOnly();
+    orgParticipants = [{ id: 'ext', participantIdentifier: '0225:303265045', status: 'PENDING_MANDATE', participantClass: 'EXTERNAL' }];
     await processArratechOnboarding(log.id);
-    expect(log.arratechOnboarding.supportNotifiedAt).toBeUndefined();
-    failSupport = false;
+    expect(events).toEqual(['upload', 'approve', 'finalize', 'audit', 'email']);
+    expect(log.status).toBe('verified');
+  });
+
+  it('blocks a send-only company that no other provider registered on Peppol', async () => {
+    sendOnly();
+    networkRegistered = false;
     await processArratechOnboarding(log.id);
-    expect(events).toEqual(['support', 'support']);
-    expect(log.arratechOnboarding.supportNotifiedAt).toBeDefined();
+    expect(events).toEqual(['lookup', 'support']);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+    expect(log.errorMessage).toBe(SEND_ONLY_NOT_ON_NETWORK_BLOCK);
+    expect(log.arratechOnboarding.external).toBeUndefined();
+  });
+
+  it('blocks a send-only company we hold as a receiving participant', async () => {
+    sendOnly();
+    orgParticipants = [{ id: 'own', participantIdentifier: '0225:303265045', status: 'PENDING_TAX_REGISTRATION' }];
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(log.errorMessage).toBe(SEND_ONLY_OWN_PARTICIPANT_BLOCK);
+  });
+
+  it('deletes a create that does not come back EXTERNAL before filing anything', async () => {
+    sendOnly();
+    createdClass = 'OWN_UNREGISTERED_IN_PEPPOL';
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['lookup', 'create', 'delete', 'support']);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+    expect(log.errorMessage).toBe(SEND_ONLY_NOT_ON_NETWORK_BLOCK);
+  });
+
+  it('does not onboard a send-only company that sends through another access point', async () => {
+    sendOnly();
+    company.accessPointProvider = 'recommand-ap1';
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['support']);
+    expect(log.arratechOnboarding.phase).toBe('blocked');
+  });
+
+  it('accepts a send-only KYC record that reports no SIRET as null', async () => {
+    sendOnly();
+    kycMetaData = { siren: '303265045', siret: null as unknown as string };
+    await processArratechOnboarding(log.id);
+    expect(log.status).toBe('verified');
+  });
+
+  it('never registers a send-only company for receiving', async () => {
+    sendOnly();
+    await processArratechOnboarding(log.id);
+    expect(events).not.toContain('register');
+    expect(events).not.toContain('sync');
+    expect(log.status).toBe('verified');
   });
 
   it('keeps completion and audit when the success email fails', async () => {
@@ -464,14 +558,45 @@ describe('resuming a blocked onboarding', () => {
     await refused(409, 'filing was already prepared');
   });
 
-  it('refuses send-only, test-network and non-strict companies', async () => {
+  it('refuses test-network and non-strict companies', async () => {
     await blockOnIdentifiers();
     identifiers = [{ scheme: '0225', identifier: '303265045' }];
-    company.isSmpRecipient = false;
-    await refused(409, 'Send-only');
-    company.isSmpRecipient = true;
     team.useTestNetwork = true;
     await refused(409, 'no longer qualify');
+  });
+
+  it('resumes a send-only onboarding once another provider registered it on Peppol', async () => {
+    sendOnly();
+    networkRegistered = false;
+    await processArratechOnboarding(log.id);
+    expect(log.errorMessage).toBe(SEND_ONLY_NOT_ON_NETWORK_BLOCK);
+    events.length = 0;
+    networkRegistered = true;
+    const result = await resume();
+    expect(result.state.phase).toBe('submit');
+    expect(events).toEqual(['audit']);
+    events.length = 0;
+    await processArratechOnboarding(log.id);
+    expect(events).toEqual(['lookup', 'create', 'upload', 'approve', 'finalize', 'audit', 'email']);
+    expect(log.status).toBe('verified');
+  });
+
+  it('refuses to resume a send-only onboarding whose participant was already created', async () => {
+    sendOnly();
+    networkRegistered = false;
+    await processArratechOnboarding(log.id);
+    events.length = 0;
+    log.arratechOnboarding.external = { participantId: 'ext' };
+    await refused(409, 'participant was already created');
+  });
+
+  it('refuses to resume a send-only onboarding blocked for another cause', async () => {
+    sendOnly();
+    networkRegistered = false;
+    await processArratechOnboarding(log.id);
+    events.length = 0;
+    log.errorMessage = 'KYC is REJECTED: manual review required';
+    await refused(409, 'manual review');
   });
 
   it('gives a resumed session a fresh time limit while keeping when it started', async () => {

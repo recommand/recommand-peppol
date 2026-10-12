@@ -125,6 +125,23 @@ describe.skipIf(!testDatabaseUrl)("company country changes against PostgreSQL", 
     expect(await companyRow("c_move")).toMatchObject({ country: "BE", smpProvider: "recommand-smp1" });
   });
 
+  it("refuses switching a verified French company between receiving and send-only", async () => {
+    await pool.query(
+      `INSERT INTO peppol_companies (id, team_id, name, address, postal_code, city, country, enterprise_number_scheme, enterprise_number,
+         is_smp_recipient, is_verified, access_point_provider, smp_provider)
+       VALUES ('c_fr', $1, 'Exemple SAS', '1 rue Test', '75001', 'Paris', 'FR', '0225', '303265045', false, true, 'at-shared-ap-fr', 'at-shared-smp-fr')`,
+      [TEAM_STRICT]
+    );
+    await expect(updateCompany({ id: "c_fr", teamId: TEAM_STRICT, isSmpRecipient: true })).rejects.toThrow("Contact support@recommand.eu");
+    const { rows } = await pool.query(`SELECT is_smp_recipient AS "isSmpRecipient" FROM peppol_companies WHERE id = 'c_fr'`);
+    expect(rows[0]).toEqual({ isSmpRecipient: false });
+    expect(smpCalls).toEqual([]);
+    await pool.query(`UPDATE peppol_companies SET is_verified = false WHERE id = 'c_fr'`);
+    await updateCompany({ id: "c_fr", teamId: TEAM_STRICT, isSmpRecipient: true });
+    const after = await pool.query(`SELECT is_smp_recipient AS "isSmpRecipient" FROM peppol_companies WHERE id = 'c_fr'`);
+    expect(after.rows[0]).toEqual({ isSmpRecipient: true });
+  });
+
   it("keeps an open link valid when the country changes without the numbers", async () => {
     await pool.query(
       `INSERT INTO peppol_companies (id, team_id, name, address, postal_code, city, country, is_smp_recipient, access_point_provider, smp_provider)

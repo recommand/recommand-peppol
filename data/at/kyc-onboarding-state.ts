@@ -20,27 +20,37 @@ export type ArratechOnboarding = {
   };
   filing?: {
     siren: string;
-    siret: string;
+    /** Absent for a send-only company, which Arratech files under its SIREN. */
+    siret?: string;
     addresses: string[];
     mandateBase64: string;
     fileName: string;
+  };
+  /** The EXTERNAL participant a send-only company sends through, once created. */
+  external?: {
+    participantId: string;
   };
 };
 
 /** The block a company runs into when an identifier of it is not under the French scheme. */
 export const UNSUPPORTED_IDENTIFIER_BLOCK = 'Automatic French onboarding requires 0225 participant identifiers.';
 
+/** The block for a send-only company that no other provider registered on Peppol. */
+export const SEND_ONLY_NOT_ON_NETWORK_BLOCK =
+  'Send-only onboarding requires the company to be registered for receiving on Peppol by another provider.';
+
+/** The block for a send-only company that is held by us as a receiving participant. */
+export const SEND_ONLY_OWN_PARTICIPANT_BLOCK =
+  'The company is registered with Arratech as a receiving participant; Arratech has to remove it before it can be onboarded as send-only.';
+
 export function getArratechVerificationProgress(
   state: ArratechOnboarding | null | undefined,
-  isSmpRecipient: boolean,
   status: string,
 ) {
   const pending = status === 'inReview' && !!state;
   return {
-    activationPending:
-      pending && isSmpRecipient && (state.phase === 'submit' || state.phase === 'activation'),
-    supportReviewPending:
-      pending && (!isSmpRecipient || state.phase === 'support' || state.phase === 'blocked'),
+    activationPending: pending && (state.phase === 'submit' || state.phase === 'activation'),
+    supportReviewPending: pending && (state.phase === 'support' || state.phase === 'blocked'),
   };
 }
 
@@ -147,22 +157,33 @@ export function assertBlockedOnboardingResumable({
   ) {
     throw new OnboardingResumeRefused('Company settings no longer qualify for automatic onboarding; start a new verification.', 409);
   }
-  if (!company.isSmpRecipient) {
-    throw new OnboardingResumeRefused('Send-only companies are reviewed manually and cannot be resumed.', 409);
-  }
   if (!log.mandateAcceptedAt || !log.verificationProofReference || !log.firstName || !log.lastName) {
     throw new OnboardingResumeRefused('The session has no completed identity check and signed mandate to resume with.', 409);
   }
   if (!sessionMatchesCompany(log, company, state)) {
     throw new OnboardingResumeRefused('Company details changed since the mandate was signed; start a new verification.', 409);
   }
-  if (log.errorMessage !== UNSUPPORTED_IDENTIFIER_BLOCK) {
+  // A send-only company can also be resumed once its receiving platform registered
+  // it on Peppol, or Arratech removed the receiving participant we held for it.
+  // Nothing was filed with Arratech for it until its participant exists.
+  const resumableBlocks = company.isSmpRecipient
+    ? [UNSUPPORTED_IDENTIFIER_BLOCK]
+    : [UNSUPPORTED_IDENTIFIER_BLOCK, SEND_ONLY_NOT_ON_NETWORK_BLOCK, SEND_ONLY_OWN_PARTICIPANT_BLOCK];
+  if (!log.errorMessage || !resumableBlocks.includes(log.errorMessage)) {
     throw new OnboardingResumeRefused(
-      'Only an onboarding blocked on unsupported participant identifiers can be resumed; this block needs manual review.',
+      company.isSmpRecipient
+        ? 'Only an onboarding blocked on unsupported participant identifiers can be resumed; this block needs manual review.'
+        : 'Only a send-only onboarding blocked on its identifiers or its Peppol registration can be resumed; this block needs manual review.',
       409,
     );
   }
-  if (state.filing) {
+  if (state.external) {
+    throw new OnboardingResumeRefused(
+      'An Arratech participant was already created for this session; resuming could contradict what the provider holds. Review it manually.',
+      409,
+    );
+  }
+  if (state.filing && (company.isSmpRecipient || log.errorMessage === UNSUPPORTED_IDENTIFIER_BLOCK)) {
     throw new OnboardingResumeRefused(
       'A filing was already prepared for this session; resuming could contradict what the provider holds. Review it manually.',
       409,

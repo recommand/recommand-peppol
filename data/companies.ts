@@ -320,6 +320,14 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     verificationRequirements,
   });
 
+  // Arratech holds a verified French company either as a receiving participant or
+  // as a send-only EXTERNAL one, filed under different mandates. Switching between
+  // the two needs Arratech, so it goes through support.
+  const isSmpRecipientChanged = (updatedFields.isSmpRecipient ?? oldCompany.isSmpRecipient) !== oldCompany.isSmpRecipient;
+  if (isSmpRecipientChanged && oldCompany.isVerified && oldCompany.smpProvider === "at-shared-smp-fr" && !useTestNetwork && !isPlaygroundTeam) {
+    throw new UserFacingError("Contact support@recommand.eu to change whether this French company receives documents through Recommand.");
+  }
+
   const newCountry = company.country && company.country !== oldCompany.country ? company.country : null;
   if (newCountry) {
     if (!wasRegistered && shouldBeRegistered) {

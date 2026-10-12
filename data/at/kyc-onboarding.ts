@@ -37,6 +37,11 @@ import {
 import { findUnsupportedIdentifiers } from '@peppol/data/company-identifier-policy';
 import { validateVerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { getParticipantByIdentifier, upsertCompanyRegistrations } from '@peppol/data/at/smp';
+import {
+  assertExternalParticipantActive,
+  ensureExternalParticipant,
+  findOrganisationParticipant,
+} from '@peppol/data/at/external-participant';
 
 import { withVerificationLock } from '@peppol/data/verification-lock';
 import { getCurrentVerificationSession } from '@peppol/data/current-verification-session';
@@ -75,6 +80,25 @@ export async function assertArratechCompanyActive(companyId: string): Promise<vo
         );
     }
   }
+}
+
+/**
+ * Refuses until a send-only French company has an active EXTERNAL participant at
+ * Arratech: without it, Arratech refuses every document the company sends.
+ */
+export async function assertArratechSenderActive(companyId: string): Promise<void> {
+  const identifiers = await getCompanyIdentifiers(companyId);
+  const sender = identifiers.find((identifier) => identifier.scheme === '0225' && /^\d{9}$/.test(identifier.identifier));
+  if (!sender) throw new KycOnboardingError('Sending through Arratech requires a 0225 SIREN identifier.');
+  const participantIdentifier = `0225:${sender.identifier}`;
+  const config = getArratechConfig(false);
+  const participant = await findOrganisationParticipant(request, config.orgId, participantIdentifier);
+  if (!participant) {
+    throw new KycOnboardingError(
+      `${participantIdentifier} is not registered as a sender at Arratech; the send-only onboarding has to register it first.`,
+    );
+  }
+  await assertExternalParticipantActive(request, config.orgId, participant.id);
 }
 
 async function saveState(
@@ -146,6 +170,67 @@ async function notifySendOnlySupport(id: string, company: Company, state: Arrate
   await saveState(id, state);
 }
 
+/**
+ * Registers a send-only company as an EXTERNAL participant, files the mandate it
+ * signed as its KYC and approves it, then verifies the company once Arratech
+ * reports the participant active. Its receiving registration stays with its own
+ * platform, so nothing is registered in the Annuaire or on an SMP.
+ */
+async function onboardSendOnlyCompany(
+  id: string,
+  company: Company,
+  state: ArratechOnboarding,
+  filing: NonNullable<ArratechOnboarding['filing']>,
+  diagnostic: ReturnType<typeof onboardingDiagnostics>,
+) {
+  if (company.accessPointProvider !== 'at-shared-ap-fr') {
+    throw new KycOnboardingError('A send-only company is only onboarded with Arratech when it sends through Arratech.');
+  }
+  const config = getArratechConfig(false);
+  const participantIdentifier = `0225:${filing.siren}`;
+  if (!filing.addresses.includes(participantIdentifier)) {
+    throw new KycOnboardingError(`Send-only onboarding requires the identifier ${participantIdentifier}.`);
+  }
+  if (state.phase === 'submit') {
+    if (!state.external) {
+      const participant = await diagnostic.step('ensure-external-participant', () => ensureExternalParticipant({
+        request,
+        orgId: config.orgId,
+        participantIdentifier,
+        name: company.name,
+        smpRef: config.smpRef,
+        apRef: config.apRef,
+      }));
+      state.external = { participantId: participant.id };
+      await diagnostic.step('save-external', () => saveState(id, state));
+    }
+    await diagnostic.step('ensure-approved-kyc', () => ensureApprovedKyc({
+      request,
+      path: `/orgs/${config.orgId}/participants/${state.external!.participantId}/kyc`,
+      siren: filing.siren,
+      mandate: Buffer.from(filing.mandateBase64, 'base64'),
+      fileName: filing.fileName,
+    }));
+    state.phase = 'activation';
+    state.attempts = 0;
+    await diagnostic.step('save-activation', () => saveState(id, state));
+  }
+  await diagnostic.step('check-activation', () => assertExternalParticipantActive(
+    request, config.orgId, state.external!.participantId,
+  ));
+  const current = await diagnostic.step('reload-session', () => getCompanyVerificationLog(id));
+  if (!current || isFinalVerificationStatus(current.status)) return;
+  const result = await diagnostic.step('finalize-verification', () => finalizeCompanyVerification({
+    companyVerificationLogId: id,
+    company,
+    status: 'verified',
+    verificationProofReference: current.verificationProofReference!,
+  }));
+  if (result.status !== 'verified')
+    throw new KycOnboardingError(result.errorMessage ?? 'Company activation failed.');
+  await diagnostic.step('notify-completion', () => notifyVerificationCompletion(id, company, state));
+}
+
 export async function processArratechOnboarding(id: string, logger: OnboardingLogger = console): Promise<void> {
   const diagnostic = onboardingDiagnostics(logger, `session=${id}`);
   await diagnostic.step('locked-processing', () => withVerificationLock(id, async () => {
@@ -179,12 +264,6 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
           'Company settings changed; onboarding requires manual review.',
         );
       }
-      if (!company.isSmpRecipient) {
-        state.phase = 'support';
-        await diagnostic.step('save-support', () => saveState(id, state));
-        await diagnostic.step('notify-support', () => notifySendOnlySupport(id, company, state));
-        return;
-      }
       if (
         !log.mandateAcceptedAt ||
         !log.verificationProofReference ||
@@ -201,12 +280,15 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
         );
       }
       const identifiers = await diagnostic.step('load-identifiers', () => getCompanyIdentifiers(company.id));
+      // A send-only company is filed under its SIREN alone; the establishment SIRET
+      // is only needed to register receiving addresses in the Annuaire.
+      const sendOnly = !company.isSmpRecipient;
       const countrySpecific = validateVerificationCountrySpecific(
-        company, log.countrySpecific ?? state.identitySupplement?.countrySpecific, true,
-      )!;
+        company, log.countrySpecific ?? state.identitySupplement?.countrySpecific, !sendOnly,
+      );
       if (state.identitySupplement &&
-        (state.identitySupplement.countrySpecific.country !== countrySpecific.country ||
-          state.identitySupplement.countrySpecific.siret !== countrySpecific.siret)) {
+        (state.identitySupplement.countrySpecific.country !== countrySpecific?.country ||
+          state.identitySupplement.countrySpecific.siret !== countrySpecific?.siret)) {
         throw new KycOnboardingError('Reviewed establishment data conflicts with the submitted verification.');
       }
       if (!identifiers.length || identifiers.some((identifier) => identifier.scheme !== '0225')) {
@@ -221,18 +303,16 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
           proofReference: log.verificationProofReference!,
           reference: log.id,
         }));
-        if (
-          filing.identity.notes.length ||
-          !filing.identity.metaData?.siret ||
-          !filing.identity.metaData?.siren
-        ) {
+        const siren = filing.identity.metaData?.siren;
+        const siret = filing.identity.metaData?.siret;
+        if (!siren || (!sendOnly && (filing.identity.notes.length || !siret))) {
           throw new KycOnboardingError(
             `An explicit SIRET is required for automatic approval. ${filing.identity.notes.join(' ')}`,
           );
         }
         state.filing = {
-          siren: filing.identity.metaData.siren,
-          siret: filing.identity.metaData.siret,
+          siren,
+          ...(sendOnly ? {} : { siret }),
           addresses: filing.electronicAddresses,
           mandateBase64: filing.mandate.toString('base64'),
           fileName: filing.mandateFileName,
@@ -240,7 +320,7 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
         await diagnostic.step('save-filing', () => saveState(id, state));
       }
       const filing = state.filing;
-      if (filing.siret !== countrySpecific.siret) {
+      if (!sendOnly && filing.siret !== countrySpecific?.siret) {
         throw new KycOnboardingError('Establishment SIRET changed since the mandate was prepared.');
       }
       const addresses = identifiers
@@ -250,6 +330,10 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
         throw new KycOnboardingError(
           'Participant identifiers changed since the mandate was prepared.',
         );
+      }
+      if (sendOnly) {
+        await onboardSendOnlyCompany(id, company, state, filing, diagnostic);
+        return;
       }
       if (state.phase === 'submit') {
         await diagnostic.step('register-participants', () => upsertCompanyRegistrations({
@@ -307,6 +391,7 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
           verificationLogId: id,
           jurisdiction: company.country,
           useTestNetwork: false,
+          sendOnly: !company.isSmpRecipient,
           submissionError: message,
           mandate: state.filing ? Buffer.from(state.filing.mandateBase64, 'base64') : undefined,
           mandateFileName: state.filing?.fileName,
