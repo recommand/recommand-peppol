@@ -19,7 +19,7 @@ import { countrySpecificSchema } from "../country-specific/schemas";
 export const creditNoteInvoiceReferenceSchema = z.object({
   id: z.string().min(1).openapi({ example: "INV-2024-001", description: "The reference to the invoice that is being credited" }),
   issueDate: z.string().date().nullish().openapi({ example: "2024-03-20", description: "The issue date of the invoice that is being credited" }),
-});
+}).openapi({ ref: "InvoiceReference" });
 
 export const baseCreditNoteSchema = z.object({
   creditNoteNumber: z.string().openapi({ example: "CN-2024-001" }),

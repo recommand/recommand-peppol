@@ -167,16 +167,18 @@ export const deliverySchema = z
         ref: "LocationIdentifier",
       })
       .nullish(),
-    location: z.object({
-      street: z.string().nullish().openapi({ example: "Example Street 1" }),
-      street2: z.string().nullish().openapi({ example: "Suite 100" }),
-      city: z.string().nullish().openapi({ example: "Brussels" }),
-      postalZone: z.string().nullish().openapi({ example: "1000" }),
-      country: z
-        .string()
-        .length(2, "Country code must be in ISO 3166-1:Alpha2 format")
-        .openapi({ example: "BE" }),
-    }),
+    location: z
+      .object({
+        city: z.string().nullish().openapi({ example: "Brussels" }),
+        country: z
+          .string()
+          .length(2, "Country code must be in ISO 3166-1:Alpha2 format")
+          .openapi({ example: "BE" }),
+        postalZone: z.string().nullish().openapi({ example: "1000" }),
+        street: z.string().nullish().openapi({ example: "Example Street 1" }),
+        street2: z.string().nullish().openapi({ example: "Suite 100" }),
+      })
+      .openapi({ ref: "DeliveryLocation" }),
     recipientName: z.string().openapi({
       example: "Company Ltd.",
       description:

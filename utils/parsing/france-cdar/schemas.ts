@@ -317,7 +317,7 @@ export const franceCdarCollectedAmountSchema = z.object({
     description: "VAT rate applicable to the collected amount.",
     example: "20.00",
   }),
-});
+}).openapi({ ref: "FranceCdarCollectedAmount" });
 
 // BR-FR-CDV-15: a reason code (MDT-113) is mandatory for these statuses.
 const statusesRequiringReason = new Set([
