@@ -51,13 +51,13 @@ export const frenchReportingStatusResponse = z.object({
     final: z.boolean().openapi({
         description: "True once nothing more will be heard about the report: `filed` or `filed_rectificative` with `outcomeCode` `300`, `superseded`, or `rejected`. A filed report whose outcome is still empty or `500` is not final and keeps being refreshed.",
     }),
-    receivedAt: z.string().nullable().openapi({ description: "When the report reached the reporting service." }),
+    receivedAt: z.string().datetime().nullable().openapi({ description: "When the report reached the reporting service." }),
     periodStart: z.string().nullable().openapi({ description: "First day of the reporting period the report belongs to." }),
     periodEnd: z.string().nullable().openapi({ description: "Last day of the reporting period; the cutoff for on-time filing." }),
     submissionId: z.string().nullable().openapi({ description: "The period filing the report was carried on, once assembled." }),
     outcomeCode: z.string().nullable().openapi({ description: "The tax administration's outcome code for the filing the report is carried on. It moves independently of `reportingStatus`: empty at first, then `500` while the deposit is being processed, then `300` once it is accepted. `501` means the deposit was refused and has to be resolved with support. A filed report is final only with `300`." }),
-    outcomeAt: z.string().nullable().openapi({ description: "When the tax administration returned its outcome." }),
-    checkedAt: z.string().nullable().openapi({ description: "When the status was last refreshed from the reporting service." }),
+    outcomeAt: z.string().datetime().nullable().openapi({ description: "When the tax administration returned its outcome." }),
+    checkedAt: z.string().datetime().nullable().openapi({ description: "When the status was last refreshed from the reporting service." }),
     simulated: z.boolean().openapi({ description: "True for playground and test-network reports, which are recorded but never filed." }),
 }).openapi({ ref: "FrenchReportingStatus" });
 
@@ -102,7 +102,7 @@ export const deliveryResponse = z.object({
         description: "The status of this delivery. See `failure` when it is `failed`.",
         example: "delivered",
     }),
-    statusChangedAt: z.string().openapi({
+    statusChangedAt: z.string().datetime().openapi({
         description: "When the delivery reached its current status.",
     }),
     failure: deliveryFailureResponse.nullable().openapi({
@@ -159,13 +159,13 @@ export const transmittedDocumentResponse = z.object({
         description: "What kind of document this is. `unknown` means the document could not be recognised as one of the supported types, in which case `parsed` is null and only the XML is available.",
         example: "invoice",
     }),
-    readAt: z.string().nullable().openapi({
+    readAt: z.string().datetime().nullable().openapi({
         description: "When the document was marked as read. Null while it is unread, which is what puts an incoming document in the inbox.",
     }),
-    createdAt: z.string().openapi({
+    createdAt: z.string().datetime().openapi({
         description: "When the document was sent or received.",
     }),
-    updatedAt: z.string().openapi({
+    updatedAt: z.string().datetime().openapi({
         description: "When the document record last changed.",
     }),
     xml: z.string().nullable().openapi({

@@ -84,14 +84,14 @@ export const frenchReportingDeclarantResponse = z
     lastError: z.string().nullable().openapi({
       description: "The reason the last registration attempt failed, if any.",
     }),
-    registeredAt: z.string().nullable().openapi({
+    registeredAt: z.string().datetime().nullable().openapi({
       description:
         "When the registration was accepted. The company's reporting periods run from this moment. Null while the state is still `pending`.",
     }),
-    createdAt: z.string().openapi({
+    createdAt: z.string().datetime().openapi({
       description: "When the registration was first requested.",
     }),
-    updatedAt: z.string().openapi({
+    updatedAt: z.string().datetime().openapi({
       description:
         "When the registration last changed, including a background retry of a `pending` registration.",
     }),

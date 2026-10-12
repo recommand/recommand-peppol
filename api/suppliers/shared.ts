@@ -9,8 +9,8 @@ export const supplierResponse = z.object({
   name: z.string(),
   vatNumber: z.string().nullable(),
   peppolAddresses: z.array(z.string()),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
   labels: z.array(labelSummaryResponse).optional(),
 }).openapi({ ref: "Supplier" });
 
