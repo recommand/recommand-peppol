@@ -21,6 +21,7 @@ const getIdentifierRouteDescription = describeRoute({
     tags: ["Company Identifiers"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully retrieved company identifier", z.object({ identifier: companyIdentifierResponse })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),
         ...describeErrorResponse(500, "Failed to fetch company identifier"),
     },

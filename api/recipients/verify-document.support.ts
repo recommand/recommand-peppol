@@ -6,6 +6,7 @@ import { actionSuccess } from "@recommand/lib/utils";
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { describeRoute } from "hono-openapi";
 import {
+    describeErrorResponse,
     describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
@@ -28,6 +29,7 @@ const verifyDocumentSupportRouteDescription = describeRoute({
             technicalContact: z.string().nullable().optional().openapi({ description: "Technical contact URL published by the receiving access point. Absent when the lookup failed." }),
             certificateExpiry: z.string().nullable().optional().openapi({ description: "Expiry date of the receiving access point's certificate (ISO 8601). Absent when the lookup failed." }),
         })),
+        ...describeErrorResponse(401, "Unauthorized"),
     },
 });
 

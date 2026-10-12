@@ -23,6 +23,7 @@ const markAsReadRouteDescription = describeRoute({
     tags: ["Documents"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully updated document read status"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Document not found"),
         ...describeErrorResponse(500, "Failed to update document read status"),
     },

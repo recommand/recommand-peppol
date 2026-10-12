@@ -86,6 +86,7 @@ const routeDescription = describeRoute({
       sendDocumentResponse,
     ),
     ...describeValidationErrorResponse("Invalid document data provided"),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(
       422,
       "Recipient could not be reached and no email fallback was configured or possible. The body carries `deliveryFailure` with the channel and the failure category, the same category a later `document.delivery_status_changed` event would carry.",

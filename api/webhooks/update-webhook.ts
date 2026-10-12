@@ -21,6 +21,7 @@ const updateWebhookRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully updated webhook", z.object({ webhook: webhookResponse })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Webhook not found"),
         ...describeErrorResponse(500, "Failed to update webhook"),
     },

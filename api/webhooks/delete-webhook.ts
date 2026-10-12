@@ -19,6 +19,7 @@ const deleteWebhookRouteDescription = describeRoute({
     tags: ["Webhooks"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully deleted webhook"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to delete webhook"),
     },
 });

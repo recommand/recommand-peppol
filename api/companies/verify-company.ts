@@ -20,6 +20,7 @@ const verifyCompanyRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully created verification session", z.object({ verificationUrl: z.string() })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),
         ...describeErrorResponse(500, "Failed to create verification session"),
     },

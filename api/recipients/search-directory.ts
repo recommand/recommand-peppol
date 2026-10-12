@@ -41,6 +41,7 @@ const searchDirectoryRouteDescription = describeRoute({
         ...describeSuccessResponseWithZod("Successfully searched directory", z.object({
         results: z.array(directoryMatchResponse).openapi({ description: "The matching participants, in the order the Peppol Directory returned them." }),
     })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(503, "Peppol directory is currently unavailable"),
     },
 });

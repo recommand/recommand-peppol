@@ -32,6 +32,7 @@ const getCustomersRouteDescription = describeRoute({
         pagination: paginationResponse,
       })
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch customers"),
   },
 });

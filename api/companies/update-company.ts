@@ -25,6 +25,7 @@ const updateCompanyRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully updated company", z.object({ company: companyResponse })),
         ...describeValidationErrorResponse("Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),
         ...describeErrorResponse(500, "Failed to update company"),
     },

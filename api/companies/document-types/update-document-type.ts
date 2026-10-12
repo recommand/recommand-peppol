@@ -22,6 +22,7 @@ const updateDocumentTypeRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully updated company document type", z.object({ documentType: companyDocumentTypeResponse })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company document type not found"),
         ...describeErrorResponse(500, "Failed to update company document type"),
     },

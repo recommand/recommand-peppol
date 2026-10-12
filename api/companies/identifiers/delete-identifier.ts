@@ -23,6 +23,7 @@ const deleteIdentifierRouteDescription = describeRoute({
     tags: ["Company Identifiers"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully deleted company identifier"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),
         ...describeErrorResponse(500, "Failed to delete company identifier"),
     },

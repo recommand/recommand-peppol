@@ -34,6 +34,7 @@ const getPlaygroundRouteDescription = describeRoute({
     ...describeSuccessResponseWithZod("Successfully retrieved playground", z.object({
       playground: playgroundResponse,
     })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Playground not found for this team"),
     ...describeErrorResponse(500, "Failed to fetch playground"),
   },

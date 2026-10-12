@@ -24,6 +24,7 @@ const updateLabelRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully updated label", z.object({ label: labelResponse })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Label not found"),
         ...describeErrorResponse(500, "Failed to update label"),
     },
