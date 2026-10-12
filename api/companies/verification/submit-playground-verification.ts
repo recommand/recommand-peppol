@@ -8,6 +8,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { UserFacingError } from "@peppol/utils/util";
 import { describeRoute } from "hono-openapi";
+import { verificationOutcomeSchema } from "./shared";
 
 const server = new Server();
 
@@ -16,7 +17,7 @@ const submitPlaygroundVerificationParamSchema = z.object({
 });
 
 const submitPlaygroundVerificationJsonBodySchema = z.object({
-    outcome: z.enum(["verified", "rejected"]),
+    outcome: verificationOutcomeSchema,
 });
 
 type SubmitPlaygroundVerificationContext = Context<Record<string, never>, string, { in: { param: z.input<typeof submitPlaygroundVerificationParamSchema>, json: z.input<typeof submitPlaygroundVerificationJsonBodySchema> }, out: { param: z.infer<typeof submitPlaygroundVerificationParamSchema>, json: z.infer<typeof submitPlaygroundVerificationJsonBodySchema> } }>;

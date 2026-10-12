@@ -16,7 +16,10 @@ export const integrationEventSchema = z.enum([
   "integration.cron.medium",
   "integration.cron.long",
   "integration.task.retry",
-]);
+]).openapi({
+  description: "An event an integration can handle.",
+  ref: "IntegrationEvent",
+});
 
 export const integrationAuthTypeSchema = z.enum(["bearer"]);
 

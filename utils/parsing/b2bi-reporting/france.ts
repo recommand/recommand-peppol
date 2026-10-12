@@ -50,7 +50,6 @@ const _reportingBillingModesAreInvoiceBillingModes: ReportingBillingModesAreInvo
 export const frenchReportingBillingModeSchema = z
   .enum(frenchReportingBillingModes)
   .openapi({
-    example: "B1",
     description: `The invoicing framework the reported document belongs to, in the same codes as the \`billingMode\` of a French regulated invoice. Use the code that matches the invoice.
 
 | Mode | Description |
@@ -66,9 +65,21 @@ export const frenchReportingBillingModeSchema = z
 | \`M4\` | Final mixed invoice after an advance payment. |
 
 This code is checked against the invoice when the reporting period is assembled, which is after the report is accepted. A framework that does not match the invoice can cause the filing for that period to be rejected, so set it from the invoice rather than from a default.`,
+    example: "B1",
+    ref: "FrenchReportingBillingMode",
   });
 
 export type FrenchReportingBillingMode = z.infer<typeof frenchReportingBillingModeSchema>;
+
+export const frenchB2BiDocumentTypeSchema = z
+  .enum(["invoice", "creditNote"])
+  .default("invoice")
+  .openapi({
+    description:
+      "Whether the reported document is an invoice or a credit note. Defaults to `invoice`.",
+    example: "invoice",
+    ref: "FrenchB2BiDocumentType",
+  });
 
 /**
  * The tax administration identifies a foreign buyer by where it is established: EU
@@ -203,14 +214,7 @@ const frenchB2BiInvoiceReportShape = {
         "The number of the invoice or credit note being reported. A payment report refers back to it, and a correction or cancellation is matched on it.",
     }),
     billingMode: frenchReportingBillingModeSchema,
-    documentType: z
-      .enum(["invoice", "creditNote"])
-      .default("invoice")
-      .openapi({
-        example: "invoice",
-        description:
-          "Whether the reported document is an invoice or a credit note. Defaults to `invoice`.",
-      }),
+    documentType: frenchB2BiDocumentTypeSchema,
     issueDate: z.string().date().openapi({
       example: "2026-01-15",
       description: "Date on which the document was issued.",

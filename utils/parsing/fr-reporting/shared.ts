@@ -37,9 +37,10 @@ export const f10ActionSchema = z
   .enum(["submit", "correct", "cancel"])
   .default("submit")
   .openapi({
-    example: "submit",
     description:
       "Use `submit` for a new report, `correct` to replace a report you filed earlier for the same period or document, or `cancel` to cancel it. Corrections and cancellations are matched on the data that identifies the report (for example the day and category of a daily total, or the document number of an invoice), and always need a new `reference`. Defaults to `submit`.",
+    example: "submit",
+    ref: "FrenchReportAction",
   });
 
 export type F10Action = z.infer<typeof f10ActionSchema>;

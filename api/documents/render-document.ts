@@ -45,11 +45,16 @@ const renderDocumentRouteDescription = describeRoute({
   },
 });
 
+const renderFormatSchema = z.enum(["html", "pdf"]).openapi({
+  description: "The format a stored document is rendered as.",
+  ref: "RenderFormat",
+});
+
 const renderDocumentParamSchema = z.object({
   documentId: z.string().openapi({
     description: "The ID of the document to render",
   }),
-  type: z.enum(["html", "pdf"]).openapi({
+  type: renderFormatSchema.openapi({
     description: "The type of the document to render",
     example: "html",
   }),

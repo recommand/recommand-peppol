@@ -9,10 +9,9 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponseWithZod, describeValidationErrorResponse } from "@core/lib/api-docs";
-import { companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
+import { companyCountrySchema, companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
-import { zodValidCountryCodes } from "@peppol/db/schema";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { audit } from "@core/lib/audit";
 
@@ -46,7 +45,7 @@ const updateCompanyJsonBodySchema = z.object({
     address: z.string().optional(),
     postalCode: z.string().optional(),
     city: z.string().optional(),
-    country: zodValidCountryCodes.optional().openapi({
+    country: companyCountrySchema.optional().openapi({
         description: "The country the company is registered in, in ISO 3166-1 alpha-2 format. Can only be changed before verification starts and before the company is registered on the Peppol network; rejected with a 400 otherwise.",
     }),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish(),

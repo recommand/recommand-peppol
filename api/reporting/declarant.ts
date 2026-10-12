@@ -36,6 +36,18 @@ import "zod-openapi/extend";
 
 const server = new Server();
 
+const vatRegimeSchema = zodFrVatRegimes.openapi({
+  description:
+    "A French VAT regime: `REEL_NORMAL_MENSUEL` (régime réel normal), `REEL_SIMPLIFIE` (régime réel simplifié) or `FRANCHISE_EN_BASE` (franchise en base de TVA).",
+  ref: "FrenchVatRegime",
+});
+
+const vatExigibilitySchema = zodFrVatExigibilities.openapi({
+  description:
+    "When VAT becomes due: `ENCAISSEMENTS` (on payment, typical for services) or `DEBITS` (on invoicing, typical for goods).",
+  ref: "FrenchVatExigibility",
+});
+
 export const frenchReportingDeclarantResponse = z
   .object({
     environment: zodFrReportingEnvironments.openapi({
@@ -49,11 +61,11 @@ export const frenchReportingDeclarantResponse = z
     issuerName: z.string().openapi({
       description: "The legal name carried as the issuer on every report filed for the company.",
     }),
-    vatRegime: zodFrVatRegimes.openapi({
+    vatRegime: vatRegimeSchema.openapi({
       description:
         "The company's French VAT regime. It determines how often its reports are filed with the tax administration.",
     }),
-    vatExigibility: zodFrVatExigibilities.openapi({
+    vatExigibility: vatExigibilitySchema.openapi({
       description:
         "When VAT becomes due for the company. Payment reports are only accepted under `ENCAISSEMENTS`; under `DEBITS` they are out of scope.",
     }),
@@ -105,12 +117,12 @@ export function toFrenchReportingDeclarantResponse(declarant: FrenchReportingDec
 
 const registerFrenchReportingDeclarantBodySchema = z
   .object({
-    vatRegime: zodFrVatRegimes.openapi({
+    vatRegime: vatRegimeSchema.openapi({
       example: "REEL_NORMAL_MENSUEL",
       description:
         "The company's French VAT regime: `REEL_NORMAL_MENSUEL` (régime réel normal), `REEL_SIMPLIFIE` (régime réel simplifié) or `FRANCHISE_EN_BASE` (franchise en base de TVA). Changing it after registration can leave the current reporting period unfiled; contact support before changing it.",
     }),
-    vatExigibility: zodFrVatExigibilities.openapi({
+    vatExigibility: vatExigibilitySchema.openapi({
       example: "DEBITS",
       description:
         "When VAT becomes due: `ENCAISSEMENTS` (on payment, typical for services) or `DEBITS` (on invoicing, typical for goods). Payment reports can only be submitted under `ENCAISSEMENTS`.",

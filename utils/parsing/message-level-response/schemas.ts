@@ -1,7 +1,11 @@
 import z from "zod";
 import "zod-openapi/extend";
 
-export const responseCodeSchema = z.enum(["AB", "AP", "RE"]);
+export const responseCodeSchema = z.enum(["AB", "AP", "RE"]).openapi({
+    description:
+        "How the recipient answered the document: `AB` (message acknowledgement), `AP` (accepted) or `RE` (rejected).",
+    ref: "MessageLevelResponseCode",
+});
 
 export const messageLevelResponseSchema = z.object({
     id: z.string(),

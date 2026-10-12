@@ -1,6 +1,6 @@
 import z from "zod";
 import "zod-openapi/extend";
-import { CURRENCIES, zCurrencies } from "@peppol/utils/currencies";
+import { zCurrencies } from "@peppol/utils/currencies";
 
 const franceCdarStatusCodeDescription = `French invoice lifecycle status.
 
@@ -155,12 +155,12 @@ export const franceCdarStatusCodeSchema = z.enum([
   "213", // Rejected
   "214", // Validated or pre-validated ("Visée")
   "501", // Inadmissible file
-]).openapi({ description: franceCdarStatusCodeDescription });
+]).openapi({ description: franceCdarStatusCodeDescription, ref: "FranceCdarStatusCode" });
 
 export const franceCdarPhaseSchema = z.enum([
   "23", // Processing phase
   "305", // Transmission phase
-]).openapi({ description: franceCdarPhaseDescription });
+]).openapi({ description: franceCdarPhaseDescription, ref: "FranceCdarPhase" });
 
 export const franceCdarBusinessProcessSchema = z.enum([
   "REGULATED", // Regulated French domestic e-invoicing
@@ -169,7 +169,7 @@ export const franceCdarBusinessProcessSchema = z.enum([
   "B2CINT", // International B2C sales e-reporting
   "B2BINT", // International B2B sales e-reporting
   "OUTOFSCOPE", // Outside the French e-invoicing and e-reporting reform
-]).openapi({ description: franceCdarBusinessProcessDescription });
+]).openapi({ description: franceCdarBusinessProcessDescription, ref: "FranceCdarBusinessProcess" });
 
 export const franceCdarRoleCodeSchema = z.enum([
   "BY", // Buyer
@@ -183,7 +183,7 @@ export const franceCdarRoleCodeSchema = z.enum([
   "PR", // Payer
   "II", // Invoicer (invoice issuer)
   "IV", // Invoicee (party invoiced)
-]).openapi({ description: franceCdarRoleCodeDescription });
+]).openapi({ description: franceCdarRoleCodeDescription, ref: "FranceCdarRoleCode" });
 
 export const franceCdarInvoiceTypeCodeSchema = z.enum([
   "380", // Commercial invoice
@@ -202,7 +202,7 @@ export const franceCdarInvoiceTypeCodeSchema = z.enum([
   "396", // Factored credit note
   "502", // Self-billed factored credit note
   "503", // Credit note for an advance payment invoice
-]).openapi({ description: franceCdarInvoiceTypeCodeDescription });
+]).openapi({ description: franceCdarInvoiceTypeCodeDescription, ref: "FranceCdarInvoiceTypeCode" });
 
 export const franceCdarReasonCodeSchema = z.enum([
   "JUSTIF_ABS", // Supporting document missing or insufficient
@@ -256,7 +256,7 @@ export const franceCdarReasonCodeSchema = z.enum([
   "CONTACT_ACHTR", // Public-sector refusal: contact your buyer
   "RETRAIT_MAN_SERV", // Public-sector refusal
   "ST_CT_NON_DECLAR", // Public-sector refusal
-]).openapi({ description: franceCdarReasonCodeDescription });
+]).openapi({ description: franceCdarReasonCodeDescription, ref: "FranceCdarReasonCode" });
 
 const franceCdarAmountSchema = z
   .string()
@@ -311,7 +311,6 @@ export const franceCdarCollectedAmountSchema = z.object({
   currency: zCurrencies.openapi({
     description: "ISO 4217 currency code of the collected amount.",
     example: "EUR",
-    enum: CURRENCIES.map((currency) => currency.code),
   }),
   vatPercent: franceCdarVatPercentSchema.openapi({
     description: "VAT rate applicable to the collected amount.",

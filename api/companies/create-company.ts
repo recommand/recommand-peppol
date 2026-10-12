@@ -11,10 +11,9 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponseWithZod, describeValidationErrorResponse } from "@core/lib/api-docs";
-import { companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
+import { companyCountrySchema, companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
-import { zodValidCountryCodes } from "@peppol/db/schema";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { audit } from "@core/lib/audit";
 
@@ -42,9 +41,8 @@ const createCompanyJsonBodySchema = z.object({
     address: z.string(),
     postalCode: z.string(),
     city: z.string(),
-    country: zodValidCountryCodes.openapi({
+    country: companyCountrySchema.openapi({
         description: "The country the company is registered in, in ISO 3166-1 alpha-2 format. Only countries Recommand supports are accepted; any other country is rejected with a 400.",
-        example: "BE",
     }),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish(),
     enterpriseNumber: z.string().nullish().transform(cleanEnterpriseNumber).openapi({ description: "The enterprise number of the company. Can only contain alphanumeric characters. For Belgian businesses it will be inferred from the VAT number if not provided." }),

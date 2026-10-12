@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Decimal } from "decimal.js";
 import "zod-openapi/extend";
-import { CURRENCIES, zCurrencies } from "@peppol/utils/currencies";
+import { zCurrencies } from "@peppol/utils/currencies";
 import { PAYMENT_MEANS } from "@peppol/utils/payment-means";
 import { ITEM_TYPE_IDENTIFICATION_CODES } from "@peppol/utils/item-type-identification-codes";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
@@ -101,7 +101,7 @@ export const partySchema = z
       description:
         "The VAT number including its country prefix, for example BE0123456789.",
     }),
-    enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish().openapi({ example: "0208", description: "The scheme that corresponds to the enterprise number. Can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/)." }),
+    enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish().openapi({ description: "The scheme that corresponds to the enterprise number. Can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/)." }),
     enterpriseNumber: z.string().nullish().openapi({
       example: "1234567894",
       description:
@@ -239,10 +239,10 @@ export const paymentTermsSchema = z
 export const vatCategoryEnum = z
   .enum(Object.keys(VAT_CATEGORIES) as [VatCategory, ...VatCategory[]])
   .openapi({
-    example: "S",
     description:
       "VAT category code. All codes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5305/). When sending regular invoices, you should most often use the `S` category. When sending an invoice to another EU country, use the `AE` category for VAT Reverse Charge. In those cases, it is still recommended to include a note in the invoice explaining that the VAT Reverse Charge applies.",
-    enum: Object.keys(VAT_CATEGORIES),
+    example: "S",
+    ref: "VatCategory",
   });
 
 export const vatSchema = z
@@ -613,7 +613,6 @@ export const baseInvoiceSchema = z.object({
   currency: zCurrencies.default("EUR").openapi({
     example: "EUR",
     description: "The currency of the invoice. Defaults to EUR.",
-    enum: CURRENCIES.map((currency) => currency.code),
   }),
 });
 

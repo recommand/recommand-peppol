@@ -9,12 +9,17 @@ import {
   getTransmittedDocuments,
 } from "@peppol/data/transmitted-documents";
 import {
+  booleanStringSchema,
   describeErrorResponse,
   describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
-import { deliveryStatuses, supportedDocumentTypeEnum } from "@peppol/db/schema";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
-import { transmittedDocumentResponse } from "./shared";
+import {
+  deliveryStatusSchema,
+  documentDirectionSchema,
+  transmittedDocumentResponse,
+  transmittedDocumentTypeSchema,
+} from "./shared";
 import { paginationResponse } from "@peppol/api/shared";
 import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions";
 import { withDocumentDeliveries } from "@peppol/data/deliveries";
@@ -61,15 +66,14 @@ const getTransmittedDocumentsQuerySchema = z.object({
     .openapi({
       description: "Filter documents by label ID",
     }),
-  direction: z.enum(["incoming", "outgoing"]).optional().openapi({
+  direction: documentDirectionSchema.optional().openapi({
     description: "Filter documents by direction (incoming or outgoing)",
-    example: "incoming",
   }),
   search: z.string().optional().openapi({
     description: "Search term to filter documents",
     example: "invoice",
   }),
-  type: z.enum(supportedDocumentTypeEnum.enumValues).optional().openapi({
+  type: transmittedDocumentTypeSchema.optional().openapi({
     description: "Filter documents by type",
     example: "invoice",
   }),
@@ -81,20 +85,18 @@ const getTransmittedDocumentsQuerySchema = z.object({
     description: "Filter documents created until this timestamp (exclusive). ISO 8601 format.",
     example: "2024-12-31T23:59:59Z",
   }),
-  isUnread: z.enum(["true", "false"]).optional().openapi({
+  isUnread: booleanStringSchema.optional().openapi({
     description: "Filter documents by read status: true for unread documents (readAt is null), false for read documents.",
-    example: "true",
   }),
   envelopeId: z.string().optional().openapi({
     description: "Filter documents by envelope ID (Standard Business Document Header Instance Identifier)",
   }),
-  deliveryStatus: z.enum(deliveryStatuses).optional().openapi({
+  deliveryStatus: deliveryStatusSchema.optional().openapi({
     description: "Filter outgoing documents by their summarised delivery status: `delivered` (confirmed on at least one channel), `failed` (every delivery failed) or `pending` (still awaiting confirmation). Documents without deliveries never match.",
     example: "failed",
   }),
-  deliveryFailed: z.enum(["true", "false"]).optional().openapi({
+  deliveryFailed: booleanStringSchema.optional().openapi({
     description: "When true, only documents with at least one failed delivery, whatever their other deliveries did. Use it to find the sends that need attention.",
-    example: "true",
   }),
   excludeAttachments: z
     .preprocess(

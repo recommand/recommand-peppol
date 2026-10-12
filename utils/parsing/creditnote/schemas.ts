@@ -13,7 +13,7 @@ import {
   totalsSchema,
   vatTotalsSchema,
 } from "../invoice/schemas";
-import { CURRENCIES, zCurrencies } from "@peppol/utils/currencies";
+import { zCurrencies } from "@peppol/utils/currencies";
 import { countrySpecificSchema } from "../country-specific/schemas";
 
 export const creditNoteInvoiceReferenceSchema = z.object({
@@ -42,7 +42,7 @@ export const baseCreditNoteSchema = z.object({
   totals: totalsSchema.nullish(),
   vat: vatTotalsSchema.nullish(),
   attachments: z.array(attachmentSchema).nullish().openapi({ description: "Optional attachments to the credit note" }),
-  currency: zCurrencies.default("EUR").openapi({ example: "EUR", description: "The currency of the credit note. Defaults to EUR.", enum: CURRENCIES.map((currency) => currency.code) }),
+  currency: zCurrencies.default("EUR").openapi({ description: "The currency of the credit note. Defaults to EUR.", example: "EUR" }),
 });
 
 export const _creditNoteSchema = baseCreditNoteSchema.extend({

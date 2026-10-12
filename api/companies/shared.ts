@@ -1,6 +1,14 @@
 import z from "zod";
 import "zod-openapi/extend";
+import { zodValidCountryCodes } from "@peppol/db/schema";
 import type { Company } from "@peppol/data/companies";
+
+export const companyCountrySchema = zodValidCountryCodes.openapi({
+    description:
+        "A country Recommand supports, in ISO 3166-1 alpha-2 format.",
+    example: "BE",
+    ref: "SupportedCountry",
+});
 
 export const companyResponse = z.object({
     id: z.string().openapi({

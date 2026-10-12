@@ -1,4 +1,5 @@
 import z from "zod";
+import "zod-openapi/extend";
 
 export type CurrencyInfo = {
     code: string;
@@ -187,4 +188,9 @@ export const CURRENCIES = [
     { code: "XXX", name: "The codes assigned for transactions where no currency is involved" },
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-export const zCurrencies = z.enum(CURRENCIES.map((currency) => currency.code) as [string, ...string[]]);
+export const zCurrencies = z
+  .enum(CURRENCIES.map((currency) => currency.code) as [string, ...string[]])
+  .openapi({
+    description: "A currency, as an ISO 4217 three-letter code.",
+    ref: "Currency",
+  });

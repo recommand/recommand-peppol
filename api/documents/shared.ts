@@ -18,7 +18,31 @@ import {
     zodFrReportingStatuses,
 } from "@peppol/db/schema";
 
-const transmittedDocumentTypeSchema = z.enum(STORED_DOCUMENT_TYPE_KEYS);
+export const transmittedDocumentTypeSchema = z.enum(STORED_DOCUMENT_TYPE_KEYS).openapi({
+    description: "The kind of document that was transmitted.",
+    ref: "DocumentType",
+});
+
+export const documentDirectionSchema = z.enum(["incoming", "outgoing"]).openapi({
+    description: "Whether a document was received by a company (`incoming`) or sent by it (`outgoing`).",
+    example: "incoming",
+    ref: "DocumentDirection",
+});
+
+export const pdfGenerationModeSchema = z
+    .enum(["never", "always", "when_no_pdf_attachment"])
+    .openapi({
+        description:
+            "When a download package includes a generated PDF: `never`, `always`, or `when_no_pdf_attachment` to add one only when the document carries no PDF of its own.",
+        example: "never",
+        ref: "PdfGenerationMode",
+    });
+
+export const exportOutputTypeSchema = z.enum(["flat", "nested"]).openapi({
+    description: "How an export archive is laid out: `flat` puts every XML in the root, `nested` keeps each document's package structure.",
+    example: "nested",
+    ref: "ExportOutputType",
+});
 
 export const frenchReportingStatusResponse = z.object({
     reportingStatus: zodFrReportingStatuses.openapi({
@@ -108,9 +132,8 @@ export const transmittedDocumentResponse = z.object({
         description: "The ID of the company the document was sent for or received by.",
         example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
     }),
-    direction: z.enum(["incoming", "outgoing"]).openapi({
+    direction: documentDirectionSchema.openapi({
         description: "Whether the document was received by this company (`incoming`) or sent by it (`outgoing`).",
-        example: "incoming",
     }),
     senderId: z.string().openapi({
         description: "The Peppol address of the sender, as `scheme:identifier`.",
