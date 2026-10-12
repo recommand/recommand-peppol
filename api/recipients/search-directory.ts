@@ -15,6 +15,23 @@ import { getTeamExtension } from "@peppol/data/teams";
 
 const server = new Server();
 
+/** A participant returned by a Peppol Directory search. */
+const directoryMatchResponse = z
+    .object({
+        name: z.string().openapi({
+            description: "The participant's name as published in its Peppol Directory entry. Empty when the entry carries no name.",
+            example: "Recommand BV",
+        }),
+        peppolAddress: z.string().openapi({
+            description: "The participant's Peppol address, as `scheme:identifier`. Pass it as the recipient when sending.",
+            example: "0208:1012081766",
+        }),
+        supportedDocumentTypes: z.array(z.string()).openapi({
+            description: "The full Peppol document type identifiers the participant is registered to receive.",
+        }),
+    })
+    .openapi({ ref: "DirectoryMatch" });
+
 const searchDirectoryRouteDescription = describeRoute({
     operationId: "searchDirectory",
     description: "Run a free-text search against the Peppol Directory and get back the participants that match, with the document types each is registered to receive. Use it to find a recipient's Peppol address when you only know who they are, then pass that address to the verify recipient endpoint. The Peppol Directory only lists participants that publish a directory entry, so a recipient that is reachable on the network can still be missing here. Returns a 503 when the directory itself cannot be reached.",
@@ -22,19 +39,7 @@ const searchDirectoryRouteDescription = describeRoute({
     tags: ["Recipients"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully searched directory", z.object({
-        results: z.array(z.object({
-            peppolAddress: z.string().openapi({
-                description: "The participant's Peppol address, as `scheme:identifier`. Pass it as the recipient when sending.",
-                example: "0208:1012081766",
-            }),
-            name: z.string().openapi({
-                description: "The participant's name as published in its Peppol Directory entry. Empty when the entry carries no name.",
-                example: "Recommand BV",
-            }),
-            supportedDocumentTypes: z.array(z.string()).openapi({
-                description: "The full Peppol document type identifiers the participant is registered to receive.",
-            }),
-        })).openapi({ description: "The matching participants, in the order the Peppol Directory returned them." }),
+        results: z.array(directoryMatchResponse).openapi({ description: "The matching participants, in the order the Peppol Directory returned them." }),
     })),
         ...describeErrorResponse(503, "Peppol directory is currently unavailable"),
     },
