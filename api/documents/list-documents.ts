@@ -15,6 +15,7 @@ import {
 import { deliveryStatuses, supportedDocumentTypeEnum } from "@peppol/db/schema";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
+import { paginationResponse } from "@peppol/api/shared";
 import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions";
 import { withDocumentDeliveries } from "@peppol/data/deliveries";
 
@@ -33,12 +34,7 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
   responses: {
     ...describeSuccessResponseWithZod("Successfully retrieved transmitted documents", z.object({
       documents: z.array(transmittedDocumentSummaryResponse),
-      pagination: z.object({
-        total: z.number(),
-        page: z.number(),
-        limit: z.number(),
-        totalPages: z.number(),
-      }),
+      pagination: paginationResponse,
     })),
     ...describeErrorResponse(500, "Failed to fetch transmitted documents"),
   },

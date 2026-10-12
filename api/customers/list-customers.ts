@@ -14,6 +14,7 @@ import {
   describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
 import { customerResponse } from "./shared";
+import { paginationResponse } from "@peppol/api/shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
@@ -28,12 +29,7 @@ const getCustomersRouteDescription = describeRoute({
       "Successfully retrieved customers",
       z.object({
         customers: z.array(customerResponse),
-        pagination: z.object({
-          total: z.number(),
-          page: z.number(),
-          limit: z.number(),
-          totalPages: z.number(),
-        }),
+        pagination: paginationResponse,
       })
     ),
     ...describeErrorResponse(500, "Failed to fetch customers"),

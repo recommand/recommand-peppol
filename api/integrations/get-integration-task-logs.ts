@@ -6,6 +6,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { integrationTaskLogResponse } from "./shared";
+import { paginationResponse } from "@peppol/api/shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { getIntegrationTaskLogs } from "@peppol/data/integrations";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -20,12 +21,7 @@ const getIntegrationTaskLogsRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully retrieved integration task logs", z.object({
             logs: z.array(integrationTaskLogResponse),
-            pagination: z.object({
-                total: z.number(),
-                page: z.number(),
-                limit: z.number(),
-                totalPages: z.number(),
-            }),
+            pagination: paginationResponse,
         })),
         ...describeErrorResponse(404, "Integration not found"),
         ...describeErrorResponse(500, "Failed to fetch integration task logs"),

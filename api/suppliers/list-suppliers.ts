@@ -13,6 +13,7 @@ import {
   describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
 import { supplierResponse } from "./shared";
+import { paginationResponse } from "@peppol/api/shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
@@ -25,12 +26,7 @@ const getSuppliersRouteDescription = describeRoute({
   responses: {
     ...describeSuccessResponseWithZod("Successfully retrieved suppliers", z.object({
       suppliers: z.array(supplierResponse),
-      pagination: z.object({
-        total: z.number(),
-        page: z.number(),
-        limit: z.number(),
-        totalPages: z.number(),
-      }),
+      pagination: paginationResponse,
     })),
     ...describeErrorResponse(500, "Failed to fetch suppliers"),
   },
