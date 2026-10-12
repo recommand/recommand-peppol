@@ -251,6 +251,7 @@ export async function requestInboundMigration({
     isSmpRecipient: company.isSmpRecipient,
     isVerified: company.isVerified,
     verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+    smpProvider: company.smpProvider,
   });
   if (!registerNow) {
     return migration;
@@ -294,6 +295,7 @@ export async function startOutboundMigration({
     isSmpRecipient: company.isSmpRecipient,
     isVerified: company.isVerified,
     verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+    smpProvider: company.smpProvider,
   });
   if (!registered) {
     throw new UserFacingError(

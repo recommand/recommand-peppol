@@ -518,6 +518,7 @@ export async function isIdentifierPublishedByAnotherCompany({
       isPlayground: teamExtensions.isPlayground,
       useTestNetwork: teamExtensions.useTestNetwork,
       verificationRequirements: teamExtensions.verificationRequirements,
+      smpProvider: companies.smpProvider,
     })
     .from(companyIdentifiers)
     .innerJoin(companies, eq(companies.id, companyIdentifiers.companyId))
@@ -540,6 +541,7 @@ export async function isIdentifierPublishedByAnotherCompany({
       isSmpRecipient: holder.isSmpRecipient,
       isVerified: holder.isVerified,
       verificationRequirements: holder.verificationRequirements ?? undefined,
+      smpProvider: holder.smpProvider,
     })
   );
   if (published) {

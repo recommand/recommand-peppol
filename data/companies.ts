@@ -197,7 +197,7 @@ export async function createCompany(company: Omit<InsertCompany, "accessPointPro
  * @param isPlayground Whether the company is in a playground team, if so we don't register the company in the SMP
  */
 async function setupCompanyDefaults({ company, isPlayground, useTestNetwork, verificationRequirements }: { company: Company, isPlayground: boolean, useTestNetwork: boolean, verificationRequirements?: string }): Promise<void> {
-  const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements });
+  const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements, smpProvider: company.smpProvider });
   const countryInfo = COUNTRIES.find((country) => country.code === company.country);
 
   for (const documentType of countryInfo?.defaultDocumentTypes ?? []) {
@@ -311,13 +311,15 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
   const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
   const verificationRequirements = teamExtension?.verificationRequirements ?? undefined;
-  const wasRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: oldCompany.isSmpRecipient, isVerified: oldCompany.isVerified, verificationRequirements });
+  const wasRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: oldCompany.isSmpRecipient, isVerified: oldCompany.isVerified, verificationRequirements, smpProvider: oldCompany.smpProvider });
   const shouldBeRegistered = shouldRegisterWithSmp({
     isPlayground: isPlaygroundTeam,
     useTestNetwork,
     isSmpRecipient: updatedFields.isSmpRecipient ?? oldCompany.isSmpRecipient,
     isVerified: updatedFields.isVerified ?? oldCompany.isVerified,
     verificationRequirements,
+    // A new country brings that country's providers with it.
+    smpProvider: countryChanged ? resolveDefaultPeppolProviders(effectiveCountry).smpProvider : oldCompany.smpProvider,
   });
 
   // Arratech holds a verified French company either as a receiving participant or
@@ -518,6 +520,7 @@ async function applyCompanyCountryChange({
       isSmpRecipient: lockedCompany.isSmpRecipient,
       isVerified: lockedCompany.isVerified,
       verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+      smpProvider: lockedCompany.smpProvider,
     });
     // A submission's claim on a session waits for the row lock above; the
     // sessions are read after taking it so one that got there first is seen.
@@ -609,7 +612,7 @@ export async function deleteCompany({
   const teamExtension = await getTeamExtension(teamId);
   const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
-  if (shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements: teamExtension?.verificationRequirements ?? undefined })) {
+  if (shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements: teamExtension?.verificationRequirements ?? undefined, smpProvider: company.smpProvider })) {
     await unregisterCompanyRegistrations({ companyId, useTestNetwork });
   }
 

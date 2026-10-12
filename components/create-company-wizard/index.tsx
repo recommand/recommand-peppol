@@ -8,6 +8,7 @@ import { Step4Create } from "./step-4-create";
 import { Step5Identifiers } from "./step-5-identifiers";
 import { Step6Verification } from "./step-6-verification";
 import { useTranslation } from "@core/hooks/use-translation";
+import { isVerificationEnforced } from "@peppol/utils/playground";
 
 type CreateCompanyWizardProps = {
     teamId: string;
@@ -42,7 +43,9 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
     const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
     const [verificationLogId, setVerificationLogId] = useState<string | null>(null);
 
-    const verificationRequired = verificationRequirements === "strict" || verificationRequirements === "lax";
+    const verificationRequired =
+        verificationRequirements === "lax" ||
+        isVerificationEnforced({ verificationRequirements, country: createdCompany?.country ?? formData.country });
 
     // Step 4 is a hidden transition; display steps = internal steps minus 1
     const totalDisplaySteps = verificationRequired ? 5 : 4;

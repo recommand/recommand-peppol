@@ -1,3 +1,5 @@
+import type { SmpProviderId } from "@peppol/data/peppol-providers";
+
 /**
  * Whether a company in this team ever reaches a Peppol network. A playground team
  * simulates the network unless it was put on the test network; every other team is
@@ -23,20 +25,60 @@ export function shouldInteractWithPeppolNetwork({
     }
 }
 
+/**
+ * Whether a company has to be verified before it is published on its SMP or sends.
+ * The team's verification level decides, except on the French production network:
+ * the French platform takes a participant only once its KYC is done, and that KYC
+ * is collected by our company verification. A company there needs verification
+ * whatever its team's level allows; lax and trusted teams included.
+ */
+export function requiresCompanyVerification({
+    verificationRequirements,
+    smpProvider,
+    useTestNetwork,
+}: {
+    verificationRequirements?: string | null;
+    smpProvider: SmpProviderId;
+    useTestNetwork?: boolean | null;
+}): boolean {
+    if (verificationRequirements === "strict") {
+        return true;
+    }
+    return smpProvider === "at-shared-smp-fr" && !useTestNetwork;
+}
+
 export function shouldRegisterWithSmp({
     isPlayground,
     useTestNetwork,
     isSmpRecipient,
     isVerified,
     verificationRequirements,
+    smpProvider,
 }: {
     isPlayground?: boolean;
     useTestNetwork?: boolean;
     isSmpRecipient: boolean;
     isVerified: boolean;
     verificationRequirements?: string;
+    smpProvider: SmpProviderId;
 }): boolean {
     // Only allow registration with the SMP if the company is an SMP recipient and is verified
-    const requiresVerification = verificationRequirements === "strict";
+    const requiresVerification = requiresCompanyVerification({ verificationRequirements, smpProvider, useTestNetwork });
     return shouldInteractWithPeppolNetwork({ isPlayground, useTestNetwork }) && isSmpRecipient && (!requiresVerification || isVerified);
+}
+
+/**
+ * The same rule for screens, which know a company's country but not its providers:
+ * a French company is on the French providers (resolveDefaultPeppolProviders), so it
+ * has to be verified whatever its team's level. Screens do not know whether the team
+ * is on the test network, where the French platform skips KYC, and ask anyway.
+ */
+export function isVerificationEnforced({
+    verificationRequirements,
+    country,
+}: {
+    verificationRequirements?: string | null;
+    country?: string | null;
+}): boolean {
+    return verificationRequirements === "strict" || country?.toUpperCase() === "FR";
 }

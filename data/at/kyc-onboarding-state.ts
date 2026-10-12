@@ -152,8 +152,7 @@ export function assertBlockedOnboardingResumable({
     company.country !== 'FR' ||
     company.smpProvider !== 'at-shared-smp-fr' ||
     team?.useTestNetwork ||
-    team?.isPlayground ||
-    team?.verificationRequirements !== 'strict'
+    team?.isPlayground
   ) {
     throw new OnboardingResumeRefused('Company settings no longer qualify for automatic onboarding; start a new verification.', 409);
   }

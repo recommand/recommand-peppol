@@ -16,6 +16,7 @@ let finalizeCompanyVerification: typeof import("../../data/company-verification"
 let unregisterCompanyRegistrations: typeof import("../../data/smp-providers").unregisterCompanyRegistrations;
 let unregisterCompanyDocumentType: typeof import("../../data/smp-providers").unregisterCompanyDocumentType;
 let unregisterCompanyIdentifier: typeof import("../../data/smp-providers").unregisterCompanyIdentifier;
+let isIdentifierPublishedByAnotherCompany: typeof import("../../data/company-identifiers").isIdentifierPublishedByAnotherCompany;
 
 const TEAM = "team_shared";
 const STRICT_TEAM = "team_shared_strict";
@@ -97,6 +98,7 @@ describe.skipIf(!testDatabaseUrl)("unregistering an identifier another company p
     ({ updateCompany } = await import("../../data/companies"));
     ({ finalizeCompanyVerification } = await import("../../data/company-verification"));
     ({ unregisterCompanyRegistrations, unregisterCompanyDocumentType, unregisterCompanyIdentifier } = await import("../../data/smp-providers"));
+    ({ isIdentifierPublishedByAnotherCompany } = await import("../../data/company-identifiers"));
     await seedTeam(TEAM);
     await seedTeam(STRICT_TEAM, { verificationRequirements: "strict" });
     await seedTeam(TEST_NETWORK_TEAM, { isPlayground: true, useTestNetwork: true });
@@ -192,6 +194,17 @@ describe.skipIf(!testDatabaseUrl)("unregistering an identifier another company p
     expect(deletes().sort()).toEqual(BOTH_SERVICE_GROUPS);
   });
 
+  it("does not count an unverified French company of a lax team, which is not published", async () => {
+    await pool.query(`UPDATE peppol_companies SET smp_provider = 'at-shared-smp-fr'`);
+    expect(
+      await isIdentifierPublishedByAnotherCompany({
+        identifier: await identifierOf(SEND_ONLY, "0208"),
+        smpProvider: "at-shared-smp-fr",
+        useTestNetwork: false,
+      })
+    ).toBe(false);
+  });
+
   it("does not count a company published through the partner SMP", async () => {
     await pool.query(`UPDATE peppol_companies SET smp_provider = 'at-shared-smp-fr' WHERE id = $1`, [PUBLISHED]);
     await unregisterCompanyRegistrations({ companyId: SEND_ONLY, useTestNetwork: false });
@@ -200,6 +213,8 @@ describe.skipIf(!testDatabaseUrl)("unregistering an identifier another company p
 
   it("leaves the partner SMP's participant of another published company", async () => {
     await pool.query(`UPDATE peppol_companies SET smp_provider = 'at-shared-smp-fr'`);
+    // The French network publishes a company only once it is verified, whatever its team's level.
+    await pool.query(`UPDATE peppol_companies SET is_verified = true WHERE id = $1`, [PUBLISHED]);
     await unregisterCompanyIdentifier({ identifier: await identifierOf(SEND_ONLY, "0208"), useTestNetwork: false });
     expect(requests).toEqual([]);
   });

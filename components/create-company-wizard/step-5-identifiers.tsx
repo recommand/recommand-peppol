@@ -2,6 +2,7 @@ import { Button } from "@core/components/ui/button";
 import { CompanyIdentifiersManager } from "@peppol/components/company-identifiers-manager";
 import type { Company } from "@peppol/types/company";
 import { useTranslation } from "@core/hooks/use-translation";
+import { isVerificationEnforced } from "@peppol/utils/playground";
 
 type Step5Props = {
     teamId: string;
@@ -28,7 +29,7 @@ export function Step5Identifiers({ teamId, company, verificationRequirements, on
                 teamId={teamId}
                 companyId={company.id}
                 isSmpRecipient={company.isSmpRecipient}
-                publishedOnSmp={company.isSmpRecipient && (verificationRequirements !== "strict" || company.isVerified)}
+                publishedOnSmp={company.isSmpRecipient && (!isVerificationEnforced({ verificationRequirements, country: company.country }) || company.isVerified)}
             />
             <div className="flex justify-end pt-2">
                 <Button type="button" onClick={onNext}>

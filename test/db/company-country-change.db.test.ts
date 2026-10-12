@@ -274,14 +274,29 @@ describe.skipIf(!testDatabaseUrl)("company country changes against PostgreSQL", 
       [TEAM_LAX]
     );
     await expect(updateCompany({
-      id: "c_sendonly", teamId: TEAM_LAX, country: "FR", enterpriseNumber: "303265045", vatNumber: null, isSmpRecipient: true,
+      id: "c_sendonly", teamId: TEAM_LAX, country: "NL", enterpriseNumber: "59581883", vatNumber: null, isSmpRecipient: true,
     })).rejects.toThrow("Change the country first");
     expect(await companyRow("c_sendonly")).toMatchObject({ country: "BE", smpProvider: "recommand-smp1" });
     expect(smpCalls).toEqual([]);
-    await updateCompany({ id: "c_sendonly", teamId: TEAM_LAX, country: "FR", enterpriseNumber: "303265045", vatNumber: null });
+    await updateCompany({ id: "c_sendonly", teamId: TEAM_LAX, country: "NL", enterpriseNumber: "59581883", vatNumber: null });
     await updateCompany({ id: "c_sendonly", teamId: TEAM_LAX, isSmpRecipient: true });
     expect(smpCalls).toEqual(["upsert"]);
-    expect(await companyRow("c_sendonly")).toMatchObject({ country: "FR", smpProvider: "at-shared-smp-fr" });
+    expect(await companyRow("c_sendonly")).toMatchObject({ country: "NL", smpProvider: "recommand-smp1" });
+  });
+
+  it("does not publish a French recipient of a lax team before it is verified", async () => {
+    await pool.query(
+      `INSERT INTO peppol_companies (id, team_id, name, address, postal_code, city, country, enterprise_number, vat_number, is_smp_recipient, access_point_provider, smp_provider)
+       VALUES ('c_tofrance', $1, 'Example BV', 'Straat 1', '9000', 'Gent', 'BE', '0123456749', 'BE0123456749', false, 'recommand-ap1', 'recommand-smp1')`,
+      [TEAM_LAX]
+    );
+    // The French network takes a participant only after its KYC, which is the
+    // verification, so the company is not published until then.
+    await updateCompany({
+      id: "c_tofrance", teamId: TEAM_LAX, country: "FR", enterpriseNumber: "303265045", vatNumber: null, isSmpRecipient: true,
+    });
+    expect(smpCalls).toEqual([]);
+    expect(await companyRow("c_tofrance")).toMatchObject({ country: "FR", smpProvider: "at-shared-smp-fr" });
   });
 
   it("waits for a submission holding the company and then refuses the move", async () => {

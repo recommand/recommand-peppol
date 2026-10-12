@@ -25,6 +25,7 @@ import { BUILT_IN_INTEGRATIONS } from "@peppol/utils/integrations";
 import { ConfirmDialog } from "@core/components/confirm-dialog";
 import { StatusMessage } from "@recommand/components/status-feedback";
 import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
+import { isVerificationEnforced } from "@peppol/utils/playground";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
@@ -48,7 +49,8 @@ export default function CompanyDetailPage() {
   const activeTeam = useActiveTeam();
   const isPlayground = useIsPlayground();
   const verificationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isVerificationRequired = verificationRequirements !== null && (verificationRequirements === "strict" || verificationRequirements === "lax") && !(isVerified ?? company?.isVerified);
+  const verificationEnforced = isVerificationEnforced({ verificationRequirements, country: company?.country });
+  const isVerificationRequired = verificationRequirements !== null && (verificationEnforced || verificationRequirements === "lax") && !(isVerified ?? company?.isVerified);
   const countryChanged = Boolean(company && formData.country !== company.country);
   const verificationIdentityChanged = Boolean(
     (isVerified ?? company?.isVerified) && company && (
@@ -327,7 +329,7 @@ export default function CompanyDetailPage() {
           tone="warning"
           icon={ShieldCheck}
           title={t`Company Verification Required`}
-          description={verificationRequirements === "strict" ? t`This company needs to be verified before it can be used.` : t`This company needs to be verified. Without verification, it will soon be deactivated.`}
+          description={verificationEnforced ? t`This company needs to be verified before it can be used.` : t`This company needs to be verified. Without verification, it will soon be deactivated.`}
           className="mb-6"
         >
           <div className="pt-1">
@@ -382,7 +384,7 @@ export default function CompanyDetailPage() {
               teamId={activeTeam.id}
               companyId={company.id}
               isSmpRecipient={company.isSmpRecipient}
-              publishedOnSmp={company.isSmpRecipient && (verificationRequirements !== "strict" || (isVerified ?? company.isVerified))}
+              publishedOnSmp={company.isSmpRecipient && (!verificationEnforced || (isVerified ?? company.isVerified))}
             />
             <CompanyDocumentTypesManager
               teamId={activeTeam.id}

@@ -13,6 +13,7 @@ import { getExtendedTeam, type ExtendedTeam } from "@peppol/data/teams";
 import { checkPeppolEntitlement, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { actionFailure } from "@recommand/lib/utils";
 import { createMiddleware } from "hono/factory";
+import { requiresCompanyVerification } from "@peppol/utils/playground";
 
 type InternalTokenContext = {
   Variables: {
@@ -196,6 +197,11 @@ export function requireIntegrationAccess() {
   );
 }
 
+/**
+ * Refuses a company that has to be verified and is not: every company of a strict
+ * team, and a company on the French production network whatever its team's level
+ * (see requiresCompanyVerification).
+ */
 export function requireCompanyVerificationForStrictTeams() {
   return createMiddleware<CompanyAccessContext>(
     async (c, next) => {
@@ -206,9 +212,13 @@ export function requireCompanyVerificationForStrictTeams() {
         return c.json(actionFailure("Team or company not found"), 404);
       }
 
-      const verificationRequirements = team.verificationRequirements ?? "lax";
-
-      if (verificationRequirements === "strict") {
+      if (
+        requiresCompanyVerification({
+          verificationRequirements: team.verificationRequirements,
+          smpProvider: company.smpProvider,
+          useTestNetwork: team.useTestNetwork,
+        })
+      ) {
         if (!company.isVerified) {
           return c.json(
             actionFailure(

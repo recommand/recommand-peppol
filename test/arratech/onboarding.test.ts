@@ -438,6 +438,17 @@ describe('durable Arratech onboarding', () => {
     expect(log.errorMessage).toContain('signed mandate');
   });
 
+  for (const level of ['lax', 'trusted']) {
+    it(`onboards a company of a ${level} team, whose verification is its KYC`, async () => {
+      team.verificationRequirements = level;
+      await processArratechOnboarding(log.id);
+      expect(events).toEqual(['register', 'upload', 'approve']);
+      participantStatus = 'ACTIVE';
+      await processArratechOnboarding(log.id);
+      expect(log.status).toBe('verified');
+    });
+  }
+
   it('does not process test or non-French companies', async () => {
     team.useTestNetwork = true;
     await processArratechOnboarding(log.id);
@@ -558,11 +569,19 @@ describe('resuming a blocked onboarding', () => {
     await refused(409, 'filing was already prepared');
   });
 
-  it('refuses test-network and non-strict companies', async () => {
+  it('refuses test-network companies', async () => {
     await blockOnIdentifiers();
     identifiers = [{ scheme: '0225', identifier: '303265045' }];
     team.useTestNetwork = true;
     await refused(409, 'no longer qualify');
+  });
+
+  it('resumes a company of a lax team', async () => {
+    await blockOnIdentifiers();
+    identifiers = [{ scheme: '0225', identifier: '303265045' }];
+    team.verificationRequirements = 'lax';
+    const result = await resume();
+    expect(result.state.phase).toBe('submit');
   });
 
   it('resumes a send-only onboarding once another provider registered it on Peppol', async () => {

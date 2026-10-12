@@ -257,8 +257,7 @@ export async function processArratechOnboarding(id: string, logger: OnboardingLo
         company.country !== 'FR' ||
         company.smpProvider !== 'at-shared-smp-fr' ||
         team?.useTestNetwork ||
-        team?.isPlayground ||
-        team?.verificationRequirements !== 'strict'
+        team?.isPlayground
       ) {
         throw new KycOnboardingError(
           'Company settings changed; onboarding requires manual review.',
