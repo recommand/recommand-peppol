@@ -108,7 +108,8 @@ export function EmailOptions({
     }
   };
 
-  const handleWhenChange = (newWhen: "always" | "on_peppol_failure") => {
+  const handleWhenChange = (value: string) => {
+    const newWhen = value as "always" | "on_peppol_failure";
     setWhen(newWhen);
     if (enabled) {
       onChange({
