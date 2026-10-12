@@ -41,10 +41,38 @@ const schemeValidators: Record<string, IdentifierValidator> = {
   "9918": validateIban,
 };
 
+/**
+ * Whether a number is a placeholder: zeros only, apart from at most two characters at
+ * its start or at its end, as in 000000000, FR12000000000 or BE0000000097. Several
+ * national checks let these through, because zero passes Luhn and a mod 97 check
+ * digit of 97 or a French key of 12 is computed from it. Senders type them when they
+ * do not know their buyer's number, so a company that publishes one receives
+ * documents meant for others.
+ */
+export function isPlaceholderNumber(identifier: string): boolean {
+  const digits = identifier
+    .toUpperCase()
+    .replace(/^[A-Z]{2}(?=[\d\s.\-]*\d)/, "")
+    .replace(/\D/g, "");
+  if (digits.length < 4) {
+    return false;
+  }
+  return /^0+$/.test(digits.slice(2)) || /^0+$/.test(digits.slice(0, -2));
+}
+
+function assertNotPlaceholderNumber(identifier: string): void {
+  if (isPlaceholderNumber(identifier)) {
+    throw new UserFacingError(
+      `${identifier} is a placeholder, not a real company number. Use the number the company is registered under.`
+    );
+  }
+}
+
 export function validateIdentifier(
   scheme: string,
   identifier: string,
 ): void {
+  assertNotPlaceholderNumber(identifier);
   const validator = schemeValidators[scheme];
   if (!validator) {
     return;
@@ -59,6 +87,11 @@ export function validateCountryIdentifier(
     enterpriseNumber?: string | null;
   },
 ): void {
+  for (const number of [identifiers.vatNumber, identifiers.enterpriseNumber]) {
+    if (number) {
+      assertNotPlaceholderNumber(number);
+    }
+  }
   const rules = getCountryIdentifierRules(country);
   if (!rules) {
     return;

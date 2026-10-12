@@ -3,6 +3,7 @@ import { COUNTRIES } from "../utils/countries";
 import { countryIdentifierRules } from "../utils/identifiers/countries";
 import {
   getVatNumberPrefixes,
+  isPlaceholderNumber,
   normalizeIdentifierValue,
   validateCompanyNumbers,
   validateCountryIdentifier,
@@ -419,6 +420,46 @@ describe("a company's own numbers", () => {
     expect(() => validateCompanyNumbers({ country: "FR", enterpriseNumber: "30326504500011", enterpriseNumberScheme: "0002" })).toThrow(
       "French SIREN"
     );
+  });
+});
+
+describe("a placeholder number", () => {
+  // Numbers a sender types when it does not know its buyer's. Each of these passes its
+  // scheme's own check, so only the placeholder rule keeps them off the network.
+  const placeholders: [string, string][] = [
+    ["0002", "000000000"],
+    ["0225", "000000000"],
+    ["0009", "00000000000000"],
+    ["9957", "FR12000000000"],
+    ["0208", "0000000097"],
+    ["9925", "BE0000000097"],
+    ["9944", "NL000000000B00"],
+    ["0088", "0000000000000"],
+    ["0106", "00000000"],
+  ];
+
+  it("is refused under every scheme", () => {
+    for (const [scheme, identifier] of placeholders) {
+      expect(() => validateIdentifier(scheme, identifier)).toThrow("is a placeholder");
+    }
+  });
+
+  it("is refused as a company's own VAT number or enterprise number", () => {
+    expect(() => validateCompanyNumbers({ country: "FR", vatNumber: "FR12000000000", enterpriseNumber: "443061841" })).toThrow(
+      "is a placeholder"
+    );
+    expect(() => validateCompanyNumbers({ country: "BE", vatNumber: null, enterpriseNumber: "0000000097" })).toThrow(
+      "is a placeholder"
+    );
+  });
+
+  it("leaves real numbers with long runs of zeros alone", () => {
+    // A GLN under the Belgian GS1 prefix with a zero run between prefix and check digit,
+    // and short codes, are not placeholders.
+    expect(isPlaceholderNumber("5400000000001")).toBe(false);
+    expect(isPlaceholderNumber("100")).toBe(false);
+    expect(isPlaceholderNumber("0202239951")).toBe(false);
+    expect(isPlaceholderNumber("FR40303265045")).toBe(false);
   });
 });
 
