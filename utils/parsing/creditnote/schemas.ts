@@ -7,6 +7,7 @@ import {
   lineSchema,
   partySchema,
   paymentMeansSchema,
+  paymentTermsSchema,
   sendVatTotalsSchema,
   surchargeSchema,
   totalsSchema,
@@ -34,9 +35,7 @@ export const baseCreditNoteSchema = z.object({
   buyer: partySchema,
   delivery: deliverySchema.nullish().openapi({ description: "Optional delivery information." }),
   paymentMeans: z.array(paymentMeansSchema).nullish(),
-  paymentTerms: z.object({
-    note: z.string().openapi({ example: "Net 30" }),
-  }).nullish(),
+  paymentTerms: paymentTermsSchema.nullish(),
   lines: z.array(lineSchema).min(1),
   discounts: z.array(discountSchema).nullish().openapi({ description: "Optional global discounts" }),
   surcharges: z.array(surchargeSchema).nullish().openapi({ description: "Optional global surcharges" }),

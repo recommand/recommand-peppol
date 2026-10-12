@@ -37,10 +37,14 @@ export const frenchReportingStatusResponse = z.object({
     simulated: z.boolean().openapi({ description: "True for playground and test-network reports, which are recorded but never filed." }),
 }).openapi({ ref: "FrenchReportingStatus" });
 
-export const deliveryStatusResponse = z.enum(deliveryStatuses).nullable().openapi({
+export const deliveryStatusSchema = z.enum(deliveryStatuses).openapi({
+    description: "`pending`: the channel accepted the document and has not confirmed arrival. `delivered`: the channel confirmed arrival; for Peppol the recipient's access point acknowledged the document, for email the recipient's mail server accepted the message. `failed`: the document did not arrive; for email the message bounced or was refused.",
+    ref: "DeliveryStatus",
+});
+
+export const deliveryStatusResponse = deliveryStatusSchema.nullable().openapi({
     description: "Whether the document reached its recipient, summarised over its deliveries: `delivered` when at least one delivery was confirmed, `failed` when every delivery failed, `pending` while any is still awaiting the channel's confirmation. Null for documents without deliveries, such as incoming documents and filed reports.",
     example: "delivered",
-    ref: "DeliveryStatus",
 });
 
 export const deliveryFailureResponse = z.object({
@@ -70,8 +74,8 @@ export const deliveryResponse = z.object({
         description: "The Peppol address or email address the document was sent to.",
         example: "0208:0428643097",
     }),
-    status: z.enum(deliveryStatuses).openapi({
-        description: "`pending`: the channel accepted the document and has not confirmed arrival. `delivered`: the channel confirmed arrival; for Peppol the recipient's access point acknowledged the document, for email the recipient's mail server accepted the message. `failed`: the document did not arrive; for email the message bounced or was refused. See `failure`.",
+    status: deliveryStatusSchema.openapi({
+        description: "The status of this delivery. See `failure` when it is `failed`.",
         example: "delivered",
     }),
     statusChangedAt: z.string().openapi({

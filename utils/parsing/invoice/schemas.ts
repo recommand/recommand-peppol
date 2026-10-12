@@ -160,12 +160,13 @@ export const deliverySchema = z
         scheme: z.string().openapi({ example: "0088" }),
         identifier: z.string().openapi({ example: "123456789" }),
       })
-      .nullish()
       .openapi({
-        example: { scheme: "0088", identifier: "123456789" },
         description:
-          "The identifier of the delivery location. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
-      }),
+          "The identifier of a delivery location within a registered scheme. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
+        example: { identifier: "123456789", scheme: "0088" },
+        ref: "LocationIdentifier",
+      })
+      .nullish(),
     location: z.object({
       street: z.string().nullish().openapi({ example: "Example Street 1" }),
       street2: z.string().nullish().openapi({ example: "Suite 100" }),
@@ -223,6 +224,15 @@ export const paymentMeansSchema = z
     }),
   })
   .openapi({ ref: "PaymentMeans" });
+
+export const paymentTermsSchema = z
+  .object({
+    note: z.string().openapi({
+      description: "The payment terms as free text.",
+      example: "Net 30",
+    }),
+  })
+  .openapi({ description: "Optional payment terms.", ref: "PaymentTerms" });
 
 export const vatCategoryEnum = z
   .enum(Object.keys(VAT_CATEGORIES) as [VatCategory, ...VatCategory[]])
@@ -389,11 +399,12 @@ export const lineSchema = z
         scheme: z.string().openapi({ example: "0160" }),
         identifier: z.string().openapi({ example: "10986700" }),
       })
-      .nullish()
       .openapi({
         description:
           "The standard identifier of the item based on a registered scheme. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
-      }),
+        ref: "StandardId",
+      })
+      .nullish(),
     documentReference: z.string().nullish().openapi({
       example: "INV-2024-001",
       description:
@@ -576,15 +587,7 @@ export const baseInvoiceSchema = z.object({
     description:
       "Optional payment information. For most invoices, this should be provided. For prepaid invoices, this could be omitted.",
   }),
-  paymentTerms: z
-    .object({
-      note: z.string().openapi({
-        example: "Net 30",
-        description: "The payment terms as free text.",
-      }),
-    })
-    .nullish()
-    .openapi({ description: "Optional payment terms." }),
+  paymentTerms: paymentTermsSchema.nullish(),
   lines: z.array(lineSchema).min(1).openapi({
     description: "The invoice lines. At least one line is required.",
   }),
@@ -615,7 +618,7 @@ export const baseInvoiceSchema = z.object({
 export type DocumentLine = z.infer<typeof lineSchema>;
 export type Party = z.infer<typeof partySchema>;
 export type PaymentMeans = z.infer<typeof paymentMeansSchema>;
-export type PaymentTerms = z.infer<typeof baseInvoiceSchema.shape.paymentTerms>;
+export type PaymentTerms = z.infer<typeof paymentTermsSchema>;
 export type Item = z.infer<typeof lineSchema>;
 export type Vat = z.infer<typeof vatSchema>;
 export type VatSubtotal = z.infer<typeof vatSubtotalSchema>;
