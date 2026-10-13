@@ -112,6 +112,7 @@ A submitted report is recorded alongside your sent documents and counts towards 
     ...describeValidationErrorResponse(
       "Invalid reporting data; the company is not registered for e-reporting, its registration is not yet registered, or it is suspended; the company is not registered in France or lacks the identifiers a report needs; a payment report was sent for a company whose VAT is due on invoicing; or the reporting service refused the report.",
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(
       409,
       "The report conflicts with what was filed before, or the filing for the period has already been assembled and the report on file can no longer be corrected or cancelled through the API",
@@ -148,6 +149,7 @@ A submitted report is recorded alongside your sent documents and counts towards 
     ...describeValidationErrorResponse(
       "Invalid reporting data; the company is not registered for e-reporting, its registration is not yet registered, or it is suspended; the company is not registered in France or lacks the identifiers a report needs; a payment report was sent for a company whose VAT is due on invoicing; or the reporting service refused the report.",
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(
       409,
       "The report conflicts with what was filed before: a payment report is already on file for the invoice and this request is not a correction or cancellation, or the filing for the period has already been assembled and the report on file can no longer be corrected or cancelled through the API",

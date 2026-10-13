@@ -21,6 +21,7 @@ const deleteCompanyRouteDescription = describeRoute({
     tags: ["Companies"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully deleted company"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to delete company"),
     },
 });

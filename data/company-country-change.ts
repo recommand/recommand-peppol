@@ -130,7 +130,9 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
     throw new UserFacingError(COUNTRY_CHANGE_BLOCKED_MESSAGE);
   }
 
-  const providers = resolveDefaultPeppolProviders(input.newCountry);
+  const providers = resolveDefaultPeppolProviders(input.newCountry, {
+    useTestNetwork: input.teamExtension?.useTestNetwork ?? false,
+  });
   const providersChanged = !samePeppolProviders(providers, input.oldCompany);
 
   const oldDefaults = defaultIdentifiersFor(

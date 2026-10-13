@@ -20,6 +20,7 @@ const getSupplierRouteDescription = describeRoute({
   tags: ["Suppliers"],
   responses: {
     ...describeSuccessResponseWithZod("Successfully retrieved supplier", z.object({ supplier: supplierResponse })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Supplier not found"),
     ...describeErrorResponse(500, "Failed to fetch supplier"),
   },

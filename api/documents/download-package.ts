@@ -39,6 +39,7 @@ const downloadPackageRouteDescription = describeRoute({
                 },
             },
         },
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Document not found"),
         ...describeErrorResponse(500, "Failed to download document"),
     },

@@ -19,6 +19,7 @@ const getWebhooksRouteDescription = describeRoute({
     tags: ["Webhooks"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully retrieved webhooks", z.object({ webhooks: z.array(webhookResponse) })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch webhooks"),
     },
 });

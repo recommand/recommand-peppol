@@ -813,6 +813,13 @@
       "when": 1791542902621,
       "tag": "20261009104822_integration_failure_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 116,
+      "version": "7",
+      "when": 1791890741804,
+      "tag": "20261013112541_elma_smp_provider",
+      "breakpoints": true
     }
   ]
 }

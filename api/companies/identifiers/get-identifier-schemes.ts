@@ -23,6 +23,7 @@ const getIdentifierSchemesRouteDescription = describeRoute({
         example: ["0225"],
       }),
     })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch supported identifier schemes"),
   },
 });

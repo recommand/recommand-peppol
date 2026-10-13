@@ -113,6 +113,7 @@ const routeDescription = describeRoute({
       "Successfully generated document",
       generateResponse,
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeValidationErrorResponse(
       "Invalid document data provided, or the generated document failed validation",
     ),

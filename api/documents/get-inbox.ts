@@ -33,6 +33,7 @@ const getInboxRouteDescription = describeRoute({
             // reporting status either.
             documents: z.array(inboxDocumentResponse),
         })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch inbox documents"),
     },
 });

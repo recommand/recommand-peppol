@@ -19,6 +19,7 @@ const unassignLabelRouteDescription = describeRoute({
     tags: ["Documents"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully unassigned label from document"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Document or label not found"),
         ...describeErrorResponse(500, "Failed to unassign label"),
     },

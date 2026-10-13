@@ -25,6 +25,7 @@ const createIdentifierRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully created company identifier", z.object({ identifier: companyIdentifierResponse })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create company identifier"),
     },
 });

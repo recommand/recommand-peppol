@@ -6,6 +6,7 @@ import { actionSuccess } from "@recommand/lib/utils";
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { describeRoute } from "hono-openapi";
 import {
+    describeErrorResponse,
     describeSuccessResponseWithZod,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
@@ -41,6 +42,7 @@ const verifyRecipientRouteDescription = describeRoute({
             companyName: z.string().nullable().optional().openapi({ description: "Company name from SMP business card." }),
             countryCode: z.string().nullable().optional().openapi({ description: "Country code from SMP business card." }),
         })),
+        ...describeErrorResponse(401, "Unauthorized"),
     },
 });
 

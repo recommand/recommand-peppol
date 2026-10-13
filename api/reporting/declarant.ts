@@ -145,6 +145,7 @@ const getRouteDescription = describeRoute({
       "The registration, or null when there is none",
       z.object({ declarant: frenchReportingDeclarantResponse.nullable() }),
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Company not found"),
   },
 });
@@ -166,6 +167,7 @@ Calling this endpoint again updates the VAT regime and exigibility. Changing the
     ...describeValidationErrorResponse(
       "The company is not registered in France, has no valid SIREN or SIRET as enterprise number, is not verified, or was verified without a signed French mandate.",
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Company not found"),
     ...describeErrorResponse(500, "The registration could not be requested"),
   },

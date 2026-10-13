@@ -22,6 +22,7 @@ const createDocumentTypeRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully created company document type", z.object({ documentType: companyDocumentTypeResponse })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create company document type"),
     },
 });
