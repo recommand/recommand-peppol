@@ -59,7 +59,7 @@ export async function checkRepresentative(
 export async function listRepresentatives(
   company: CheckedCompany,
   dependencies: RepresentativeCheckDependencies = defaultDependencies
-): Promise<{ representatives: ListedRepresentative[]; allowsOtherNames: boolean } | null> {
+): Promise<{ representatives: ListedRepresentative[]; nameWithoutList: "unknown" | "typed" } | null> {
   const check = representativeChecks[company.country];
   if (!check) {
     return null;
@@ -70,7 +70,7 @@ export async function listRepresentatives(
   } catch (error) {
     console.error(`Failed to list the representatives of company ${company.id}:`, error);
   }
-  return { representatives, allowsOtherNames: check.allowsOtherNames };
+  return { representatives, nameWithoutList: check.nameWithoutList };
 }
 
 /**

@@ -71,8 +71,8 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
             },
             isRepresentativeSelectionRequired,
             representatives,
-            // Whether a name that is not on the list may be typed instead.
-            allowsOtherRepresentativeNames: listed?.allowsOtherNames ?? true,
+            // What the form asks when the register lists nobody.
+            nameWithoutRepresentatives: listed?.nameWithoutList ?? "typed",
             isPlayground: teamIsPlayground,
             isMandateRequired,
             countryRequirements: getVerificationCountryRequirements(company.country, isMandateRequired, company.isSmpRecipient),

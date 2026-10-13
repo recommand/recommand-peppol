@@ -148,10 +148,10 @@ export const norwegianRepresentativeCheck: CountryRepresentativeCheck = {
   },
 
   listRepresentatives: listSignatories,
-  // Names in the register can be spelled differently from how someone writes their
-  // own, so a name that is not listed can be typed; the checks hold it against the
-  // register all the same.
-  allowsOtherNames: true,
+  // Without a list (the register is unreachable or names nobody, as for a branch of
+  // a foreign company) the representative types their name: the checks hold it
+  // against the register, and support needs it when the session is held for review.
+  nameWithoutList: "typed",
 
   afterIdentity: async (company, name, dependencies) => {
     let assessment: NorwegianAssessment;

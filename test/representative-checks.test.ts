@@ -157,7 +157,7 @@ describe("the representative of a Norwegian company", () => {
     it("offers everyone the register names for signature or procuration once, with their roles", async () => {
       const { deps } = dependencies(soleOrBoard);
       expect(await listRepresentatives(company, deps)).toEqual({
-        allowsOtherNames: true,
+        nameWithoutList: "typed",
         representatives: [
           { firstName: "Ingrid", lastName: "Berg", function: "Daglig leder" },
           { firstName: "Kari", lastName: "Nordmann", function: "Styrets leder" },
@@ -167,9 +167,9 @@ describe("the representative of a Norwegian company", () => {
       });
     });
 
-    it("lets the representative type their name while the register is unreachable", async () => {
+    it("lets the representative type their name when the register lists nobody or cannot be reached", async () => {
       const { deps } = dependencies(new BronnoysundUnavailableError("down"));
-      expect(await listRepresentatives(company, deps)).toEqual({ representatives: [], allowsOtherNames: true });
+      expect(await listRepresentatives(company, deps)).toEqual({ representatives: [], nameWithoutList: "typed" });
     });
   });
 
@@ -237,11 +237,11 @@ describe("the representative check per country", () => {
     expect(await findRepresentativeReview(belgian, name("Els", "Maes"), deps)).toBeNull();
   });
 
-  it("offers the Belgian representatives as a binding list", async () => {
+  it("offers the Belgian representatives, and an unknown name when the register lists none", async () => {
     const { deps } = belgianDependencies([{ firstName: "Jan", lastName: "Peeters" }, { firstName: "Els" }]);
     expect(await listRepresentatives(belgian, deps)).toEqual({
       representatives: [{ firstName: "Jan", lastName: "Peeters", function: "" }],
-      allowsOtherNames: false,
+      nameWithoutList: "unknown",
     });
   });
 

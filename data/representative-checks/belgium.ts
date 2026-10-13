@@ -39,6 +39,5 @@ export const belgianRepresentativeCheck: CountryRepresentativeCheck = {
   },
 
   listRepresentatives: namedRepresentatives,
-  // The representative picks their name; a name that is not listed cannot be used.
-  allowsOtherNames: false,
+  nameWithoutList: "unknown",
 };

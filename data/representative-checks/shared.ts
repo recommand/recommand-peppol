@@ -31,8 +31,12 @@ export type CountryRepresentativeCheck = {
   beforeIdentity: (company: CheckedCompany, name: RepresentativeName, dependencies: RepresentativeCheckDependencies) => Promise<RepresentativeName>;
   /** The people to offer on the verification form. */
   listRepresentatives: (company: CheckedCompany, dependencies: RepresentativeCheckDependencies) => Promise<ListedRepresentative[]>;
-  /** Whether the representative may type a name that is not on the list. */
-  allowsOtherNames: boolean;
+  /**
+   * What the form asks when the register lists nobody: an unknown name, so the
+   * identity check runs and is reviewed, or the representative's typed name. A
+   * name that is listed is always picked from the list.
+   */
+  nameWithoutList: "unknown" | "typed";
   /** After a successful identity check: why support has to decide, or null to verify. */
   afterIdentity?: (company: CheckedCompany, name: RepresentativeName, dependencies: RepresentativeCheckDependencies) => Promise<string | null>;
   /** Tells support about a session afterIdentity held. */
