@@ -20,7 +20,7 @@ import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
 import { UserFacingError } from "@peppol/utils/util";
 import { getCompanyIdentifiers } from "@peppol/data/company-identifiers";
-import { assertNorwegianOrganisationsRegistrable } from "@peppol/data/bronnoysund/organisation-check";
+import { assertIdentifiersRegistrable } from "@peppol/data/identifier-registration-checks";
 
 type MinimalCompanyIdentifier = {
   scheme: string;
@@ -98,7 +98,7 @@ export async function upsertCompanyRegistrations(options: {
 }) {
   const { provider, isSmpRecipient } = await getCompanyRouting(options.companyId);
   if (isSmpRecipient) {
-    await assertNorwegianOrganisationsRegistrable(await getCompanyIdentifiers(options.companyId));
+    await assertIdentifiersRegistrable(await getCompanyIdentifiers(options.companyId));
   }
   await provider.upsertCompanyRegistrations(options);
 }
@@ -118,7 +118,7 @@ export async function upsertCompanyRegistration(options: {
 }) {
   const { provider, isSmpRecipient } = await getCompanyRouting(options.companyId);
   if (isSmpRecipient) {
-    await assertNorwegianOrganisationsRegistrable([options.identifier]);
+    await assertIdentifiersRegistrable([options.identifier]);
   }
   await provider.upsertCompanyRegistration(options);
 }

@@ -7,6 +7,7 @@ import {
   lookupOrganisation,
 } from "@peppol/data/bronnoysund/client";
 import { assertNorwegianOrganisationsRegistrable } from "@peppol/data/bronnoysund/organisation-check";
+import { assertIdentifiersRegistrable } from "@peppol/data/identifier-registration-checks";
 import type { RegisteredNorwegianIdentifier } from "@peppol/data/bronnoysund/deleted-organisations";
 
 // The sweep is tested through its dependencies; the database is never reached.
@@ -145,6 +146,25 @@ describe("registering a Norwegian organisation number", () => {
     });
     expect(alerts).toHaveLength(1);
     expect(alerts[0]).toContain("0192:923609016 was registered without checking");
+  });
+});
+
+describe("checks before an identifier is published", () => {
+  it("hands each scheme's check only its own identifiers and leaves other schemes alone", async () => {
+    const calls: string[] = [];
+    await assertIdentifiersRegistrable(
+      [
+        { scheme: "0192", identifier: "923609016" },
+        { scheme: "0208", identifier: "0123456749" },
+        { scheme: "0192", identifier: "974760673" },
+      ],
+      { "0192": async (identifiers) => { calls.push(identifiers.map((identifier) => identifier.identifier).join(",")); } }
+    );
+    expect(calls).toEqual(["923609016,974760673"]);
+  });
+
+  it("checks nothing for identifiers without a register check", async () => {
+    await assertIdentifiersRegistrable([{ scheme: "0208", identifier: "0123456749" }]);
   });
 });
 
