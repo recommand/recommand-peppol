@@ -52,7 +52,7 @@ export type SmpProviderAdapter = {
 const adapters = {
   "recommand-smp1": recommandSmp,
   "at-shared-smp-fr": arratechSmp,
-  elma: elmaSmp,
+  "elma-smp-no": elmaSmp,
 } satisfies Record<SmpProviderId, SmpProviderAdapter>;
 
 export type SmpRoutingDependencies = {

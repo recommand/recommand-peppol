@@ -23,7 +23,7 @@ const DEFAULT_PEPPOL_PROVIDERS: PeppolProviders = {
  */
 const COUNTRY_PEPPOL_PROVIDERS: Partial<Record<string, PeppolProviders>> = {
   FR: { accessPointProvider: "at-shared-ap-fr", smpProvider: "at-shared-smp-fr" },
-  NO: { accessPointProvider: "recommand-ap1", smpProvider: "elma" },
+  NO: { accessPointProvider: "recommand-ap1", smpProvider: "elma-smp-no" },
 };
 
 /**

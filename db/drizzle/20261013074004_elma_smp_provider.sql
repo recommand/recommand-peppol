@@ -1,1 +1,0 @@
-ALTER TYPE "public"."peppol_smp_provider" ADD VALUE 'elma';

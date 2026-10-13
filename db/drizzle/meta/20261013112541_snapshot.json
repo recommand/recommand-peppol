@@ -1,5 +1,5 @@
 {
-  "id": "525e5780-fd98-4f4d-86c1-70fa1fead1a2",
+  "id": "19c4d385-67aa-41fc-affd-68a43a0ba83b",
   "prevId": "f92afdf4-5b56-467d-acab-784b597f1d60",
   "version": "7",
   "dialect": "postgresql",
@@ -3153,7 +3153,7 @@
       "values": [
         "recommand-smp1",
         "at-shared-smp-fr",
-        "elma"
+        "elma-smp-no"
       ]
     },
     "public.peppol_supported_document_type": {

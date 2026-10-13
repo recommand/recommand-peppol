@@ -46,7 +46,7 @@ export const smpProviderDescriptors: Record<SmpProviderId, SmpProviderDescriptor
   // moves participants between service providers with its own transfer rather than
   // SML migration keys, and requires the participant's contact details to be kept
   // current.
-  elma: {
+  "elma-smp-no": {
     identifierSchemes: ["0192"],
     migrationKeys: false,
     republishOnCompanyDetailsChange: true,

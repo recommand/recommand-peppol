@@ -34,12 +34,12 @@ describe("choosing the providers of a Norwegian company", () => {
     delete process.env.ELMA_ENABLED;
     expect(resolveDefaultPeppolProviders("NO", { useTestNetwork: true })).toEqual({
       accessPointProvider: "recommand-ap1",
-      smpProvider: "elma",
+      smpProvider: "elma-smp-no",
     });
     expect(resolveDefaultPeppolProviders("no", { useTestNetwork: false }).smpProvider).toBe("recommand-smp1");
 
     process.env.ELMA_ENABLED = "true";
-    expect(resolveDefaultPeppolProviders("NO", { useTestNetwork: false }).smpProvider).toBe("elma");
+    expect(resolveDefaultPeppolProviders("NO", { useTestNetwork: false }).smpProvider).toBe("elma-smp-no");
   });
 
   it("leaves other countries where they were", () => {
@@ -51,10 +51,10 @@ describe("choosing the providers of a Norwegian company", () => {
 
 describe("what each SMP supports", () => {
   it("restricts ELMA to Norwegian organisation numbers", () => {
-    expect(getSupportedIdentifierSchemes("elma")).toEqual(["0192"]);
+    expect(getSupportedIdentifierSchemes("elma-smp-no")).toEqual(["0192"]);
     const identifiers = [{ scheme: "0192", identifier: "923609016" }, { scheme: "9908", identifier: "no923609016mva" }];
-    expect(findUnsupportedIdentifiers({ smpProvider: "elma" }, identifiers)).toEqual([identifiers[1]]);
-    expect(findUnsupportedIdentifiers({ smpProvider: "elma", isPlayground: true }, identifiers)).toEqual([]);
+    expect(findUnsupportedIdentifiers({ smpProvider: "elma-smp-no" }, identifiers)).toEqual([identifiers[1]]);
+    expect(findUnsupportedIdentifiers({ smpProvider: "elma-smp-no", isPlayground: true }, identifiers)).toEqual([]);
   });
 
   it("offers SML migration keys on our own SMP only", () => {
@@ -65,7 +65,7 @@ describe("what each SMP supports", () => {
   });
 
   it("republishes company details only where the SMP keeps them", () => {
-    expect(smpProviderDescriptors.elma.republishOnCompanyDetailsChange).toBe(true);
+    expect(smpProviderDescriptors["elma-smp-no"].republishOnCompanyDetailsChange).toBe(true);
     expect(smpProviderDescriptors["recommand-smp1"].republishOnCompanyDetailsChange).toBe(false);
   });
 });
@@ -94,7 +94,7 @@ function fakeRouting(company: { smpProvider: SmpProviderId; isSmpRecipient: bool
     adapters: {
       "recommand-smp1": adapter("recommand-smp1"),
       "at-shared-smp-fr": adapter("at-shared-smp-fr"),
-      elma: adapter("elma"),
+      "elma-smp-no": adapter("elma-smp-no"),
     },
     loadCompany: async () => ({ ...state }),
     loadIdentifiers: async () => options.identifiers ?? [{ scheme: "0192", identifier: "923609016" }],
@@ -112,9 +112,9 @@ function fakeRouting(company: { smpProvider: SmpProviderId; isSmpRecipient: bool
 
 describe("routing registrations to the company's SMP", () => {
   it("registers a Norwegian company on ELMA after checking its identifiers", async () => {
-    const { routing, calls } = fakeRouting({ smpProvider: "elma", isSmpRecipient: true });
+    const { routing, calls } = fakeRouting({ smpProvider: "elma-smp-no", isSmpRecipient: true });
     await routing.upsertCompanyRegistrations({ companyId: "c_no", useTestNetwork: true });
-    expect(calls).toEqual(["check 0192:923609016", "elma.upsertCompanyRegistrations"]);
+    expect(calls).toEqual(["check 0192:923609016", "elma-smp-no.upsertCompanyRegistrations"]);
   });
 
   it("checks a single identifier before registering it", async () => {
@@ -124,43 +124,43 @@ describe("routing registrations to the company's SMP", () => {
   });
 
   it("does not check identifiers of a company that does not receive", async () => {
-    const { routing, calls } = fakeRouting({ smpProvider: "elma", isSmpRecipient: false });
+    const { routing, calls } = fakeRouting({ smpProvider: "elma-smp-no", isSmpRecipient: false });
     await routing.upsertCompanyRegistrations({ companyId: "c_no", useTestNetwork: true });
-    expect(calls).toEqual(["elma.upsertCompanyRegistrations"]);
+    expect(calls).toEqual(["elma-smp-no.upsertCompanyRegistrations"]);
   });
 });
 
 describe("moving a company to another SMP", () => {
   it("takes a published company off the old SMP before registering it on the new one", async () => {
     const { routing, calls, state } = fakeRouting({ smpProvider: "recommand-smp1", isSmpRecipient: true });
-    expect(await routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma" })).toBe("moved");
+    expect(await routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma-smp-no" })).toBe("moved");
     expect(calls).toEqual([
       "check 0192:923609016",
       "recommand-smp1.unregisterCompanyRegistrations",
-      "set elma",
-      "elma.upsertCompanyRegistrations",
+      "set elma-smp-no",
+      "elma-smp-no.upsertCompanyRegistrations",
     ]);
-    expect(state.smpProvider).toBe("elma");
+    expect(state.smpProvider).toBe("elma-smp-no");
   });
 
   it("only changes the record of a company that is not published", async () => {
     const { routing, calls } = fakeRouting({ smpProvider: "recommand-smp1", isSmpRecipient: true }, { registered: false });
-    await routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma" });
-    expect(calls).toEqual(["set elma"]);
+    await routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma-smp-no" });
+    expect(calls).toEqual(["set elma-smp-no"]);
   });
 
   it("puts the company back on the old SMP when the new one refuses it", async () => {
     const { routing, calls, state } = fakeRouting(
       { smpProvider: "recommand-smp1", isSmpRecipient: true },
-      { failOn: "elma.upsertCompanyRegistrations" }
+      { failOn: "elma-smp-no.upsertCompanyRegistrations" }
     );
-    await expect(routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma" })).rejects.toThrow("elma refused");
+    await expect(routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma-smp-no" })).rejects.toThrow("elma-smp-no refused");
     expect(calls).toEqual([
       "check 0192:923609016",
       "recommand-smp1.unregisterCompanyRegistrations",
-      "set elma",
-      "elma.upsertCompanyRegistrations",
-      "elma.unregisterCompanyRegistrations",
+      "set elma-smp-no",
+      "elma-smp-no.upsertCompanyRegistrations",
+      "elma-smp-no.unregisterCompanyRegistrations",
       "set recommand-smp1",
       "recommand-smp1.upsertCompanyRegistrations",
     ]);
@@ -172,13 +172,13 @@ describe("moving a company to another SMP", () => {
       { smpProvider: "recommand-smp1", isSmpRecipient: true },
       { identifiers: [{ scheme: "0192", identifier: "923609016" }, { scheme: "9908", identifier: "no923609016mva" }] }
     );
-    await expect(routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma" })).rejects.toThrow("9908:no923609016mva");
+    await expect(routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma-smp-no" })).rejects.toThrow("9908:no923609016mva");
     expect(calls).toEqual([]);
   });
 
   it("does nothing for a company already on the SMP", async () => {
-    const { routing, calls } = fakeRouting({ smpProvider: "elma", isSmpRecipient: true });
-    expect(await routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma" })).toBe("unchanged");
+    const { routing, calls } = fakeRouting({ smpProvider: "elma-smp-no", isSmpRecipient: true });
+    expect(await routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma-smp-no" })).toBe("unchanged");
     expect(calls).toEqual([]);
   });
 });
