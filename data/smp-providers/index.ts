@@ -8,7 +8,7 @@ import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import type { CompanyDocumentType } from "@peppol/data/company-document-types";
 import { getCompanyIdentifiers } from "@peppol/data/company-identifiers";
 import { getTeamExtensionAndCompanyByCompanyId } from "@peppol/data/teams";
-import { assertNorwegianOrganisationsRegistrable } from "@peppol/data/bronnoysund/organisation-check";
+import { assertIdentifiersRegistrable } from "@peppol/data/identifier-registration-checks";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { UserFacingError } from "@peppol/utils/util";
 import { getSmpProviderDescriptor, type SmpProviderId } from "./descriptors";
@@ -172,7 +172,7 @@ const routing = createSmpRouting({
       .where(eq(companies.id, companyId))
       .then((rows) => rows[0]),
   loadIdentifiers: (companyId) => getCompanyIdentifiers(companyId),
-  checkIdentifiers: (identifiers) => assertNorwegianOrganisationsRegistrable(identifiers),
+  checkIdentifiers: (identifiers) => assertIdentifiersRegistrable(identifiers),
   loadRegistrationState: async (companyId) => {
     const context = await getTeamExtensionAndCompanyByCompanyId(companyId);
     if (!context) {

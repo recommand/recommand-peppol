@@ -2,19 +2,19 @@ import { Text } from "@react-email/components";
 import { EmailLayout, EmailHeading, InfoSection } from "@core/emails/components/shared";
 import { fallbackT, type TranslationFunction } from "@core/lib/translations";
 
-interface ReceiverRegistrationRemovedNotificationProps {
+interface NorwegianRegistrationRemovedNotificationProps {
   companyName: string;
   identifier: string;
   deletedOn: string;
   t?: TranslationFunction;
 }
 
-export const ReceiverRegistrationRemovedNotification = ({
+export const NorwegianRegistrationRemovedNotification = ({
   companyName = "Acme AS",
   identifier = "0192:123456785",
   deletedOn = "2026-10-08",
   t = fallbackT,
-}: ReceiverRegistrationRemovedNotificationProps) => (
+}: NorwegianRegistrationRemovedNotificationProps) => (
   <EmailLayout
     preview={t`${identifier} of ${companyName} can no longer receive documents over Peppol`}
     t={t}
@@ -36,13 +36,13 @@ export const ReceiverRegistrationRemovedNotification = ({
   </EmailLayout>
 );
 
-ReceiverRegistrationRemovedNotification.PreviewProps = {
+NorwegianRegistrationRemovedNotification.PreviewProps = {
   companyName: "Acme AS",
   identifier: "0192:123456785",
   deletedOn: "2026-10-08",
-} as ReceiverRegistrationRemovedNotificationProps;
+} as NorwegianRegistrationRemovedNotificationProps;
 
-export default ReceiverRegistrationRemovedNotification;
+export default NorwegianRegistrationRemovedNotification;
 
 export const subject = (props: {
   companyName: string;

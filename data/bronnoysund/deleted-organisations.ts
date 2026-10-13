@@ -11,9 +11,9 @@ import { getTeamNotificationGroups } from "@peppol/data/notification-language";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import {
-  ReceiverRegistrationRemovedNotification,
-  subject as receiverRegistrationRemovedSubject,
-} from "@peppol/emails/receiver-registration-removed-notification";
+  NorwegianRegistrationRemovedNotification,
+  subject as norwegianRegistrationRemovedSubject,
+} from "@peppol/emails/norwegian-registration-removed-notification";
 import { fetchDeletedOrganisations, type DeletedOrganisation } from "./client";
 import { NORWEGIAN_ORGANISATION_SCHEME } from "./organisation-check";
 
@@ -177,8 +177,8 @@ async function notifyTeamOfRemovedRegistration(
     }
     await sendEmail({
       to: emails.join(", "),
-      subject: receiverRegistrationRemovedSubject({ ...props, t }),
-      email: React.createElement(ReceiverRegistrationRemovedNotification, { ...props, t }),
+      subject: norwegianRegistrationRemovedSubject({ ...props, t }),
+      email: React.createElement(NorwegianRegistrationRemovedNotification, { ...props, t }),
     });
   }
 }
