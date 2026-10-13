@@ -7,6 +7,7 @@ import DocumentIncomingNotification from "@peppol/emails/document-incoming-notif
 import DocumentOutgoingNotification from "@peppol/emails/document-outgoing-notification";
 import { Attachment } from "postmark";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
+import { isUnreachableEmailAddressError } from "@peppol/data/email/unreachable-address";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type {
   AnyDocumentType,
@@ -159,11 +160,13 @@ export async function sendIncomingDocumentNotifications(
         `Failed to send incoming document notification to ${notificationEmail.email}:`,
         error
       );
-      sendSystemAlert(
-        "Document Notification Sending Failed",
-        `Failed to send incoming document notification to ${notificationEmail.email}.`,
-        "error"
-      );
+      if (!isUnreachableEmailAddressError(error)) {
+        sendSystemAlert(
+          "Document Notification Sending Failed",
+          `Failed to send incoming document notification to ${notificationEmail.email}.`,
+          "error"
+        );
+      }
       results.push({ email: notificationEmail.email, sent: false, error: describeError(error) });
     }
   }
@@ -273,11 +276,13 @@ export async function sendOutgoingDocumentNotifications(
         `Failed to send outgoing document notification to ${notificationEmail.email}:`,
         error
       );
-      sendSystemAlert(
-        "Document Notification Sending Failed",
-        `Failed to send outgoing document notification to ${notificationEmail.email}.`,
-        "error"
-      );
+      if (!isUnreachableEmailAddressError(error)) {
+        sendSystemAlert(
+          "Document Notification Sending Failed",
+          `Failed to send outgoing document notification to ${notificationEmail.email}.`,
+          "error"
+        );
+      }
       results.push({ email: notificationEmail.email, sent: false, error: describeError(error) });
     }
   }
