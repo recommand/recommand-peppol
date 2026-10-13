@@ -25,9 +25,9 @@ const PUBLISHED = "c_published";
 const SEND_ONLY = "c_send_only";
 
 const requests: { url: string; method?: string }[] = [];
-// How the SMP answers a DELETE, and where the SML resolves participants to (null: no record).
+// How the SMP answers a DELETE, and how often anything asked the SML's DNS.
 let deleteStatus = 200;
-let smlTarget: string | null = null;
+let naptrLookups = 0;
 const alerts: string[] = [];
 
 const fetchMock = spyOn(globalThis, "fetch");
@@ -92,7 +92,12 @@ describe.skipIf(!testDatabaseUrl)("unregistering an identifier another company p
         alerts.push(title);
       },
     }));
-    mock.module("@peppol/utils/naptr", () => ({ resolveNaptr: async () => smlTarget }));
+    mock.module("@peppol/utils/naptr", () => ({
+      resolveNaptr: async () => {
+        naptrLookups++;
+        return null;
+      },
+    }));
     // The event registry is set up when the app starts, which these tests do not do.
     mock.module("@peppol/data/company-verification-webhooks", () => ({ publishCompanyVerificationEvent: async () => {} }));
     ({ updateCompany } = await import("../../data/companies"));
@@ -113,7 +118,7 @@ describe.skipIf(!testDatabaseUrl)("unregistering an identifier another company p
     requests.length = 0;
     alerts.length = 0;
     deleteStatus = 200;
-    smlTarget = null;
+    naptrLookups = 0;
     await pool.query("TRUNCATE peppol_companies CASCADE");
     await seedCompany(PUBLISHED, TEAM, { isSmpRecipient: true });
     await seedCompany(SEND_ONLY, TEAM, { isSmpRecipient: false });
@@ -219,28 +224,11 @@ describe.skipIf(!testDatabaseUrl)("unregistering an identifier another company p
     expect(requests).toEqual([]);
   });
 
-  describe("a published company whose service groups are already gone", () => {
-    it("is unregistered, and support is alerted while the SML still points to our SMP", async () => {
-      deleteStatus = 404;
-      smlTarget = "https://smp.net.recommand.com";
-      await unregisterCompanyRegistrations({ companyId: PUBLISHED, useTestNetwork: false });
-      expect(deletes().sort()).toEqual(BOTH_SERVICE_GROUPS);
-      expect(alerts).toEqual(["Participant Left In SML Without Service Group", "Participant Left In SML Without Service Group"]);
-    });
-
-    it("is unregistered without an alert when the SML points to another SMP", async () => {
-      deleteStatus = 404;
-      smlTarget = "https://smp.example.com";
-      await unregisterCompanyRegistrations({ companyId: PUBLISHED, useTestNetwork: false });
-      expect(deletes().sort()).toEqual(BOTH_SERVICE_GROUPS);
-      expect(alerts).toEqual([]);
-    });
-
-    it("is unregistered without an alert when the SML has no record of it", async () => {
-      deleteStatus = 404;
-      await unregisterCompanyRegistrations({ companyId: PUBLISHED, useTestNetwork: false });
-      expect(deletes().sort()).toEqual(BOTH_SERVICE_GROUPS);
-      expect(alerts).toEqual([]);
-    });
+  it("unregisters a published company whose service groups are already gone, without asking the SML", async () => {
+    deleteStatus = 404;
+    await unregisterCompanyRegistrations({ companyId: PUBLISHED, useTestNetwork: false });
+    expect(deletes().sort()).toEqual(BOTH_SERVICE_GROUPS);
+    expect(alerts).toEqual([]);
+    expect(naptrLookups).toBe(0);
   });
 });

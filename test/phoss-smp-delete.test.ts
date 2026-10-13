@@ -4,8 +4,7 @@ import { deleteServiceMetadata } from "../data/phoss-smp/service-metadata";
 
 // Unregistering asks the SMP to delete what the company published. When the SMP no
 // longer has it, the outcome the delete asks for is already there, so the company
-// can still be unregistered; the caller is told it was missing. Other failures stay
-// failures.
+// can still be unregistered. Other failures stay failures.
 
 const fetchMock = spyOn(globalThis, "fetch");
 
@@ -28,14 +27,9 @@ afterAll(() => {
 });
 
 describe("deleting a service group", () => {
-  it("reports a service group the SMP does not have as missing", async () => {
+  it("treats a service group the SMP does not have as deleted", async () => {
     respondWith(404, notRegistered);
-    expect(await deleteServiceGroup(ref)).toBe("missing");
-  });
-
-  it("reports a service group it deleted as deleted", async () => {
-    respondWith(200, "");
-    expect(await deleteServiceGroup(ref)).toBe("deleted");
+    expect(await deleteServiceGroup(ref)).toBe(true);
   });
 
   it("still fails on any other error", async () => {

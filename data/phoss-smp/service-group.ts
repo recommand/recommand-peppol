@@ -63,7 +63,7 @@ export async function deleteServiceGroup({
   peppolIdentifierEas: string;
   peppolIdentifierAddress: string;
   useTestNetwork: boolean;
-}): Promise<"deleted" | "missing"> {
+}) {
   const serviceGroupId = `${peppolIdentifierEas}:${peppolIdentifierAddress}`;
   
   const response = await fetchSmp(
@@ -82,11 +82,11 @@ export async function deleteServiceGroup({
     // The SMP answers 404 for a service group it does not have. That is what the
     // delete asks for, so it must not stop the company from being unregistered.
     if(response.status === 404 || responseText.includes("does not exist")){
-      return "missing";
+      return true;
     }
 
     throw new UserFacingError("Failed to delete service group in SMP");
   }
 
-  return "deleted";
+  return true;
 }
