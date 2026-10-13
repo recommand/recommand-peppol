@@ -1,6 +1,6 @@
 import { getCompanyById } from "@peppol/data/companies";
 import { getCompanyVerificationLog } from "@peppol/data/company-verification";
-import { getEnterpriseData } from "@peppol/data/cbe-public-search/client";
+import { listRepresentatives } from "@peppol/data/representative-checks";
 import { requiresArratechKycReview } from "@peppol/data/at/kyc";
 import { getMandateDocument } from "@peppol/data/at/mandate";
 import { isPlayground } from "@peppol/data/teams";
@@ -43,28 +43,16 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
         }
 
         const teamIsPlayground = await isPlayground(company.teamId);
-        const isRepresentativeSelectionRequired = !teamIsPlayground && company.country === "BE";
         const isMandateRequired = await requiresArratechKycReview(company);
 
-        let representatives: { firstName: string; lastName: string; function: string }[] = [];
-        if (isRepresentativeSelectionRequired) {
-            if (!company.enterpriseNumber) {
-                return c.json(actionFailure("Company does not have an enterprise number. Please complete the company details first."), 400);
-            }
-            try {
-                const lookupNumber = company.country === "BE" && company.enterpriseNumber.toUpperCase().startsWith("BE") ? company.enterpriseNumber.slice(2) : company.enterpriseNumber;
-                const enterpriseData = await getEnterpriseData(lookupNumber, company.country);
-                representatives = enterpriseData.representatives
-                    .filter((rep) => rep.firstName && rep.lastName)
-                    .map((rep) => ({
-                        firstName: rep.firstName!,
-                        lastName: rep.lastName!,
-                        function: rep.function ?? "",
-                    }));
-            } catch (error) {
-                console.error("Failed to fetch enterprise data:", error);
-            }
+        // Where the company's register lists who may act for it, the representative
+        // picks their name from that list; playground teams type any name.
+        const listed = teamIsPlayground ? null : await listRepresentatives(company);
+        if (listed && !company.enterpriseNumber) {
+            return c.json(actionFailure("Company does not have an enterprise number. Please complete the company details first."), 400);
         }
+        const isRepresentativeSelectionRequired = listed !== null;
+        const representatives = listed?.representatives ?? [];
 
         return c.json(actionSuccess({
             verificationLog: {
@@ -83,6 +71,8 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
             },
             isRepresentativeSelectionRequired,
             representatives,
+            // Whether a name that is not on the list may be typed instead.
+            allowsOtherRepresentativeNames: listed?.allowsOtherNames ?? true,
             isPlayground: teamIsPlayground,
             isMandateRequired,
             countryRequirements: getVerificationCountryRequirements(company.country, isMandateRequired, company.isSmpRecipient),

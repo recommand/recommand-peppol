@@ -46,6 +46,7 @@ type VerificationContext = {
     };
     isRepresentativeSelectionRequired: boolean;
     representatives: Representative[];
+    allowsOtherRepresentativeNames: boolean;
     isPlayground: boolean;
     isMandateRequired: boolean;
     mandateTitle: string | null;
@@ -53,6 +54,9 @@ type VerificationContext = {
 };
 
 type VerificationStep = "details" | "mandate";
+
+/** The radio value for a representative whose name is not on the register's list. */
+const OTHER_REPRESENTATIVE = "other";
 
 export default function Page() {
     const { t } = useTranslation();
@@ -77,23 +81,28 @@ export default function Page() {
     const [restartError, setRestartError] = useState<string | null>(null);
 
     const showRepresentativeSelection = context?.isRepresentativeSelectionRequired && context.representatives.length > 0;
-    const noRepresentativesFound = context?.isRepresentativeSelectionRequired && context.representatives.length === 0;
+    // Where the list is binding and empty, the identity check runs on an unknown name
+    // and is reviewed; where other names are allowed, the representative types theirs.
+    const noRepresentativesFound = context?.isRepresentativeSelectionRequired && context.representatives.length === 0
+        && !context.allowsOtherRepresentativeNames;
+    const enteringOtherName = showRepresentativeSelection && selectedRepresentativeIndex === OTHER_REPRESENTATIVE;
+    const showNameInputs = !showRepresentativeSelection || enteringOtherName;
 
     const selectedRepresentative = useMemo(() => {
-        if (!showRepresentativeSelection || selectedRepresentativeIndex === null) return null;
+        if (!showRepresentativeSelection || selectedRepresentativeIndex === null || selectedRepresentativeIndex === OTHER_REPRESENTATIVE) return null;
         return context?.representatives[parseInt(selectedRepresentativeIndex)] ?? null;
     }, [showRepresentativeSelection, selectedRepresentativeIndex, context?.representatives]);
 
     const effectiveFirstName = noRepresentativesFound
         ? "UNKNOWN"
-        : showRepresentativeSelection
-            ? (selectedRepresentative?.firstName ?? "")
-            : firstName;
+        : showNameInputs
+            ? firstName
+            : (selectedRepresentative?.firstName ?? "");
     const effectiveLastName = noRepresentativesFound
         ? "UNKNOWN"
-        : showRepresentativeSelection
-            ? (selectedRepresentative?.lastName ?? "")
-            : lastName;
+        : showNameInputs
+            ? lastName
+            : (selectedRepresentative?.lastName ?? "");
 
     const isFormComplete =
         effectiveFirstName.trim() !== "" &&
@@ -498,7 +507,7 @@ export default function Page() {
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    {showRepresentativeSelection ? (
+                                    {showRepresentativeSelection && (
                                         <RadioGroup
                                             value={selectedRepresentativeIndex ?? ""}
                                             onValueChange={(value) => setSelectedRepresentativeIndex(value)}
@@ -519,8 +528,15 @@ export default function Page() {
                                                     </div>
                                                 </label>
                                             ))}
+                                            {context.allowsOtherRepresentativeNames && (
+                                                <label className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors hover:bg-muted/50 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-primary/5">
+                                                    <RadioGroupItem value={OTHER_REPRESENTATIVE} />
+                                                    <p className="text-sm font-medium leading-none">{t`My name is not on the list`}</p>
+                                                </label>
+                                            )}
                                         </RadioGroup>
-                                    ) : (
+                                    )}
+                                    {showNameInputs && (
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <div className="space-y-2">
                                                 <Label htmlFor="firstName">{t`First name`}</Label>

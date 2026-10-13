@@ -10,6 +10,8 @@ export type SigningPerson = {
   name: string;
   /** The role code, for example DAGL (daglig leder) or LEDE (styrets leder). */
   role: string;
+  /** The register's description of the role, in Norwegian, for example "Daglig leder". */
+  roleDescription?: string;
 };
 
 export type SigningCombination = {
@@ -33,7 +35,7 @@ export type SigningAuthority = {
   procuration: SigningAuthorityRecord | null;
 };
 
-type FullmaktPerson = { navn?: string; rolle?: { kode?: string } };
+type FullmaktPerson = { navn?: string; rolle?: { kode?: string; tekstforklaring?: string } };
 type FullmaktResponse = {
   signeringsGrunnlag?: {
     muligeSigneringsRoller?: { personRolleGrunnlag?: FullmaktPerson[] };
@@ -46,7 +48,9 @@ type FullmaktResponse = {
 
 function toPersons(persons: FullmaktPerson[] | undefined): SigningPerson[] {
   return (persons ?? []).flatMap((person) =>
-    person.navn ? [{ name: person.navn, role: person.rolle?.kode ?? "" }] : []
+    person.navn
+      ? [{ name: person.navn, role: person.rolle?.kode ?? "", roleDescription: person.rolle?.tekstforklaring ?? "" }]
+      : []
   );
 }
 

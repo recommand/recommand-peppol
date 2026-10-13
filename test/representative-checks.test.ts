@@ -11,7 +11,7 @@ import {
 
 // The checks are tested through their dependencies; the database is never reached.
 mock.module("@recommand/db", () => ({ db: {} }));
-const { checkRepresentative, findRepresentativeReview } = await import("@peppol/data/representative-checks");
+const { checkRepresentative, findRepresentativeReview, listRepresentatives } = await import("@peppol/data/representative-checks");
 type Dependencies = NonNullable<Parameters<typeof checkRepresentative>[2]>;
 
 const fixture = (name: string) =>
@@ -153,6 +153,26 @@ describe("the representative of a Norwegian company", () => {
     });
   });
 
+  describe("on the verification form", () => {
+    it("offers everyone the register names for signature or procuration once, with their roles", async () => {
+      const { deps } = dependencies(soleOrBoard);
+      expect(await listRepresentatives(company, deps)).toEqual({
+        allowsOtherNames: true,
+        representatives: [
+          { firstName: "Ingrid", lastName: "Berg", function: "Daglig leder" },
+          { firstName: "Kari", lastName: "Nordmann", function: "Styrets leder" },
+          { firstName: "Ola Johan", lastName: "Hansen", function: "Styremedlem" },
+          { firstName: "Per", lastName: "Lie", function: "Prokura" },
+        ],
+      });
+    });
+
+    it("lets the representative type their name while the register is unreachable", async () => {
+      const { deps } = dependencies(new BronnoysundUnavailableError("down"));
+      expect(await listRepresentatives(company, deps)).toEqual({ representatives: [], allowsOtherNames: true });
+    });
+  });
+
   describe("after the identity check", () => {
     it("verifies the daglig leder and the chair", async () => {
       const { deps } = dependencies(soleOrBoard);
@@ -215,6 +235,19 @@ describe("the representative check per country", () => {
     const { deps } = belgianDependencies([]);
     deps.getEnterpriseData = async () => { throw new Error("must not be called"); };
     expect(await findRepresentativeReview(belgian, name("Els", "Maes"), deps)).toBeNull();
+  });
+
+  it("offers the Belgian representatives as a binding list", async () => {
+    const { deps } = belgianDependencies([{ firstName: "Jan", lastName: "Peeters" }, { firstName: "Els" }]);
+    expect(await listRepresentatives(belgian, deps)).toEqual({
+      representatives: [{ firstName: "Jan", lastName: "Peeters", function: "" }],
+      allowsOtherNames: false,
+    });
+  });
+
+  it("offers no list for a country without a register", async () => {
+    const { deps } = belgianDependencies([]);
+    expect(await listRepresentatives({ ...belgian, country: "NL" }, deps)).toBeNull();
   });
 
   it("checks nothing for a country without a register check", async () => {
