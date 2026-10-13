@@ -172,10 +172,12 @@ export async function createCompany(company: Omit<InsertCompany, "accessPointPro
     .then((rows) => rows[0]);
 
   try {
-    sendSystemAlert(
-      "Company Created",
-      `Company ${createdCompany.name} has been created. It is ${createdCompany.isSmpRecipient ? "registered as an SMP recipient" : "not registered as an SMP recipient"}.`
-    );
+    if (!isPlaygroundTeam) {
+      sendSystemAlert(
+        "Company Created",
+        `Company ${createdCompany.name} (${createdCompany.country}) has been created. It is ${createdCompany.isSmpRecipient ? "registered as an SMP recipient" : "not registered as an SMP recipient"}.`
+      );
+    }
     if (!company.skipDefaultCompanySetup) {
       await setupCompanyDefaults({ company: createdCompany, isPlayground: isPlaygroundTeam, useTestNetwork, verificationRequirements: teamExtension?.verificationRequirements ?? undefined });
     }
@@ -345,7 +347,7 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
       vatNumber: effectiveVat ?? null,
       teamExtension,
     });
-    await finishCompanyUpdate({ oldCompany, updatedCompany, isPlaygroundTeam, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
+    await finishCompanyUpdate({ oldCompany, updatedCompany, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
     return updatedCompany;
   }
 
@@ -416,30 +418,21 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     }
   }
 
-  await finishCompanyUpdate({ oldCompany, updatedCompany, isPlaygroundTeam, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
+  await finishCompanyUpdate({ oldCompany, updatedCompany, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
 
   return updatedCompany;
 }
 
-/** What every successful update ends with: the alert, and the revocations a number change brings. */
+/** What every successful update ends with: the revocations a number change brings. */
 async function finishCompanyUpdate({
   oldCompany,
   updatedCompany,
-  isPlaygroundTeam,
   numbersChanged,
 }: {
   oldCompany: Company;
   updatedCompany: Company;
-  isPlaygroundTeam: boolean;
   numbersChanged: boolean;
 }): Promise<void> {
-  if (!isPlaygroundTeam) {
-    sendSystemAlert(
-      "Company Updated",
-      `Company ${updatedCompany.name} has been updated. It is ${updatedCompany.isSmpRecipient ? "registered as an SMP recipient" : "not registered as an SMP recipient"}.`
-    );
-  }
-
   if (numbersChanged) {
     await revokeOpenCompanyVerificationSessions(updatedCompany.id);
 
