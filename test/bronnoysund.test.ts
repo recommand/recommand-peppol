@@ -62,6 +62,15 @@ describe("looking up a Norwegian organisation", () => {
     ]);
   });
 
+  it("reports a number that is not a valid organisation number as unknown", async () => {
+    // The register answers 400 for a malformed number, such as a Belgian enterprise number.
+    const brreg = fakeBrreg({
+      "/enhetsregisteret/api/enheter/0674404277": () => new Response("Ugyldig organisasjonsnummer", { status: 400 }),
+      "/enhetsregisteret/api/underenheter/0674404277": () => new Response("Ugyldig organisasjonsnummer", { status: 400 }),
+    });
+    expect(await lookupOrganisation("0674404277", brreg)).toEqual({ status: "notFound", organisationNumber: "0674404277" });
+  });
+
   it("reports a number neither register knows", async () => {
     const brreg = fakeBrreg({});
     expect(await lookupOrganisation("123456785", brreg)).toEqual({ status: "notFound", organisationNumber: "123456785" });
@@ -74,7 +83,7 @@ describe("looking up a Norwegian organisation", () => {
   });
 
   it("does not retry a client error", async () => {
-    const brreg = fakeBrreg({ "/enhetsregisteret/api/enheter/923609016": () => new Response("bad", { status: 400 }) });
+    const brreg = fakeBrreg({ "/enhetsregisteret/api/enheter/923609016": () => new Response("forbidden", { status: 403 }) });
     await expect(lookupOrganisation("923609016", brreg)).rejects.toBeInstanceOf(BronnoysundUnavailableError);
     expect(brreg.requests).toHaveLength(1);
   });
@@ -158,13 +167,22 @@ describe("checks before an identifier is published", () => {
         { scheme: "0208", identifier: "0123456749" },
         { scheme: "0192", identifier: "974760673" },
       ],
+      { useTestNetwork: false },
       { "0192": async (identifiers) => { calls.push(identifiers.map((identifier) => identifier.identifier).join(",")); } }
     );
     expect(calls).toEqual(["923609016,974760673"]);
   });
 
   it("checks nothing for identifiers without a register check", async () => {
-    await assertIdentifiersRegistrable([{ scheme: "0208", identifier: "0123456749" }]);
+    await assertIdentifiersRegistrable([{ scheme: "0208", identifier: "0123456749" }], { useTestNetwork: false });
+  });
+
+  it("leaves the test network alone, where integrators use synthetic test organisations", async () => {
+    await assertIdentifiersRegistrable(
+      [{ scheme: "0192", identifier: "311343610" }],
+      { useTestNetwork: true },
+      { "0192": async () => { throw new Error("must not be checked"); } }
+    );
   });
 });
 

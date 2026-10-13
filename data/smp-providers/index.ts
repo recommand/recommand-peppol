@@ -59,8 +59,8 @@ export type SmpRoutingDependencies = {
   adapters: Record<SmpProviderId, SmpProviderAdapter>;
   loadCompany(companyId: string): Promise<{ smpProvider: SmpProviderId; isSmpRecipient: boolean } | undefined>;
   loadIdentifiers(companyId: string): Promise<MinimalCompanyIdentifier[]>;
-  /** Refuses identifiers that a national register says cannot be registered. */
-  checkIdentifiers(identifiers: readonly MinimalCompanyIdentifier[]): Promise<void>;
+  /** Refuses identifiers that a national register says cannot be registered on the network. */
+  checkIdentifiers(identifiers: readonly MinimalCompanyIdentifier[], network: { useTestNetwork: boolean }): Promise<void>;
   /** Whether the company is published on its SMP now, and on which network. */
   loadRegistrationState(companyId: string): Promise<{ registered: boolean; useTestNetwork: boolean }>;
   setSmpProvider(companyId: string, provider: SmpProviderId): Promise<void>;
@@ -79,7 +79,7 @@ export function createSmpRouting(dependencies: SmpRoutingDependencies) {
     async upsertCompanyRegistrations(options: { companyId: string; useTestNetwork: boolean; includeCapabilities?: boolean }) {
       const { company, adapter } = await route(options.companyId);
       if (company.isSmpRecipient) {
-        await dependencies.checkIdentifiers(await dependencies.loadIdentifiers(options.companyId));
+        await dependencies.checkIdentifiers(await dependencies.loadIdentifiers(options.companyId), options);
       }
       await adapter.upsertCompanyRegistrations(options);
     },
@@ -92,7 +92,7 @@ export function createSmpRouting(dependencies: SmpRoutingDependencies) {
     async upsertCompanyRegistration(options: { companyId: string; identifier: MinimalCompanyIdentifier; useTestNetwork: boolean }) {
       const { company, adapter } = await route(options.companyId);
       if (company.isSmpRecipient) {
-        await dependencies.checkIdentifiers([options.identifier]);
+        await dependencies.checkIdentifiers([options.identifier], options);
       }
       await adapter.upsertCompanyRegistration(options);
     },
@@ -139,7 +139,7 @@ export function createSmpRouting(dependencies: SmpRoutingDependencies) {
         return "moved";
       }
 
-      await dependencies.checkIdentifiers(identifiers);
+      await dependencies.checkIdentifiers(identifiers, { useTestNetwork });
       await from.unregisterCompanyRegistrations({ companyId, useTestNetwork });
       await dependencies.setSmpProvider(companyId, to);
       try {
@@ -172,7 +172,7 @@ const routing = createSmpRouting({
       .where(eq(companies.id, companyId))
       .then((rows) => rows[0]),
   loadIdentifiers: (companyId) => getCompanyIdentifiers(companyId),
-  checkIdentifiers: (identifiers) => assertIdentifiersRegistrable(identifiers),
+  checkIdentifiers: (identifiers, network) => assertIdentifiersRegistrable(identifiers, network),
   loadRegistrationState: async (companyId) => {
     const context = await getTeamExtensionAndCompanyByCompanyId(companyId);
     if (!context) {

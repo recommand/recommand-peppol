@@ -132,9 +132,10 @@ async function findRegisteredNorwegianIdentifiers(
     for (const row of rows) {
       const teamExtension = await getTeamExtension(row.teamId);
       const useTestNetwork = teamExtension?.useTestNetwork ?? false;
-      // Only what is published on an SMP is the network's concern. An identifier
-      // that is not published stays: registering it later is refused by the
-      // registration check.
+      // Only what is published on the production network is the Norwegian Peppol
+      // Authority's concern. An identifier that is not published stays: registering
+      // it later is refused by the registration check. The test network is left
+      // alone, as by that check.
       const published = shouldRegisterWithSmp({
         isPlayground: teamExtension?.isPlayground ?? false,
         useTestNetwork,
@@ -143,7 +144,7 @@ async function findRegisteredNorwegianIdentifiers(
         verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
         smpProvider: row.smpProvider,
       });
-      if (published) {
+      if (published && !useTestNetwork) {
         registered.push({
           identifierId: row.identifierId,
           identifier: row.identifier,

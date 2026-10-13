@@ -35,7 +35,8 @@ export type OrganisationLookup =
 /**
  * GETs a JSON document from data.brreg.no, retrying network failures and server
  * errors. Resolves to null on 404 and 410, which the register uses for numbers it
- * does not know.
+ * does not know, and on 400, which it answers for a number that is not a valid
+ * organisation number at all.
  */
 export async function getBronnoysundJson<T>(path: string, options: BronnoysundClientOptions): Promise<T | null> {
   const fetchImpl = options.fetch ?? fetch;
@@ -50,7 +51,7 @@ export async function getBronnoysundJson<T>(path: string, options: BronnoysundCl
         headers: { Accept: "application/json" },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
-      if (response.status === 404 || response.status === 410) {
+      if (response.status === 400 || response.status === 404 || response.status === 410) {
         return null;
       }
       if (response.ok) {
