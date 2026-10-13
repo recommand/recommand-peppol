@@ -188,6 +188,7 @@ const routing = createSmpRouting({
         isSmpRecipient: company.isSmpRecipient,
         isVerified: company.isVerified,
         verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+        smpProvider: company.smpProvider,
       }),
     };
   },

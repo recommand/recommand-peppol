@@ -319,7 +319,7 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     isVerified: updatedFields.isVerified ?? oldCompany.isVerified,
     verificationRequirements,
     // A new country brings that country's providers with it.
-    smpProvider: countryChanged ? resolveDefaultPeppolProviders(effectiveCountry).smpProvider : oldCompany.smpProvider,
+    smpProvider: countryChanged ? resolveDefaultPeppolProviders(effectiveCountry, { useTestNetwork }).smpProvider : oldCompany.smpProvider,
   });
 
   // Arratech holds a verified French company either as a receiving participant or
