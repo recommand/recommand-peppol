@@ -1,7 +1,7 @@
 import { companyVerificationLog } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { requiresArratechKycReview } from "./at/kyc";
 import { UserFacingError } from "@peppol/utils/util";
 import { verifyCompany } from "./companies";
@@ -17,7 +17,7 @@ import { lockCompanyRow, sameCompanyIdentity } from "./company-row-lock";
 import { getCurrentVerificationSession } from "./current-verification-session";
 import { sessionMatchesCompany } from "./at/kyc-onboarding-state";
 import { namesMatch } from "@peppol/utils/names-match";
-import { checkRepresentative } from "./representative-checks";
+import { checkRepresentative, findRepresentativeReview, notifySupportOfRepresentativeReview } from "./representative-checks";
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -341,6 +341,59 @@ export async function createCompanyVerificationLog({
 
   const verificationUrl = `${baseUrl}/company-verification/${log.id}/verify`;
   return { log, verificationUrl, created };
+}
+
+/**
+ * After a successful identity check, holds the session for support when the
+ * company's register does not confirm that the representative may act for the
+ * company alone. The session goes to inReview with the reason in its error message,
+ * where support finds it and decides it with complete-verification. Support is
+ * told once per reason, however often the identity provider reports the result.
+ * Resolves to whether the session is held.
+ */
+export async function holdVerificationForRepresentativeReview(
+  {
+    log,
+    company,
+    verificationProofReference,
+  }: {
+    log: CompanyVerificationLog;
+    company: Company;
+    verificationProofReference: string;
+  },
+  dependencies: {
+    findReview: typeof findRepresentativeReview;
+    notifySupport: typeof notifySupportOfRepresentativeReview;
+  } = { findReview: findRepresentativeReview, notifySupport: notifySupportOfRepresentativeReview }
+): Promise<boolean> {
+  const representative = { firstName: log.firstName ?? "", lastName: log.lastName ?? "" };
+  const finding = await dependencies.findReview(company, representative);
+  if (!finding) {
+    return false;
+  }
+  const changed = await db
+    .update(companyVerificationLog)
+    .set({ status: "inReview", verificationProofReference, errorMessage: finding })
+    .where(
+      and(
+        eq(companyVerificationLog.id, log.id),
+        or(
+          ne(companyVerificationLog.status, "inReview"),
+          isNull(companyVerificationLog.errorMessage),
+          ne(companyVerificationLog.errorMessage, finding)
+        )
+      )
+    )
+    .returning({ id: companyVerificationLog.id });
+  if (changed.length > 0) {
+    await dependencies.notifySupport({
+      company,
+      sessionId: log.id,
+      representativeName: `${representative.firstName} ${representative.lastName}`,
+      finding,
+    });
+  }
+  return true;
 }
 
 export async function submitIdentityForm(

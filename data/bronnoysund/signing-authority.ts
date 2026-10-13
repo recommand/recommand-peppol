@@ -101,9 +101,25 @@ const SOLE_AUTHORITY_CODES = new Set([
   "R0013", // daglig leder alene eller styrets medlemmer hver for seg
 ]);
 
+// The roles that get full rights for an organisation in Altinn, the Norwegian public
+// sector's authorisation service, without anyone delegating them: the norm in Norway
+// for who may act for an organisation. Holding one of them is enough here too, also
+// where the register lets the board sign only jointly.
+const FULL_AUTHORITY_ROLES = new Set([
+  "DAGL", // daglig leder
+  "LEDE", // styrets leder
+  "INNH", // innehaver
+  "DTSO", // deltaker med solidarisk ansvar
+  "DTPR", // deltaker med proratarisk ansvar
+  "KOMP", // komplementar
+  "BEST", // bestyrende reder
+]);
+
 export type SigningAuthorityAssessment =
   /** The person may act for the organisation alone. */
   | { kind: "sole"; authority: "signature" | "procuration"; role: string; rule: string }
+  /** The person holds a role with full rights for the organisation (see FULL_AUTHORITY_ROLES). */
+  | { kind: "role"; role: string }
   /** The person may only act together with others. */
   | { kind: "joint"; authority: "signature" | "procuration"; rule: string }
   /** The register cannot say; the person holds a role that can carry the authority. */
@@ -117,10 +133,11 @@ function samePerson(person: SigningPerson, name: { firstName: string; lastName: 
 
 /**
  * Whether the named person may act for the organisation according to the register.
- * Signature and procuration are both considered, and the strongest authority wins:
- * acting alone, then acting jointly. Where the register could not interpret the
- * organisation's rules, a person in a role that can carry them is undetermined
- * rather than refused, and so is everyone when the register returns nobody at all.
+ * Signature and procuration are both considered, and the strongest ground wins:
+ * acting alone under the organisation's rules, then holding a role with full rights,
+ * then acting jointly. Where the register could not interpret the organisation's
+ * rules, a person in a role that can carry them is undetermined rather than
+ * refused, and so is everyone when the register returns nobody at all.
  */
 export function assessSigningAuthority(
   authority: SigningAuthority,
@@ -144,6 +161,15 @@ export function assessSigningAuthority(
       joint ??= { kind: "joint", authority: kind, rule: combination.description || combination.code };
     }
   }
+
+  const persons = records.flatMap(({ record }) => [
+    ...(record?.combinations ?? []).flatMap((combination) => combination.persons),
+    ...(record?.possibleSignatories ?? []),
+  ]);
+  const withFullRights = persons.find((person) => FULL_AUTHORITY_ROLES.has(person.role) && samePerson(person, name));
+  if (withFullRights) {
+    return { kind: "role", role: withFullRights.role };
+  }
   if (joint) {
     return joint;
   }
@@ -152,10 +178,7 @@ export function assessSigningAuthority(
   if (possible.some((person) => samePerson(person, name))) {
     return { kind: "undetermined", reason: "the person holds a role that can carry signing authority, but the register could not derive who may sign" };
   }
-  const anyoneKnown =
-    possible.length > 0 ||
-    records.some(({ record }) => (record?.combinations ?? []).some((combination) => combination.persons.length > 0));
-  if (!anyoneKnown) {
+  if (persons.length === 0) {
     return { kind: "undetermined", reason: "the register returned no one who can sign for the organisation" };
   }
   return { kind: "none" };

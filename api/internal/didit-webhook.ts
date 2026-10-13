@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@recommand/db";
 import { companyVerificationLog } from "@peppol/db/schema";
 import { UserFacingError } from "@peppol/utils/util";
-import { finalizeCompanyVerification, getCompanyVerificationLog, isFinalVerificationStatus } from "@peppol/data/company-verification";
+import { finalizeCompanyVerification, getCompanyVerificationLog, holdVerificationForRepresentativeReview, isFinalVerificationStatus } from "@peppol/data/company-verification";
 import { withVerificationLock, VerificationBusyError } from "@peppol/data/verification-lock";
 import { requiresArratechKycReview } from "@peppol/data/at/kyc";
 import { startArratechKycReview } from "@peppol/data/at/kyc-review";
@@ -125,6 +125,16 @@ server.post(
       if (!isVerified && !lastManualReview && company.isVerified) {
         console.log(`Ignoring automated rejection for already-verified company ${companyVerificationLogRecord.companyId}`);
         return c.json(actionSuccess({ message: "Verification status not changed (already verified)" }), 200);
+      }
+
+      // The identity is proven; whether the person may act for the company is not,
+      // where the company's register leaves that to support.
+      if (isVerified && await holdVerificationForRepresentativeReview({
+        log: companyVerificationLogRecord,
+        company,
+        verificationProofReference,
+      })) {
+        return c.json(actionSuccess({ message: "Verification is held for a review of the representative's authority" }), 200);
       }
 
       if (isVerified && await requiresArratechKycReview(company)) {

@@ -11,7 +11,7 @@ import {
 
 // The checks are tested through their dependencies; the database is never reached.
 mock.module("@recommand/db", () => ({ db: {} }));
-const { checkRepresentative } = await import("@peppol/data/representative-checks");
+const { checkRepresentative, findRepresentativeReview } = await import("@peppol/data/representative-checks");
 type Dependencies = NonNullable<Parameters<typeof checkRepresentative>[2]>;
 
 const fixture = (name: string) =>
@@ -55,8 +55,12 @@ describe("assessing who may act for a Norwegian organisation", () => {
     expect(assessSigningAuthority(soleOrBoard, name("Per", "Lie"))).toMatchObject({ kind: "sole", authority: "procuration" });
   });
 
-  it("finds that a board member may only sign together with the board", () => {
-    expect(assessSigningAuthority(soleOrBoard, name("Kari", "Nordmann"))).toEqual({
+  it("lets the chair act on their role, as Altinn does, where the board signs jointly", () => {
+    expect(assessSigningAuthority(soleOrBoard, name("Kari", "Nordmann"))).toEqual({ kind: "role", role: "LEDE" });
+  });
+
+  it("finds that an ordinary board member may only sign together with the board", () => {
+    expect(assessSigningAuthority(soleOrBoard, name("Ola Johan", "Hansen"))).toEqual({
       kind: "joint", authority: "signature", rule: "Styret i fellesskap",
     });
   });
@@ -69,10 +73,18 @@ describe("assessing who may act for a Norwegian organisation", () => {
     expect(assessSigningAuthority(soleOrBoard, name("Nils", "Dahl"))).toEqual({ kind: "none" });
   });
 
-  it("cannot decide for someone in a possible role when the register could not interpret the rules", () => {
+  it("lets the daglig leder act on their role when the register could not interpret the rules", () => {
     const uninterpreted = authority("signatur-uninterpreted.json", "prokura-not-available.json");
-    expect(assessSigningAuthority(uninterpreted, name("Ingrid", "Berg")).kind).toBe("undetermined");
+    expect(assessSigningAuthority(uninterpreted, name("Ingrid", "Berg"))).toEqual({ kind: "role", role: "DAGL" });
     expect(assessSigningAuthority(uninterpreted, name("Nils", "Dahl")).kind).toBe("none");
+  });
+
+  it("cannot decide for a board member when the register could not interpret the rules", () => {
+    const uninterpretedBoard: SigningAuthority = {
+      signature: { routineStatus: "OK", combinations: [], possibleSignatories: [{ name: "Ola Johan Hansen", role: "MEDL" }] },
+      procuration: null,
+    };
+    expect(assessSigningAuthority(uninterpretedBoard, name("Ola", "Hansen")).kind).toBe("undetermined");
   });
 
   it("cannot decide when the register returns no one", () => {
@@ -85,7 +97,7 @@ describe("assessing who may act for a Norwegian organisation", () => {
       signature: {
         routineStatus: "OK",
         possibleSignatories: [],
-        combinations: [{ code: "STYR", description: "Styret i fellesskap", persons: [{ name: "Kari Nordmann", role: "LEDE" }] }],
+        combinations: [{ code: "STYR", description: "Styret i fellesskap", persons: [{ name: "Kari Nordmann", role: "MEDL" }] }],
       },
       procuration: null,
     };
@@ -93,11 +105,10 @@ describe("assessing who may act for a Norwegian organisation", () => {
   });
 });
 
-describe("checking the representative of a Norwegian company", () => {
+describe("the representative of a Norwegian company", () => {
   const company = { id: "c_no", teamId: "team_1", name: "Nordlys Handel AS", country: "NO", enterpriseNumber: "923609016" };
 
   function dependencies(signingAuthority: SigningAuthority | Error) {
-    const alerts: string[] = [];
     const lookups: string[] = [];
     const deps: Dependencies = {
       getEnterpriseData: async () => { throw new Error("must not be called"); },
@@ -106,52 +117,70 @@ describe("checking the representative of a Norwegian company", () => {
         if (signingAuthority instanceof Error) throw signingAuthority;
         return signingAuthority;
       },
-      requestManualReview: async (request) => {
-        alerts.push(`${request.company.id} ${request.organisationNumber} ${request.representativeName}: ${request.finding}`);
-      },
     };
-    return { deps, alerts, lookups };
+    return { deps, lookups };
   }
 
-  it("accepts someone who may sign alone", async () => {
-    const { deps, alerts, lookups } = dependencies(soleOrBoard);
-    expect(await checkRepresentative(company, name("Ingrid", "Berg"), deps)).toEqual(name("Ingrid", "Berg"));
-    expect(lookups).toEqual(["923609016"]);
-    expect(alerts).toEqual([]);
+  describe("before the identity check", () => {
+    it("lets someone who may sign alone through", async () => {
+      const { deps, lookups } = dependencies(soleOrBoard);
+      expect(await checkRepresentative(company, name("Ingrid", "Berg"), deps)).toEqual(name("Ingrid", "Berg"));
+      expect(lookups).toEqual(["923609016"]);
+    });
+
+    it("lets someone who may only sign jointly through to the identity check", async () => {
+      const { deps } = dependencies(soleOrBoard);
+      expect(await checkRepresentative(company, name("Ola", "Hansen"), deps)).toEqual(name("Ola", "Hansen"));
+    });
+
+    it("refuses someone the register does not list", async () => {
+      const { deps } = dependencies(soleOrBoard);
+      await expect(checkRepresentative(company, name("Nils", "Dahl"), deps)).rejects.toThrow(
+        "does not match anyone who can sign for this company or holds procuration in Enhetsregisteret"
+      );
+    });
+
+    it("does not block while the register is unreachable, since it is asked again after the identity check", async () => {
+      const { deps } = dependencies(new BronnoysundUnavailableError("down"));
+      expect(await checkRepresentative(company, name("Nils", "Dahl"), deps)).toEqual(name("Nils", "Dahl"));
+    });
+
+    it("refuses a company without an organisation number", async () => {
+      const { deps } = dependencies(soleOrBoard);
+      await expect(checkRepresentative({ ...company, enterpriseNumber: null }, name("Ingrid", "Berg"), deps)).rejects.toThrow(
+        "Company does not have an enterprise number."
+      );
+    });
   });
 
-  it("sends someone who may only sign jointly to support for manual review", async () => {
-    const { deps, alerts } = dependencies(soleOrBoard);
-    await expect(checkRepresentative(company, name("Kari", "Nordmann"), deps)).rejects.toThrow(
-      "We could not confirm automatically that you may sign for this company on your own."
-    );
-    expect(alerts).toEqual(["c_no 923609016 Kari Nordmann: They may only sign jointly with others (Styret i fellesskap)."]);
-  });
+  describe("after the identity check", () => {
+    it("verifies the daglig leder and the chair", async () => {
+      const { deps } = dependencies(soleOrBoard);
+      expect(await findRepresentativeReview(company, name("Ingrid", "Berg"), deps)).toBeNull();
+      expect(await findRepresentativeReview(company, name("Kari", "Nordmann"), deps)).toBeNull();
+    });
 
-  it("sends an undetermined case to manual review", async () => {
-    const { deps, alerts } = dependencies(authority("signatur-not-available.json", "prokura-not-available.json"));
-    await expect(checkRepresentative(company, name("Ingrid", "Berg"), deps)).rejects.toThrow("contact support@recommand.eu");
-    expect(alerts[0]).toContain("could not be confirmed");
-  });
+    it("holds an ordinary board member who may only sign jointly for support", async () => {
+      const { deps } = dependencies(soleOrBoard);
+      expect(await findRepresentativeReview(company, name("Ola", "Hansen"), deps)).toBe(
+        "They may only sign jointly with others (Styret i fellesskap)."
+      );
+    });
 
-  it("refuses someone who cannot sign", async () => {
-    const { deps, alerts } = dependencies(soleOrBoard);
-    await expect(checkRepresentative(company, name("Nils", "Dahl"), deps)).rejects.toThrow(
-      "does not match anyone who can sign for this company or holds procuration in Enhetsregisteret"
-    );
-    expect(alerts).toEqual([]);
-  });
+    it("holds a case the register cannot decide", async () => {
+      const { deps } = dependencies(authority("signatur-not-available.json", "prokura-not-available.json"));
+      expect(await findRepresentativeReview(company, name("Ingrid", "Berg"), deps)).toContain("could not be confirmed");
+    });
 
-  it("asks to try again when the register is unreachable", async () => {
-    const { deps } = dependencies(new BronnoysundUnavailableError("down"));
-    await expect(checkRepresentative(company, name("Ingrid", "Berg"), deps)).rejects.toThrow("Please try again in a few minutes.");
-  });
+    it("holds someone the register no longer lists", async () => {
+      const { deps } = dependencies(soleOrBoard);
+      expect(await findRepresentativeReview(company, name("Nils", "Dahl"), deps)).toContain("not listed");
+    });
 
-  it("refuses a company without an organisation number", async () => {
-    const { deps } = dependencies(soleOrBoard);
-    await expect(checkRepresentative({ ...company, enterpriseNumber: null }, name("Ingrid", "Berg"), deps)).rejects.toThrow(
-      "Company does not have an enterprise number."
-    );
+    it("holds the session while the register is unreachable", async () => {
+      const { deps } = dependencies(new BronnoysundUnavailableError("down"));
+      expect(await findRepresentativeReview(company, name("Ingrid", "Berg"), deps)).toContain("could not be reached");
+    });
   });
 });
 
@@ -166,7 +195,6 @@ describe("the representative check per country", () => {
         return { representatives } as any;
       },
       fetchSigningAuthority: async () => { throw new Error("must not be called"); },
-      requestManualReview: async () => {},
     } satisfies Dependencies;
     return { deps, lookups };
   }
@@ -181,6 +209,12 @@ describe("the representative check per country", () => {
   it("lets a Belgian company without named representatives through on an unknown name", async () => {
     const { deps } = belgianDependencies([{ firstName: "Jan" }]);
     expect(await checkRepresentative(belgian, name("Els", "Maes"), deps)).toEqual(name("UNKNOWN", "UNKNOWN"));
+  });
+
+  it("holds nothing after the identity check outside Norway", async () => {
+    const { deps } = belgianDependencies([]);
+    deps.getEnterpriseData = async () => { throw new Error("must not be called"); };
+    expect(await findRepresentativeReview(belgian, name("Els", "Maes"), deps)).toBeNull();
   });
 
   it("checks nothing for a country without a register check", async () => {
