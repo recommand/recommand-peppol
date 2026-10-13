@@ -19,6 +19,7 @@ const getAddressesRouteDescription = describeRoute({
     tags: ["Company Notification Email Addresses"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully retrieved company notification email addresses", z.object({ notificationEmailAddresses: z.array(companyNotificationEmailAddressResponse) })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch company notification email addresses"),
     },
 });

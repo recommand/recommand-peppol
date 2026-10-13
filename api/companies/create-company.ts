@@ -32,6 +32,7 @@ const createCompanyRouteDescription = describeRoute({
             }),
         })),
         ...describeValidationErrorResponse("Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create company"),
     },
 });

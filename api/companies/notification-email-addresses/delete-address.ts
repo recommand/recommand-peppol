@@ -19,6 +19,7 @@ const deleteAddressRouteDescription = describeRoute({
     tags: ["Company Notification Email Addresses"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully deleted company notification email address"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company notification email address not found"),
         ...describeErrorResponse(500, "Failed to delete company notification email address"),
     },

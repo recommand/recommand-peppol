@@ -23,6 +23,7 @@ const upsertSupplierRouteDescription = describeRoute({
   responses: {
     ...describeSuccessResponseWithZod("Successfully upserted supplier", z.object({ supplier: supplierResponse })),
     ...describeErrorResponse(400, "Invalid request data"),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to upsert supplier"),
   },
 });

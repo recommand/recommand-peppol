@@ -30,6 +30,7 @@ const getCustomerRouteDescription = describeRoute({
       "Successfully retrieved customer",
       z.object({ customer: customerResponse })
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Customer not found"),
     ...describeErrorResponse(500, "Failed to fetch customer"),
   },

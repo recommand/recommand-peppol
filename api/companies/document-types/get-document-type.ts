@@ -19,6 +19,7 @@ const getDocumentTypeRouteDescription = describeRoute({
     tags: ["Company Document Types"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully retrieved company document type", z.object({ documentType: companyDocumentTypeResponse })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company document type not found"),
         ...describeErrorResponse(500, "Failed to fetch company document type"),
     },

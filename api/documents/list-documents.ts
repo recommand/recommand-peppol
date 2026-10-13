@@ -41,6 +41,7 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
       documents: z.array(transmittedDocumentSummaryResponse),
       pagination: paginationResponse,
     })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch transmitted documents"),
   },
 });

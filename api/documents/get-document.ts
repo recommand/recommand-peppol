@@ -28,6 +28,7 @@ const getTransmittedDocumentRouteDescription = describeRoute({
     tags: ["Documents"],
     responses: {
       ...describeSuccessResponseWithZod("Successfully retrieved the document", z.object({ document: transmittedDocumentResponse })),
+      ...describeErrorResponse(401, "Unauthorized"),
       ...describeErrorResponse(404, "Document not found"),
       ...describeErrorResponse(500, "Failed to fetch document"),
     },

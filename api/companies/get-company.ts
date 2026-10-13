@@ -21,6 +21,7 @@ const getCompanyRouteDescription = describeRoute({
     tags: ["Companies"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully retrieved company", z.object({ company: companyResponse })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),
         ...describeErrorResponse(500, "Failed to fetch company"),
     },

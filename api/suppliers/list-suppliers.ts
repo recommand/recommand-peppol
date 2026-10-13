@@ -28,6 +28,7 @@ const getSuppliersRouteDescription = describeRoute({
       suppliers: z.array(supplierResponse),
       pagination: paginationResponse,
     })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch suppliers"),
   },
 });

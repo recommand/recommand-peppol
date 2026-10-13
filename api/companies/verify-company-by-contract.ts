@@ -44,6 +44,7 @@ const verifyCompanyByContractRouteDescription = describeRoute({
     responses: {
         ...describeSuccessResponseWithZod("Successfully verified company by contract"),
         ...describeErrorResponse(400, "Invalid request data, invalid contract, or the team is not enabled for contract verification"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),
         ...describeErrorResponse(500, "Failed to verify company by contract"),
     },
