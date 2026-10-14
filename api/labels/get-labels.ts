@@ -21,7 +21,7 @@ const getLabelsRouteDescription = describeRoute({
     summary: "List Labels",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved labels", z.object({ labels: z.array(labelResponse) })),
+        ...describeSuccessResponseWithZod("Successfully retrieved labels", z.object({ labels: z.array(labelResponse).openapi({ description: "Every label in the team." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch labels"),
     },

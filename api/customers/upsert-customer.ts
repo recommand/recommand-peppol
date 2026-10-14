@@ -28,7 +28,7 @@ const upsertCustomerRouteDescription = describeRoute({
   responses: {
     ...describeSuccessResponseWithZod(
       "Successfully upserted customer",
-      z.object({ customer: customerResponse })
+      z.object({ customer: customerResponse.openapi({ description: "The customer, as created or updated." }) })
     ),
     ...describeErrorResponse(400, "Invalid request data"),
     ...describeErrorResponse(401, "Unauthorized"),

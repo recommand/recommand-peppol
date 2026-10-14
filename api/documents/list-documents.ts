@@ -38,7 +38,7 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
   tags: ["Documents"],
   responses: {
     ...describeSuccessResponseWithZod("Successfully retrieved transmitted documents", z.object({
-      documents: z.array(transmittedDocumentSummaryResponse),
+      documents: z.array(transmittedDocumentSummaryResponse).openapi({ description: "The documents on this page." }),
       pagination: paginationResponse,
     })),
     ...describeErrorResponse(401, "Unauthorized"),

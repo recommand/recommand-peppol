@@ -18,7 +18,7 @@ const getAddressesRouteDescription = describeRoute({
     summary: "List Company Notification Email Addresses",
     tags: ["Company Notification Email Addresses"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved company notification email addresses", z.object({ notificationEmailAddresses: z.array(companyNotificationEmailAddressResponse) })),
+        ...describeSuccessResponseWithZod("Successfully retrieved company notification email addresses", z.object({ notificationEmailAddresses: z.array(companyNotificationEmailAddressResponse).openapi({ description: "The company's notification email addresses." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch company notification email addresses"),
     },

@@ -22,7 +22,7 @@ const createLabelRouteDescription = describeRoute({
     summary: "Create Label",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created label", z.object({ label: labelResponse })),
+        ...describeSuccessResponseWithZod("Successfully created label", z.object({ label: labelResponse.openapi({ description: "The label, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create label"),

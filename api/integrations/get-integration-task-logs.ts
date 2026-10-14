@@ -20,7 +20,7 @@ const getIntegrationTaskLogsRouteDescription = describeRoute({
     tags: ["Integrations"],
     responses: {
         ...describeSuccessResponseWithZod("Successfully retrieved integration task logs", z.object({
-            logs: z.array(integrationTaskLogResponse),
+            logs: z.array(integrationTaskLogResponse).openapi({ description: "The task logs on this page." }),
             pagination: paginationResponse,
         })),
         ...describeErrorResponse(404, "Integration not found"),

@@ -23,7 +23,7 @@ const updateIdentifierRouteDescription = describeRoute({
     summary: "Update Company Identifier",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated company identifier", z.object({ identifier: companyIdentifierResponse })),
+        ...describeSuccessResponseWithZod("Successfully updated company identifier", z.object({ identifier: companyIdentifierResponse.openapi({ description: "The identifier, as updated." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),
         ...describeErrorResponse(500, "Failed to update company identifier"),

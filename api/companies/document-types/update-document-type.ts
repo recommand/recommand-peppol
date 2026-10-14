@@ -20,7 +20,7 @@ const updateDocumentTypeRouteDescription = describeRoute({
     summary: "Update Company Document Type",
     tags: ["Company Document Types"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated company document type", z.object({ documentType: companyDocumentTypeResponse })),
+        ...describeSuccessResponseWithZod("Successfully updated company document type", z.object({ documentType: companyDocumentTypeResponse.openapi({ description: "The document type, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company document type not found"),

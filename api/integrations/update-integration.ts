@@ -21,7 +21,7 @@ const updateIntegrationRouteDescription = describeRoute({
     summary: "Update Integration",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated integration", z.object({ integration: integrationResponse })),
+        ...describeSuccessResponseWithZod("Successfully updated integration", z.object({ integration: integrationResponse.openapi({ description: "The integration, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(404, "Integration not found"),
         ...describeErrorResponse(500, "Failed to update integration"),

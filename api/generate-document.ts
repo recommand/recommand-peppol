@@ -100,6 +100,8 @@ const generateResponse = z.object({
     description: "The process identifier the document was generated for.",
     example: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
   }),
+}).openapi({
+  description: "The generated XML, with the document type and process it was generated for.",
 });
 
 const routeDescription = describeRoute({

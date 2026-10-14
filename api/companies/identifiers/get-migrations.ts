@@ -19,7 +19,7 @@ const getMigrationsRouteDescription = describeRoute({
     summary: "List Company Identifier Migrations",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved the identifier's migrations", z.object({ migrations: z.array(participantMigrationResponse) })),
+        ...describeSuccessResponseWithZod("Successfully retrieved the identifier's migrations", z.object({ migrations: z.array(participantMigrationResponse).openapi({ description: "The identifier's migrations between Peppol providers, newest first." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),
         ...describeErrorResponse(500, "Failed to fetch company identifier migrations"),

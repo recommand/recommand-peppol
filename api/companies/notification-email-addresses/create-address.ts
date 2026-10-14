@@ -19,7 +19,7 @@ const createAddressRouteDescription = describeRoute({
     summary: "Create Company Notification Email Address",
     tags: ["Company Notification Email Addresses"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created company notification email address", z.object({ notificationEmailAddress: companyNotificationEmailAddressResponse })),
+        ...describeSuccessResponseWithZod("Successfully created company notification email address", z.object({ notificationEmailAddress: companyNotificationEmailAddressResponse.openapi({ description: "The notification email address, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),

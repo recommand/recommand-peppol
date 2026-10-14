@@ -31,7 +31,7 @@ const getInboxRouteDescription = describeRoute({
         ...describeSuccessResponseWithZod("Successfully retrieved inbox documents", z.object({
             // Incoming documents are never filed reports, so the inbox carries no
             // reporting status either.
-            documents: z.array(inboxDocumentResponse),
+            documents: z.array(inboxDocumentResponse).openapi({ description: "The incoming documents that have not been marked as read." }),
         })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch inbox documents"),

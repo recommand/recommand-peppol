@@ -28,7 +28,7 @@ const getCustomerRouteDescription = describeRoute({
   responses: {
     ...describeSuccessResponseWithZod(
       "Successfully retrieved customer",
-      z.object({ customer: customerResponse })
+      z.object({ customer: customerResponse.openapi({ description: "The customer." }) })
     ),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Customer not found"),
