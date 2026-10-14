@@ -12,9 +12,9 @@ import { getCustomers } from "@peppol/data/customers";
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
+  paginationResponse,
 } from "@core/lib/api-docs";
 import { customerResponse } from "./shared";
-import { paginationResponse } from "@peppol/api/shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();

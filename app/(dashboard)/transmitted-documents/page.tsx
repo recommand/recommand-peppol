@@ -88,7 +88,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
   const activeTeam = useActiveTeam();
@@ -186,7 +186,7 @@ export default function Page() {
             labels: doc.labels || [],
           }))
         );
-        setTotal(json.pagination.total);
+        setTotalPages(json.pagination.totalPages);
       }
     } catch (error) {
       console.error("Error fetching documents:", error);
@@ -1158,7 +1158,7 @@ export default function Page() {
     },
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange,
-    pageCount: Math.ceil(total / limit),
+    pageCount: totalPages,
     manualPagination: true,
     manualFiltering: true,
   });
