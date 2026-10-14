@@ -38,6 +38,15 @@ const downloadPackageRouteDescription = describeRoute({
                     },
                 },
             },
+            headers: {
+                "Content-Disposition": {
+                    description: "Offers the zip as a download named after the document.",
+                    schema: {
+                        example: "attachment; filename=\"doc_01JQZ8X0M4T7RB6K9V2NDHW3PA.zip\"",
+                        type: "string",
+                    },
+                },
+            },
         },
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Document not found"),

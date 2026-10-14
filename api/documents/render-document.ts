@@ -39,6 +39,15 @@ const renderDocumentRouteDescription = describeRoute({
           },
         },
       },
+      headers: {
+        "Content-Disposition": {
+          description: "Offers a PDF as a download named after the document. Not sent with HTML.",
+          schema: {
+            example: "attachment; filename=\"doc_01JQZ8X0M4T7RB6K9V2NDHW3PA.pdf\"",
+            type: "string",
+          },
+        },
+      },
     },
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Document not found"),
