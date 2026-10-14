@@ -40,6 +40,13 @@ function nullableDate(value: any): string | null {
   return parsedDate || null;
 }
 
+function billingPeriod(period: any) {
+  const startDate = nullableDate(period?.StartDateTime);
+  const endDate = nullableDate(period?.EndDateTime);
+  if (!startDate && !endDate) return undefined;
+  return { startDate, endDate };
+}
+
 function allowanceCharge(charge: any) {
   return {
     reasonCode: getNullableTextContent(charge.ReasonCode),
@@ -164,6 +171,7 @@ export function parseBillingDocumentFromCII(xml: string) {
     despatchReference: getNullableTextContent(
       delivery?.DespatchAdviceReferencedDocument?.IssuerAssignedID
     ),
+    billingPeriod: billingPeriod(settlement.BillingSpecifiedPeriod),
     invoiceReferences: (settlement.InvoiceReferencedDocument || []).map((reference: any) => ({
       id: getTextContent(reference.IssuerAssignedID),
       issueDate: nullableDate(reference.FormattedIssueDateTime),
@@ -250,6 +258,7 @@ export function parseBillingDocumentFromCII(xml: string) {
         orderLineReference: getNullableTextContent(
           lineAgreement?.BuyerOrderReferencedDocument?.LineID
         ),
+        billingPeriod: billingPeriod(lineSettlement?.BillingSpecifiedPeriod),
         commodityClassifications: (product?.DesignatedProductClassification || []).map(
           (classification: any) => ({
             scheme: getTextContent(classification.ClassCode?.["@_listID"]),

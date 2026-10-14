@@ -3,6 +3,7 @@ import type { Invoice } from "../schemas";
 import { calculateDocumentTotals } from "../calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { resolveBuyerReference } from "../../buyer-reference";
+import { billingPeriodToUBL } from "../../billing-period";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -82,6 +83,7 @@ export function prebuildInvoiceUBL({
       ...(buyerReference && {
         "cbc:BuyerReference": buyerReference,
       }),
+      ...billingPeriodToUBL(invoice.billingPeriod),
       ...((invoice.purchaseOrderReference || invoice.salesOrderReference) && {
         "cac:OrderReference": {
           "cbc:ID": invoice.purchaseOrderReference || "NA",
@@ -382,6 +384,7 @@ export function prebuildInvoiceUBL({
           "@_currencyID": invoice.currency,
           "#text": item.netAmount,
         },
+        ...billingPeriodToUBL(item.billingPeriod),
         ...(item.orderLineReference && {
           "cac:OrderLineReference": {
             "cbc:LineID": item.orderLineReference,

@@ -60,6 +60,8 @@ function valueForPath(path: string[]): unknown {
     field === "issueDate" ||
     field === "invoiceIssueDate" ||
     field === "dueDate" ||
+    field === "startDate" ||
+    field === "endDate" ||
     field === "date"
   ) {
     return "2025-01-01";

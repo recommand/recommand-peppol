@@ -188,6 +188,32 @@ export const deliverySchema = z
   .partial()
   .openapi({ ref: "Delivery" });
 
+export const periodSchema = z
+  .object({
+    startDate: z.string().date().nullish().openapi({
+      example: "2025-03-01",
+      description: "The first day of the period, as YYYY-MM-DD.",
+    }),
+    endDate: z.string().date().nullish().openapi({
+      example: "2025-03-31",
+      description: "The last day of the period, as YYYY-MM-DD.",
+    }),
+  })
+  .refine((period) => period.startDate || period.endDate, {
+    message: "A period needs a startDate or an endDate.",
+  })
+  .refine(
+    (period) => !period.startDate || !period.endDate || period.startDate <= period.endDate,
+    { message: "The endDate of a period must not be before its startDate." }
+  )
+  .openapi({
+    ref: "Period",
+    description:
+      "A period of time. Give at least a startDate or an endDate; the endDate must not be before the startDate.",
+  });
+
+export type Period = z.infer<typeof periodSchema>;
+
 export const paymentMeansSchema = z
   .object({
     name: z.string().nullish().openapi({
@@ -415,6 +441,10 @@ export const lineSchema = z
     orderLineReference: z.string().nullish().openapi({
       description: "A reference to a related order line.",
     }),
+    billingPeriod: periodSchema.nullish().openapi({
+      description:
+        "The period this line bills for (BG-26), for example the month of a subscription. When the document has a billing period too, this period must fall within it.",
+    }),
     commodityClassifications: z.array(itemClassificationCodeSchema).nullish().openapi({ description: "Optional commodity classifications" }),
     additionalItemProperties: z
       .array(additionalItemPropertySchema)
@@ -579,6 +609,10 @@ export const baseInvoiceSchema = z.object({
     example: "DE-2024-001",
     description:
       "A reference to a related despatch advice document (e.g. packing slip)",
+  }),
+  billingPeriod: periodSchema.nullish().openapi({
+    description:
+      "The period the document bills for (BG-14), for example the month of a subscription.",
   }),
   seller: partySchema,
   buyer: partySchema,

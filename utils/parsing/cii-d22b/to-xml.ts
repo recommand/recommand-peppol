@@ -68,6 +68,17 @@ function formattedDateTime(date: string): XmlNode {
   };
 }
 
+function billingPeriod(period: { startDate?: string | null; endDate?: string | null }): XmlNode | undefined {
+  if (!period.startDate && !period.endDate) {
+    return undefined;
+  }
+
+  return {
+    ...(period.startDate && { "ram:StartDateTime": dateTime(period.startDate) }),
+    ...(period.endDate && { "ram:EndDateTime": dateTime(period.endDate) }),
+  };
+}
+
 function contact(party: Party): XmlNode | undefined {
   if (!party.phone && !party.email) {
     return undefined;
@@ -263,6 +274,8 @@ function additionalDocumentReference(attachment: NonNullable<BillingDocument["at
 }
 
 function lineItem(document: BillingDocument, item: BillingDocument["lines"][number], index: number): XmlNode {
+  const lineBillingPeriod = item.billingPeriod && billingPeriod(item.billingPeriod);
+
   return {
     "ram:AssociatedDocumentLineDocument": {
       "ram:LineID":
@@ -326,6 +339,7 @@ function lineItem(document: BillingDocument, item: BillingDocument["lines"][numb
         percentage: item.vat.percentage,
         currency: document.currency,
       }),
+      ...(lineBillingPeriod && { "ram:BillingSpecifiedPeriod": lineBillingPeriod }),
       ...((item.discounts || item.surcharges) && {
         "ram:SpecifiedTradeAllowanceCharge": [
           ...(item.discounts?.map((discount) =>
@@ -397,6 +411,7 @@ export function billingDocumentToCII({
       ?.map((payment) => payment.reference)
       .filter((reference): reference is string => Boolean(reference)) ?? [];
   const documentNotes = includedNotes(document, additionalNotes);
+  const headerBillingPeriod = document.billingPeriod && billingPeriod(document.billingPeriod);
 
   const buyerReference = resolveBuyerReference({
     buyerReference: document.buyerReference,
@@ -498,6 +513,7 @@ export function billingDocumentToCII({
               exemptionReason: subtotal.exemptionReason,
             })
           ),
+          ...(headerBillingPeriod && { "ram:BillingSpecifiedPeriod": headerBillingPeriod }),
           ...((document.discounts || document.surcharges) && {
             "ram:SpecifiedTradeAllowanceCharge": [
               ...(document.discounts?.map((discount) =>

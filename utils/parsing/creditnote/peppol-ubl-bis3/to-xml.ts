@@ -3,6 +3,7 @@ import type { CreditNote } from "../schemas";
 import { calculateDocumentTotals } from "../../invoice/calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { resolveBuyerReference } from "../../buyer-reference";
+import { billingPeriodToUBL } from "../../billing-period";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -82,6 +83,7 @@ export function prebuildCreditNoteUBL({
       ...(buyerReference && {
         "cbc:BuyerReference": buyerReference,
       }),
+      ...billingPeriodToUBL(creditNote.billingPeriod),
       ...((creditNote.purchaseOrderReference || creditNote.salesOrderReference) && {
         "cac:OrderReference": {
           "cbc:ID": creditNote.purchaseOrderReference || "NA",
@@ -391,6 +393,7 @@ export function prebuildCreditNoteUBL({
           "@_currencyID": creditNote.currency,
           "#text": item.netAmount,
         },
+        ...billingPeriodToUBL(item.billingPeriod),
         ...(item.orderLineReference && {
           "cac:OrderLineReference": {
             "cbc:LineID": item.orderLineReference,

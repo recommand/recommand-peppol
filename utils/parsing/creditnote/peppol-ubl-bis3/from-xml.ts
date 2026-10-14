@@ -3,6 +3,7 @@ import { creditNoteSchema, type CreditNote } from "../schemas";
 import { getTextContent, getNumberContent, getPercentage, getNullableTextContent, getNullableNumberContent } from "../../xml-helpers";
 import type { SelfBillingCreditNote } from "../../self-billing-creditnote/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
+import { parseUblBillingPeriod } from "../../billing-period";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -39,6 +40,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   const salesOrderReference = getNullableTextContent(creditNote.OrderReference?.SalesOrderID);
   const buyerReference = getNullableTextContent(creditNote.BuyerReference);
   const despatchReference = getNullableTextContent(creditNote.DespatchDocumentReference?.ID);
+  const billingPeriod = parseUblBillingPeriod(creditNote.InvoicePeriod);
   const invoiceReferences = (creditNote.BillingReference || []).map((reference: any) => ({
     id: getTextContent(reference.InvoiceDocumentReference?.ID),
     issueDate: reference.InvoiceDocumentReference?.IssueDate ? getTextContent(reference.InvoiceDocumentReference?.IssueDate) : null,
@@ -150,6 +152,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     } : null,
     documentReference: getNullableTextContent(line.DocumentReference?.ID),
     orderLineReference: getNullableTextContent(line.OrderLineReference?.LineID),
+    billingPeriod: parseUblBillingPeriod(line.InvoicePeriod),
     commodityClassifications: (line.Item?.CommodityClassification || []).map((classification: any) => ({
       scheme: getTextContent(classification.ItemClassificationCode["@_listID"]),
       schemeVersion: getNullableTextContent(classification.ItemClassificationCode["@_listVersionID"]),
@@ -246,6 +249,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     salesOrderReference,
     buyerReference,
     despatchReference,
+    billingPeriod,
     invoiceReferences,
     attachments: attachments.length > 0 ? attachments : [],
     seller,

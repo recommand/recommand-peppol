@@ -3,6 +3,7 @@ import { invoiceSchema, type Invoice } from "../schemas";
 import { getTextContent, getNumberContent, getPercentage, getNullableTextContent, getNullableNumberContent } from "../../xml-helpers";
 import type { SelfBillingInvoice } from "../../self-billing-invoice/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
+import { parseUblBillingPeriod } from "../../billing-period";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -39,6 +40,7 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
   const salesOrderReference = getNullableTextContent(invoice.OrderReference?.SalesOrderID);
   const buyerReference = getNullableTextContent(invoice.BuyerReference);
   const despatchReference = getNullableTextContent(invoice.DespatchDocumentReference?.ID);
+  const billingPeriod = parseUblBillingPeriod(invoice.InvoicePeriod);
 
   // Extract attachments
   const attachments = (invoice.AdditionalDocumentReference || []).map((ref: any) => ({
@@ -141,6 +143,7 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     } : null,
     documentReference: getNullableTextContent(line.DocumentReference?.ID),
     orderLineReference: getNullableTextContent(line.OrderLineReference?.LineID),
+    billingPeriod: parseUblBillingPeriod(line.InvoicePeriod),
     commodityClassifications: (line.Item?.CommodityClassification || []).map((classification: any) => ({
       scheme: getTextContent(classification.ItemClassificationCode["@_listID"]),
       schemeVersion: getNullableTextContent(classification.ItemClassificationCode["@_listVersionID"]),
@@ -237,6 +240,7 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     salesOrderReference,
     buyerReference,
     despatchReference,
+    billingPeriod,
     attachments: attachments.length > 0 ? attachments : [],
     seller,
     buyer,

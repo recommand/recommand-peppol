@@ -11,6 +11,7 @@ import type { CreditNote } from "../creditnote/schemas";
 import type { SelfBillingInvoice } from "../self-billing-invoice/schemas";
 import type { SelfBillingCreditNote } from "../self-billing-creditnote/schemas";
 import { UserFacingError } from "@peppol/utils/util";
+import { assertLinePeriodsWithinBillingPeriod } from "../billing-period";
 
 type VatCalculationDocument = Pick<
   Invoice,
@@ -241,6 +242,9 @@ export function calculateDocumentTotals({
   document: Invoice | CreditNote;
   isDocumentValidationEnforced: boolean;
 }) {
+  if (isDocumentValidationEnforced) {
+    assertLinePeriodsWithinBillingPeriod(document);
+  }
   const totals = calculateTotals(document);
   const vat = resolveVatTotals({ document, isDocumentValidationEnforced });
   const lines = document.lines.map((line) => ({
