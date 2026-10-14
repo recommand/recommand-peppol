@@ -11,6 +11,7 @@ import {
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
+  paginationQuery,
   paginationResponse,
 } from "@core/lib/api-docs";
 import { supplierResponse } from "./shared";
@@ -33,15 +34,7 @@ const getSuppliersRouteDescription = describeRoute({
   },
 });
 
-const getSuppliersQuerySchema = z.object({
-  page: z.coerce.number().min(1).default(1).openapi({
-    description: "The page number to retrieve",
-    examples: [1],
-  }),
-  limit: z.coerce.number().min(1).max(100).default(10).openapi({
-    description: "The number of items per page",
-    examples: [10],
-  }),
+const getSuppliersQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 100 }).extend({
   search: z.string().optional().openapi({
     description: "Search term to filter suppliers",
     examples: ["supplier name"],

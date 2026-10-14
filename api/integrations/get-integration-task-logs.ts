@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod, paginationResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponseWithZod, paginationQuery, paginationResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { integrationTaskLogResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -27,16 +27,7 @@ const getIntegrationTaskLogsRouteDescription = describeRoute({
     },
 });
 
-const getIntegrationTaskLogsQuerySchema = z.object({
-    page: z.coerce.number().min(1).default(1).openapi({
-        description: "The page number to retrieve",
-        examples: [1],
-    }),
-    limit: z.coerce.number().min(1).max(100).default(10).openapi({
-        description: "The number of items per page",
-        examples: [10],
-    }),
-});
+const getIntegrationTaskLogsQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 100 });
 
 const getIntegrationTaskLogsParamSchema = z.object({
     integrationId: z.string().openapi({

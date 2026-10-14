@@ -12,6 +12,7 @@ import {
   booleanStringSchema,
   describeErrorResponse,
   describeSuccessResponseWithZod,
+  paginationQuery,
   paginationResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
@@ -46,15 +47,7 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
   },
 });
 
-const getTransmittedDocumentsQuerySchema = z.object({
-  page: z.coerce.number().min(1).default(1).openapi({
-    description: "The page number to retrieve",
-    examples: [1],
-  }),
-  limit: z.coerce.number().min(1).max(200).default(10).openapi({
-    description: "The number of items per page",
-    examples: [10],
-  }),
+const getTransmittedDocumentsQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 200 }).extend({
   companyId: z
     .union([z.string(), z.array(z.string())])
     .optional()

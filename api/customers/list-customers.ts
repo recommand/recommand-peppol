@@ -12,6 +12,7 @@ import { getCustomers } from "@peppol/data/customers";
 import {
   describeErrorResponse,
   describeSuccessResponseWithZod,
+  paginationQuery,
   paginationResponse,
 } from "@core/lib/api-docs";
 import { customerResponse } from "./shared";
@@ -37,15 +38,7 @@ const getCustomersRouteDescription = describeRoute({
   },
 });
 
-const getCustomersQuerySchema = z.object({
-  page: z.coerce.number().min(1).default(1).openapi({
-    description: "The page number to retrieve",
-    examples: [1],
-  }),
-  limit: z.coerce.number().min(1).max(100).default(10).openapi({
-    description: "The number of items per page",
-    examples: [10],
-  }),
+const getCustomersQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 100 }).extend({
   search: z.string().optional().openapi({
     description: "Search term to filter customers",
     examples: ["customer name"],
