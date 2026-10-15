@@ -798,6 +798,9 @@ The manual verification for {0} was declined.,La vérification manuelle de {0} a
 The {0} has been accepted for processing by our approved reporting partner. The reported data is included with this email for your records.,Le document ({0}) a été accepté pour traitement par notre partenaire de déclaration agréé. Les données déclarées sont jointes à cet e-mail pour vos archives.
 The {0} has been delivered to the recipient through the Peppol network. The document and any attachments are included with this email for your records.,Le document ({0}) a été remis au destinataire via le réseau Peppol. Le document et ses éventuelles pièces jointes sont joints à cet e-mail pour vos archives.
 This company is not active on the Peppol network yet. Please contact us if you believe this decision needs to be reviewed.,Cette entreprise n'est pas encore active sur le réseau Peppol. Contactez-nous si vous estimez que cette décision doit être réexaminée.
+Reason,Motif
+This company is not active on the Peppol network yet. You can start a new verification with the link below.,Cette entreprise n'est pas encore active sur le réseau Peppol. Vous pouvez lancer une nouvelle vérification via le lien ci-dessous.
+Verify again,Vérifier à nouveau
 To,À
 Unknown company,Entreprise inconnue
 Updated,Mise à jour

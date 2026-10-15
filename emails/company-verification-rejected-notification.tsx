@@ -1,5 +1,6 @@
-import { Text } from "@react-email/components";
+import { Section, Text } from "@react-email/components";
 import {
+  Button,
   EmailLayout,
   EmailHeading,
   InfoSection,
@@ -8,11 +9,15 @@ import { fallbackT, type TranslationFunction } from "@core/lib/translations";
 
 interface CompanyVerificationRejectedNotificationProps {
   companyName: string;
+  reason?: string | null;
+  verificationUrl?: string | null;
   t?: TranslationFunction;
 }
 
 export const CompanyVerificationRejectedNotification = ({
   companyName = "Acme Corp",
+  reason,
+  verificationUrl,
   t = fallbackT,
 }: CompanyVerificationRejectedNotificationProps) => (
   <EmailLayout
@@ -24,9 +29,28 @@ export const CompanyVerificationRejectedNotification = ({
     <Text className="mb-4">
       {t`The manual verification for ${companyName} was declined.`}
     </Text>
-    <Text className="mb-4">
-      {t`This company is not active on the Peppol network yet. Please contact us if you believe this decision needs to be reviewed.`}
-    </Text>
+    {reason ? (
+      <InfoSection>
+        <Text className="my-1"><strong>{t`Reason`}:</strong></Text>
+        <Text className="my-1 whitespace-pre-line">{reason}</Text>
+      </InfoSection>
+    ) : null}
+    {verificationUrl ? (
+      <>
+        <Text className="mb-4">
+          {t`This company is not active on the Peppol network yet. You can start a new verification with the link below.`}
+        </Text>
+        <Section className="my-6 text-center">
+          <Button variant="primary" href={verificationUrl}>
+            {t`Verify again`}
+          </Button>
+        </Section>
+      </>
+    ) : (
+      <Text className="mb-4">
+        {t`This company is not active on the Peppol network yet. Please contact us if you believe this decision needs to be reviewed.`}
+      </Text>
+    )}
     <InfoSection>
       <Text className="my-1 text-sm">
         {t`If you have any questions, contact`}{" "}
@@ -38,6 +62,8 @@ export const CompanyVerificationRejectedNotification = ({
 
 CompanyVerificationRejectedNotification.PreviewProps = {
   companyName: "Acme Corp",
+  reason: "The uploaded identity document has expired. Please verify again with a valid document.",
+  verificationUrl: "https://app.recommand.eu/company-verification/example/verify",
 } as CompanyVerificationRejectedNotificationProps;
 
 export default CompanyVerificationRejectedNotification;

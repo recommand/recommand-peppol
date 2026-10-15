@@ -119,11 +119,13 @@ export async function finalizeCompanyVerification({
   company,
   status,
   verificationProofReference,
+  rejectionReason,
 }: {
   companyVerificationLogId: string;
   company: Company;
   status: "verified" | "rejected";
   verificationProofReference: string;
+  rejectionReason?: string | null;
 }): Promise<FinalizeCompanyVerificationResult> {
   const existingLog = await getCompanyVerificationLog(companyVerificationLogId);
   if (!existingLog) {
@@ -137,6 +139,7 @@ export async function finalizeCompanyVerification({
   }
 
   const isVerified = status === "verified";
+  const errorMessage = isVerified ? null : rejectionReason || null;
   const teamExtension = await getTeamExtension(company.teamId);
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
   const verificationRequirements = teamExtension?.verificationRequirements ?? undefined;
@@ -238,7 +241,7 @@ export async function finalizeCompanyVerification({
     await db.transaction(async (tx) => {
       await tx
         .update(companyVerificationLog)
-        .set({ status, verificationProofReference, errorMessage: null })
+        .set({ status, verificationProofReference, errorMessage })
         .where(eq(companyVerificationLog.id, companyVerificationLogId));
       await tx
         .update(companies)
@@ -258,9 +261,10 @@ export async function finalizeCompanyVerification({
     teamId: company.teamId,
     companyId: company.id,
     status,
+    errorMessage,
   });
 
-  return { status, errorMessage: null };
+  return { status, errorMessage };
 }
 
 /**

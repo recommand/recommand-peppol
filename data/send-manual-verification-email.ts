@@ -48,9 +48,13 @@ export async function sendManualVerificationEmail({
 export async function sendManualVerificationDeclinedEmail({
   teamId,
   companyName,
+  reason,
+  verificationUrl,
 }: {
   teamId: string;
   companyName: string;
+  reason?: string | null;
+  verificationUrl?: string | null;
 }): Promise<void> {
   const groups = await getManualVerificationEmailGroups(teamId);
 
@@ -63,7 +67,7 @@ export async function sendManualVerificationDeclinedEmail({
       await sendEmail({
         to: emails.join(", "),
         subject: rejectedSubject({ companyName, t }),
-        email: React.createElement(CompanyVerificationRejectedNotification, { companyName, t }),
+        email: React.createElement(CompanyVerificationRejectedNotification, { companyName, reason, verificationUrl, t }),
       });
     } catch (error) {
       console.error(`Failed to send manual verification declined email for company ${companyName}:`, error);

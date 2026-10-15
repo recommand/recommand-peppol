@@ -798,6 +798,9 @@ The manual verification for {0} was declined.,De handmatige verificatie voor {0}
 The {0} has been accepted for processing by our approved reporting partner. The reported data is included with this email for your records.,Het document ({0}) is geaccepteerd voor verwerking door onze erkende rapportagepartner. De gerapporteerde gegevens zijn bij deze e-mail gevoegd voor je administratie.
 The {0} has been delivered to the recipient through the Peppol network. The document and any attachments are included with this email for your records.,Het document ({0}) is via het Peppol-netwerk aan de ontvanger bezorgd. Het document en eventuele bijlagen zijn bij deze e-mail gevoegd voor je administratie.
 This company is not active on the Peppol network yet. Please contact us if you believe this decision needs to be reviewed.,Dit bedrijf is nog niet actief op het Peppol-netwerk. Neem contact met ons op als je vindt dat deze beslissing herzien moet worden.
+Reason,Reden
+This company is not active on the Peppol network yet. You can start a new verification with the link below.,Dit bedrijf is nog niet actief op het Peppol-netwerk. Je kunt een nieuwe verificatie starten via de onderstaande link.
+Verify again,Opnieuw verifiëren
 To,Aan
 Unknown company,Onbekend bedrijf
 Updated,Bijgewerkt
