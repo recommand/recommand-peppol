@@ -4,6 +4,7 @@ import { getTextContent, getNumberContent, getPercentage, getNullableTextContent
 import type { SelfBillingInvoice } from "../../self-billing-invoice/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 import { parseUblBillingPeriod } from "../../billing-period";
+import { parseUblPartyIdentifiers } from "../../party-identifiers";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -40,6 +41,8 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
   const salesOrderReference = getNullableTextContent(invoice.OrderReference?.SalesOrderID);
   const buyerReference = getNullableTextContent(invoice.BuyerReference);
   const despatchReference = getNullableTextContent(invoice.DespatchDocumentReference?.ID);
+  const contractReference = getNullableTextContent(invoice.ContractDocumentReference?.ID);
+  const projectReference = getNullableTextContent(invoice.ProjectReference?.ID);
   const billingPeriod = parseUblBillingPeriod(invoice.InvoicePeriod);
 
   // Extract attachments
@@ -71,6 +74,7 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
       sellerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
         sellerParty.PartyLegalEntity?.CompanyID
     ),
+    partyIdentifiers: parseUblPartyIdentifiers(sellerParty),
     email: getNullableTextContent(sellerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(sellerParty.Contact?.Telephone),
   };
@@ -94,6 +98,7 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
       buyerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
         buyerParty.PartyLegalEntity?.CompanyID
     ),
+    partyIdentifiers: parseUblPartyIdentifiers(buyerParty),
     email: getNullableTextContent(buyerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(buyerParty.Contact?.Telephone),
   };
@@ -240,6 +245,8 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     salesOrderReference,
     buyerReference,
     despatchReference,
+    ...(contractReference && { contractReference }),
+    ...(projectReference && { projectReference }),
     billingPeriod,
     attachments: attachments.length > 0 ? attachments : [],
     seller,

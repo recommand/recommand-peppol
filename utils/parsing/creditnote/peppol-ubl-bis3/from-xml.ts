@@ -4,6 +4,7 @@ import { getTextContent, getNumberContent, getPercentage, getNullableTextContent
 import type { SelfBillingCreditNote } from "../../self-billing-creditnote/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 import { parseUblBillingPeriod } from "../../billing-period";
+import { parseUblPartyIdentifiers } from "../../party-identifiers";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -40,6 +41,13 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   const salesOrderReference = getNullableTextContent(creditNote.OrderReference?.SalesOrderID);
   const buyerReference = getNullableTextContent(creditNote.BuyerReference);
   const despatchReference = getNullableTextContent(creditNote.DespatchDocumentReference?.ID);
+  const contractReference = getNullableTextContent(creditNote.ContractDocumentReference?.ID);
+  // Peppol BIS Billing 3.0 carries a credit note's project reference (BT-11) as a
+  // document reference typed 50, since UBL 2.1 credit notes have no ProjectReference.
+  const isProjectReference = (ref: any) => getTextContent(ref.DocumentTypeCode) === "50";
+  const projectReference = getNullableTextContent(
+    (creditNote.AdditionalDocumentReference || []).find(isProjectReference)?.ID
+  );
   const billingPeriod = parseUblBillingPeriod(creditNote.InvoicePeriod);
   const invoiceReferences = (creditNote.BillingReference || []).map((reference: any) => ({
     id: getTextContent(reference.InvoiceDocumentReference?.ID),
@@ -47,7 +55,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   }));
 
   // Extract attachments
-  const attachments = (creditNote.AdditionalDocumentReference || []).map((ref: any) => ({
+  const attachments = (creditNote.AdditionalDocumentReference || []).filter((ref: any) => !isProjectReference(ref)).map((ref: any) => ({
     id: getTextContent(ref.ID),
     description: getTextContent(ref.DocumentDescription),
     mimeCode: getTextContent(ref.Attachment?.EmbeddedDocumentBinaryObject?.["@_mimeCode"]),
@@ -75,6 +83,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
       sellerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
         sellerParty.PartyLegalEntity?.CompanyID
     ),
+    partyIdentifiers: parseUblPartyIdentifiers(sellerParty),
     email: getNullableTextContent(sellerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(sellerParty.Contact?.Telephone),
   };
@@ -98,6 +107,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
       buyerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
         buyerParty.PartyLegalEntity?.CompanyID
     ),
+    partyIdentifiers: parseUblPartyIdentifiers(buyerParty),
     email: getNullableTextContent(buyerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(buyerParty.Contact?.Telephone),
   };
@@ -249,6 +259,8 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     salesOrderReference,
     buyerReference,
     despatchReference,
+    ...(contractReference && { contractReference }),
+    ...(projectReference && { projectReference }),
     billingPeriod,
     invoiceReferences,
     attachments: attachments.length > 0 ? attachments : [],

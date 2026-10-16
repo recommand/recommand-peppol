@@ -4,6 +4,7 @@ import { calculateDocumentTotals } from "../../invoice/calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { resolveBuyerReference } from "../../buyer-reference";
 import { billingPeriodToUBL } from "../../billing-period";
+import { partyIdentifiersToUBL } from "../../party-identifiers";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -103,29 +104,44 @@ export function prebuildCreditNoteUBL({
           }
         })),
       }),
-      ...(creditNote.attachments && {
-        "cac:AdditionalDocumentReference": creditNote.attachments.map(
-          (attachment) => ({
-            "cbc:ID": attachment.id,
-            ...(attachment.description && {"cbc:DocumentDescription": attachment.description}),
-            ...((attachment.embeddedDocument || attachment.url) && {
-              "cac:Attachment": {
-                ...(attachment.embeddedDocument && {
-                  "cbc:EmbeddedDocumentBinaryObject": {
-                    "@_mimeCode": attachment.mimeCode,
-                    "@_filename": attachment.filename,
-                    "#text": attachment.embeddedDocument,
-                  },
-                }),
-                ...(attachment.url && {
-                  "cac:ExternalReference": {
-                    "cbc:URI": attachment.url,
-                  },
-                }),
-              },
-            }),
-          })
-        ),
+      ...(creditNote.contractReference && {
+        "cac:ContractDocumentReference": {
+          "cbc:ID": creditNote.contractReference,
+        },
+      }),
+      ...((creditNote.projectReference || creditNote.attachments) && {
+        "cac:AdditionalDocumentReference": [
+          // UBL 2.1 credit notes have no ProjectReference: Peppol BIS Billing 3.0
+          // carries the project reference (BT-11) as a document reference typed 50.
+          ...(creditNote.projectReference
+            ? [{
+                "cbc:ID": creditNote.projectReference,
+                "cbc:DocumentTypeCode": "50",
+              }]
+            : []),
+          ...(creditNote.attachments ?? []).map(
+            (attachment) => ({
+              "cbc:ID": attachment.id,
+              ...(attachment.description && {"cbc:DocumentDescription": attachment.description}),
+              ...((attachment.embeddedDocument || attachment.url) && {
+                "cac:Attachment": {
+                  ...(attachment.embeddedDocument && {
+                    "cbc:EmbeddedDocumentBinaryObject": {
+                      "@_mimeCode": attachment.mimeCode,
+                      "@_filename": attachment.filename,
+                      "#text": attachment.embeddedDocument,
+                    },
+                  }),
+                  ...(attachment.url && {
+                    "cac:ExternalReference": {
+                      "cbc:URI": attachment.url,
+                    },
+                  }),
+                },
+              }),
+            })
+          ),
+        ],
       }),
       "cac:AccountingSupplierParty": {
         "cac:Party": {
@@ -133,6 +149,7 @@ export function prebuildCreditNoteUBL({
             "@_schemeID": supplier.schemeId,
             "#text": supplier.identifier,
           },
+          ...partyIdentifiersToUBL(creditNote.seller),
           "cac:PartyName": {
             "cbc:Name": creditNote.seller.name,
           },
@@ -175,6 +192,7 @@ export function prebuildCreditNoteUBL({
             "@_schemeID": buyer.schemeId,
             "#text": buyer.identifier,
           },
+          ...partyIdentifiersToUBL(creditNote.buyer),
           "cac:PartyName": {
             "cbc:Name": creditNote.buyer.name,
           },

@@ -7,6 +7,7 @@ import {
   getPercentage,
   getTextContent,
 } from "../xml-helpers";
+import { parseCiiPartyIdentifiers } from "../party-identifiers";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -91,6 +92,7 @@ function party(tradeParty: any) {
       tradeParty.SpecifiedLegalOrganization?.ID?.["#text"] ??
         tradeParty.SpecifiedLegalOrganization?.ID
     ),
+    partyIdentifiers: parseCiiPartyIdentifiers(tradeParty),
     email: getNullableTextContent(
       tradeParty.DefinedTradeContact?.EmailURIUniversalCommunication?.URIID
     ),
@@ -154,6 +156,12 @@ export function parseBillingDocumentFromCII(xml: string) {
   const generalNote = invoiceNotes.find(
     (note: any) => !getTextContent(note.SubjectCode)
   );
+  const contractReference = getNullableTextContent(
+    agreement.ContractReferencedDocument?.IssuerAssignedID
+  );
+  const projectReference = getNullableTextContent(
+    agreement.SpecifiedProcuringProject?.ID
+  );
 
   return {
     documentNumber: getTextContent(invoice.ExchangedDocument?.ID),
@@ -171,6 +179,8 @@ export function parseBillingDocumentFromCII(xml: string) {
     despatchReference: getNullableTextContent(
       delivery?.DespatchAdviceReferencedDocument?.IssuerAssignedID
     ),
+    ...(contractReference && { contractReference }),
+    ...(projectReference && { projectReference }),
     billingPeriod: billingPeriod(settlement.BillingSpecifiedPeriod),
     invoiceReferences: (settlement.InvoiceReferencedDocument || []).map((reference: any) => ({
       id: getTextContent(reference.IssuerAssignedID),

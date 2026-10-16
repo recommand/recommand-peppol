@@ -32,6 +32,8 @@ export const baseCreditNoteSchema = z.object({
   purchaseOrderReference: z.string().nullish().openapi({ example: "4500012345", description: "The buyer's purchase order number (BT-13), written to the order reference." }),
   salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
   despatchReference: z.string().nullish().openapi({ example: "DE-2024-001", description: "A reference to a related despatch advice document (e.g. packing slip)" }),
+  contractReference: z.string().nullish().openapi({ example: "CT-2024-017", description: "The identifier of the contract the credit note is issued under (BT-12)." }),
+  projectReference: z.string().nullish().openapi({ example: "PRJ-2024-003", description: "The identifier of the project the credit note refers to (BT-11). In UBL it is written as an additional document reference with document type code `50`, as Peppol BIS Billing 3.0 prescribes for credit notes." }),
   billingPeriod: periodSchema.nullish().openapi({ description: "The period the credit note bills for (BG-14), for example the month of a subscription." }),
   seller: partySchema,
   buyer: partySchema,
