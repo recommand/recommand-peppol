@@ -23,7 +23,7 @@ type GetVerificationContextContext = Context<Record<string, never>, string, { in
 
 const _getVerificationContext = server.get(
     "/companies/verification/:companyVerificationLogId/context",
-    describeRoute({ hide: true }),
+    describeRoute({ hide: true, security: [] }),
     zodValidator("param", getVerificationContextParamSchema),
     _getVerificationContextImplementation,
 );

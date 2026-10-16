@@ -10,6 +10,7 @@ const jwksRouteDescription = describeRoute({
     description: "Get the JSON Web Key Set (JWKS) for integration public keys",
     summary: "Get JWKS",
     tags: ["Integrations"],
+    security: [],
     responses: {
         200: {
             description: "Successfully retrieved JWKS",

@@ -26,7 +26,7 @@ type SubmitIdentityFormContext = Context<Record<string, never>, string, { in: { 
 
 const _submitIdentityForm = server.post(
     "/companies/verification/:companyVerificationLogId/submit-identity-form",
-    describeRoute({ hide: true }),
+    describeRoute({ hide: true, security: [] }),
     zodValidator("param", submitIdentityFormParamSchema),
     zodValidator("json", submitIdentityFormJsonBodySchema),
     _submitIdentityFormImplementation,

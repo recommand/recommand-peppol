@@ -27,7 +27,7 @@ type ForwardVerificationContext = Context<{ Variables: { t: TranslationFunction;
 
 const _forwardVerification = server.post(
     "/companies/verification/:companyVerificationLogId/forward",
-    describeRoute({ hide: true }),
+    describeRoute({ hide: true, security: [] }),
     zodValidator("param", forwardVerificationParamSchema),
     zodValidator("json", forwardVerificationJsonBodySchema),
     // Public route: the forwarding colleague works at the same company as the
