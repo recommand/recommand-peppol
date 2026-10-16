@@ -57,6 +57,12 @@ import {
 
 const TIMEOUT = 120_000;
 
+// For a test about what is generated and stored rather than whether it is delivered,
+// sent to a combination the default recipient is not registered for. The playground
+// refuses that Peppol delivery as production would; the email fallback still has the
+// document stored.
+const STORED_DESPITE_PEPPOL_REFUSAL = { email: { to: [EMAIL_TO] } };
+
 // Everything here needs a running server, so the whole suite steps aside when
 // only the offline tests are wanted. See test/utils/skip-e2e.ts.
 const e2eDescribe = describe.skipIf(SKIP_E2E);
@@ -70,8 +76,8 @@ const ERROR = {
   pdfMessageLevelResponse:
     "PDF generation is not supported for messageLevelResponse.",
   pdfXml: "PDF generation is not supported for raw XML documents.",
-  peppolFailed: `Failed to send document over Peppol network. ${SIMULATED_PEPPOL_FAILURE}`,
-  peppolAndEmailFailed: `Failed to send document over Peppol network and email. ${SIMULATED_PEPPOL_FAILURE} `,
+  peppolFailed: (failure: string) => `Failed to send document over Peppol network. ${failure}`,
+  peppolAndEmailFailed: (failure: string) => `Failed to send document over Peppol network and email. ${failure} `,
   doctypeNotDetected:
     "Document type could not be detected automatically from your XML document. Please provide the doctypeId manually.",
   processIdNotDetected:
@@ -200,15 +206,18 @@ function expectedOutcome(combination: Combination): Expected {
     };
   }
 
-  if (!recipient.reachable) {
+  const peppolFailure = !recipient.reachable
+    ? SIMULATED_PEPPOL_FAILURE
+    : variant.refusedBy?.(recipient.receiverId!);
+  if (peppolFailure) {
     if (!email) {
-      return { kind: "failure", status: 422, message: ERROR.peppolFailed };
+      return { kind: "failure", status: 422, message: ERROR.peppolFailed(peppolFailure) };
     }
     if (emailRecipients.length === 0) {
       return {
         kind: "failure",
         status: 422,
-        message: ERROR.peppolAndEmailFailed,
+        message: ERROR.peppolAndEmailFailed(peppolFailure),
       };
     }
     // Email is sent whenever Peppol failed, whatever `when` says.
@@ -217,7 +226,7 @@ function expectedOutcome(combination: Combination): Expected {
       sentOverPeppol: false,
       sentOverEmail: true,
       emailRecipients,
-      additionalPeppolFailureContext: SIMULATED_PEPPOL_FAILURE,
+      additionalPeppolFailureContext: peppolFailure,
     };
   }
 
@@ -667,8 +676,10 @@ e2eDescribe("send document: raw XML", () => {
         document: invoiceXmlDocument(),
         doctypeId: UNKNOWN_DOC_TYPE_ID,
         processId: CUSTOM_PROCESS_ID,
+        ...STORED_DESPITE_PEPPOL_REFUSAL,
       });
       expect(response.status).toBe(200);
+      expect(response.body.sentOverPeppol).toBe(false);
 
       const stored = await getDocument(response.body.id);
       expect(stored.body.document.docTypeId).toBe(UNKNOWN_DOC_TYPE_ID);
@@ -726,7 +737,7 @@ e2eDescribe("send document: email fallback edge cases", () => {
         document: invoiceDocument(),
         email: { to: [] },
       });
-      expectFailure(response, 422, ERROR.peppolAndEmailFailed);
+      expectFailure(response, 422, ERROR.peppolAndEmailFailed(SIMULATED_PEPPOL_FAILURE));
     },
     TIMEOUT
   );
@@ -822,6 +833,7 @@ e2eDescribe("send document: document defaults", () => {
         recipient: RECIPIENT,
         documentType: "messageLevelResponse",
         document: messageLevelResponseDocument(),
+        ...STORED_DESPITE_PEPPOL_REFUSAL,
       });
       expect(response.status).toBe(200);
 
@@ -1218,6 +1230,7 @@ e2eDescribe("send document: doctypeId and processId on JSON documents", () => {
         documentType: "invoice",
         document: invoiceDocument(),
         doctypeId: DOC_TYPE_ID.ciiInvoice,
+        ...STORED_DESPITE_PEPPOL_REFUSAL,
       });
       expect(response.status).toBe(200);
 
@@ -1327,6 +1340,7 @@ e2eDescribe("send document: a French company", () => {
           document: frenchInvoiceDocument(),
           doctypeId: DOC_TYPE_ID.franceCiusCiiInvoice,
           processId: PROCESS_ID.franceRegulated,
+          ...STORED_DESPITE_PEPPOL_REFUSAL,
         },
         { path: sendPathFor(frenchCompanyId) }
       );

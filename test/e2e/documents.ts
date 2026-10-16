@@ -354,6 +354,13 @@ export type DocumentVariant = {
   isBillingType: boolean;
   /** PDF generation is rejected for message level responses and raw XML. */
   supportsPdf: boolean;
+  /**
+   * Why Peppol delivery to `RECIPIENT` is refused, for a variant it is not registered
+   * to receive. The playground looks a recipient up as production would, and the
+   * default recipient receives invoices, credit notes and their self-billing
+   * counterparts under their standard processes, and nothing else.
+   */
+  refusedBy?: (receiverId: string) => string;
   /** What the stored document is expected to look like. */
   storedDocTypeId: string;
   storedProcessId: string;
@@ -407,6 +414,8 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
     document: () => messageLevelResponseDocument(),
     isBillingType: false,
     supportsPdf: false,
+    refusedBy: (receiverId) =>
+      `Recipient ${receiverId} is not registered to receive message level response documents in any format this company can send.`,
     storedDocTypeId: DOC_TYPE_ID.messageLevelResponse,
     storedProcessId: PROCESS_ID.messageLevelResponse,
     storedType: "messageLevelResponse",
@@ -439,6 +448,8 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
     processId: CUSTOM_PROCESS_ID,
     isBillingType: false,
     supportsPdf: false,
+    refusedBy: (receiverId) =>
+      `Recipient ${receiverId} is not registered to receive document type ${DOC_TYPE_ID.invoice} under process ${CUSTOM_PROCESS_ID}.`,
     storedDocTypeId: DOC_TYPE_ID.invoice,
     storedProcessId: CUSTOM_PROCESS_ID,
     storedType: "invoice",
@@ -451,6 +462,8 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
     processId: CUSTOM_PROCESS_ID,
     isBillingType: false,
     supportsPdf: false,
+    refusedBy: (receiverId) =>
+      `Recipient ${receiverId} is not registered to receive document type ${DOC_TYPE_ID.invoice} under process ${CUSTOM_PROCESS_ID}.`,
     storedDocTypeId: DOC_TYPE_ID.invoice,
     storedProcessId: CUSTOM_PROCESS_ID,
     storedType: "invoice",

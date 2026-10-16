@@ -12,12 +12,19 @@ import {
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { verifyDocumentSupport } from "@peppol/data/recipient";
 import { getTeamExtension } from "@peppol/data/teams";
+import {
+    findPlaygroundRecipient,
+    isReservedUnknownRecipient,
+    isSimulatedPlayground,
+    playgroundRecipientAccepts,
+} from "@peppol/data/playground/recipients";
+import { resolveDocTypeId } from "@peppol/utils/type-repository/receiving-capabilities";
 
 const server = new Server();
 
 const verifyDocumentSupportRouteDescription = describeRoute({
     operationId: "verifyDocumentSupport",
-    description: "Check whether a Peppol address is registered to receive one specific document type, optionally under one specific process. Use it before sending a document type the recipient may not accept. A lookup that fails, including an address that is registered but not for this document type, is not an error: the response is `{ isValid: false }` with no further fields.",
+    description: "Check whether a Peppol address is registered to receive one specific document type, optionally under one specific process. Use it before sending a document type the recipient may not accept. A lookup that fails, including an address that is registered but not for this document type, is not an error: the response is `{ isValid: false }` with no further fields. In a playground that is not connected to the Peppol Test Network, an address that belongs to a company in the same playground is checked against that company's document types, and the response has no SMP or endpoint fields; any other address is checked against the production network, as the send endpoint does.",
     summary: "Verify Document Support",
     tags: ["Recipients"],
     responses: {
@@ -61,6 +68,20 @@ async function _verifyDocumentSupportImplementation(c: VerifyDocumentSupportCont
     try {
         const { peppolAddress, documentType, processId } = c.req.valid("json");
         const teamExtension = await getTeamExtension(c.var.team.id);
+
+        // Answered from the same place a send would be routed from, so the two agree.
+        if (teamExtension && isSimulatedPlayground(teamExtension)) {
+            if (isReservedUnknownRecipient(peppolAddress)) {
+                return c.json(actionSuccess({ isValid: false }));
+            }
+            const playgroundRecipient = await findPlaygroundRecipient({ recipientAddress: peppolAddress, playgroundTeamId: c.var.team.id });
+            if (playgroundRecipient) {
+                return c.json(actionSuccess({
+                    isValid: playgroundRecipientAccepts(playgroundRecipient, resolveDocTypeId(documentType), processId),
+                }));
+            }
+        }
+
         const { smpUrl, endpointDetails } = await verifyDocumentSupport({ recipientAddress: peppolAddress, documentType, processId, useTestNetwork: teamExtension?.useTestNetwork ?? false });
         return c.json(actionSuccess({ isValid: true, smpUrl, ...endpointDetails }));
     } catch (error) {

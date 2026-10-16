@@ -11,6 +11,7 @@ import {
   type SentDocumentEmail,
 } from "@peppol/data/email/send-document-emails";
 import {
+  PlaygroundDocumentNotSupportedError,
   PlaygroundRecipientNotFoundError,
   simulateSendAs4,
 } from "@peppol/data/playground/simulate-ap";
@@ -160,7 +161,9 @@ export async function sendingPipeline(c: SendingContext) {
           peppolFailureCategory =
             error instanceof PlaygroundRecipientNotFoundError
               ? "recipient_not_found"
-              : "transport";
+              : error instanceof PlaygroundDocumentNotSupportedError
+                ? "document_not_supported"
+                : "transport";
         }
       } else {
         as4Response = await getAccessPointProvider(

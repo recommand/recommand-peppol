@@ -21,7 +21,11 @@ export const EMAIL_TO =
 export const EMAIL_TO_2 =
   process.env.ETE_UNIT_TEST_EMAIL_TO_2 ?? "test+2@blackhole.postmarkapp.com";
 
-/** A Peppol address that is reachable (not registered in the playground team). */
+/**
+ * A production Peppol participant outside the playground team, registered to receive
+ * invoices, credit notes and their self-billing counterparts under their standard
+ * processes. The playground looks it up as production would and delivers nothing.
+ */
 export const RECIPIENT = process.env.ETE_UNIT_TEST_RECIPIENT ?? "0208:0598726857";
 
 /** Hardcoded in the playground access point simulator as "does not exist". */
