@@ -1,5 +1,8 @@
 import { documentFormats } from "@peppol/utils/type-repository/document-formats";
-import { isFranceBillingProcessId } from "@peppol/utils/type-repository/document-formats/france-process";
+import {
+  FRANCE_NON_REGULATED_PROCESS_ID,
+  isFranceBillingProcessId,
+} from "@peppol/utils/type-repository/document-formats/france-process";
 import type { AccessPointProviderId } from "@peppol/data/peppol-providers";
 import { SendingFailure } from "./errors";
 
@@ -62,13 +65,27 @@ export function isFranceRegulatedSendingSupported(options: {
 }): boolean {
   const { docTypeId, processId, company, isPlayground } = options;
 
-  const isFranceRegulated =
-    isFranceBillingProcessId(processId) || FRANCE_DOC_TYPE_IDS.has(docTypeId);
-  if (!isFranceRegulated) {
+  const isFrenchDocType = FRANCE_DOC_TYPE_IDS.has(docTypeId);
+  if (!isFranceBillingProcessId(processId) && !isFrenchDocType) {
     return true;
   }
 
   const isFrenchCompany = company.country.toUpperCase() === "FR";
+
+  // A supplier established outside France invoicing a French buyer is outside the French
+  // reform. Peppol France assigns that flow the non-regulated process, and only regulated
+  // flows are reserved to accredited platforms, so any Peppol access point may carry it.
+  // A French receiver may publish Peppol BIS 3 under the French processes alone, and
+  // without this a company outside France could not reach it at all. The French formats
+  // stay reserved: Peppol BIS 3 is the format every French receiver must accept.
+  if (
+    !isFrenchCompany &&
+    processId === FRANCE_NON_REGULATED_PROCESS_ID &&
+    !isFrenchDocType
+  ) {
+    return true;
+  }
+
   const usesFranceAccessPoint =
     isPlayground || company.accessPointProvider === FRANCE_ACCESS_POINT_PROVIDER;
   return isFrenchCompany && usesFranceAccessPoint;

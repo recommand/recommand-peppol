@@ -22,6 +22,7 @@ import { receivingCapabilities } from "../utils/type-repository/receiving-capabi
 import { peppolUblBis3InvoiceFormat } from "../utils/type-repository/document-formats/peppol-ubl-bis3-invoice";
 import { ublFranceCiusInvoiceFormat } from "../utils/type-repository/document-formats/ubl-france-cius-invoice";
 import { facturxFranceFormat } from "../utils/type-repository/document-formats/facturx-france";
+import { isFranceRegulatedSendingSupported } from "../utils/pipelines/sending/france-regulated-guard";
 
 const PEPPOL_BILLING_PROCESS_ID =
   "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
@@ -216,6 +217,40 @@ describe("France non-regulated process", () => {
         ...frenchCountrySpecific,
         businessProcess: "B2C",
       }).success
+    ).toBe(false);
+  });
+});
+
+describe("France sending guard on the non-regulated process", () => {
+  const bis3 = peppolUblBis3InvoiceFormat.docTypeId;
+  const frenchCius = ublFranceCiusInvoiceFormat.docTypeId;
+  const belgianCompany = { country: "BE", accessPointProvider: "recommand-ap1" as const };
+  const frenchCompany = { country: "FR", accessPointProvider: "at-shared-ap-fr" as const };
+  const frenchCompanyOffAccessPoint = {
+    country: "FR",
+    accessPointProvider: "recommand-ap1" as const,
+  };
+  const allowed = (
+    docTypeId: string,
+    processId: string,
+    company: typeof belgianCompany | typeof frenchCompany,
+  ) =>
+    isFranceRegulatedSendingSupported({ docTypeId, processId, company, isPlayground: false });
+
+  it("lets a company outside France send Peppol BIS 3 over the non-regulated process", () => {
+    expect(allowed(bis3, FRANCE_NON_REGULATED_PROCESS_ID, belgianCompany)).toBe(true);
+  });
+
+  it("keeps the regulated process and the French formats from a company outside France", () => {
+    expect(allowed(bis3, FRANCE_REGULATED_PROCESS_ID, belgianCompany)).toBe(false);
+    expect(allowed(frenchCius, FRANCE_NON_REGULATED_PROCESS_ID, belgianCompany)).toBe(false);
+  });
+
+  it("keeps a French company to the French access point for both processes", () => {
+    expect(allowed(bis3, FRANCE_NON_REGULATED_PROCESS_ID, frenchCompany)).toBe(true);
+    expect(allowed(bis3, FRANCE_REGULATED_PROCESS_ID, frenchCompany)).toBe(true);
+    expect(
+      allowed(bis3, FRANCE_NON_REGULATED_PROCESS_ID, frenchCompanyOffAccessPoint),
     ).toBe(false);
   });
 });
