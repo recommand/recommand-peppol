@@ -111,9 +111,29 @@ describe("planning a country change", () => {
     });
     expect(plan.enterpriseNumberScheme).toBe("0208");
     const custom = planCompanyCountryChange({
-      ...base, oldCompany: { ...belgian, enterpriseNumberScheme: "0088" }, newCountry: "NL", enterpriseNumber: "12345678", vatNumber: null, identifiers: [],
+      ...base, oldCompany: { ...belgian, enterpriseNumber: "7300009000005", enterpriseNumberScheme: "0088" }, newCountry: "NL",
+      enterpriseNumber: "7300009000005", vatNumber: null, identifiers: [],
     });
     expect(custom.enterpriseNumberScheme).toBeUndefined();
+  });
+
+  it("keeps a GLN the company names as its enterprise number as its address", () => {
+    const plan = planCompanyCountryChange({
+      ...base, oldCompany: { ...belgian, enterpriseNumber: "7300009000005", enterpriseNumberScheme: "0088", vatNumber: null }, newCountry: "SE",
+      enterpriseNumber: "7300009000005", vatNumber: null, identifiers: [{ id: "gln", scheme: "0088", identifier: "7300009000005" }],
+    });
+    expect(plan.deleteIdentifierIds).toEqual([]);
+    expect(plan.createIdentifiers).toEqual([]);
+    expect(plan.keptIdentifiers.map((i) => i.id)).toEqual(["gln"]);
+  });
+
+  it("gives a GLN named as enterprise number in the move its own address instead of the country's register scheme", () => {
+    const plan = planCompanyCountryChange({
+      ...base, oldCompany: belgian, newCountry: "SE", enterpriseNumber: "7300009000005", vatNumber: null,
+      requestedEnterpriseNumberScheme: "0088", identifiers: belgianDefaults,
+    });
+    expect(plan.deleteIdentifierIds).toEqual(["en", "vat"]);
+    expect(plan.createIdentifiers).toEqual([{ scheme: "0088", identifier: "7300009000005" }]);
   });
 
   it("leaves a simulated playground company free of the French scheme restriction", () => {

@@ -1,6 +1,6 @@
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { COUNTRIES } from "@peppol/utils/countries";
-import { normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
+import { enterpriseNumberIdentifierScheme, normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { cleanIdentifier, cleanScheme, validateIdentifierAgainstCompany } from "./company-identifiers";
 import { findUnsupportedIdentifiers } from "./company-identifier-policy";
@@ -64,12 +64,15 @@ const LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES: Record<string, string> = {
 
 /**
  * The identifiers a country gives a company by default: its business register
- * number and its VAT number under the country's schemes. These are the ones a
- * country change replaces; anything else the customer added is kept and re-checked.
+ * number and its VAT number under the country's schemes, or the enterprise number
+ * under the scheme the company names it under when that is not one of the country's,
+ * such as a GLN. These are the ones a country change replaces; anything else the
+ * customer added is kept and re-checked.
  */
 function defaultIdentifiersFor(
   country: string,
   enterpriseNumber: string | null,
+  enterpriseNumberScheme: string | null,
   vatNumber: string | null,
   options: { includeLegacy?: boolean } = {}
 ): NewIdentifier[] {
@@ -77,7 +80,7 @@ function defaultIdentifiersFor(
   const defaults: NewIdentifier[] = [];
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(enterpriseNumber);
   const enterpriseNumberSchemes = [
-    countryInfo?.defaultEnterpriseNumberScheme,
+    enterpriseNumberIdentifierScheme(country, enterpriseNumberScheme),
     options.includeLegacy ? LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES[country] : undefined,
   ].filter((scheme): scheme is string => !!scheme);
   for (const scheme of enterpriseNumberSchemes) {
@@ -135,13 +138,31 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
   });
   const providersChanged = !samePeppolProviders(providers, input.oldCompany);
 
+  let enterpriseNumberScheme: string | null | undefined;
+  if (input.requestedEnterpriseNumberScheme !== undefined) {
+    enterpriseNumberScheme = input.requestedEnterpriseNumberScheme;
+  } else if (
+    input.oldCompany.enterpriseNumberScheme === null ||
+    input.oldCompany.enterpriseNumberScheme === defaultEnterpriseNumberSchemeFor(input.oldCompany.country) ||
+    input.oldCompany.enterpriseNumberScheme === LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES[input.oldCompany.country]
+  ) {
+    // The scheme followed the old country's default, so it follows the new one's.
+    enterpriseNumberScheme = defaultEnterpriseNumberSchemeFor(input.newCountry);
+  }
+
   const oldDefaults = defaultIdentifiersFor(
     input.oldCompany.country,
     input.oldCompany.enterpriseNumber,
+    input.oldCompany.enterpriseNumberScheme,
     input.oldCompany.vatNumber,
     { includeLegacy: true }
   );
-  const newDefaults = defaultIdentifiersFor(input.newCountry, input.enterpriseNumber, input.vatNumber);
+  const newDefaults = defaultIdentifiersFor(
+    input.newCountry,
+    input.enterpriseNumber,
+    enterpriseNumberScheme !== undefined ? enterpriseNumberScheme : input.oldCompany.enterpriseNumberScheme,
+    input.vatNumber
+  );
 
   // An old default the new country would create again stays where it is.
   const deleted = input.identifiers.filter(
@@ -187,18 +208,6 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
       }
       throw error;
     }
-  }
-
-  let enterpriseNumberScheme: string | null | undefined;
-  if (input.requestedEnterpriseNumberScheme !== undefined) {
-    enterpriseNumberScheme = input.requestedEnterpriseNumberScheme;
-  } else if (
-    input.oldCompany.enterpriseNumberScheme === null ||
-    input.oldCompany.enterpriseNumberScheme === defaultEnterpriseNumberSchemeFor(input.oldCompany.country) ||
-    input.oldCompany.enterpriseNumberScheme === LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES[input.oldCompany.country]
-  ) {
-    // The scheme followed the old country's default, so it follows the new one's.
-    enterpriseNumberScheme = defaultEnterpriseNumberSchemeFor(input.newCountry);
   }
 
   return {

@@ -140,12 +140,7 @@ export function validateCompanyNumbers({
   if (!country) {
     return;
   }
-  // An enterprise number under a scheme of another country or of no country, such as a
-  // GLN or the Dutch OIN, is held to that scheme instead of the country's register. Under
-  // one of the country's own schemes it is the country's enterprise number, as a SIREN
-  // is under the French 0002, or the register number German companies once named 0204.
-  const otherScheme =
-    enterpriseNumberScheme && !countrySchemes(country).includes(enterpriseNumberScheme) ? enterpriseNumberScheme : null;
+  const otherScheme = foreignEnterpriseNumberScheme(country, enterpriseNumberScheme);
   if (enterpriseNumber && otherScheme) {
     validateIdentifier(otherScheme, enterpriseNumber);
   }
@@ -153,6 +148,32 @@ export function validateCompanyNumbers({
     vatNumber,
     enterpriseNumber: otherScheme ? null : enterpriseNumber,
   });
+}
+
+/**
+ * The scheme a company names its enterprise number under when that is a scheme of
+ * another country or of no country, such as a GLN or the Dutch OIN, and null otherwise.
+ * Under one of the country's own schemes the number is the country's enterprise number,
+ * as a SIREN is under the French 0002, or the register number German companies once
+ * named 0204.
+ */
+function foreignEnterpriseNumberScheme(country: string, enterpriseNumberScheme: string | null | undefined): string | null {
+  return enterpriseNumberScheme && !countrySchemes(country).includes(enterpriseNumberScheme) ? enterpriseNumberScheme : null;
+}
+
+/**
+ * The scheme a company's enterprise number becomes a Peppol identifier under: the
+ * scheme the company names it under when that is not one of the country's own, so a
+ * GLN is published as 0088, and otherwise the country's default enterprise number
+ * scheme. Null when the country has none, as Germany, whose register number is no
+ * Peppol address.
+ */
+export function enterpriseNumberIdentifierScheme(country: string, enterpriseNumberScheme: string | null | undefined): string | null {
+  return (
+    foreignEnterpriseNumberScheme(country, enterpriseNumberScheme) ??
+    COUNTRIES.find((entry) => entry.code === country.toUpperCase())?.defaultEnterpriseNumberScheme ??
+    null
+  );
 }
 
 /** The prefixes a country's VAT numbers carry: its code, unless its rules name others. */

@@ -13,7 +13,7 @@ import { createVerificationSession, type VerificationExpectedDetails } from "./d
 import { getCompanyVerificationLog, revokeOpenCompanyVerificationSessions } from "./company-verification";
 import { companyDocumentsS3Prefix } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
-import { validateCompanyNumbers } from "@peppol/utils/identifier-validation";
+import { enterpriseNumberIdentifierScheme, validateCompanyNumbers } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
 import { getSmpProviderDescriptor } from "./smp-providers/descriptors";
@@ -214,12 +214,13 @@ async function setupCompanyDefaults({ company, isPlayground, useTestNetwork, ver
     });
   }
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
-  if (countryInfo?.defaultEnterpriseNumberScheme && cleanedEnterpriseNumber) {
+  const enterpriseNumberScheme = enterpriseNumberIdentifierScheme(company.country, company.enterpriseNumberScheme);
+  if (enterpriseNumberScheme && cleanedEnterpriseNumber) {
     try {
       await createCompanyIdentifier({
         companyIdentifier: {
           companyId: company.id,
-          scheme: countryInfo.defaultEnterpriseNumberScheme,
+          scheme: enterpriseNumberScheme,
           identifier: cleanedEnterpriseNumber,
         },
         skipSmpRegistration,
