@@ -1,4 +1,5 @@
 import { UserFacingError } from "@peppol/utils/util";
+import { validateLeitwegId } from "@peppol/utils/identifiers/countries/germany";
 import { parsePeppolAddress } from "./peppol-address";
 
 /** The Leitweg-ID scheme, which addresses the invoice reception of a German public authority. */
@@ -21,33 +22,45 @@ export function buyerLeitwegId(customerAddress: string | null | undefined): stri
  * The value written as BT-10 Buyer reference, or null to leave it out.
  *
  * A buyer addressed by a Leitweg-ID is a German public authority, and XRechnung
- * (BR-DE-15) and the federal invoice portals require that same Leitweg-ID in BT-10.
- * It is filled in when the caller left it out, and a different buyer reference is
- * refused rather than overwritten, since it would be rejected at the authority.
+ * (BR-DE-15) and the federal invoice portals require a Leitweg-ID in BT-10. The
+ * authority routes the invoice internally on that Leitweg-ID, which is often the one
+ * it is addressed by on Peppol but need not be: the KoSIT guideline on Peppol
+ * identifiers in Germany (section 3.2.2) has an authority reached at
+ * 0204:04000000-FHBXLAND-82 that expects 04000000-900X44X06-60 in BT-10. So the
+ * recipient's Leitweg-ID is filled in when the caller left BT-10 out, a different
+ * Leitweg-ID is kept, and anything that is not a Leitweg-ID is refused, since the
+ * authority would reject it.
  *
- * Every other buyer keeps the existing behaviour: the given buyer reference, or the
- * document number when neither a buyer reference nor a purchase order reference is
- * given, which satisfies the Peppol rule that one of the two is present.
+ * Every other buyer gets the given buyer reference or, when there is none, the
+ * document number in two cases: when no purchase order reference is given either,
+ * which satisfies the Peppol rule that one of the two is present, and when seller and
+ * buyer are both located in Germany, where Peppol BIS (DE-R-015) and XRechnung
+ * (BR-DE-15) require BT-10 itself. The German tax administration accepts a
+ * placeholder there for business buyers, which use no Leitweg-ID.
  */
 export function resolveBuyerReference({
   buyerReference,
   purchaseOrderReference,
   documentNumber,
   customerAddress,
+  sellerCountry,
+  buyerCountry,
 }: {
   buyerReference?: string | null;
   purchaseOrderReference?: string | null;
   documentNumber: string;
   customerAddress: string | null | undefined;
+  /** BT-40, the country DE-R-015 reads to tell whether the seller is in Germany. */
+  sellerCountry?: string | null;
+  /** BT-55, the country DE-R-015 reads to tell whether the buyer is in Germany. */
+  buyerCountry?: string | null;
 }): string | null {
   const leitwegId = buyerLeitwegId(customerAddress);
   const given = buyerReference?.trim() || null;
 
   if (leitwegId) {
     if (given && given.toUpperCase() !== leitwegId) {
-      throw new UserFacingError(
-        `The buyer ${LEITWEG_ID_SCHEME}:${leitwegId} is a German public authority, which requires its Leitweg-ID ${leitwegId} as buyer reference (BT-10). Got buyerReference '${given}'. Leave buyerReference out to have it filled in, or set it to the Leitweg-ID. Other references, such as an order number, belong in purchaseOrderReference.`
-      );
+      assertLeitwegIdBuyerReference(given, leitwegId);
     }
     return given ?? leitwegId;
   }
@@ -55,5 +68,25 @@ export function resolveBuyerReference({
   if (given) {
     return given;
   }
-  return purchaseOrderReference ? null : documentNumber;
+  if (!purchaseOrderReference || (isGermany(sellerCountry) && isGermany(buyerCountry))) {
+    return documentNumber;
+  }
+  return null;
+}
+
+function isGermany(country: string | null | undefined): boolean {
+  return country?.trim().toUpperCase() === "DE";
+}
+
+function assertLeitwegIdBuyerReference(given: string, leitwegId: string): void {
+  try {
+    validateLeitwegId(given);
+  } catch (error) {
+    if (!(error instanceof UserFacingError)) {
+      throw error;
+    }
+    throw new UserFacingError(
+      `The buyer ${LEITWEG_ID_SCHEME}:${leitwegId} is a German public authority, which requires a Leitweg-ID as buyer reference (BT-10). Got buyerReference '${given}', which is not a valid Leitweg-ID (a 2 to 12 digit coarse address, an optional fine address and 2 check digits, such as ${leitwegId}). Leave buyerReference out to use ${leitwegId}, or set it to the Leitweg-ID the authority gave you. Other references, such as an order number, belong in purchaseOrderReference.`
+    );
+  }
 }

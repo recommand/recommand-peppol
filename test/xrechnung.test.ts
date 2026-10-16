@@ -198,10 +198,13 @@ describe("writing XRechnung", () => {
   });
 
   it("refuses a document without the fields XRechnung requires, naming all of them", () => {
+    // A buyer outside Germany, since between German parties BT-10 is filled with the
+    // invoice number when only an order reference is given.
     const incomplete = invoice({
       paymentMeans: [],
       purchaseOrderReference: "PO-7",
       seller: { ...seller, phone: null, email: null },
+      buyer: { ...buyer, country: "AT" },
     });
     expect(() => encode("xrechnung-ubl-invoice", incomplete, BUSINESS)).toThrow(
       /buyerReference \(BT-10, BR-DE-15\).*paymentMeans \(BG-16, BR-DE-1\).*seller\.phone \(BT-42, BR-DE-6\).*seller\.email \(BT-43, BR-DE-7\)/
