@@ -254,7 +254,9 @@ export function buildOutgoingTransferEvents(options: {
  * stored because an email fallback applied, is a `failed` delivery with the reason
  * the refusal gave. Email deliveries start out `pending`: the mail service accepted
  * the message, and reports its arrival or bounce later under the message id and
- * delivery id the message was sent with. An address the mail service refused in the
+ * delivery id the message was sent with. A message a playground simulated never
+ * reached the mail service, so like a simulated transmission it is `delivered`
+ * without a provider. An address the mail service refused in the
  * send is a `failed` email delivery with the service's reason, as it would be had
  * the refusal come from the deferred fallback.
  */
@@ -314,14 +316,15 @@ export function buildOutgoingDocumentDeliveries(options: {
   for (const address of facts.emailRecipients) {
     const at = messages.findIndex((message) => message.address === address);
     const message = at === -1 ? null : messages.splice(at, 1)[0]!;
+    const mailed = message !== null && !message.simulated;
     rows.push({
       ...base,
       ...(message ? { id: message.deliveryId } : {}),
       channel: "email",
       address,
-      status: "pending",
-      provider: message ? EMAIL_DELIVERY_PROVIDER : null,
-      providerTransactionId: message?.providerMessageId ?? null,
+      status: message?.simulated ? "delivered" : "pending",
+      provider: mailed ? EMAIL_DELIVERY_PROVIDER : null,
+      providerTransactionId: mailed ? message.providerMessageId : null,
     });
   }
   for (const refused of facts.emailFailures) {

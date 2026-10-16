@@ -67,6 +67,8 @@ function fakeDependencies(options: {
   /** Ids of deliveries a stopped run wrote before this one starts. */
   existingDeliveries?: EmailFallbackDelivery[];
   finishFails?: () => boolean;
+  /** The verified addresses of the playground team's members. */
+  memberAddresses?: string[];
 }) {
   let request: EmailFallbackRequest | null = options.document?.request ?? null;
   const sent: string[] = [];
@@ -108,6 +110,9 @@ function fakeDependencies(options: {
       sent.push(email.to);
       messages.push({ to: email.to, metadata: email.metadata });
       return { messageId: `msg-${sent.length}` };
+    },
+    async playgroundMemberAddresses() {
+      return options.memberAddresses ?? [];
     },
     async recordDelivery(row: EmailFallbackDeliveryRow) {
       const existing = deliveries.get(row.id!);
@@ -256,6 +261,24 @@ describe("sending the email fallback after a later failure", () => {
 
     expect(finished[0]!.deliveries).toHaveLength(2);
     expect(finished[0]!.transferEvents).toEqual([]);
+  });
+
+  it("in a playground mails only the team's members and simulates every other address as delivered", async () => {
+    const { deps, sent, finished } = fakeDependencies({
+      document: { ...document, isPlayground: true },
+      memberAddresses: ["B@Example.com"],
+    });
+
+    const outcome = await runEmailFallback("doc_1", deps);
+
+    expect(sent).toEqual(["b@example.com"]);
+    expect(finished[0]!.deliveries).toEqual([
+      expect.objectContaining({ address: "a@example.com", status: "delivered", provider: null, providerTransactionId: null }),
+      expect.objectContaining({ address: "b@example.com", status: "pending", provider: "postmark", providerTransactionId: "msg-1" }),
+    ]);
+    // The simulated address counts as mailed, as it would have been in production.
+    expect(finished[0]!.sent).toEqual(["a@example.com", "b@example.com"]);
+    expect(outcome).toMatchObject({ kind: "sent", sent: ["a@example.com", "b@example.com"], failed: [] });
   });
 });
 

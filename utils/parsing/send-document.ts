@@ -124,7 +124,7 @@ export const sendDocumentBaseShape = {
           description: "When to send the email. `always` sends it with the Peppol transmission. `on_peppol_failure` sends it when the Peppol transmission is refused at send time, or when the access point reports afterwards that it failed; in that second case the email goes out at that moment and appears as email deliveries on the document, announced by a `document.delivery_status_changed` event. If the Peppol recipient is null, email is the only channel and is always sent.",
         }),
       to: z.array(z.string()).openapi({
-        description: "The email addresses to send the document to.",
+        description: "The email addresses to send the document to. In a playground, only the verified addresses of the team's members receive the email; it is simulated for any other address.",
         example: ["support@recommand.eu"],
       }),
       subject: z.string().optional().openapi({

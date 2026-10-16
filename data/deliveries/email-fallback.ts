@@ -7,6 +7,7 @@ import {
   sendDocumentEmails,
   type DocumentEmailSender,
 } from "@peppol/data/email/send-document-emails";
+import { playgroundEmailSender } from "@peppol/data/playground/email";
 import type { documentDeliveries, transferEvents } from "@peppol/db/schema";
 import { EMAIL_DELIVERY_PROVIDER } from "./model";
 import type { ParsedDocument } from "@peppol/utils/document-filename";
@@ -123,6 +124,8 @@ export type EmailFallbackDependencies = {
     isPlayground: boolean;
     metadata: Record<string, string>;
   }): Promise<{ messageId: string | null }>;
+  /** The addresses a playground team really mails documents to (see data/playground/email). */
+  playgroundMemberAddresses(teamId: string): Promise<string[]>;
   /** Writes one delivery row on its own, and leaves a row with that id alone if it exists. */
   recordDelivery(row: EmailFallbackDeliveryRow): Promise<EmailFallbackDelivery>;
   /**
@@ -169,7 +172,8 @@ export const OUTCOME_NOT_RECORDED_MESSAGE =
  * Sends the email a document's sender asked for in case its Peppol transmission
  * failed, exactly as the sending pipeline would have in the send itself, and records
  * one email delivery per address: pending for an address the mail service accepted,
- * failed for one it refused. Only the emails that went out are billed. Never sends
+ * failed for one it refused, and delivered for one a playground simulated. Only the
+ * emails that went out are billed, and none in a playground. Never sends
  * twice: an address is noted in the request before it is mailed, and a run that
  * resumes a stopped one only mails addresses no run has started on. An address a
  * stopped run had started on without recording the service's answer is recorded as
@@ -190,7 +194,7 @@ export async function runEmailFallback(
 
   try {
     const payload = await deps.loadPayload(document.id);
-    const send: DocumentEmailSender = ({ to, metadata }) =>
+    const mail: DocumentEmailSender = ({ to, metadata }) =>
       deps.sendEmail({
         to,
         subject: document.request.subject,
@@ -201,6 +205,9 @@ export async function runEmailFallback(
         isPlayground: document.isPlayground,
         metadata,
       });
+    const send = document.isPlayground
+      ? playgroundEmailSender(await deps.playgroundMemberAddresses(document.teamId), mail)
+      : mail;
     const base = {
       transmittedDocumentId: document.id,
       teamId: document.teamId,
@@ -249,7 +256,18 @@ export async function runEmailFallback(
         send,
       });
       const accepted = attempted.sent[0];
-      const row: EmailFallbackDeliveryRow = accepted
+      // A message a playground simulated is delivered as it is recorded, with no
+      // mail service to report on it later.
+      const row: EmailFallbackDeliveryRow = accepted?.simulated
+        ? {
+            ...base,
+            id: deliveryId,
+            address,
+            status: "delivered",
+            provider: null,
+            providerTransactionId: null,
+          }
+        : accepted
         ? {
             ...base,
             id: deliveryId,
@@ -272,8 +290,10 @@ export async function runEmailFallback(
       deliveries.push(await deps.recordDelivery(row));
     }
 
+    // What went out: accepted by the mail service, and possibly reported on since,
+    // or simulated by a playground.
     const sent = deliveries
-      .filter((delivery) => delivery.status === "pending")
+      .filter((delivery) => delivery.status !== "failed")
       .map((delivery) => delivery.address);
     const failed = deliveries
       .filter((delivery) => delivery.status === "failed")

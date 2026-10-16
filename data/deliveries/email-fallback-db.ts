@@ -1,6 +1,7 @@
 import { writeAuditEvent } from "@core/lib/audit";
 import { publishEvent } from "@core/data/rules/events";
 import { sendDocumentEmail } from "@peppol/data/email/send-email";
+import { getPlaygroundMemberAddresses } from "@peppol/data/playground/email-db";
 import {
   resolveDocumentParsedWithAttachments,
   resolveDocumentXml,
@@ -99,6 +100,10 @@ const databaseDependencies: EmailFallbackDependencies = {
 
   async sendEmail(options) {
     return await sendDocumentEmail(options);
+  },
+
+  async playgroundMemberAddresses(teamId) {
+    return await getPlaygroundMemberAddresses(teamId);
   },
 
   async recordDelivery(row) {

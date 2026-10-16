@@ -46,6 +46,19 @@ describe("mailing a document to its recipients", () => {
     expect(outcome.sent.map((message) => message.providerMessageId)).toEqual([null, null]);
   });
 
+  it("marks a message the sender only simulated", async () => {
+    const outcome = await sendDocumentEmails({
+      documentId: "doc_1",
+      recipients: ["a@example.com"],
+      deliveryId: () => "dlv_1",
+      send: async () => ({ messageId: null, simulated: true }),
+    });
+
+    expect(outcome.sent).toEqual([
+      { deliveryId: "dlv_1", address: "a@example.com", providerMessageId: null, simulated: true },
+    ]);
+  });
+
   it("reports an address the mail service refused, with its reason, and carries on", async () => {
     const outcome = await sendDocumentEmails({
       documentId: "doc_1",

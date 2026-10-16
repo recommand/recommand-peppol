@@ -343,6 +343,18 @@ describe("email deliveries of a recorded document", () => {
     ]);
   });
 
+  it("record a message a playground simulated as delivered, without a provider", () => {
+    const [row] = build({
+      kind: "peppol",
+      sentPeppol: false,
+      emailRecipients: ["a@example.com"],
+      emailMessages: [{ deliveryId: "dlv_a", address: "a@example.com", providerMessageId: null, simulated: true }],
+      as4Response: null,
+    });
+
+    expect(row).toMatchObject({ id: "dlv_a", channel: "email", status: "delivered", provider: null, providerTransactionId: null });
+  });
+
   it("match an address mailed twice to its two messages in order", () => {
     const rows = build({
       kind: "peppol",

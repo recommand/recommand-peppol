@@ -7,9 +7,12 @@ import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import { sendDocumentEmail } from "@peppol/data/email/send-email";
 import {
   sendDocumentEmails,
+  type DocumentEmailSender,
   type FailedDocumentEmail,
   type SentDocumentEmail,
 } from "@peppol/data/email/send-document-emails";
+import { playgroundEmailSender } from "@peppol/data/playground/email";
+import { getPlaygroundMemberAddresses } from "@peppol/data/playground/email-db";
 import {
   PlaygroundDocumentNotSupportedError,
   PlaygroundRecipientNotFoundError,
@@ -202,20 +205,23 @@ export async function sendingPipeline(c: SendingContext) {
     let emailFailure = "";
     if (input.email && (input.email.when === "always" || !sentPeppol)) {
       const email = input.email;
+      const mail: DocumentEmailSender = ({ to, metadata }) =>
+        sendDocumentEmail({
+          to,
+          subject: email.subject,
+          htmlBody: email.htmlBody,
+          xmlDocument,
+          type: prepared.type as any,
+          parsedDocument: prepared.parsed,
+          isPlayground,
+          metadata,
+        });
       const outcome = await sendDocumentEmails({
         documentId,
         recipients: email.to,
-        send: ({ to, metadata }) =>
-          sendDocumentEmail({
-            to,
-            subject: email.subject,
-            htmlBody: email.htmlBody,
-            xmlDocument,
-            type: prepared.type as any,
-            parsedDocument: prepared.parsed,
-            isPlayground,
-            metadata,
-          }),
+        send: isPlayground
+          ? playgroundEmailSender(await getPlaygroundMemberAddresses(team.id), mail)
+          : mail,
       });
       emailMessages = outcome.sent;
       emailFailures = outcome.failed;
