@@ -277,7 +277,9 @@ export function validateIdentifierBelongsToCompany({
   if (cleanedIdentifier !== companyNumber) {
     const foreign = company.country
       ? company.country.toUpperCase() !== national.country
-      : national.number === "vatNumber" && !getVatNumberPrefixes(national.country).some((prefix) => companyNumber.startsWith(prefix));
+      : national.number === "vatNumber" &&
+        // Before normalisation, which takes the prefix off a Greek VAT number under 9933.
+        !getVatNumberPrefixes(national.country).some((prefix) => cleanVatNumber(company.vatNumber)?.startsWith(prefix));
     const country = countryInProse(national.country);
     throw new UserFacingError(
       `Company identifier with scheme ${scheme} must match the company ${label}. Expected: ${companyNumber}, got: ${cleanedIdentifier}` +

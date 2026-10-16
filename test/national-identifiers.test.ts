@@ -340,7 +340,7 @@ describe("VAT schemes that are no country's default", () => {
 
   it("hold the number to its country's rules where we have them", () => {
     expect(() => validateIdentifier("9933", "EL094014201")).not.toThrow();
-    expect(() => validateIdentifier("9933", "EL0940142")).toThrow("Greek VAT number must have the format");
+    expect(() => validateIdentifier("9933", "EL0940142")).toThrow("must be a Greek VAT number (AFM) of 9 digits");
   });
 
   it("only take the company's own VAT number", () => {
