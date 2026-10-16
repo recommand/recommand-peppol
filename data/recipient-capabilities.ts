@@ -1,6 +1,5 @@
 import {
-  findPlaygroundRecipient,
-  isReservedUnknownRecipient,
+  resolvePlaygroundAddress,
   type PlaygroundRecipient,
 } from "@peppol/data/playground/recipients";
 import {
@@ -59,7 +58,7 @@ function writeCache(key: string, capabilities: RecipientCapabilities): void {
  * The registrations a playground company holds, which is what a playground has in place
  * of an SMP entry for its own companies.
  */
-export function getPlaygroundCapabilities(recipient: PlaygroundRecipient): RecipientCapabilities {
+function getPlaygroundCapabilities(recipient: PlaygroundRecipient): RecipientCapabilities {
   const processIdsByDocType = new Map<string, string[]>();
   for (const registration of recipient.registrations) {
     const processIds = processIdsByDocType.get(registration.docTypeId) ?? [];
@@ -140,12 +139,14 @@ export async function getRecipientCapabilities(options: {
 }): Promise<RecipientCapabilities | null> {
   try {
     if (options.isPlayground && !options.useTestNetwork) {
-      if (isReservedUnknownRecipient(options.recipientAddress)) return null;
-      const playgroundRecipient = await findPlaygroundRecipient({
+      const playgroundAddress = await resolvePlaygroundAddress({
         recipientAddress: options.recipientAddress,
         playgroundTeamId: options.teamId,
       });
-      if (playgroundRecipient) return getPlaygroundCapabilities(playgroundRecipient);
+      if (playgroundAddress?.kind === "unknown") return null;
+      if (playgroundAddress?.kind === "company") {
+        return getPlaygroundCapabilities(playgroundAddress.recipient);
+      }
     }
 
     const key = cacheKey(options);
@@ -163,7 +164,7 @@ export async function getRecipientCapabilities(options: {
     // the send fails on anyway. Logged rather than raised, because the send carries on
     // with the format it would have been written as before.
     console.log(
-      `Could not look up receiving capabilities for ${options.recipientAddress}, sending as the default document type:`,
+      `Could not look up receiving capabilities for ${options.recipientAddress}:`,
       error instanceof Error ? error.message : error,
     );
     return null;

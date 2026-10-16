@@ -2,14 +2,15 @@ import { findCompanyByPeppolId, type Company } from "@peppol/data/companies";
 import { getCompanyDocumentTypes } from "@peppol/data/company-document-types";
 import { DOCUMENT_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
 import { normalizeProcessId } from "@peppol/utils/parsing/process-id";
+import { UserFacingError } from "@peppol/utils/util";
 
 /**
  * A playground that is not connected to the Peppol Test Network answers every recipient
  * question the way production would, and only leaves out the delivery. Its own
  * companies are laid over the production network: an address that belongs to one of
  * them is answered from that company's registrations, any other address from the
- * production SMP. Sending, generating and both verify endpoints share this lookup, so
- * they cannot disagree about a recipient.
+ * production SMP. Sending, generating and both verify endpoints resolve an address
+ * through resolvePlaygroundAddress, so they answer it from the same place.
  */
 export function isSimulatedPlayground(team: {
   isPlayground?: boolean | null;
@@ -26,6 +27,32 @@ const RESERVED_UNKNOWN_RECIPIENTS = ["404:404", "0208:1234567894"];
 
 export function isReservedUnknownRecipient(recipientAddress: string): boolean {
   return RESERVED_UNKNOWN_RECIPIENTS.includes(recipientAddress.toLowerCase());
+}
+
+/**
+ * Where a simulated playground answers an address from, before the network is asked:
+ * `unknown` for one of the reserved addresses or one that is not a Peppol address at
+ * all, `company` for one of the playground's own companies, and null for any other
+ * address, which the production network answers.
+ */
+export type PlaygroundAddress =
+  | { kind: "unknown" }
+  | { kind: "company"; recipient: PlaygroundRecipient }
+  | null;
+
+export async function resolvePlaygroundAddress(options: {
+  recipientAddress: string;
+  playgroundTeamId: string;
+}): Promise<PlaygroundAddress> {
+  if (isReservedUnknownRecipient(options.recipientAddress)) return { kind: "unknown" };
+  try {
+    const recipient = await findPlaygroundRecipient(options);
+    return recipient ? { kind: "company", recipient } : null;
+  } catch (error) {
+    // A malformed address, which the network would not find either.
+    if (error instanceof UserFacingError) return { kind: "unknown" };
+    throw error;
+  }
 }
 
 export type PlaygroundRegistration = { docTypeId: string; processId: string };

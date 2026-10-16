@@ -13,9 +13,8 @@ import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from
 import { verifyRecipient, fetchServiceMetadata, fetchBusinessCard } from "@peppol/data/recipient";
 import { getTeamExtension } from "@peppol/data/teams";
 import {
-    findPlaygroundRecipient,
-    isReservedUnknownRecipient,
     isSimulatedPlayground,
+    resolvePlaygroundAddress,
 } from "@peppol/data/playground/recipients";
 import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
 
@@ -74,13 +73,14 @@ async function _verifyRecipientImplementation(c: VerifyRecipientContext) {
         const teamExtension = await getTeamExtension(c.var.team.id);
         const useTestNetwork = teamExtension?.useTestNetwork ?? false;
 
-        // Answered from the same place a send would be routed from, so the two agree.
+        // Answered from the same place a send would be routed from.
         if (teamExtension && isSimulatedPlayground(teamExtension)) {
-            if (isReservedUnknownRecipient(peppolAddress)) {
+            const playgroundAddress = await resolvePlaygroundAddress({ recipientAddress: peppolAddress, playgroundTeamId: c.var.team.id });
+            if (playgroundAddress?.kind === "unknown") {
                 return c.json(actionSuccess({ isValid: false }));
             }
-            const playgroundRecipient = await findPlaygroundRecipient({ recipientAddress: peppolAddress, playgroundTeamId: c.var.team.id });
-            if (playgroundRecipient) {
+            if (playgroundAddress?.kind === "company") {
+                const playgroundRecipient = playgroundAddress.recipient;
                 const docTypeIds = [...new Set(playgroundRecipient.registrations.map((registration) => registration.docTypeId))];
                 const result: Record<string, unknown> = {
                     isValid: true,

@@ -157,7 +157,13 @@ type Combination = {
 };
 
 type Expected =
-  | { kind: "failure"; status: number; message: string }
+  | {
+      kind: "failure";
+      status: number;
+      message: string;
+      /** The delivery failure category a refused Peppol delivery reports. */
+      deliveryFailureCategory?: string;
+    }
   | {
       kind: "success";
       sentOverPeppol: boolean;
@@ -210,14 +216,23 @@ function expectedOutcome(combination: Combination): Expected {
     ? SIMULATED_PEPPOL_FAILURE
     : variant.refusedBy?.(recipient.receiverId!);
   if (peppolFailure) {
+    const deliveryFailureCategory = !recipient.reachable
+      ? "recipient_not_found"
+      : "document_not_supported";
     if (!email) {
-      return { kind: "failure", status: 422, message: ERROR.peppolFailed(peppolFailure) };
+      return {
+        kind: "failure",
+        status: 422,
+        message: ERROR.peppolFailed(peppolFailure),
+        deliveryFailureCategory,
+      };
     }
     if (emailRecipients.length === 0) {
       return {
         kind: "failure",
         status: 422,
         message: ERROR.peppolAndEmailFailed(peppolFailure),
+        deliveryFailureCategory,
       };
     }
     // Email is sent whenever Peppol failed, whatever `when` says.
@@ -256,10 +271,17 @@ function requestBody(combination: Combination): Record<string, unknown> {
 function expectFailure(
   response: ApiResponse,
   status: number,
-  message: string
+  message: string,
+  deliveryFailureCategory?: string
 ): void {
   expect(response.status).toBe(status);
-  expect(response.body).toEqual({ success: false, errors: { root: [message] } });
+  expect(response.body).toMatchObject({ success: false, errors: { root: [message] } });
+  if (deliveryFailureCategory) {
+    expect(response.body.deliveryFailure).toEqual({
+      channel: "peppol",
+      category: deliveryFailureCategory,
+    });
+  }
 }
 
 function expectSuccess(
@@ -284,7 +306,13 @@ function expectSuccess(
       expected.additionalPeppolFailureContext;
   }
 
-  expect(response.body).toEqual(expectedBody);
+  // The delivery summary (`deliveryStatus`, `deliveries`) is covered by the
+  // persistence tests; here only its presence is part of the contract.
+  expect(response.body).toMatchObject(expectedBody);
+  expect(Array.isArray(response.body.deliveries)).toBe(true);
+  if (!expected.additionalPeppolFailureContext) {
+    expect(response.body).not.toHaveProperty("additionalPeppolFailureContext");
+  }
 }
 
 /** Verifies the document the API stored for a successful send. */
@@ -340,7 +368,12 @@ async function runCombination(combination: Combination): Promise<void> {
   const response = await sendDocument(requestBody(combination));
 
   if (expected.kind === "failure") {
-    expectFailure(response, expected.status, expected.message);
+    expectFailure(
+      response,
+      expected.status,
+      expected.message,
+      expected.deliveryFailureCategory
+    );
     return;
   }
 
@@ -737,7 +770,12 @@ e2eDescribe("send document: email fallback edge cases", () => {
         document: invoiceDocument(),
         email: { to: [] },
       });
-      expectFailure(response, 422, ERROR.peppolAndEmailFailed(SIMULATED_PEPPOL_FAILURE));
+      expectFailure(
+        response,
+        422,
+        ERROR.peppolAndEmailFailed(SIMULATED_PEPPOL_FAILURE),
+        "recipient_not_found"
+      );
     },
     TIMEOUT
   );

@@ -33,6 +33,7 @@ const smpRequests: string[] = [];
 let pool: Pool;
 let getRecipientCapabilities: typeof import("../../data/recipient-capabilities").getRecipientCapabilities;
 let simulate: typeof import("../../data/playground/simulate-ap");
+let resolvePlaygroundAddress: typeof import("../../data/playground/recipients").resolvePlaygroundAddress;
 
 /** The production SMP: every participant registered for self-billing invoices only. */
 const productionParticipants = new Set([PLAYGROUND_RECIPIENT, OTHER_TEAMS_RECIPIENT, PRODUCTION_RECIPIENT]);
@@ -124,6 +125,7 @@ describe.skipIf(!testDatabaseUrl)("playground recipients against PostgreSQL", ()
     );
     ({ getRecipientCapabilities } = await import("../../data/recipient-capabilities"));
     simulate = await import("../../data/playground/simulate-ap");
+    ({ resolvePlaygroundAddress } = await import("../../data/playground/recipients"));
     await seedPlaygroundTeam(PLAYGROUND);
     await seedPlaygroundTeam(OTHER_PLAYGROUND);
   });
@@ -141,6 +143,30 @@ describe.skipIf(!testDatabaseUrl)("playground recipients against PostgreSQL", ()
     await register("c_playground", BIS3_INVOICE, BILLING_PROCESS);
     await seedCompany("c_other_team", OTHER_PLAYGROUND, OTHER_TEAMS_RECIPIENT);
     await register("c_other_team", BIS3_INVOICE, BILLING_PROCESS);
+  });
+
+  describe("resolving an address", () => {
+    // What both verify endpoints answer from, before they fall through to the network.
+    const resolve = (recipientAddress: string) =>
+      resolvePlaygroundAddress({ recipientAddress, playgroundTeamId: PLAYGROUND });
+
+    it("resolves a playground company to its registrations", async () => {
+      const resolved = await resolve(PLAYGROUND_RECIPIENT);
+      expect(resolved?.kind).toBe("company");
+      expect(resolved?.kind === "company" && resolved.recipient.registrations).toEqual([
+        { docTypeId: BIS3_INVOICE, processId: BILLING_PROCESS },
+      ]);
+    });
+
+    it("leaves another team's company and any other address to the network", async () => {
+      expect(await resolve(OTHER_TEAMS_RECIPIENT)).toBeNull();
+      expect(await resolve(PRODUCTION_RECIPIENT)).toBeNull();
+    });
+
+    it("treats the reserved addresses and a malformed one as unknown", async () => {
+      expect(await resolve("404:404")).toEqual({ kind: "unknown" });
+      expect(await resolve("0208:")).toEqual({ kind: "unknown" });
+    });
   });
 
   describe("looking a recipient up", () => {
@@ -215,6 +241,12 @@ describe.skipIf(!testDatabaseUrl)("playground recipients against PostgreSQL", ()
 
     it("reports an address no playground company and no production participant answers to as not found", async () => {
       await expect(send("0208:0555555555", BIS3_INVOICE, BILLING_PROCESS)).rejects.toBeInstanceOf(
+        simulate.PlaygroundRecipientNotFoundError,
+      );
+    });
+
+    it("reports a malformed address as not found", async () => {
+      await expect(send("0208:", BIS3_INVOICE, BILLING_PROCESS)).rejects.toBeInstanceOf(
         simulate.PlaygroundRecipientNotFoundError,
       );
     });

@@ -3,10 +3,10 @@ import { receivingPipeline } from "@peppol/utils/pipelines/receiving";
 import { normalizeProcessId } from "@peppol/utils/parsing/process-id";
 import { getRecipientCapabilities } from "@peppol/data/recipient-capabilities";
 import {
-  findPlaygroundRecipient,
   isReservedUnknownRecipient,
   normalizeDocTypeId,
   playgroundRecipientAccepts,
+  resolvePlaygroundAddress,
 } from "./recipients";
 
 /**
@@ -45,13 +45,16 @@ export async function simulateSendAs4(options: {
     throw new PlaygroundRecipientNotFoundError("This document was sent to recipient 404:404 or 0208:1234567894, simulating the sending of a document to a Peppol address that does not exist.");
   }
 
-  const playgroundRecipient = await findPlaygroundRecipient({
+  const playgroundAddress = await resolvePlaygroundAddress({
     recipientAddress: options.receiverId,
     playgroundTeamId: options.playgroundTeamId,
   });
+  if (playgroundAddress?.kind === "unknown") {
+    throw new PlaygroundRecipientNotFoundError(`Recipient ${options.receiverId} is not a valid Peppol address.`);
+  }
 
-  if (playgroundRecipient) {
-    if (!playgroundRecipientAccepts(playgroundRecipient, options.docTypeId, options.processId)) {
+  if (playgroundAddress?.kind === "company") {
+    if (!playgroundRecipientAccepts(playgroundAddress.recipient, options.docTypeId, options.processId)) {
       throw new PlaygroundDocumentNotSupportedError(notSupportedMessage(options));
     }
   } else {
@@ -61,8 +64,10 @@ export async function simulateSendAs4(options: {
       useTestNetwork: false,
       teamId: options.playgroundTeamId,
     });
+    // An unregistered participant and an SMP that could not be reached look the same
+    // from here, so the message claims neither.
     if (!capabilities) {
-      throw new PlaygroundRecipientNotFoundError(`Recipient ${options.receiverId} is not registered on the Peppol network.`);
+      throw new PlaygroundRecipientNotFoundError(`Recipient ${options.receiverId} could not be found on the Peppol network.`);
     }
     const docTypeId = normalizeDocTypeId(options.docTypeId);
     const processIds = capabilities.supportsDocType(docTypeId)

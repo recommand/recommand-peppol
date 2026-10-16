@@ -13,10 +13,9 @@ import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from
 import { verifyDocumentSupport } from "@peppol/data/recipient";
 import { getTeamExtension } from "@peppol/data/teams";
 import {
-    findPlaygroundRecipient,
-    isReservedUnknownRecipient,
     isSimulatedPlayground,
     playgroundRecipientAccepts,
+    resolvePlaygroundAddress,
 } from "@peppol/data/playground/recipients";
 import { resolveDocTypeId } from "@peppol/utils/type-repository/receiving-capabilities";
 
@@ -69,15 +68,15 @@ async function _verifyDocumentSupportImplementation(c: VerifyDocumentSupportCont
         const { peppolAddress, documentType, processId } = c.req.valid("json");
         const teamExtension = await getTeamExtension(c.var.team.id);
 
-        // Answered from the same place a send would be routed from, so the two agree.
+        // Answered from the same place a send would be routed from.
         if (teamExtension && isSimulatedPlayground(teamExtension)) {
-            if (isReservedUnknownRecipient(peppolAddress)) {
+            const playgroundAddress = await resolvePlaygroundAddress({ recipientAddress: peppolAddress, playgroundTeamId: c.var.team.id });
+            if (playgroundAddress?.kind === "unknown") {
                 return c.json(actionSuccess({ isValid: false }));
             }
-            const playgroundRecipient = await findPlaygroundRecipient({ recipientAddress: peppolAddress, playgroundTeamId: c.var.team.id });
-            if (playgroundRecipient) {
+            if (playgroundAddress?.kind === "company") {
                 return c.json(actionSuccess({
-                    isValid: playgroundRecipientAccepts(playgroundRecipient, resolveDocTypeId(documentType), processId),
+                    isValid: playgroundRecipientAccepts(playgroundAddress.recipient, resolveDocTypeId(documentType), processId),
                 }));
             }
         }
