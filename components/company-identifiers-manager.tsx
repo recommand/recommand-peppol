@@ -44,6 +44,7 @@ const SCHEME_LABELS: Record<string, string> = {
     "0225": "0225 (France, SIREN)",
     "9930": "9930 (Germany, VAT number)",
     "0204": "0204 (Germany, Leitweg-ID)",
+    "0246": "0246 (Germany, GEBA)",
     "0088": "0088 (GLN)",
     "9918": "9918 (IBAN)",
 };

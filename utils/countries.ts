@@ -96,6 +96,7 @@ const BASE_COUNTRIES: BaseCountryInfo[] = ([
         supportLevel: "supported",
         // German businesses are addressed by their VAT number. 0204 is the Leitweg-ID of
         // a public authority, not a register number, so it is never derived from one.
+        // A GEBA (0246), built from the same number, is added explicitly.
         defaultVatScheme: "9930",
     },
     {

@@ -1,4 +1,4 @@
-import { UserFacingError } from "@peppol/utils/util";
+import { UserFacingError, cleanVatNumber } from "@peppol/utils/util";
 import { mod97, lettersToDigits, passesMod11_10 } from "../checksums";
 import type { CountryIdentifierRules } from "../validators";
 
@@ -62,11 +62,66 @@ export function rejectDeprecatedLeitwegIdScheme(): void {
   );
 }
 
+export const GEBA_SCHEME = "0246";
+
+/** A GEBA: the W-IdNr, an optional distinctive feature and an optional sub-address. */
+const GEBA = /^(DE\d{9})(?:-\d{5})?(?:\.[0-9A-Z]{1,8})?$/;
+
+/**
+ * The German Electronic Business Address (GEBA, ICD 0246), the identifier KoSIT
+ * recommends to private businesses: the Business Identification Number
+ * (Wirtschafts-Identifikationsnummer, W-IdNr), DE and 9 digits, optionally followed by
+ * a hyphen and the 5 digit distinctive feature (Unterscheidungsmerkmal) and by a full
+ * stop and a sub-address of 1 to 8 letters or digits, e.g. DE136695976-00001.ABT1.
+ * The ninth digit is a check digit over the eight before it. Source: Peppol participant
+ * identifier schemes v9.7, DE:GEBA. The W-IdNr has the same value as the business's
+ * VAT number (KoSIT, Germany Identifier Guideline v1.3), so its check digit is the
+ * VAT number's.
+ */
+export function validateGeba(identifier: string): void {
+  const match = GEBA.exec(identifier.trim().toUpperCase());
+  if (!match) {
+    throw new UserFacingError(
+      "GEBA must be the W-IdNr (DE + 9 digits), optionally followed by a hyphen and its 5 digit distinctive feature and by a full stop and a sub-address of up to 8 letters or digits (e.g. DE136695976 or DE136695976-00001)"
+    );
+  }
+  if (!passesMod11_10(match[1]!.substring(2))) {
+    throw new UserFacingError("GEBA contains a W-IdNr with an invalid check digit");
+  }
+}
+
+/**
+ * A GEBA names the business its W-IdNr belongs to, which is the business whose VAT
+ * number has the same value. The distinctive feature and the sub-address are the
+ * company's to choose.
+ */
+function validateGebaBelongsToCompany(
+  scheme: string,
+  identifier: string,
+  company: { enterpriseNumber: string | null; vatNumber: string | null }
+): void {
+  const vatNumber = cleanVatNumber(company.vatNumber);
+  if (!vatNumber) {
+    throw new UserFacingError(`Company identifier with scheme ${scheme} requires a company VAT number to be set.`);
+  }
+  const businessIdentificationNumber = GEBA.exec(identifier.trim().toUpperCase())?.[1];
+  if (businessIdentificationNumber !== vatNumber) {
+    throw new UserFacingError(
+      `Company identifier with scheme ${scheme} must start with the company VAT number, which is its W-IdNr. Expected: ${vatNumber}, got: ${identifier}`
+    );
+  }
+}
+
 export const germany: CountryIdentifierRules = {
   country: "DE",
   vatNumber: validateGermanVatNumber,
   schemes: {
     "0204": validateLeitwegId,
     "9958": rejectDeprecatedLeitwegIdScheme,
+    [GEBA_SCHEME]: validateGeba,
+  },
+  companyIdentifiers: {
+    schemes: [GEBA_SCHEME],
+    validate: validateGebaBelongsToCompany,
   },
 };
