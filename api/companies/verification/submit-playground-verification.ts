@@ -24,7 +24,7 @@ type SubmitPlaygroundVerificationContext = Context<Record<string, never>, string
 
 const _submitPlaygroundVerification = server.post(
     "/companies/verification/:companyVerificationLogId/submit-playground-verification",
-    describeRoute({ hide: true }),
+    describeRoute({ hide: true, security: [] }),
     zodValidator("param", submitPlaygroundVerificationParamSchema),
     zodValidator("json", submitPlaygroundVerificationJsonBodySchema),
     _submitPlaygroundVerificationImplementation,

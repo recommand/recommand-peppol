@@ -117,7 +117,7 @@ async function findTransmittedDocument(
 
 server.post(
   "/arratech",
-  describeRoute({ hide: true }),
+  describeRoute({ hide: true, security: [] }),
   async (c) => {
     console.log("Received Arratech webhook");
     const webhookSecret = process.env.ARRATECH_WEBHOOK_SECRET;

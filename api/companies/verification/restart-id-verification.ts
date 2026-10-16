@@ -18,7 +18,7 @@ type RestartIdVerificationContext = Context<Record<string, never>, string, { in:
 
 const _restartIdVerification = server.post(
     "/companies/verification/:companyVerificationLogId/restart-id-verification",
-    describeRoute({ hide: true }),
+    describeRoute({ hide: true, security: [] }),
     zodValidator("param", restartIdVerificationParamSchema),
     _restartIdVerificationImplementation,
 );

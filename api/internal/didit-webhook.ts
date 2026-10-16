@@ -18,7 +18,7 @@ const server = new Server();
 
 server.post(
   "/didit",
-  describeRoute({ hide: true }),
+  describeRoute({ hide: true, security: [] }),
   async (c) => {
     console.log("Received Didit webhook");
     const webhookSecret = process.env.DIDIT_WEBHOOK_SECRET_KEY;
