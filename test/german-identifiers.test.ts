@@ -12,7 +12,9 @@ const { validateIdentifierAgainstCompany } = await import("../data/company-ident
 // addresses a public authority's invoice reception and is only ever entered
 // explicitly; its predecessor 9958 is no longer allowed on the network. GLN (0088)
 // and IBAN (9918) are the fallbacks the German identifier guideline names for a
-// business without a VAT number.
+// business without a VAT number. A GEBA (0246), the address the guideline recommends
+// to private businesses, is the W-IdNr, which has the value of the VAT number, and is
+// added explicitly.
 
 describe("German identifier validation", () => {
   it("accepts Leitweg-IDs with valid check digits, with and without a fine address", () => {
@@ -113,5 +115,64 @@ describe("German company defaults", () => {
     expect(() => validateIdentifierAgainstCompany({ scheme: "9930", identifier: "DE136695976", company: { ...company, vatNumber: null }, teamExtension })).toThrow(
       /requires a company VAT number/
     );
+  });
+});
+
+describe("German Electronic Business Address (0246)", () => {
+  it("accepts the W-IdNr with an optional distinctive feature and sub-address, in either case", () => {
+    for (const geba of ["DE136695976", "DE136695976-00001", "DE136695976.ABT1", "DE136695976-00002.EINKAUF1", "de811569869-00001.x"]) {
+      expect(() => validateIdentifier("0246", geba), geba).not.toThrow();
+    }
+  });
+
+  it("refuses other shapes", () => {
+    for (const geba of [
+      "136695976",            // no DE
+      "DE13669597",           // eight digits
+      "DE136695976-0001",     // a four digit distinctive feature
+      "DE136695976.",         // an empty sub-address
+      "DE136695976.ABCDEFGHI", // a nine character sub-address
+      "DE136695976_00001",    // another separator
+      "DE136695976.ABT1-00001", // the parts in the wrong order
+      "ATU37866403",          // another country's number
+    ]) {
+      expect(() => validateIdentifier("0246", geba), geba).toThrow(/GEBA must be the W-IdNr/);
+    }
+  });
+
+  it("refuses a W-IdNr with a wrong check digit, and a placeholder", () => {
+    expect(() => validateIdentifier("0246", "DE136695977-00001")).toThrow(/invalid check digit/);
+    expect(() => validateIdentifier("0246", "DE000000000")).toThrow(/is a placeholder/);
+  });
+
+  it("only takes the company's own W-IdNr, with any distinctive feature or sub-address", () => {
+    const company = { smpProvider: "recommand-smp1" as const, enterpriseNumber: "HRB12345", vatNumber: "DE136695976" };
+    const teamExtension = { isPlayground: false, useTestNetwork: false };
+    for (const identifier of ["de136695976", "DE136695976-00001", "de136695976-00001.abt1"]) {
+      expect(() => validateIdentifierAgainstCompany({ scheme: "0246", identifier, company, teamExtension }), identifier).not.toThrow();
+    }
+    expect(() => validateIdentifierAgainstCompany({ scheme: "0246", identifier: "DE811569869-00001", company, teamExtension })).toThrow(
+      /must start with the company VAT number/
+    );
+    expect(() =>
+      validateIdentifierAgainstCompany({ scheme: "0246", identifier: "DE136695976", company: { ...company, vatNumber: null }, teamExtension })
+    ).toThrow(/requires a company VAT number/);
+  });
+
+  it("is not created by default", () => {
+    const plan = planCompanyCountryChange({
+      oldCompany: {
+        country: "BE", enterpriseNumber: "0123456749", vatNumber: "BE0123456749", enterpriseNumberScheme: "0208",
+        accessPointProvider: "recommand-ap1", smpProvider: "recommand-smp1",
+      },
+      newCountry: "DE",
+      enterpriseNumber: "HRB12345",
+      vatNumber: "DE136695976",
+      identifiers: [],
+      teamExtension: { isPlayground: false, useTestNetwork: false },
+      verificationStarted: false,
+      networkRegistered: false,
+    });
+    expect(plan.createIdentifiers).toEqual([{ scheme: "9930", identifier: "de136695976" }]);
   });
 });
