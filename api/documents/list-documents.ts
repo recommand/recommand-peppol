@@ -12,6 +12,7 @@ import {
   booleanStringSchema,
   describeErrorResponse,
   describeSuccessResponseWithZod,
+  paginationResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import {
@@ -20,7 +21,6 @@ import {
   transmittedDocumentResponse,
   transmittedDocumentTypeSchema,
 } from "./shared";
-import { paginationResponse } from "@peppol/api/shared";
 import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions";
 import { withDocumentDeliveries } from "@peppol/data/deliveries";
 

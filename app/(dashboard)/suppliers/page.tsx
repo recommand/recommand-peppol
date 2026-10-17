@@ -93,7 +93,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [labels, setLabels] = useState<LabelType[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
@@ -146,19 +146,19 @@ export default function Page() {
       if (!json.success) {
         toast.error(t`Failed to load suppliers`);
         setSuppliers([]);
-        setTotal(0);
+        setTotalPages(0);
       } else {
         setSuppliers(json.suppliers.map((supplier) => ({
           ...supplier,
           peppolAddresses: supplier.peppolAddresses || [],
         })));
-        setTotal(json.pagination?.total || 0);
+        setTotalPages(json.pagination?.totalPages || 0);
       }
     } catch (error) {
       console.error("Error fetching suppliers:", error);
       toast.error(t`Failed to load suppliers`);
       setSuppliers([]);
-      setTotal(0);
+      setTotalPages(0);
     } finally {
       setIsLoading(false);
     }
@@ -514,7 +514,7 @@ export default function Page() {
     },
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange,
-    pageCount: Math.ceil(total / limit),
+    pageCount: totalPages,
     manualPagination: true,
     manualFiltering: true,
   });
