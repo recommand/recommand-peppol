@@ -141,6 +141,26 @@ export async function getSendingCompanyIdentifier(
   return chooseSendingCompanyIdentifier(company, await getCompanyIdentifiers(company.id), recipientAddress);
 }
 
+type SenderCandidate = Pick<CompanyIdentifier, "scheme" | "identifier">;
+
+/**
+ * Identifiers a company can add next to the one it has always sent from, each with the
+ * identifier it gives way to as the sender. Adding one leaves the address the company
+ * sends from as it was, even where it sorts first; without the other it is sent from as
+ * any identifier would be.
+ */
+const SENDER_ADDITIONS: { addition: (identifier: SenderCandidate) => boolean; givesWayTo: (identifier: SenderCandidate) => boolean }[] = [
+  // A GEBA (0246) gives way to the German VAT number (9930).
+  {
+    addition: (identifier) => identifier.scheme === "0246",
+    givesWayTo: (identifier) => identifier.scheme === "9930",
+  },
+];
+
+function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly SenderCandidate[]): boolean {
+  return SENDER_ADDITIONS.some((rule) => rule.addition(candidate) && identifiers.some(rule.givesWayTo));
+}
+
 /**
  * The choice getSendingCompanyIdentifier makes, given the company's identifiers in
  * the order getCompanyIdentifiers lists them. Separate so the choice can be asserted
@@ -154,6 +174,8 @@ export async function getSendingCompanyIdentifier(
  * - Otherwise the lowest scheme, as before, except that a Leitweg-ID is passed over
  *   while the company has any other identifier: it names an authority's invoice
  *   reception, which is never the address a supplier sends from.
+ * - An identifier a company adds next to the one it sends from, such as a GEBA
+ *   beside the German VAT number, is passed over as well; see SENDER_ADDITIONS.
  */
 export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier, "scheme" | "identifier">>(
   company: Pick<Company, "accessPointProvider">,
@@ -185,7 +207,10 @@ export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier,
     }
   }
 
-  return identifiers.find((identifier) => identifier.scheme !== LEITWEG_ID_SCHEME) ?? identifiers[0]!;
+  return (
+    identifiers.find((identifier) => identifier.scheme !== LEITWEG_ID_SCHEME && !givesWayAsSender(identifier, identifiers)) ??
+    identifiers[0]!
+  );
 }
 
 /**
