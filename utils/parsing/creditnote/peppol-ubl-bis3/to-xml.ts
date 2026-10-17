@@ -62,6 +62,8 @@ export function prebuildCreditNoteUBL({
     purchaseOrderReference: creditNote.purchaseOrderReference,
     documentNumber: creditNote.creditNoteNumber,
     customerAddress,
+    sellerCountry: creditNote.seller.country,
+    buyerCountry: creditNote.buyer.country,
   });
   return {
     CreditNote: {

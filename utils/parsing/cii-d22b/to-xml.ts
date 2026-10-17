@@ -418,6 +418,8 @@ export function billingDocumentToCII({
     purchaseOrderReference: document.purchaseOrderReference,
     documentNumber,
     customerAddress,
+    sellerCountry: document.seller.country,
+    buyerCountry: document.buyer.country,
   });
 
   return builder.build({
