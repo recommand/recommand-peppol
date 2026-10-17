@@ -159,9 +159,6 @@ export function parseBillingDocumentFromCII(xml: string) {
   const contractReference = getNullableTextContent(
     agreement.ContractReferencedDocument?.IssuerAssignedID
   );
-  const projectReference = getNullableTextContent(
-    agreement.SpecifiedProcuringProject?.ID
-  );
 
   return {
     documentNumber: getTextContent(invoice.ExchangedDocument?.ID),
@@ -180,7 +177,6 @@ export function parseBillingDocumentFromCII(xml: string) {
       delivery?.DespatchAdviceReferencedDocument?.IssuerAssignedID
     ),
     ...(contractReference && { contractReference }),
-    ...(projectReference && { projectReference }),
     billingPeriod: billingPeriod(settlement.BillingSpecifiedPeriod),
     invoiceReferences: (settlement.InvoiceReferencedDocument || []).map((reference: any) => ({
       id: getTextContent(reference.IssuerAssignedID),

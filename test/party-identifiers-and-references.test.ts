@@ -9,10 +9,9 @@ import { ciiD22bEn16931Format } from "../utils/type-repository/document-formats/
 import type { AnyDocumentFormat } from "../utils/type-repository/document-formats/types";
 import { validateXmlDocument } from "../data/validation/client";
 
-// The seller identifier (BT-29), the buyer identifier (BT-46), the contract
-// reference (BT-12) and the project reference (BT-11), as some public buyers
-// require them: a supplier number the buyer assigned, the code of the
-// contracting authority, a contract number and a budget reference.
+// The seller identifier (BT-29), the buyer identifier (BT-46) and the contract
+// reference (BT-12), as some public buyers require them: a supplier number the
+// buyer assigned, the code of the contracting authority and a contract number.
 
 const context = {
   senderAddress: "0208:1234567894",
@@ -26,7 +25,6 @@ const sellerIdentifiers = [
 ];
 const buyerIdentifiers = [{ identifier: "0123456749", scheme: "0208" }];
 const contractReference = "20SYMV006467658";
-const projectReference = "1|602ΚΚ2Π-ΨΞ4";
 
 const parties = {
   seller: { name: "Seller BV", street: "Street 1", city: "Ghent", postalZone: "9000", country: "BE", vatNumber: "BE1234567894", partyIdentifiers: sellerIdentifiers },
@@ -50,7 +48,6 @@ const invoice = (overrides: Record<string, unknown> = {}): Invoice =>
     dueDate: "2026-05-01",
     ...parties,
     contractReference,
-    projectReference,
     paymentMeans: [{ paymentMethod: "credit_transfer", reference: "INV-2026-001", iban: "BE68539007547034" }],
     lines,
     ...overrides,
@@ -63,7 +60,6 @@ const creditNote = (overrides: Record<string, unknown> = {}): CreditNote =>
     invoiceReferences: [{ id: "INV-2026-001", issueDate: "2026-04-01" }],
     ...parties,
     contractReference,
-    projectReference,
     attachments: [{ id: "ATT-1", filename: "timesheet.csv", mimeCode: "text/csv", embeddedDocument: "SGVsbG8=" }],
     lines,
     ...overrides,
@@ -84,7 +80,7 @@ const cases: { title: string; format: AnyDocumentFormat; document: () => Invoice
   { title: "CII credit note", format: ciiD22bEn16931Format, document: creditNote },
 ];
 
-describe("party identifiers and contract and project references", () => {
+describe("party identifiers and the contract reference", () => {
   for (const { title, format, document } of cases) {
     it(`are written into a ${title}, read back and pass validation`, async () => {
       const xml = encode(format, document());
@@ -93,7 +89,6 @@ describe("party identifiers and contract and project references", () => {
       expect(parsed.seller.partyIdentifiers).toEqual(sellerIdentifiers);
       expect(parsed.buyer.partyIdentifiers).toEqual(buyerIdentifiers);
       expect(parsed.contractReference).toBe(contractReference);
-      expect(parsed.projectReference).toBe(projectReference);
 
       const validation = await validateXmlDocument(xml, { profile: format.validationProfile });
       expect(validation.errors).toEqual([]);
@@ -104,7 +99,7 @@ describe("party identifiers and contract and project references", () => {
   it("are placed in the UBL invoice sequence", () => {
     const xml = encode(peppolUblBis3InvoiceFormat, invoice());
     expect(xml).toMatch(
-      /<\/cbc:BuyerReference>\s*<cac:ContractDocumentReference>\s*<cbc:ID>20SYMV006467658<\/cbc:ID>\s*<\/cac:ContractDocumentReference>\s*<cac:ProjectReference>\s*<cbc:ID>1\|602ΚΚ2Π-ΨΞ4<\/cbc:ID>\s*<\/cac:ProjectReference>\s*<cac:AccountingSupplierParty>/
+      /<\/cbc:BuyerReference>\s*<cac:ContractDocumentReference>\s*<cbc:ID>20SYMV006467658<\/cbc:ID>\s*<\/cac:ContractDocumentReference>\s*<cac:AccountingSupplierParty>/
     );
     expect(xml).toMatch(
       /<cac:AccountingSupplierParty>\s*<cac:Party>\s*<cbc:EndpointID schemeID="0208">1234567894<\/cbc:EndpointID>\s*<cac:PartyIdentification>\s*<cbc:ID>50012345<\/cbc:ID>\s*<\/cac:PartyIdentification>\s*<cac:PartyIdentification>\s*<cbc:ID schemeID="0088">5790000435975<\/cbc:ID>\s*<\/cac:PartyIdentification>\s*<cac:PartyName>/
@@ -114,43 +109,11 @@ describe("party identifiers and contract and project references", () => {
     );
   });
 
-  it("puts a credit note's project reference in a document reference typed 50 in UBL", () => {
+  it("are placed in the UBL credit note sequence", () => {
     const xml = encode(peppolUblBis3CreditnoteFormat, creditNote());
-    expect(xml).not.toContain("ProjectReference");
     expect(xml).toMatch(
-      /<cac:ContractDocumentReference>\s*<cbc:ID>20SYMV006467658<\/cbc:ID>\s*<\/cac:ContractDocumentReference>\s*<cac:AdditionalDocumentReference>\s*<cbc:ID>1\|602ΚΚ2Π-ΨΞ4<\/cbc:ID>\s*<cbc:DocumentTypeCode>50<\/cbc:DocumentTypeCode>\s*<\/cac:AdditionalDocumentReference>\s*<cac:AdditionalDocumentReference>\s*<cbc:ID>ATT-1<\/cbc:ID>/
+      /<\/cac:BillingReference>\s*<cac:ContractDocumentReference>\s*<cbc:ID>20SYMV006467658<\/cbc:ID>\s*<\/cac:ContractDocumentReference>\s*<cac:AdditionalDocumentReference>\s*<cbc:ID>ATT-1<\/cbc:ID>/
     );
-    const parsed = decode(peppolUblBis3CreditnoteFormat, xml);
-    expect(parsed.attachments?.map((attachment) => attachment.id)).toEqual(["ATT-1"]);
-  });
-
-  describe("on a received UBL credit note", () => {
-    const withDocumentReferences = (references: string) => {
-      const xml = encode(peppolUblBis3CreditnoteFormat, creditNote({ projectReference: undefined }));
-      return xml.replace("<cac:AccountingSupplierParty>", `${references}<cac:AccountingSupplierParty>`);
-    };
-    const reference = (id: string, file?: string) =>
-      `<cac:AdditionalDocumentReference><cbc:ID>${id}</cbc:ID><cbc:DocumentTypeCode>50</cbc:DocumentTypeCode>${
-        file
-          ? `<cac:Attachment><cbc:EmbeddedDocumentBinaryObject mimeCode="text/csv" filename="${file}">SGVsbG8=</cbc:EmbeddedDocumentBinaryObject></cac:Attachment>`
-          : ""
-      }</cac:AdditionalDocumentReference>`;
-
-    it("keeps a reference typed 50 that carries a file as an attachment", () => {
-      const parsed = decode(peppolUblBis3CreditnoteFormat, withDocumentReferences(reference("PRJ-FILE", "project.csv")));
-      expect("projectReference" in parsed).toBe(false);
-      expect(parsed.attachments?.map((attachment) => attachment.id)).toEqual(["ATT-1", "PRJ-FILE"]);
-      expect(parsed.attachments?.[1]).toMatchObject({ filename: "project.csv", mimeCode: "text/csv", embeddedDocument: "SGVsbG8=" });
-    });
-
-    it("reads the first reference typed 50 without a file as the project reference", () => {
-      const parsed = decode(
-        peppolUblBis3CreditnoteFormat,
-        withDocumentReferences(reference("PRJ-FILE", "project.csv") + reference("PRJ-1") + reference("PRJ-2"))
-      );
-      expect(parsed.projectReference).toBe("PRJ-1");
-      expect(parsed.attachments?.map((attachment) => attachment.id)).toEqual(["ATT-1", "PRJ-FILE", "PRJ-2"]);
-    });
   });
 
   it("are written to the CII trade parties and header agreement", () => {
@@ -164,9 +127,6 @@ describe("party identifiers and contract and project references", () => {
     expect(xml).toMatch(
       /<ram:ContractReferencedDocument>\s*<ram:IssuerAssignedID>20SYMV006467658<\/ram:IssuerAssignedID>\s*<\/ram:ContractReferencedDocument>/
     );
-    expect(xml).toMatch(
-      /<ram:SpecifiedProcuringProject>\s*<ram:ID>1\|602ΚΚ2Π-ΨΞ4<\/ram:ID>\s*<ram:Name>Project reference<\/ram:Name>\s*<\/ram:SpecifiedProcuringProject>\s*<\/ram:ApplicableHeaderTradeAgreement>/
-    );
   });
 
   it("are left out when not given", () => {
@@ -175,7 +135,6 @@ describe("party identifiers and contract and project references", () => {
       seller: withoutParty(parties.seller),
       buyer: withoutParty(parties.buyer),
       contractReference: undefined,
-      projectReference: undefined,
     };
     for (const [format, document] of [
       [peppolUblBis3InvoiceFormat, invoice(plain)],
@@ -183,14 +142,13 @@ describe("party identifiers and contract and project references", () => {
       [ciiD22bEn16931Format, invoice(plain)],
     ] as const) {
       const xml = encode(format, document);
-      for (const element of ["PartyIdentification", "ContractDocumentReference", "ProjectReference", "DocumentTypeCode>50", "ContractReferencedDocument", "SpecifiedProcuringProject", "GlobalID"]) {
+      for (const element of ["PartyIdentification", "ContractDocumentReference", "ContractReferencedDocument", "GlobalID"]) {
         expect(xml, `${format.key} ${element}`).not.toContain(element);
       }
       const parsed = decode(format, xml);
       expect(parsed.seller.partyIdentifiers, format.key).toBeUndefined();
       expect(parsed.buyer.partyIdentifiers, format.key).toBeUndefined();
       expect("contractReference" in parsed, format.key).toBe(false);
-      expect("projectReference" in parsed, format.key).toBe(false);
     }
   });
 
@@ -199,12 +157,10 @@ describe("party identifiers and contract and project references", () => {
       invoiceNumber: "INV-2026-002",
       buyer: parties.buyer,
       contractReference,
-      projectReference,
       lines,
     });
     expect(parsed.buyer.partyIdentifiers).toEqual(buyerIdentifiers);
     expect(parsed.contractReference).toBe(contractReference);
-    expect(parsed.projectReference).toBe(projectReference);
   });
 
   it("refuses more than one buyer identifier when validation is enforced", () => {

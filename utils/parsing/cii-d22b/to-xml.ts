@@ -473,13 +473,6 @@ export function billingDocumentToCII({
           ...(document.attachments && {
             "ram:AdditionalReferencedDocument": document.attachments.map(additionalDocumentReference),
           }),
-          ...(document.projectReference && {
-            "ram:SpecifiedProcuringProject": {
-              "ram:ID": document.projectReference,
-              // The CII schema requires a project name, which EN 16931 does not model.
-              "ram:Name": "Project reference",
-            },
-          }),
         },
         "ram:ApplicableHeaderTradeDelivery": {
           ...(shipToTradeParty && { "ram:ShipToTradeParty": shipToTradeParty }),

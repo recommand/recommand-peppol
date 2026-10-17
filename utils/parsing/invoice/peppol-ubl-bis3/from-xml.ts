@@ -42,7 +42,6 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
   const buyerReference = getNullableTextContent(invoice.BuyerReference);
   const despatchReference = getNullableTextContent(invoice.DespatchDocumentReference?.ID);
   const contractReference = getNullableTextContent(invoice.ContractDocumentReference?.ID);
-  const projectReference = getNullableTextContent(invoice.ProjectReference?.ID);
   const billingPeriod = parseUblBillingPeriod(invoice.InvoicePeriod);
 
   // Extract attachments
@@ -246,7 +245,6 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     buyerReference,
     despatchReference,
     ...(contractReference && { contractReference }),
-    ...(projectReference && { projectReference }),
     billingPeriod,
     attachments: attachments.length > 0 ? attachments : [],
     seller,

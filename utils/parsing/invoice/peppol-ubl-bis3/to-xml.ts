@@ -125,11 +125,6 @@ export function prebuildInvoiceUBL({
           })
         ),
       }),
-      ...(invoice.projectReference && {
-        "cac:ProjectReference": {
-          "cbc:ID": invoice.projectReference,
-        },
-      }),
       "cac:AccountingSupplierParty": {
         "cac:Party": {
           "cbc:EndpointID": {

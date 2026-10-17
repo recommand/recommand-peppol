@@ -109,39 +109,29 @@ export function prebuildCreditNoteUBL({
           "cbc:ID": creditNote.contractReference,
         },
       }),
-      ...((creditNote.projectReference || creditNote.attachments) && {
-        "cac:AdditionalDocumentReference": [
-          // UBL 2.1 credit notes have no ProjectReference: Peppol BIS Billing 3.0
-          // carries the project reference (BT-11) as a document reference typed 50.
-          ...(creditNote.projectReference
-            ? [{
-                "cbc:ID": creditNote.projectReference,
-                "cbc:DocumentTypeCode": "50",
-              }]
-            : []),
-          ...(creditNote.attachments ?? []).map(
-            (attachment) => ({
-              "cbc:ID": attachment.id,
-              ...(attachment.description && {"cbc:DocumentDescription": attachment.description}),
-              ...((attachment.embeddedDocument || attachment.url) && {
-                "cac:Attachment": {
-                  ...(attachment.embeddedDocument && {
-                    "cbc:EmbeddedDocumentBinaryObject": {
-                      "@_mimeCode": attachment.mimeCode,
-                      "@_filename": attachment.filename,
-                      "#text": attachment.embeddedDocument,
-                    },
-                  }),
-                  ...(attachment.url && {
-                    "cac:ExternalReference": {
-                      "cbc:URI": attachment.url,
-                    },
-                  }),
-                },
-              }),
-            })
-          ),
-        ],
+      ...(creditNote.attachments && {
+        "cac:AdditionalDocumentReference": creditNote.attachments.map(
+          (attachment) => ({
+            "cbc:ID": attachment.id,
+            ...(attachment.description && {"cbc:DocumentDescription": attachment.description}),
+            ...((attachment.embeddedDocument || attachment.url) && {
+              "cac:Attachment": {
+                ...(attachment.embeddedDocument && {
+                  "cbc:EmbeddedDocumentBinaryObject": {
+                    "@_mimeCode": attachment.mimeCode,
+                    "@_filename": attachment.filename,
+                    "#text": attachment.embeddedDocument,
+                  },
+                }),
+                ...(attachment.url && {
+                  "cac:ExternalReference": {
+                    "cbc:URI": attachment.url,
+                  },
+                }),
+              },
+            }),
+          })
+        ),
       }),
       "cac:AccountingSupplierParty": {
         "cac:Party": {

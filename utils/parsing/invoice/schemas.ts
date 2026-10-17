@@ -638,11 +638,6 @@ export const baseInvoiceSchema = z.object({
     description:
       "The identifier of the contract the invoice is issued under (BT-12).",
   }),
-  projectReference: z.string().nullish().openapi({
-    example: "PRJ-2024-003",
-    description:
-      "The identifier of the project the invoice refers to (BT-11).",
-  }),
   billingPeriod: periodSchema.nullish().openapi({
     description:
       "The period the document bills for (BG-14), for example the month of a subscription.",

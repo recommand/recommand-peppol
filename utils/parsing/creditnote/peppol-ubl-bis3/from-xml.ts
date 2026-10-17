@@ -42,18 +42,6 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   const buyerReference = getNullableTextContent(creditNote.BuyerReference);
   const despatchReference = getNullableTextContent(creditNote.DespatchDocumentReference?.ID);
   const contractReference = getNullableTextContent(creditNote.ContractDocumentReference?.ID);
-  // Peppol BIS Billing 3.0 carries a credit note's project reference (BT-11) as a
-  // document reference typed 50 without a file, since UBL 2.1 credit notes have no
-  // ProjectReference. Only the first such reference is BT-11; any other reference,
-  // including one typed 50 that carries a file, stays an attachment.
-  const documentReferences: any[] = creditNote.AdditionalDocumentReference || [];
-  const projectReferenceIndex = documentReferences.findIndex(
-    (ref: any) =>
-      getTextContent(ref.DocumentTypeCode) === "50" && !ref.Attachment && getTextContent(ref.ID) !== ""
-  );
-  const projectReference = projectReferenceIndex === -1
-    ? null
-    : getNullableTextContent(documentReferences[projectReferenceIndex].ID);
   const billingPeriod = parseUblBillingPeriod(creditNote.InvoicePeriod);
   const invoiceReferences = (creditNote.BillingReference || []).map((reference: any) => ({
     id: getTextContent(reference.InvoiceDocumentReference?.ID),
@@ -61,7 +49,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   }));
 
   // Extract attachments
-  const attachments = documentReferences.filter((_: any, index: number) => index !== projectReferenceIndex).map((ref: any) => ({
+  const attachments = (creditNote.AdditionalDocumentReference || []).map((ref: any) => ({
     id: getTextContent(ref.ID),
     description: getTextContent(ref.DocumentDescription),
     mimeCode: getTextContent(ref.Attachment?.EmbeddedDocumentBinaryObject?.["@_mimeCode"]),
@@ -266,7 +254,6 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     buyerReference,
     despatchReference,
     ...(contractReference && { contractReference }),
-    ...(projectReference && { projectReference }),
     billingPeriod,
     invoiceReferences,
     attachments: attachments.length > 0 ? attachments : [],
