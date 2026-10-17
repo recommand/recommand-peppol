@@ -50,6 +50,22 @@ describe("the address a company sends under", () => {
     expect(chooseSendingCompanyIdentifier(otherCompany, sorted(belgian))).toBe(belgian);
   });
 
+  it("keeps a Belgian company sending from its enterprise number beside its VAT number", () => {
+    const enterpriseNumber = { scheme: "0208", identifier: "0123456749" };
+    const vat = { scheme: "9925", identifier: "be0123456749" };
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, enterpriseNumber))).toBe(enterpriseNumber);
+  });
+
+  it("keeps a Luxembourg company sending from its VAT number when it adds its matricule", () => {
+    const vat = { scheme: "9938", identifier: "lu15027442" };
+    const matricule = { scheme: "9938", identifier: "20042228800" };
+    const gln = { scheme: "0088", identifier: "4000001000005" };
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, matricule))).toBe(vat);
+    // Without a VAT number the matricule is the address, and a lower scheme still comes first.
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(matricule))).toBe(matricule);
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, matricule, gln))).toBe(gln);
+  });
+
   it("refuses a company without identifiers the same way for every access point", () => {
     for (const company of [frenchCompany, otherCompany]) {
       expect(() => chooseSendingCompanyIdentifier(company, [])).toThrow(

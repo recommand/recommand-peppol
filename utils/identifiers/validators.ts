@@ -29,7 +29,7 @@ export type CountryIdentifierRules = {
    */
   companyIdentifiers?: {
     schemes: string[];
-    validate: (scheme: string, identifier: string, company: { enterpriseNumber: string | null; vatNumber: string | null }) => void;
+    validate: (scheme: string, identifier: string, company: { enterpriseNumber: string | null; vatNumber: string | null; country?: string | null }) => void;
   };
 };
 
