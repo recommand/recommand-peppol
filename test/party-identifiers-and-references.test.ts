@@ -124,6 +124,35 @@ describe("party identifiers and contract and project references", () => {
     expect(parsed.attachments?.map((attachment) => attachment.id)).toEqual(["ATT-1"]);
   });
 
+  describe("on a received UBL credit note", () => {
+    const withDocumentReferences = (references: string) => {
+      const xml = encode(peppolUblBis3CreditnoteFormat, creditNote({ projectReference: undefined }));
+      return xml.replace("<cac:AccountingSupplierParty>", `${references}<cac:AccountingSupplierParty>`);
+    };
+    const reference = (id: string, file?: string) =>
+      `<cac:AdditionalDocumentReference><cbc:ID>${id}</cbc:ID><cbc:DocumentTypeCode>50</cbc:DocumentTypeCode>${
+        file
+          ? `<cac:Attachment><cbc:EmbeddedDocumentBinaryObject mimeCode="text/csv" filename="${file}">SGVsbG8=</cbc:EmbeddedDocumentBinaryObject></cac:Attachment>`
+          : ""
+      }</cac:AdditionalDocumentReference>`;
+
+    it("keeps a reference typed 50 that carries a file as an attachment", () => {
+      const parsed = decode(peppolUblBis3CreditnoteFormat, withDocumentReferences(reference("PRJ-FILE", "project.csv")));
+      expect("projectReference" in parsed).toBe(false);
+      expect(parsed.attachments?.map((attachment) => attachment.id)).toEqual(["ATT-1", "PRJ-FILE"]);
+      expect(parsed.attachments?.[1]).toMatchObject({ filename: "project.csv", mimeCode: "text/csv", embeddedDocument: "SGVsbG8=" });
+    });
+
+    it("reads the first reference typed 50 without a file as the project reference", () => {
+      const parsed = decode(
+        peppolUblBis3CreditnoteFormat,
+        withDocumentReferences(reference("PRJ-FILE", "project.csv") + reference("PRJ-1") + reference("PRJ-2"))
+      );
+      expect(parsed.projectReference).toBe("PRJ-1");
+      expect(parsed.attachments?.map((attachment) => attachment.id)).toEqual(["ATT-1", "PRJ-FILE", "PRJ-2"]);
+    });
+  });
+
   it("are written to the CII trade parties and header agreement", () => {
     const xml = encode(ciiD22bEn16931Format, invoice());
     expect(xml).toMatch(
