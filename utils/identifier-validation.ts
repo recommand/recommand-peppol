@@ -214,6 +214,22 @@ export function normalizeIdentifierValue(scheme: string, identifier: string): st
   return identifier.replace(optionalPrefixes[scheme] ?? /^$/, "");
 }
 
+/** Whether a scheme's identifiers can be written with a prefix the stored value goes without. */
+export function hasOptionalPrefix(scheme: string): boolean {
+  return scheme in optionalPrefixes;
+}
+
+/**
+ * Whether two values under a scheme are the same identifier, as stored and published:
+ * compared without case and without a prefix the scheme does not carry, so a stored
+ * el094014201 and an entered EL094014201 under 9933 are one identifier.
+ */
+export function sameIdentifierValue(scheme: string, left: string, right: string): boolean {
+  return (
+    normalizeIdentifierValue(scheme, left.toLowerCase().trim()) === normalizeIdentifierValue(scheme, right.toLowerCase().trim())
+  );
+}
+
 /** A country's name as it reads in a sentence: "the Netherlands", "Belgium". */
 function countryInProse(code: string): string {
   const name = getCountryName(code);
@@ -277,7 +293,9 @@ export function validateIdentifierBelongsToCompany({
   if (cleanedIdentifier !== companyNumber) {
     const foreign = company.country
       ? company.country.toUpperCase() !== national.country
-      : national.number === "vatNumber" && !getVatNumberPrefixes(national.country).some((prefix) => companyNumber.startsWith(prefix));
+      : national.number === "vatNumber" &&
+        // Before normalisation, which takes the prefix off a Greek VAT number under 9933.
+        !getVatNumberPrefixes(national.country).some((prefix) => cleanVatNumber(company.vatNumber)?.startsWith(prefix));
     const country = countryInProse(national.country);
     throw new UserFacingError(
       `Company identifier with scheme ${scheme} must match the company ${label}. Expected: ${companyNumber}, got: ${cleanedIdentifier}` +

@@ -1,11 +1,11 @@
 import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
-import { isSiren, normalizeIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
+import { hasOptionalPrefix, isSiren, normalizeIdentifierValue, sameIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
 import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { db } from "@recommand/db";
-import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
+import { eq, and, asc, ne, or, isNull, like } from "drizzle-orm";
 import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";
 import { getTeamExtensionAndCompanyByCompanyId } from "./teams";
 import type { Company } from "./companies";
@@ -364,8 +364,9 @@ export async function updateCompanyIdentifier({
     );
   }
 
-  // Return if there is no change (taking lowercase into account)
-  if(oldIdentifier.scheme === cleanedScheme && oldIdentifier.identifier === cleanedIdentifierValue){
+  // Return if there is no change (taking lowercase and an optional prefix into account,
+  // so repeating the stored identifier in another accepted form changes nothing)
+  if(oldIdentifier.scheme === cleanedScheme && sameIdentifierValue(cleanedScheme, oldIdentifier.identifier, cleanedIdentifierValue)){
     return oldIdentifier;
   }
 
@@ -444,9 +445,21 @@ export async function canUpsertCompanyIdentifier(scheme: string, identifier: str
   }
   const isPlaygroundTeam = teamInfo.teamExtension?.isPlayground ?? false;
   const useTestNetwork = teamInfo.teamExtension?.useTestNetwork ?? false;
+  const cleanedScheme = scheme.toLowerCase().trim();
+  const cleanedIdentifier = identifier.toLowerCase().trim();
+  // Under a scheme with an optional prefix a stored value may still carry it (it predates
+  // normalisation, or is the other's form), so every stored value ending in the
+  // normalised one is a candidate and the comparison is made without the prefix.
+  const normalizedIdentifier = normalizeIdentifierValue(cleanedScheme, cleanedIdentifier);
+  const identifierCondition = hasOptionalPrefix(cleanedScheme)
+    ? or(
+        eq(companyIdentifiers.identifier, cleanedIdentifier),
+        like(companyIdentifiers.identifier, "%" + normalizedIdentifier.replace(/[\\%_]/g, "\\$&")),
+      )
+    : eq(companyIdentifiers.identifier, cleanedIdentifier);
   // Look for collisions
   return await db
-    .select()
+    .select({ identifier: companyIdentifiers.identifier })
     .from(companyIdentifiers)
     .innerJoin(companies, eq(companies.id, companyIdentifiers.companyId))
     .leftJoin(teamExtensions, eq(companies.teamId, teamExtensions.id))
@@ -472,12 +485,12 @@ export async function canUpsertCompanyIdentifier(scheme: string, identifier: str
         ),
         // The identifier and scheme must be the same for there to be a match
         and(
-          eq(companyIdentifiers.scheme, scheme.toLowerCase().trim()),
-          eq(companyIdentifiers.identifier, identifier.toLowerCase().trim()),
+          eq(companyIdentifiers.scheme, cleanedScheme),
+          identifierCondition,
         )
       )
     )
-    .then((rows) => rows.length === 0);
+    .then((rows) => !rows.some((row) => sameIdentifierValue(cleanedScheme, row.identifier, cleanedIdentifier)));
 }
 
 /**
