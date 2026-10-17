@@ -1,6 +1,6 @@
 import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
-import { isSiren, normalizeIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
+import { derivedDefaultIdentifiers, isSiren, normalizeIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
 import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
@@ -266,6 +266,19 @@ async function writeIdentifierAgainst<T>(
   });
 }
 
+/** Whether an identifier is one the company's country derives for it by default, such as the Finnish OVT code. */
+export function isDerivedDefaultIdentifier(
+  company: Pick<Company, "country" | "enterpriseNumber" | "vatNumber">,
+  scheme: string,
+  identifier: string
+): boolean {
+  return derivedDefaultIdentifiers(company.country, company).some(
+    (derived) =>
+      cleanScheme(derived.scheme) === cleanScheme(scheme) &&
+      normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(derived.identifier)) === normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(identifier))
+  );
+}
+
 export async function createCompanyIdentifier({
   companyIdentifier,
   skipSmpRegistration,
@@ -290,6 +303,15 @@ export async function createCompanyIdentifier({
     identifier: cleanedIdentifierValue,
     companyId: companyIdentifier.companyId,
   });
+
+  // A company now gets this identifier by default, so a request that adds it as it
+  // had to before finds it there and gets it back rather than a refusal.
+  if (!migrationKey && isDerivedDefaultIdentifier(validatedAgainst, cleanedScheme, cleanedIdentifierValue)) {
+    const existing = await getCompanyIdentifierBySchemeAndValue(companyIdentifier.companyId, cleanedScheme, cleanedIdentifierValue);
+    if (existing) {
+      return existing;
+    }
+  }
 
   const canUpsert = await canUpsertCompanyIdentifier(cleanedScheme, cleanedIdentifierValue, undefined, companyIdentifier.companyId);
   if(!canUpsert){

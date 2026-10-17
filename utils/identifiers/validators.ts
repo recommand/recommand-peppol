@@ -31,6 +31,12 @@ export type CountryIdentifierRules = {
     schemes: string[];
     validate: (scheme: string, identifier: string, company: { enterpriseNumber: string | null; vatNumber: string | null }) => void;
   };
+  /**
+   * Identifiers a company of the country gets by default that are built from its
+   * numbers rather than being one of them, next to those under the country's default
+   * schemes.
+   */
+  derivedIdentifiers?: (company: { enterpriseNumber: string | null; vatNumber: string | null }) => { scheme: string; identifier: string }[];
 };
 
 /**
