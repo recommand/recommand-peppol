@@ -22,7 +22,7 @@ const createIntegrationRouteDescription = describeRoute({
     summary: "Create Integration",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created integration", z.object({ integration: integrationResponse })),
+        ...describeSuccessResponseWithZod("Successfully created integration", z.object({ integration: integrationResponse.openapi({ description: "The integration, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(500, "Failed to create integration"),
     },

@@ -32,7 +32,7 @@ const getPlaygroundRouteDescription = describeRoute({
   tags: ["Playgrounds"],
   responses: {
     ...describeSuccessResponseWithZod("Successfully retrieved playground", z.object({
-      playground: playgroundResponse,
+      playground: playgroundResponse.openapi({ description: "The team's playground settings." }),
     })),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Playground not found for this team"),
@@ -76,7 +76,7 @@ const createPlaygroundRouteDescription = describeRoute({
   tags: ["Playgrounds"],
   responses: {
     ...describeSuccessResponseWithZod("Successfully created playground", z.object({
-      playground: playgroundResponse,
+      playground: playgroundResponse.openapi({ description: "The playground team, as created." }),
     })),
     ...describeErrorResponse(400, "Invalid request data"),
     ...describeErrorResponse(401, "Unauthorized"),

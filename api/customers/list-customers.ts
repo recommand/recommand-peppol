@@ -28,7 +28,7 @@ const getCustomersRouteDescription = describeRoute({
     ...describeSuccessResponseWithZod(
       "Successfully retrieved customers",
       z.object({
-        customers: z.array(customerResponse),
+        customers: z.array(customerResponse).openapi({ description: "The customers on this page." }),
         pagination: paginationResponse,
       })
     ),

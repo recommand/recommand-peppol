@@ -19,7 +19,7 @@ const createWebhookRouteDescription = describeRoute({
     summary: "Create Webhook",
     tags: ["Webhooks"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created webhook", z.object({ webhook: webhookResponse })),
+        ...describeSuccessResponseWithZod("Successfully created webhook", z.object({ webhook: webhookResponse.openapi({ description: "The webhook, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create webhook"),

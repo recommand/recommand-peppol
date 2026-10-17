@@ -20,7 +20,7 @@ const requestMigrationRouteDescription = describeRoute({
     summary: "Migrate Company Identifier to Recommand",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("The migration completed or was stored to run at registration", z.object({ migration: participantMigrationResponse })),
+        ...describeSuccessResponseWithZod("The migration completed or was stored to run at registration", z.object({ migration: participantMigrationResponse.openapi({ description: "The migration, completed or stored to run when the identifier is registered." }) })),
         ...describeErrorResponse(400, "The key was refused, is malformed, or the identifier cannot be migrated"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),

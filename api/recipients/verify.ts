@@ -46,7 +46,7 @@ const verifyRecipientRouteDescription = describeRoute({
             supportedDocuments: z.array(supportedDocumentTypeResponse).optional().openapi({ description: "Document types supported by this participant. Includes endpoint details when includeEndpointDetails is true. Absent when the lookup failed." }),
             companyName: z.string().nullable().optional().openapi({ description: "Company name from SMP business card." }),
             countryCode: z.string().nullable().optional().openapi({ description: "Country code from SMP business card." }),
-        })),
+        }).openapi({ description: "Whether the recipient can be reached over Peppol, and what it publishes there: its SMP, the document types it supports and its business card." })),
         ...describeErrorResponse(401, "Unauthorized"),
     },
 });

@@ -75,6 +75,8 @@ const frenchReportResponseSchema = z.object({
     description:
       "Present only on a duplicate that is not a plain retry: the reference was already used for a report that differs from this request, so nothing was filed for this request. The text says what was found. A correction or a cancellation sent under the reference of the report it means to act on is the usual cause.",
   }),
+}).openapi({
+  description: "The report as accepted: the ID it is recorded under, and whether it had already been filed.",
 });
 
 const referenceGuidance = `Choose a new, unique \`reference\` for every report, including corrections and cancellations. Retrying the exact same request with the same reference is safe: it returns the report filed the first time instead of filing a second one. A correction or cancellation acts on the report identified by the data in the request, and carries the optional \`action\` field.

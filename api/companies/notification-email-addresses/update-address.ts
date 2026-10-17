@@ -19,7 +19,7 @@ const updateAddressRouteDescription = describeRoute({
     summary: "Update Company Notification Email Address",
     tags: ["Company Notification Email Addresses"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated company notification email address", z.object({ notificationEmailAddress: companyNotificationEmailAddressResponse })),
+        ...describeSuccessResponseWithZod("Successfully updated company notification email address", z.object({ notificationEmailAddress: companyNotificationEmailAddressResponse.openapi({ description: "The notification email address, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company notification email address not found"),

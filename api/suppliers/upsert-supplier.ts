@@ -21,7 +21,7 @@ const upsertSupplierRouteDescription = describeRoute({
   summary: "Upsert Supplier",
   tags: ["Suppliers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully upserted supplier", z.object({ supplier: supplierResponse })),
+    ...describeSuccessResponseWithZod("Successfully upserted supplier", z.object({ supplier: supplierResponse.openapi({ description: "The supplier, as created or updated." }) })),
     ...describeErrorResponse(400, "Invalid request data"),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to upsert supplier"),

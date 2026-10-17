@@ -143,7 +143,7 @@ const getRouteDescription = describeRoute({
   responses: {
     ...describeSuccessResponseWithZod(
       "The registration, or null when there is none",
-      z.object({ declarant: frenchReportingDeclarantResponse.nullable() }),
+      z.object({ declarant: frenchReportingDeclarantResponse.nullable().openapi({ description: "The company's French e-reporting registration, or `null` when it has not been registered yet." }) }),
     ),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Company not found"),
@@ -162,7 +162,7 @@ Calling this endpoint again updates the VAT regime and exigibility. Changing the
   responses: {
     ...describeSuccessResponseWithZod(
       "The registration as it stands after this request",
-      z.object({ declarant: frenchReportingDeclarantResponse }),
+      z.object({ declarant: frenchReportingDeclarantResponse.openapi({ description: "The registration, as it stands after this request." }) }),
     ),
     ...describeValidationErrorResponse(
       "The company is not registered in France, has no valid SIREN or SIRET as enterprise number, is not verified, or was verified without a signed French mandate.",

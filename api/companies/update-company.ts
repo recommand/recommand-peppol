@@ -23,7 +23,7 @@ const updateCompanyRouteDescription = describeRoute({
     summary: "Update Company",
     tags: ["Companies"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated company", z.object({ company: companyResponse })),
+        ...describeSuccessResponseWithZod("Successfully updated company", z.object({ company: companyResponse.openapi({ description: "The company, as updated." }) })),
         ...describeValidationErrorResponse("Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),

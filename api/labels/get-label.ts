@@ -21,7 +21,7 @@ const getLabelRouteDescription = describeRoute({
     summary: "Get Label",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved label", z.object({ label: labelResponse })),
+        ...describeSuccessResponseWithZod("Successfully retrieved label", z.object({ label: labelResponse.openapi({ description: "The label." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Label not found"),
         ...describeErrorResponse(500, "Failed to fetch label"),

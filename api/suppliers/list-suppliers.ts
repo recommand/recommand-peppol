@@ -25,7 +25,7 @@ const getSuppliersRouteDescription = describeRoute({
   tags: ["Suppliers"],
   responses: {
     ...describeSuccessResponseWithZod("Successfully retrieved suppliers", z.object({
-      suppliers: z.array(supplierResponse),
+      suppliers: z.array(supplierResponse).openapi({ description: "The suppliers on this page." }),
       pagination: paginationResponse,
     })),
     ...describeErrorResponse(401, "Unauthorized"),

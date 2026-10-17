@@ -19,7 +19,7 @@ const getSupplierRouteDescription = describeRoute({
   summary: "Get Supplier",
   tags: ["Suppliers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved supplier", z.object({ supplier: supplierResponse })),
+    ...describeSuccessResponseWithZod("Successfully retrieved supplier", z.object({ supplier: supplierResponse.openapi({ description: "The supplier." }) })),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Supplier not found"),
     ...describeErrorResponse(500, "Failed to fetch supplier"),

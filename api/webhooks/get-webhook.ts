@@ -18,7 +18,7 @@ const getWebhookRouteDescription = describeRoute({
     summary: "Get Webhook",
     tags: ["Webhooks"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved webhook", z.object({ webhook: webhookResponse })),
+        ...describeSuccessResponseWithZod("Successfully retrieved webhook", z.object({ webhook: webhookResponse.openapi({ description: "The webhook." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Webhook not found"),
         ...describeErrorResponse(500, "Failed to fetch webhook"),

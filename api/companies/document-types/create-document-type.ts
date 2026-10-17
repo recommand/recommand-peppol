@@ -20,7 +20,7 @@ const createDocumentTypeRouteDescription = describeRoute({
     summary: "Create Company Document Type",
     tags: ["Company Document Types"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created company document type", z.object({ documentType: companyDocumentTypeResponse })),
+        ...describeSuccessResponseWithZod("Successfully created company document type", z.object({ documentType: companyDocumentTypeResponse.openapi({ description: "The document type, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create company document type"),

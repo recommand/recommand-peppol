@@ -22,7 +22,7 @@ const updateLabelRouteDescription = describeRoute({
     summary: "Update Label",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated label", z.object({ label: labelResponse })),
+        ...describeSuccessResponseWithZod("Successfully updated label", z.object({ label: labelResponse.openapi({ description: "The label, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Label not found"),

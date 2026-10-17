@@ -34,7 +34,7 @@ const verifyDocumentSupportRouteDescription = describeRoute({
             serviceEndpoint: z.string().nullable().optional().openapi({ description: "The endpoint URL the document would be delivered to. Absent when the lookup failed." }),
             technicalContact: z.string().nullable().optional().openapi({ description: "Technical contact URL published by the receiving access point. Absent when the lookup failed." }),
             certificateExpiry: z.string().nullable().optional().openapi({ description: "Expiry date of the receiving access point's certificate (ISO 8601). Absent when the lookup failed." }),
-        })),
+        }).openapi({ description: "Whether the recipient can receive this document type over Peppol, and the endpoint it would be delivered to." })),
         ...describeErrorResponse(401, "Unauthorized"),
     },
 });

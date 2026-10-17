@@ -64,6 +64,8 @@ const sendDocumentResponse = z.object({
     description:
       "Where the document stands with each recipient: one entry per channel and address it was sent to. A Peppol delivery is `delivered` once the recipient's access point acknowledged the document and `pending` while the sending access point has not yet reported the outcome; an email delivery is `pending` once the mail service accepted the message and becomes `delivered` when the recipient's mail server took it or `failed` when it bounced. In a playground, an email to an address that is not one of the team's members is simulated and `delivered` straight away. Later changes arrive as `document.delivery_status_changed` webhook events.",
   }),
+}).openapi({
+  description: "The sent document: its ID, the channels it went out over and to whom, and the state of each delivery.",
 });
 
 const sendDocumentParamSchema = z.object({

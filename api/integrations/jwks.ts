@@ -19,6 +19,7 @@ const jwksRouteDescription = describeRoute({
                         type: "object",
                         properties: {
                             keys: {
+                                description: "The integrations' public keys, as JSON Web Keys.",
                                 type: "array",
                                 items: {
                                     type: "object",

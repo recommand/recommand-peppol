@@ -18,7 +18,7 @@ const getIntegrationRouteDescription = describeRoute({
     summary: "Get Integration",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved integration", z.object({ integration: integrationResponse })),
+        ...describeSuccessResponseWithZod("Successfully retrieved integration", z.object({ integration: integrationResponse.openapi({ description: "The integration." }) })),
         ...describeErrorResponse(404, "Integration not found"),
         ...describeErrorResponse(500, "Failed to fetch integration"),
     },

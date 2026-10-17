@@ -20,7 +20,7 @@ const getIdentifiersRouteDescription = describeRoute({
   summary: "List Company Identifiers",
   tags: ["Company Identifiers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved company identifiers", z.object({ identifiers: z.array(companyIdentifierResponse) })),
+    ...describeSuccessResponseWithZod("Successfully retrieved company identifiers", z.object({ identifiers: z.array(companyIdentifierResponse).openapi({ description: "The company's Peppol identifiers." }) })),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch company identifiers"),
   },

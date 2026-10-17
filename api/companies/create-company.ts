@@ -30,7 +30,7 @@ const createCompanyRouteDescription = describeRoute({
             verificationUrl: z.string().openapi({
                 description: "A one-time URL where an authorised representative completes the company's identity check. If its identifiers are registered elsewhere, we recommend preparing their migration or deregistration before completing verification to avoid registration conflicts. Identifiers can also be migrated after verification. Call the verify company endpoint if you need a fresh URL.",
             }),
-        })),
+        }).openapi({ description: "The company, as created, and the URL to verify it at." })),
         ...describeValidationErrorResponse("Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create company"),
