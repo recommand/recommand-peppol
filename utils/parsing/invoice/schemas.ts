@@ -94,6 +94,24 @@ export const priceDecimalSchema = z
       "Decimal number as a string with flexible precision",
   });
 
+export const partyIdentifierSchema = z
+  .object({
+    identifier: z.string().min(1).openapi({
+      example: "50012345",
+      description: "The identifier itself.",
+    }),
+    scheme: z.string().nullish().openapi({
+      example: "0088",
+      description:
+        "The ISO/IEC 6523 scheme the identifier is issued under, as listed [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/). Leave it out for an identifier without a registered scheme, such as a supplier number the buyer assigned to you.",
+    }),
+  })
+  .openapi({
+    ref: "PartyIdentifier",
+    description:
+      "An identifier of a party other than its VAT number, its enterprise number or its Peppol address.",
+  });
+
 export const partySchema = z
   .object({
     vatNumber: z.string().nullish().openapi({
@@ -106,6 +124,11 @@ export const partySchema = z
       example: "1234567894",
       description:
         "The national registration number without a country prefix, paired with `enterpriseNumberScheme`.",
+    }),
+    partyIdentifiers: z.array(partyIdentifierSchema).nullish().openapi({
+      example: [{ identifier: "50012345" }],
+      description:
+        "The seller identifier (BT-29) on the seller and the buyer identifier (BT-46) on the buyer, for example the supplier number a public buyer assigned to you, or the code a public buyer is known by. The seller can have several identifiers, the buyer at most one.",
     }),
     name: z.string().openapi({
       example: "Example Company",
@@ -610,6 +633,11 @@ export const baseInvoiceSchema = z.object({
     description:
       "A reference to a related despatch advice document (e.g. packing slip)",
   }),
+  contractReference: z.string().nullish().openapi({
+    example: "CT-2024-017",
+    description:
+      "The identifier of the contract the invoice is issued under (BT-12).",
+  }),
   billingPeriod: periodSchema.nullish().openapi({
     description:
       "The period the document bills for (BG-14), for example the month of a subscription.",
@@ -652,6 +680,7 @@ export const baseInvoiceSchema = z.object({
 
 export type DocumentLine = z.infer<typeof lineSchema>;
 export type Party = z.infer<typeof partySchema>;
+export type PartyIdentifier = z.infer<typeof partyIdentifierSchema>;
 export type PaymentMeans = z.infer<typeof paymentMeansSchema>;
 export type PaymentTerms = z.infer<typeof paymentTermsSchema>;
 export type Item = z.infer<typeof lineSchema>;

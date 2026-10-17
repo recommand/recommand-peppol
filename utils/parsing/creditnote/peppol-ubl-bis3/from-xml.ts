@@ -4,6 +4,7 @@ import { getTextContent, getNumberContent, getPercentage, getNullableTextContent
 import type { SelfBillingCreditNote } from "../../self-billing-creditnote/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 import { parseUblBillingPeriod } from "../../billing-period";
+import { parseUblPartyIdentifiers } from "../../party-identifiers";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -40,6 +41,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   const salesOrderReference = getNullableTextContent(creditNote.OrderReference?.SalesOrderID);
   const buyerReference = getNullableTextContent(creditNote.BuyerReference);
   const despatchReference = getNullableTextContent(creditNote.DespatchDocumentReference?.ID);
+  const contractReference = getNullableTextContent(creditNote.ContractDocumentReference?.ID);
   const billingPeriod = parseUblBillingPeriod(creditNote.InvoicePeriod);
   const invoiceReferences = (creditNote.BillingReference || []).map((reference: any) => ({
     id: getTextContent(reference.InvoiceDocumentReference?.ID),
@@ -75,6 +77,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
       sellerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
         sellerParty.PartyLegalEntity?.CompanyID
     ),
+    partyIdentifiers: parseUblPartyIdentifiers(sellerParty),
     email: getNullableTextContent(sellerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(sellerParty.Contact?.Telephone),
   };
@@ -98,6 +101,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
       buyerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
         buyerParty.PartyLegalEntity?.CompanyID
     ),
+    partyIdentifiers: parseUblPartyIdentifiers(buyerParty),
     email: getNullableTextContent(buyerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(buyerParty.Contact?.Telephone),
   };
@@ -249,6 +253,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     salesOrderReference,
     buyerReference,
     despatchReference,
+    ...(contractReference && { contractReference }),
     billingPeriod,
     invoiceReferences,
     attachments: attachments.length > 0 ? attachments : [],

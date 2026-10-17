@@ -4,6 +4,7 @@ import { calculateDocumentTotals } from "../../invoice/calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { resolveBuyerReference } from "../../buyer-reference";
 import { billingPeriodToUBL } from "../../billing-period";
+import { partyIdentifiersToUBL } from "../../party-identifiers";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -103,6 +104,11 @@ export function prebuildCreditNoteUBL({
           }
         })),
       }),
+      ...(creditNote.contractReference && {
+        "cac:ContractDocumentReference": {
+          "cbc:ID": creditNote.contractReference,
+        },
+      }),
       ...(creditNote.attachments && {
         "cac:AdditionalDocumentReference": creditNote.attachments.map(
           (attachment) => ({
@@ -133,6 +139,7 @@ export function prebuildCreditNoteUBL({
             "@_schemeID": supplier.schemeId,
             "#text": supplier.identifier,
           },
+          ...partyIdentifiersToUBL(creditNote.seller),
           "cac:PartyName": {
             "cbc:Name": creditNote.seller.name,
           },
@@ -175,6 +182,7 @@ export function prebuildCreditNoteUBL({
             "@_schemeID": buyer.schemeId,
             "#text": buyer.identifier,
           },
+          ...partyIdentifiersToUBL(creditNote.buyer),
           "cac:PartyName": {
             "cbc:Name": creditNote.buyer.name,
           },

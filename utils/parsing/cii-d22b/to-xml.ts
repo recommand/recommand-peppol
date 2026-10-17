@@ -4,6 +4,7 @@ import type { CreditNote } from "../creditnote/schemas";
 import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
 import { resolveBuyerReference } from "../buyer-reference";
+import { partyIdentifiersToCII } from "../party-identifiers";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -114,6 +115,7 @@ function tradeParty(party: Party, peppolAddress: string): XmlNode {
   const partyContact = contact(party);
 
   return {
+    ...partyIdentifiersToCII(party),
     "ram:Name": party.name,
     ...(party.enterpriseNumber && {
       "ram:SpecifiedLegalOrganization": {
@@ -461,6 +463,11 @@ export function billingDocumentToCII({
           ...(document.purchaseOrderReference && {
             "ram:BuyerOrderReferencedDocument": {
               "ram:IssuerAssignedID": document.purchaseOrderReference,
+            },
+          }),
+          ...(document.contractReference && {
+            "ram:ContractReferencedDocument": {
+              "ram:IssuerAssignedID": document.contractReference,
             },
           }),
           ...(document.attachments && {
