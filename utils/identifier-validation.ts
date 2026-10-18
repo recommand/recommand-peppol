@@ -176,6 +176,17 @@ export function enterpriseNumberIdentifierScheme(country: string, enterpriseNumb
   );
 }
 
+/**
+ * The identifiers a company gets by default that its country builds from its numbers,
+ * such as the Finnish OVT code, next to its numbers under the country's default schemes.
+ */
+export function derivedDefaultIdentifiers(
+  country: string,
+  company: { enterpriseNumber: string | null; vatNumber: string | null }
+): { scheme: string; identifier: string }[] {
+  return getCountryIdentifierRules(country)?.derivedIdentifiers?.(company) ?? [];
+}
+
 /** The prefixes a country's VAT numbers carry: its code, unless its rules name others. */
 export function getVatNumberPrefixes(country: string): string[] {
   return getCountryIdentifierRules(country)?.vatPrefixes ?? [country.toUpperCase()];

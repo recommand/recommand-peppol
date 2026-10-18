@@ -8,16 +8,25 @@ import { creditNoteToCII } from "../utils/parsing/creditnote/cii-d22b/to-xml";
 import { resolveBuyerReference } from "../utils/parsing/buyer-reference";
 import { validateXml } from "./utils/utils";
 
-// A German public authority is addressed by its Leitweg-ID (scheme 0204), and the
-// same Leitweg-ID has to be in BT-10 Buyer reference (XRechnung BR-DE-15), or the
-// federal invoice portal rejects the invoice. The writers fill it in from the
-// recipient, refuse a different buyer reference, and never fall back to the invoice
-// number for such a recipient. Every other recipient keeps the existing behaviour.
+// A German public authority is addressed by its Leitweg-ID (scheme 0204), and a
+// Leitweg-ID has to be in BT-10 Buyer reference (XRechnung BR-DE-15), or the federal
+// invoice portal rejects the invoice. That is usually the one it is addressed by, but
+// the authority may ask for another: the KoSIT guideline on Peppol identifiers in
+// Germany (section 3.2.2) gives 0204:04000000-FHBXLAND-82 with 04000000-900X44X06-60
+// in BT-10. The writers fill in the recipient's Leitweg-ID when BT-10 is left out,
+// keep another Leitweg-ID, refuse anything else, and never fall back to the invoice
+// number for such a recipient.
+//
+// Between a seller and a buyer both located in Germany, Peppol BIS (DE-R-015) and
+// XRechnung (BR-DE-15) require BT-10 even next to an order reference, so the document
+// number is filled in there. Every other recipient keeps the existing behaviour.
 
 const LEITWEG_ID = "991-33333TEST-33";
+const OTHER_LEITWEG_ID = "04000000-900X44X06-60";
 const AUTHORITY = `0204:${LEITWEG_ID.toLowerCase()}`;
 const SUPPLIER = "9930:de136695976";
 const BUSINESS = "9930:de811569869";
+const FOREIGN_BUSINESS = "9925:be0598726857";
 
 const profile = {
   customizationId: "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0",
@@ -137,20 +146,48 @@ describe("BT-10 for a recipient addressed by a Leitweg-ID", () => {
         ).toEqual([LEITWEG_ID.toLowerCase()]);
       });
 
-      it("refuses a different buyer reference", () => {
+      it("keeps a different Leitweg-ID the authority asked for", () => {
+        expect(
+          buyerReferences(write({ document: make({ buyerReference: OTHER_LEITWEG_ID }), recipientAddress: AUTHORITY }), buyerReference)
+        ).toEqual([OTHER_LEITWEG_ID]);
+      });
+
+      it("refuses a buyer reference that is not a Leitweg-ID", () => {
         expect(() => write({ document: make({ buyerReference: "PO-7" }), recipientAddress: AUTHORITY })).toThrow(
-          /requires its Leitweg-ID 991-33333TEST-33 as buyer reference \(BT-10\)/
+          /requires a Leitweg-ID as buyer reference \(BT-10\). Got buyerReference 'PO-7', which is not a valid Leitweg-ID/
+        );
+        expect(() => write({ document: make({ buyerReference: "04000000-900X44X06-61" }), recipientAddress: AUTHORITY })).toThrow(
+          /not a valid Leitweg-ID/
         );
       });
 
-      it("is unchanged for other recipients", () => {
+      it("is filled with the document number between a German seller and a German business buyer", () => {
         const number = name.includes("invoice") ? "RE-2026-001" : "GS-2026-001";
-        expect(buyerReferences(write({ document: make(), recipientAddress: BUSINESS }), buyerReference)).toEqual([number]);
+        const germanBuyer = { ...buyer, name: "Kunde GmbH", vatNumber: "DE811569869" };
+        expect(buyerReferences(write({ document: make({ buyer: germanBuyer }), recipientAddress: BUSINESS }), buyerReference)).toEqual([number]);
         expect(
-          buyerReferences(write({ document: make({ purchaseOrderReference: "PO-7" }), recipientAddress: BUSINESS }), buyerReference)
+          buyerReferences(
+            write({ document: make({ buyer: germanBuyer, purchaseOrderReference: "PO-7" }), recipientAddress: BUSINESS }),
+            buyerReference
+          )
+        ).toEqual([number]);
+        expect(
+          buyerReferences(write({ document: make({ buyer: germanBuyer, buyerReference: "Abt. 4" }), recipientAddress: BUSINESS }), buyerReference)
+        ).toEqual(["Abt. 4"]);
+      });
+
+      it("is unchanged for a buyer outside Germany", () => {
+        const number = name.includes("invoice") ? "RE-2026-001" : "GS-2026-001";
+        const foreignBuyer = { ...buyer, name: "Klant BV", city: "Brussel", postalZone: "1000", country: "BE", vatNumber: "BE0598726857" };
+        expect(buyerReferences(write({ document: make({ buyer: foreignBuyer }), recipientAddress: FOREIGN_BUSINESS }), buyerReference)).toEqual([number]);
+        expect(
+          buyerReferences(
+            write({ document: make({ buyer: foreignBuyer, purchaseOrderReference: "PO-7" }), recipientAddress: FOREIGN_BUSINESS }),
+            buyerReference
+          )
         ).toEqual([]);
         expect(
-          buyerReferences(write({ document: make({ buyerReference: "Abt. 4" }), recipientAddress: BUSINESS }), buyerReference)
+          buyerReferences(write({ document: make({ buyer: foreignBuyer, buyerReference: "Abt. 4" }), recipientAddress: FOREIGN_BUSINESS }), buyerReference)
         ).toEqual(["Abt. 4"]);
       });
     });
@@ -159,6 +196,22 @@ describe("BT-10 for a recipient addressed by a Leitweg-ID", () => {
   it("writes Peppol BIS documents to a Leitweg-ID that pass validation", async () => {
     await validateXml(writers[0]!.write({ document: invoice({ purchaseOrderReference: "PO-7", salesOrderReference: "SO-1" }), recipientAddress: AUTHORITY }), "UBL invoice to Leitweg-ID");
     await validateXml(writers[1]!.write({ document: creditNote(), recipientAddress: AUTHORITY }), "UBL credit note to Leitweg-ID");
+    await validateXml(
+      writers[0]!.write({ document: invoice({ buyerReference: OTHER_LEITWEG_ID }), recipientAddress: AUTHORITY }),
+      "UBL invoice to Leitweg-ID with a different Leitweg-ID in BT-10"
+    );
+  });
+
+  it("writes Peppol BIS documents between German businesses that pass DE-R-015 with only an order reference", async () => {
+    const germanBuyer = { ...buyer, name: "Kunde GmbH", vatNumber: "DE811569869" };
+    await validateXml(
+      writers[0]!.write({ document: invoice({ buyer: germanBuyer, purchaseOrderReference: "PO-7" }), recipientAddress: BUSINESS }),
+      "UBL invoice between German businesses"
+    );
+    await validateXml(
+      writers[1]!.write({ document: creditNote({ buyer: germanBuyer, purchaseOrderReference: "PO-7" }), recipientAddress: BUSINESS }),
+      "UBL credit note between German businesses"
+    );
   });
 
   it("writes BT-10 before the order reference, where the UBL schema puts it", async () => {
@@ -170,6 +223,12 @@ describe("BT-10 for a recipient addressed by a Leitweg-ID", () => {
   it("resolves without a recipient as before", () => {
     expect(resolveBuyerReference({ documentNumber: "1", customerAddress: null })).toBe("1");
     expect(resolveBuyerReference({ documentNumber: "1", purchaseOrderReference: "PO", customerAddress: undefined })).toBeNull();
+    expect(
+      resolveBuyerReference({ documentNumber: "1", purchaseOrderReference: "PO", customerAddress: null, sellerCountry: "DE", buyerCountry: "de" })
+    ).toBe("1");
+    expect(
+      resolveBuyerReference({ documentNumber: "1", purchaseOrderReference: "PO", customerAddress: null, sellerCountry: "DE", buyerCountry: "AT" })
+    ).toBeNull();
   });
 });
 
@@ -200,5 +259,8 @@ describe("sending to a Leitweg-ID", () => {
 
     const prepared = await prepareJsonDocument({ input: input(), company, senderAddress: SUPPLIER, recipientAddress: AUTHORITY, documentId: "doc_2" });
     expect(prepared.xml).toContain(`<cbc:BuyerReference>${LEITWEG_ID}</cbc:BuyerReference>`);
+
+    const other = await prepareJsonDocument({ input: input(OTHER_LEITWEG_ID), company, senderAddress: SUPPLIER, recipientAddress: AUTHORITY, documentId: "doc_3" });
+    expect(other.xml).toContain(`<cbc:BuyerReference>${OTHER_LEITWEG_ID}</cbc:BuyerReference>`);
   });
 });

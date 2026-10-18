@@ -14,7 +14,8 @@ function stripTrailingEquals(str: string): string {
   return str.replace(/=+$/, "");
 }
 
-async function getSmpUrlNaptr({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string | null> {
+/** The URL of the SMP the SML points a participant to, or null when the SML has no entry for it. */
+export async function getSmpUrlNaptr({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string | null> {
   const dnsZone = useTestNetwork ? SML_TEST_ZONE : SML_ZONE;
   
   const sha256Hash = createHash("sha256")

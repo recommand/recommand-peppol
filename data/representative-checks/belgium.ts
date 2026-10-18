@@ -4,13 +4,21 @@ import { type CheckedCompany, type CountryRepresentativeCheck, type ListedRepres
 
 // Belgium: the representatives of the company in the Crossroads Bank for Enterprises.
 
+// Representatives change without notice, for example when an association of
+// co-owners appoints a new property manager, and a copy weeks old would offer the
+// previous one and refuse the new one. An hour is long enough for the check before
+// the identity check to reuse the copy the form has just read.
+const REPRESENTATIVES_MAX_AGE_MS = 60 * 60 * 1000;
+
 async function namedRepresentatives(
   company: CheckedCompany,
   dependencies: RepresentativeCheckDependencies
 ): Promise<ListedRepresentative[]> {
   const enterpriseNumber = requireEnterpriseNumber(company);
   const lookupNumber = enterpriseNumber.toUpperCase().startsWith("BE") ? enterpriseNumber.slice(2) : enterpriseNumber;
-  const enterpriseData = await dependencies.getEnterpriseData(lookupNumber, company.country);
+  const enterpriseData = await dependencies.getEnterpriseData(lookupNumber, company.country, {
+    maxAgeMs: REPRESENTATIVES_MAX_AGE_MS,
+  });
   return enterpriseData.representatives.flatMap((rep) =>
     rep.firstName && rep.lastName ? [{ firstName: rep.firstName, lastName: rep.lastName, function: rep.function ?? "" }] : []
   );

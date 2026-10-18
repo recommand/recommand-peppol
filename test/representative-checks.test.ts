@@ -209,14 +209,16 @@ describe("the representative check per country", () => {
 
   function belgianDependencies(representatives: { firstName?: string; lastName?: string }[]) {
     const lookups: string[] = [];
+    const maxAges: (number | undefined)[] = [];
     const deps = {
-      getEnterpriseData: async (enterpriseNumber: string) => {
+      getEnterpriseData: async (enterpriseNumber: string, _country: string, options?: { maxAgeMs?: number }) => {
         lookups.push(enterpriseNumber);
+        maxAges.push(options?.maxAgeMs);
         return { representatives } as any;
       },
       fetchSigningAuthority: async () => { throw new Error("must not be called"); },
     } satisfies Dependencies;
-    return { deps, lookups };
+    return { deps, lookups, maxAges };
   }
 
   it("holds a Belgian representative against the CBE without the country prefix", async () => {
@@ -224,6 +226,13 @@ describe("the representative check per country", () => {
     expect(await checkRepresentative(belgian, name("Jan", "Peeters"), deps)).toEqual(name("Jan", "Peeters"));
     expect(lookups).toEqual(["0123456749"]);
     await expect(checkRepresentative(belgian, name("Els", "Maes"), deps)).rejects.toThrow("in the CBE registry");
+  });
+
+  it("reads Belgian representatives from a copy of the CBE at most an hour old", async () => {
+    const { deps, maxAges } = belgianDependencies([{ firstName: "Jan", lastName: "Peeters" }]);
+    await listRepresentatives(belgian, deps);
+    await checkRepresentative(belgian, name("Jan", "Peeters"), deps);
+    expect(maxAges).toEqual([60 * 60 * 1000, 60 * 60 * 1000]);
   });
 
   it("lets a Belgian company without named representatives through on an unknown name", async () => {

@@ -1,6 +1,6 @@
 import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
-import { hasOptionalPrefix, isSiren, normalizeIdentifierValue, sameIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
+import { derivedDefaultIdentifiers, hasOptionalPrefix, isSiren, normalizeIdentifierValue, sameIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
 import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
@@ -141,6 +141,26 @@ export async function getSendingCompanyIdentifier(
   return chooseSendingCompanyIdentifier(company, await getCompanyIdentifiers(company.id), recipientAddress);
 }
 
+type SenderCandidate = Pick<CompanyIdentifier, "scheme" | "identifier">;
+
+/**
+ * Identifiers a company can add next to the one it has always sent from, each with the
+ * identifier it gives way to as the sender. Adding one leaves the address the company
+ * sends from as it was, even where it sorts first; without the other it is sent from as
+ * any identifier would be.
+ */
+const SENDER_ADDITIONS: { addition: (identifier: SenderCandidate) => boolean; givesWayTo: (identifier: SenderCandidate) => boolean }[] = [
+  // A Luxembourg matricule under 9938 gives way to a VAT number under the same scheme.
+  {
+    addition: (identifier) => identifier.scheme === "9938" && /^\d{11}$/.test(identifier.identifier),
+    givesWayTo: (identifier) => identifier.scheme === "9938" && /^lu\d{8}$/i.test(identifier.identifier),
+  },
+];
+
+function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly SenderCandidate[]): boolean {
+  return SENDER_ADDITIONS.some((rule) => rule.addition(candidate) && identifiers.some(rule.givesWayTo));
+}
+
 /**
  * The choice getSendingCompanyIdentifier makes, given the company's identifiers in
  * the order getCompanyIdentifiers lists them. Separate so the choice can be asserted
@@ -154,6 +174,9 @@ export async function getSendingCompanyIdentifier(
  * - Otherwise the lowest scheme, as before, except that a Leitweg-ID is passed over
  *   while the company has any other identifier: it names an authority's invoice
  *   reception, which is never the address a supplier sends from.
+ * - An identifier a company adds next to the one it sends from, such as a
+ *   Luxembourg matricule beside the VAT number, is passed over as well; see
+ *   SENDER_ADDITIONS.
  */
 export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier, "scheme" | "identifier">>(
   company: Pick<Company, "accessPointProvider">,
@@ -185,7 +208,10 @@ export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier,
     }
   }
 
-  return identifiers.find((identifier) => identifier.scheme !== LEITWEG_ID_SCHEME) ?? identifiers[0]!;
+  return (
+    identifiers.find((identifier) => identifier.scheme !== LEITWEG_ID_SCHEME && !givesWayAsSender(identifier, identifiers)) ??
+    identifiers[0]!
+  );
 }
 
 /**
@@ -266,6 +292,19 @@ async function writeIdentifierAgainst<T>(
   });
 }
 
+/** Whether an identifier is one the company's country derives for it by default, such as the Finnish OVT code. */
+export function isDerivedDefaultIdentifier(
+  company: Pick<Company, "country" | "enterpriseNumber" | "vatNumber">,
+  scheme: string,
+  identifier: string
+): boolean {
+  return derivedDefaultIdentifiers(company.country, company).some(
+    (derived) =>
+      cleanScheme(derived.scheme) === cleanScheme(scheme) &&
+      normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(derived.identifier)) === normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(identifier))
+  );
+}
+
 export async function createCompanyIdentifier({
   companyIdentifier,
   skipSmpRegistration,
@@ -290,6 +329,15 @@ export async function createCompanyIdentifier({
     identifier: cleanedIdentifierValue,
     companyId: companyIdentifier.companyId,
   });
+
+  // A company now gets this identifier by default, so a request that adds it as it
+  // had to before finds it there and gets it back rather than a refusal.
+  if (!migrationKey && isDerivedDefaultIdentifier(validatedAgainst, cleanedScheme, cleanedIdentifierValue)) {
+    const existing = await getCompanyIdentifierBySchemeAndValue(companyIdentifier.companyId, cleanedScheme, cleanedIdentifierValue);
+    if (existing) {
+      return existing;
+    }
+  }
 
   const canUpsert = await canUpsertCompanyIdentifier(cleanedScheme, cleanedIdentifierValue, undefined, companyIdentifier.companyId);
   if(!canUpsert){
