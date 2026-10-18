@@ -1,6 +1,6 @@
 import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
-import { isSiren, normalizeIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
+import { derivedDefaultIdentifiers, isSiren, normalizeIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
 import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
@@ -155,6 +155,11 @@ const SENDER_ADDITIONS: { addition: (identifier: SenderCandidate) => boolean; gi
     addition: (identifier) => identifier.scheme === "0246",
     givesWayTo: (identifier) => identifier.scheme === "9930",
   },
+  // A Luxembourg matricule under 9938 gives way to a VAT number under the same scheme.
+  {
+    addition: (identifier) => identifier.scheme === "9938" && /^\d{11}$/.test(identifier.identifier),
+    givesWayTo: (identifier) => identifier.scheme === "9938" && /^lu\d{8}$/i.test(identifier.identifier),
+  },
 ];
 
 function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly SenderCandidate[]): boolean {
@@ -175,7 +180,8 @@ function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly Send
  *   while the company has any other identifier: it names an authority's invoice
  *   reception, which is never the address a supplier sends from.
  * - An identifier a company adds next to the one it sends from, such as a GEBA
- *   beside the German VAT number, is passed over as well; see SENDER_ADDITIONS.
+ *   beside the German VAT number or a Luxembourg matricule beside the VAT
+ *   number, is passed over as well; see SENDER_ADDITIONS.
  */
 export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier, "scheme" | "identifier">>(
   company: Pick<Company, "accessPointProvider">,
@@ -291,6 +297,19 @@ async function writeIdentifierAgainst<T>(
   });
 }
 
+/** Whether an identifier is one the company's country derives for it by default, such as the Finnish OVT code. */
+export function isDerivedDefaultIdentifier(
+  company: Pick<Company, "country" | "enterpriseNumber" | "vatNumber">,
+  scheme: string,
+  identifier: string
+): boolean {
+  return derivedDefaultIdentifiers(company.country, company).some(
+    (derived) =>
+      cleanScheme(derived.scheme) === cleanScheme(scheme) &&
+      normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(derived.identifier)) === normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(identifier))
+  );
+}
+
 export async function createCompanyIdentifier({
   companyIdentifier,
   skipSmpRegistration,
@@ -315,6 +334,15 @@ export async function createCompanyIdentifier({
     identifier: cleanedIdentifierValue,
     companyId: companyIdentifier.companyId,
   });
+
+  // A company now gets this identifier by default, so a request that adds it as it
+  // had to before finds it there and gets it back rather than a refusal.
+  if (!migrationKey && isDerivedDefaultIdentifier(validatedAgainst, cleanedScheme, cleanedIdentifierValue)) {
+    const existing = await getCompanyIdentifierBySchemeAndValue(companyIdentifier.companyId, cleanedScheme, cleanedIdentifierValue);
+    if (existing) {
+      return existing;
+    }
+  }
 
   const canUpsert = await canUpsertCompanyIdentifier(cleanedScheme, cleanedIdentifierValue, undefined, companyIdentifier.companyId);
   if(!canUpsert){

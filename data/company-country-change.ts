@@ -1,6 +1,6 @@
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { COUNTRIES } from "@peppol/utils/countries";
-import { enterpriseNumberIdentifierScheme, normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
+import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { cleanIdentifier, cleanScheme, validateIdentifierAgainstCompany } from "./company-identifiers";
 import { findUnsupportedIdentifiers } from "./company-identifier-policy";
@@ -66,8 +66,9 @@ const LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES: Record<string, string> = {
  * The identifiers a country gives a company by default: its business register
  * number and its VAT number under the country's schemes, or the enterprise number
  * under the scheme the company names it under when that is not one of the country's,
- * such as a GLN. These are the ones a country change replaces; anything else the
- * customer added is kept and re-checked.
+ * such as a GLN, and any identifier the country builds from those numbers. These are
+ * the ones a country change replaces; anything else the customer added is kept and
+ * re-checked.
  */
 function defaultIdentifiersFor(
   country: string,
@@ -97,6 +98,9 @@ function defaultIdentifiersFor(
       scheme: cleanScheme(countryInfo.defaultVatScheme),
       identifier: cleanIdentifier(cleanedVatNumber),
     });
+  }
+  for (const identifier of derivedDefaultIdentifiers(country, { enterpriseNumber, vatNumber })) {
+    defaults.push({ scheme: cleanScheme(identifier.scheme), identifier: cleanIdentifier(identifier.identifier) });
   }
   return defaults;
 }

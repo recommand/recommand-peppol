@@ -4,6 +4,7 @@ import { calculateDocumentTotals } from "../calculations";
 import { parsePeppolAddress } from "../../peppol-address";
 import { resolveBuyerReference } from "../../buyer-reference";
 import { billingPeriodToUBL } from "../../billing-period";
+import { partyIdentifiersToUBL } from "../../party-identifiers";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -61,6 +62,8 @@ export function prebuildInvoiceUBL({
     purchaseOrderReference: invoice.purchaseOrderReference,
     documentNumber: invoice.invoiceNumber,
     customerAddress,
+    sellerCountry: invoice.seller.country,
+    buyerCountry: invoice.buyer.country,
   });
   return {
     Invoice: {
@@ -95,6 +98,11 @@ export function prebuildInvoiceUBL({
           "cbc:ID": invoice.despatchReference,
         },
       }),
+      ...(invoice.contractReference && {
+        "cac:ContractDocumentReference": {
+          "cbc:ID": invoice.contractReference,
+        },
+      }),
       ...(invoice.attachments && {
         "cac:AdditionalDocumentReference": invoice.attachments.map(
           (attachment) => ({
@@ -125,6 +133,7 @@ export function prebuildInvoiceUBL({
             "@_schemeID": supplier.schemeId,
             "#text": supplier.identifier,
           },
+          ...partyIdentifiersToUBL(invoice.seller),
           "cac:PartyName": {
             "cbc:Name": invoice.seller.name,
           },
@@ -167,6 +176,7 @@ export function prebuildInvoiceUBL({
             "@_schemeID": customer.schemeId,
             "#text": customer.identifier,
           },
+          ...partyIdentifiersToUBL(invoice.buyer),
           "cac:PartyName": {
             "cbc:Name": invoice.buyer.name,
           },

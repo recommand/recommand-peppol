@@ -19,7 +19,7 @@ export const PEPPOL_VAT_SCHEMES: Record<string, string> = {
  * forbids using at all, with the scheme that replaced them. 9958 has its own message.
  */
 export const REMOVED_SCHEMES: Record<string, string> = {
-  "0213": "Finnish VAT numbers are no longer a Peppol scheme.",
+  "0213": "Finnish companies are addressed by their OVT code under scheme 0216.",
   "9906": "Italian VAT numbers use scheme 0211.",
   "9955": "Swedish companies are addressed by their organisation number under scheme 0007.",
 };

@@ -63,11 +63,21 @@ async function resolveEnterpriseAddress({
   }
 }
 
-export async function getEnterpriseData(enterpriseNumber: string, country: string): Promise<EnterpriseData> {
+const DEFAULT_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Reads an enterprise from the CBE, or from the cache while the cached copy is
+ * younger than `maxAgeMs` (30 days by default).
+ */
+export async function getEnterpriseData(
+  enterpriseNumber: string,
+  country: string,
+  { maxAgeMs = DEFAULT_CACHE_MAX_AGE_MS }: { maxAgeMs?: number } = {}
+): Promise<EnterpriseData> {
 
   try {
     const cache = await getEnterpriseDataFromCache(enterpriseNumber, country);
-    if (cache && new Date(cache.updatedAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000) {
+    if (cache && new Date(cache.updatedAt).getTime() > Date.now() - maxAgeMs) {
       if (hasCompleteCbeAddress(cache.enterpriseData.address)) {
         return cache.enterpriseData;
       }

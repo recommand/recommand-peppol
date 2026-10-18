@@ -24,6 +24,8 @@ export function assertXRechnungRequirements(
       purchaseOrderReference: document.purchaseOrderReference,
       documentNumber,
       customerAddress,
+      sellerCountry: document.seller.country,
+      buyerCountry: document.buyer.country,
     })
   ) {
     missing.push("buyerReference (BT-10, BR-DE-15): the buyer's routing reference, or its Leitweg-ID for a public authority");
