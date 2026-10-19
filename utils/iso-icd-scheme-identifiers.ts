@@ -244,6 +244,6 @@ export const zodValidIsoIcdSchemeIdentifiers = z
   .enum(ISO_ICD_SCHEME_IDENTIFIERS.map((scheme) => scheme.key) as [string, ...string[]])
   .openapi({
     description: "The ISO/IEC 6523 scheme an enterprise number is issued under.",
-    example: "0208",
+    examples: ["0208"],
     ref: "EnterpriseNumberScheme",
   });

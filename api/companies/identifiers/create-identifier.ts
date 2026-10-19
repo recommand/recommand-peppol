@@ -45,7 +45,7 @@ const createIdentifierJsonBodySchema = z.object({
     }),
     migrationKey: z.string().trim().min(8).max(24).optional().openapi({
         description: "A Peppol migration key issued by the provider that currently publishes this identifier for receiving. With it, the identifier is taken over from that provider without a gap instead of failing because it is registered elsewhere. Ask the previous provider for the key. When the company is not yet publishable, for example because its identity check is still open, the key is kept and used the moment the company is registered.",
-        example: "Ab12$#xyZ9!kLm",
+        examples: ["Ab12$#xyZ9!kLm"],
     }),
 });
 

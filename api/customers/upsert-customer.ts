@@ -68,7 +68,7 @@ const upsertCustomerJsonBodySchema = z.object({
   }),
   country: z.string().openapi({
     description: "The country code (ISO 3166-1 alpha-2) of the customer",
-    example: "BE",
+    examples: ["BE"],
   }),
   email: z.string().nullable().optional().openapi({
     description: "The email address of the customer",

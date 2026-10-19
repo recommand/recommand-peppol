@@ -36,11 +36,11 @@ const updateWebhookParamSchema = z.object({
 const updateWebhookJsonBodySchema = z.object({
     url: z.string().url().openapi({
         description: "The HTTPS endpoint to deliver events to.",
-        example: "https://example.com/hooks/recommand",
+        examples: ["https://example.com/hooks/recommand"],
     }),
     companyId: z.string().nullish().openapi({
         description: "Limit the webhook to one company's events. Leave it out to receive the events of every company in the team.",
-        example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+        examples: ["c_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
     }),
     secret: z.preprocess(
         (value) => value === "" ? undefined : value,

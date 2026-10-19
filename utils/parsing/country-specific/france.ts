@@ -67,7 +67,7 @@ export const frenchBillingModeSchema = z.enum([
   "S9",
   "M9",
 ]).openapi({
-  example: "S1",
+  examples: ["S1"],
 });
 
 export type FrenchBillingMode = z.infer<typeof frenchBillingModeSchema>;
@@ -82,21 +82,22 @@ export const frenchCountrySpecificSchema = z.object({
   }),
   businessProcess: frenchBusinessProcessSchema.optional().default("REGULATED").openapi({
     description: frenchBusinessProcessDescription,
-    example: "REGULATED",
+    examples: ["REGULATED"],
   }),
   recoveryCostsNote: z.string().min(1).openapi({
-    example: "Indemnite forfaitaire de 40 EUR pour frais de recouvrement.",
+    examples: ["Indemnite forfaitaire de 40 EUR pour frais de recouvrement."],
     description:
       "The mandatory French recovery-cost indemnity statement, written as an IncludedNote with subject code PMT.",
   }),
   latePaymentPenaltiesNote: z.string().min(1).openapi({
-    example:
+    examples: [
       "Penalites de retard exigibles au taux prevu dans les conditions generales de vente.",
+    ],
     description:
       "The mandatory French late-payment penalties statement, written as an IncludedNote with subject code PMD.",
   }),
   earlyPaymentDiscountNote: z.string().min(1).openapi({
-    example: "Aucun escompte accorde pour paiement anticipe.",
+    examples: ["Aucun escompte accorde pour paiement anticipe."],
     description:
       "The mandatory French early-payment discount statement, written as an IncludedNote with subject code AAB. State either the offered discount terms or explicitly that no early-payment discount applies.",
   }),

@@ -20,7 +20,7 @@ const getIdentifierSchemesRouteDescription = describeRoute({
     ...describeSuccessResponseWithZod("Successfully retrieved the supported identifier schemes", z.object({
       supportedSchemes: z.array(z.string()).nullable().openapi({
         description: "The schemes the company can register identifiers under, or null when any scheme is accepted.",
-        example: ["0225"],
+        examples: [["0225"]],
       }),
     })),
     ...describeErrorResponse(401, "Unauthorized"),

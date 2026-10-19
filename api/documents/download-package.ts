@@ -15,6 +15,7 @@ import {
 } from "@peppol/data/offload/storage";
 import {
     describeErrorResponse,
+    parameterSchema,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import JSZip from "jszip";
@@ -41,10 +42,10 @@ const downloadPackageRouteDescription = describeRoute({
             headers: {
                 "Content-Disposition": {
                     description: "Offers the zip as a download named after the document.",
-                    schema: {
-                        example: "attachment; filename=\"doc_01JQZ8X0M4T7RB6K9V2NDHW3PA.zip\"",
+                    schema: parameterSchema({
+                        examples: ["attachment; filename=\"doc_01JQZ8X0M4T7RB6K9V2NDHW3PA.zip\""],
                         type: "string",
-                    },
+                    }),
                 },
             },
         },

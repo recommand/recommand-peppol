@@ -42,7 +42,7 @@ const markAsReadParamSchemaWithTeamId = markAsReadParamSchema.extend({
 const markAsReadJsonBodySchema = z.object({
     read: z.boolean().optional().default(true).openapi({
         description: "Whether to mark the document as read (true) or unread (false). If not provided, defaults to true.",
-        example: true,
+        examples: [true],
     }),
 }).optional();
 

@@ -36,15 +36,15 @@ const getSuppliersRouteDescription = describeRoute({
 const getSuppliersQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1).openapi({
     description: "The page number to retrieve",
-    example: 1,
+    examples: [1],
   }),
   limit: z.coerce.number().min(1).max(100).default(10).openapi({
     description: "The number of items per page",
-    example: 10,
+    examples: [10],
   }),
   search: z.string().optional().openapi({
     description: "Search term to filter suppliers",
-    example: "supplier name",
+    examples: ["supplier name"],
   }),
 });
 

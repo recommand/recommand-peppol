@@ -20,11 +20,11 @@ const directoryMatchResponse = z
     .object({
         name: z.string().openapi({
             description: "The participant's name as published in its Peppol Directory entry. Empty when the entry carries no name.",
-            example: "Recommand BV",
+            examples: ["Recommand BV"],
         }),
         peppolAddress: z.string().openapi({
             description: "The participant's Peppol address, as `scheme:identifier`. Pass it as the recipient when sending.",
-            example: "0208:1012081766",
+            examples: ["0208:1012081766"],
         }),
         supportedDocumentTypes: z.array(z.string()).openapi({
             description: "The full Peppol document type identifiers the participant is registered to receive.",
@@ -47,7 +47,7 @@ const searchDirectoryRouteDescription = describeRoute({
 });
 
 const searchDirectoryJsonBodySchema = z.object({
-    query: z.string().openapi({ description: "The search query to find recipients.", example: "Company Name" }),
+    query: z.string().openapi({ description: "The search query to find recipients.", examples: ["Company Name"] }),
 });
 
 type SearchDirectoryContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { json: z.input<typeof searchDirectoryJsonBodySchema> }, out: { json: z.infer<typeof searchDirectoryJsonBodySchema> } }>;

@@ -24,40 +24,40 @@ const sendDocumentResponse = z.object({
   sentOverPeppol: z.boolean().openapi({
     description:
       "Whether the document was handed over to the Peppol network. False when the document could not be routed or the sending access point refused it, in which case it was delivered by email instead. Handing over is not arrival: see `deliveryStatus` and `deliveries` for whether the recipient's access point acknowledged it.",
-    example: true,
+    examples: [true],
   }),
   sentOverEmail: z.boolean().openapi({
     description:
       "Whether the document was also sent by email in this request. Email delivery happens when you configure it, either always or only as a fallback when Peppol delivery fails. This field describes the send itself: an email fallback that goes out afterwards, when the access point reports the transmission failed, appears in `deliveries` and in `document.delivery_status_changed` events, not here.",
-    example: false,
+    examples: [false],
   }),
   emailRecipients: z.array(z.string()).openapi({
     description:
       "The email addresses the document was sent to in this request. Empty when it was not sent by email in this request; an address the mail service refused is left out. Like `sentOverEmail` this describes the send itself; `deliveries` is where every delivery of the document stands, including an email fallback sent later.",
-    example: [],
+    examples: [[]],
   }),
   teamId: z.string().openapi({
     description: "The ID of the team the document was sent from.",
-    example: "team_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    examples: ["team_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
   }),
   companyId: z.string().openapi({
     description: "The ID of the company the document was sent for.",
-    example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    examples: ["c_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
   }),
   id: z.string().openapi({
     description:
       "The Recommand document ID of the stored document. Use it with the documents endpoints to fetch, render or download what was sent.",
-    example: "doc_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    examples: ["doc_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
   }),
   peppolMessageId: z.string().nullable().openapi({
     description:
       "The AS4 message ID of the transmission. Null when the document was not transmitted over Peppol, and for playground teams, whose transmissions are simulated.",
-    example: "b7c2f0a4-3d1e-4a58-9c6d-0f2e8a1b4c73@recommand.eu",
+    examples: ["b7c2f0a4-3d1e-4a58-9c6d-0f2e8a1b4c73@recommand.eu"],
   }),
   envelopeId: z.string().nullable().openapi({
     description:
       "The envelope ID of the transmission, also known as the SBDH instance identifier (Standard Business Document Header Instance Identifier). Null when the document was not transmitted over Peppol, and for playground teams, whose transmissions are simulated.",
-    example: "9f1b3c7e-52a4-4d68-8b0f-6c9d2e4a17b5",
+    examples: ["9f1b3c7e-52a4-4d68-8b0f-6c9d2e4a17b5"],
   }),
   deliveryStatus: deliveryStatusResponse,
   deliveries: z.array(deliveryResponse).openapi({
@@ -72,7 +72,7 @@ const sendDocumentParamSchema = z.object({
   companyId: z.string().openapi({
     description:
       "The ID of the company sending the document. The document is sent from this company's Peppol identifier.",
-    example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    examples: ["c_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
   }),
 });
 

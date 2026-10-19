@@ -44,15 +44,15 @@ const hexColorRegex = /^#[A-Fa-f0-9]{6}$/;
 
 const updateLabelJsonBodySchema = z.object({
     name: z.string().min(1).optional().openapi({
-        example: "ERP",
+        examples: ["ERP"],
         description: "The label's new name. Left as it is when omitted.",
     }),
     colorHex: z.string().regex(hexColorRegex, "Color must be a valid hex color (e.g., #3B82F6)").optional().openapi({
-        example: "#3B82F6",
+        examples: ["#3B82F6"],
         description: "The label's new colour, as a hex code. Left as it is when omitted.",
     }),
     externalId: z.string().optional().nullable().openapi({
-        example: "erp-routing-inbox",
+        examples: ["erp-routing-inbox"],
         description: "Your own identifier for the label. It must be unique within the team. Left as it is when omitted; pass `null` to clear it.",
     }),
 });

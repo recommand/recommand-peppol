@@ -49,11 +49,11 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
 const getTransmittedDocumentsQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1).openapi({
     description: "The page number to retrieve",
-    example: 1,
+    examples: [1],
   }),
   limit: z.coerce.number().min(1).max(200).default(10).openapi({
     description: "The number of items per page",
-    example: 10,
+    examples: [10],
   }),
   companyId: z
     .union([z.string(), z.array(z.string())])
@@ -72,19 +72,19 @@ const getTransmittedDocumentsQuerySchema = z.object({
   }),
   search: z.string().optional().openapi({
     description: "Search term to filter documents",
-    example: "invoice",
+    examples: ["invoice"],
   }),
   type: transmittedDocumentTypeSchema.optional().openapi({
     description: "Filter documents by type",
-    example: "invoice",
+    examples: ["invoice"],
   }),
   from: z.coerce.date().optional().openapi({
     description: "Filter documents created from this timestamp (inclusive). ISO 8601 format.",
-    example: "2024-01-01T00:00:00Z",
+    examples: ["2024-01-01T00:00:00Z"],
   }),
   to: z.coerce.date().optional().openapi({
     description: "Filter documents created until this timestamp (exclusive). ISO 8601 format.",
-    example: "2024-12-31T23:59:59Z",
+    examples: ["2024-12-31T23:59:59Z"],
   }),
   isUnread: booleanStringSchema.optional().openapi({
     description: "Filter documents by read status: true for unread documents (readAt is null), false for read documents.",
@@ -94,7 +94,7 @@ const getTransmittedDocumentsQuerySchema = z.object({
   }),
   deliveryStatus: deliveryStatusSchema.optional().openapi({
     description: "Filter outgoing documents by their summarised delivery status: `delivered` (confirmed on at least one channel), `failed` (every delivery failed) or `pending` (still awaiting confirmation). Documents without deliveries never match.",
-    example: "failed",
+    examples: ["failed"],
   }),
   deliveryFailed: booleanStringSchema.optional().openapi({
     description: "When true, only documents with at least one failed delivery, whatever their other deliveries did. Use it to find the sends that need attention.",
@@ -113,7 +113,7 @@ const getTransmittedDocumentsQuerySchema = z.object({
     .default(false)
     .openapi({
     description: "When true, excludes attachments from the parsed object to reduce payload size. Can be passed as a flag without a value (e.g. ?excludeAttachments).",
-    example: false,
+    examples: [false],
   }),
 });
 

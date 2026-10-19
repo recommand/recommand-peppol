@@ -33,15 +33,15 @@ const hexColorRegex = /^#[A-Fa-f0-9]{6}$/;
 
 const createLabelJsonBodySchema = z.object({
     name: z.string().min(1, "Name is required").openapi({
-        example: "ERP",
+        examples: ["ERP"],
         description: "The label's name. Keep it short: it is what you match on in your own routing code.",
     }),
     colorHex: z.string().regex(hexColorRegex, "Color must be a valid hex color (e.g., #3B82F6)").openapi({
-        example: "#3B82F6",
+        examples: ["#3B82F6"],
         description: "The colour the label is shown in, as a hex code such as `#3B82F6`.",
     }),
     externalId: z.string().optional().nullable().openapi({
-        example: "erp-routing-inbox",
+        examples: ["erp-routing-inbox"],
         description: "Your own identifier for the label. It must be unique within the team.",
     }),
 });

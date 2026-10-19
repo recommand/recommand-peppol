@@ -43,11 +43,11 @@ const exportDocumentsRouteDescription = describeRoute({
 const exportDocumentsBodySchema = z.object({
     from: z.coerce.date().openapi({
         description: "Start datetime (inclusive). ISO 8601 format.",
-        example: "2024-01-01T00:00:00Z",
+        examples: ["2024-01-01T00:00:00Z"],
     }),
     to: z.coerce.date().openapi({
         description: "End datetime (exclusive). ISO 8601 format.",
-        example: "2024-01-31T23:59:59Z",
+        examples: ["2024-01-31T23:59:59Z"],
     }),
     outputType: exportOutputTypeSchema.openapi({
         description: "Output format: 'flat' for all XMLs in root, 'nested' for document package structure",

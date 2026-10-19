@@ -14,7 +14,7 @@ const jsonWebKey = z
         }),
         e: z.string().openapi({
             description: "The RSA public exponent, base64url-encoded.",
-            example: "AQAB",
+            examples: ["AQAB"],
         }),
         kty: z.literal("RSA").openapi({
             description: "The key type.",

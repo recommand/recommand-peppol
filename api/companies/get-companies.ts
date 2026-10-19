@@ -29,11 +29,11 @@ const getCompaniesRouteDescription = describeRoute({
 const getCompaniesQuerySchema = z.object({
     enterpriseNumber: z.string().optional().openapi({
         description: "Filter companies by enterprise number",
-        example: "1234567894",
+        examples: ["1234567894"],
     }),
     vatNumber: z.string().optional().openapi({
         description: "Filter companies by VAT number",
-        example: "BE1234567894",
+        examples: ["BE1234567894"],
     }),
 });
 

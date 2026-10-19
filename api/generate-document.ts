@@ -51,7 +51,7 @@ const { email: _email, ...generateBaseShape } = {
   recipient: z.string().openapi({
     description:
       "The Peppol address of the recipient the document is generated for.",
-    example: "0208:987654321",
+    examples: ["0208:987654321"],
   }),
 };
 
@@ -64,7 +64,7 @@ const generateParamSchema = z.object({
   companyId: z.string().openapi({
     description:
       "The ID of the company the document is generated for. Its Peppol identifier is written into the document as the sender.",
-    example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    examples: ["c_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
   }),
 });
 
@@ -89,16 +89,17 @@ const generateResponse = z.object({
   }),
   documentType: z.string().openapi({
     description: "The type of the generated document.",
-    example: DocumentType.INVOICE,
+    examples: [DocumentType.INVOICE],
   }),
   doctypeId: z.string().openapi({
     description: "The document type identifier the document was generated for.",
-    example:
+    examples: [
       "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+    ],
   }),
   processId: z.string().openapi({
     description: "The process identifier the document was generated for.",
-    example: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+    examples: ["urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"],
   }),
 }).openapi({
   description: "The generated XML, with the document type and process it was generated for.",

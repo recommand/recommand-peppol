@@ -306,15 +306,15 @@ export const franceCdarCollectedAmountSchema = z.object({
   amount: franceCdarAmountSchema.openapi({
     description:
       "Net collected amount (positive) or disbursed amount (negative), for status 212.",
-    example: "12000.00",
+    examples: ["12000.00"],
   }),
   currency: zCurrencies.openapi({
     description: "ISO 4217 currency code of the collected amount.",
-    example: "EUR",
+    examples: ["EUR"],
   }),
   vatPercent: franceCdarVatPercentSchema.openapi({
     description: "VAT rate applicable to the collected amount.",
-    example: "20.00",
+    examples: ["20.00"],
   }),
 }).openapi({ ref: "FranceCdarCollectedAmount" });
 
@@ -437,75 +437,75 @@ const franceCdarObjectSchema = z.object({
   issueDate: franceCdarIncomingIssueDateSchema.openapi({
     description:
       "Creation date and time of the CDAR, without a timezone and with second precision. Date-only values are accepted for incoming format-102 documents.",
-    example: "2024-03-20T14:05:09",
+    examples: ["2024-03-20T14:05:09"],
   }),
   businessProcess: franceCdarBusinessProcessSchema.openapi({
     description: franceCdarBusinessProcessDescription,
-    example: "REGULATED",
+    examples: ["REGULATED"],
   }),
   phase: franceCdarPhaseSchema.openapi({
     description: franceCdarPhaseDescription,
-    example: "23",
+    examples: ["23"],
   }),
   senderRole: franceCdarRoleCodeSchema.openapi({
     description: `Role of the CDAR sender.
 
 ${franceCdarRoleCodeDescription}`,
-    example: "WK",
+    examples: ["WK"],
   }),
   issuerRole: franceCdarRoleCodeSchema.openapi({
     description: `Role of the party that creates and issues the invoice lifecycle status. This is independent from the CDAR sender role.
 
 ${franceCdarRoleCodeDescription}`,
-    example: "BY",
+    examples: ["BY"],
   }),
   issuerLegalId: franceCdarLegalIdSchema.optional().openapi({
     description:
       "Legal identifier of the party setting the status. Required when phase is 23. When sending, it must be omitted when phase is 305 unless recipientRole is DFH; a received CDAR may carry the identifier of the platform that set a phase-305 status.",
-    example: "200000008",
+    examples: ["200000008"],
   }),
   issuerLegalIdScheme: franceCdarIdentifierSchemeSchema.optional().openapi({
     description:
       "ISO 6523 ICD scheme of the party-setting-status legal identifier. Required together with issuerLegalId.",
-    example: "0002",
+    examples: ["0002"],
   }),
   recipientRole: franceCdarRoleCodeSchema.openapi({
     description: `Role of the CDAR recipient.
 
 ${franceCdarRoleCodeDescription}`,
-    example: "SE",
+    examples: ["SE"],
   }),
   recipientLegalId: franceCdarLegalIdSchema.optional().openapi({
     description: "Legal identifier of the CDAR recipient.",
-    example: "200000008",
+    examples: ["200000008"],
   }),
   recipientLegalIdScheme: franceCdarIdentifierSchemeSchema.optional().openapi({
     description:
       "ISO 6523 ICD scheme of the CDAR recipient legal identifier. Required together with recipientLegalId.",
-    example: "0002",
+    examples: ["0002"],
   }),
   recipientElectronicAddress: franceCdarElectronicAddressSchema
     .optional()
     .openapi({
       description:
         "Electronic address of the CDAR recipient. Required when recipientRole is not WK or DFH.",
-      example: "100000009",
+      examples: ["100000009"],
     }),
   recipientElectronicAddressScheme: franceCdarIdentifierSchemeSchema
     .optional()
     .openapi({
       description:
         "Electronic Address Scheme (EAS) code of the CDAR recipient electronic address. Required together with recipientElectronicAddress.",
-      example: "0225",
+      examples: ["0225"],
     }),
   statusCode: franceCdarStatusCodeSchema.openapi({
     description: franceCdarStatusCodeDescription,
-    example: "200",
+    examples: ["200"],
   }),
   statusDate: franceCdarIncomingIssueDateSchema.openapi({
     description:
       "Date and time at which the status itself was set, without a timezone and with second precision. This is distinct from issueDate, which is the creation date and time of the CDAR message. Date-only values are accepted for incoming format-102 documents.",
-    example: "2024-03-20T14:05:09",
+    examples: ["2024-03-20T14:05:09"],
   }),
   invoiceId: franceCdarInvoiceIdSchema.openapi({
     description:
@@ -515,22 +515,22 @@ ${franceCdarRoleCodeDescription}`,
     description: `Type of the referenced invoice.
 
 ${franceCdarInvoiceTypeCodeDescription}`,
-    example: "380",
+    examples: ["380"],
   }),
   invoiceIssueDate: z.string().date().optional().openapi({
     description:
       "Issue date of the referenced invoice. Required unless statusCode is 501.",
-    example: "2024-03-15",
+    examples: ["2024-03-15"],
   }),
   sellerLegalId: franceCdarLegalIdSchema.optional().openapi({
     description:
       "Legal identifier (e.g. SIREN) of the invoice seller. Required unless statusCode is 501.",
-    example: "123456789",
+    examples: ["123456789"],
   }),
   sellerLegalIdScheme: franceCdarIdentifierSchemeSchema.optional().openapi({
     description:
       "ISO 6523 ICD scheme of the referenced invoice seller legal identifier. Required together with sellerLegalId.",
-    example: "0002",
+    examples: ["0002"],
   }),
   reasonCode: franceCdarReasonCodeSchema.optional().openapi({
     description: franceCdarReasonCodeDescription,
@@ -542,7 +542,7 @@ ${franceCdarInvoiceTypeCodeDescription}`,
   reasonNote: franceCdarReasonNoteSchema.optional().openapi({
     description:
       "Free-text comment in the status detail IncludedNote. Required when reasonCode is AUTRE.",
-    example: "The invoice needs manual review.",
+    examples: ["The invoice needs manual review."],
   }),
   collectedAmounts: z.array(franceCdarCollectedAmountSchema).optional().openapi({
     description:
@@ -668,12 +668,12 @@ export const sendFranceCdarSchema = franceCdarObjectSchema
       description: "The ID of the CDAR. If not provided, the ID will be autogenerated.",
     }),
     issueDate: franceCdarDateTimeSchema.optional().openapi({
-      example: "2024-03-20T14:05:09",
+      examples: ["2024-03-20T14:05:09"],
       description:
         "If not provided, the issue date and time will be the current local date and time.",
     }),
     statusDate: franceCdarDateTimeSchema.optional().openapi({
-      example: "2024-03-20T14:05:09",
+      examples: ["2024-03-20T14:05:09"],
       description:
         "Date and time at which the status was set. If not provided, the issue date and time of the CDAR is used.",
     }),
@@ -681,7 +681,7 @@ export const sendFranceCdarSchema = franceCdarObjectSchema
       description: `${franceCdarPhaseDescription}
 
 Defaults to \`305\` for statuses \`200\`, \`201\`, \`202\`, \`203\`, \`213\`, and \`501\`; otherwise defaults to \`23\`.`,
-      example: "23",
+      examples: ["23"],
     }),
   })
   .transform((data) => ({

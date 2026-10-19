@@ -40,7 +40,7 @@ const requestMigrationParamSchema = z.object({
 const requestMigrationJsonBodySchema = z.object({
     migrationKey: z.string().trim().min(8).max(24).openapi({
         description: "The migration key issued by the provider that currently publishes the identifier. 8 to 24 characters with at least two upper case letters, two lower case letters, two digits and two special characters.",
-        example: "Ab12$#xyZ9!kLm",
+        examples: ["Ab12$#xyZ9!kLm"],
     }),
 });
 

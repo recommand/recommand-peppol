@@ -36,7 +36,6 @@ import { initializeDeliveryReconciliationCron } from "./data/deliveries/reconcil
 import { initializeEmailDeliveryReconciliationCron } from "./data/deliveries/reconcile-email";
 import { initializeDeletedNorwegianOrganisationsCron } from "./data/bronnoysund/deleted-organisations";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
-import { normalizeSchemaExamples } from "./utils/openapi-schema-examples";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
 import { registerPeppolEventTypes } from "./lib/event-types";
@@ -206,7 +205,7 @@ For additional support or questions, don't hesitate to contact our support team.
   let openApiDocument: ReturnType<typeof generateSpecs> | undefined;
   const getOpenApiDocument = (c: Context) => {
     openApiDocument ??= generateSpecs(server, specsOptions, undefined, c).then(
-      (document) => withoutUnusedSchemas(withoutEmptyPaths(normalizeSchemaExamples(document))),
+      (document) => withoutUnusedSchemas(withoutEmptyPaths(document)),
       (error) => {
         openApiDocument = undefined;
         throw error;

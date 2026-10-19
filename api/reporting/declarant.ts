@@ -55,7 +55,7 @@ export const frenchReportingDeclarantResponse = z
         "The reporting environment this registration belongs to. Teams on the test network are registered in `TEST`, all other teams in `PROD`.",
     }),
     siren: z.string().openapi({
-      example: "123456789",
+      examples: ["123456789"],
       description: "The SIREN the company reports under, derived from its enterprise number.",
     }),
     issuerName: z.string().openapi({
@@ -118,12 +118,12 @@ export function toFrenchReportingDeclarantResponse(declarant: FrenchReportingDec
 const registerFrenchReportingDeclarantBodySchema = z
   .object({
     vatRegime: vatRegimeSchema.openapi({
-      example: "REEL_NORMAL_MENSUEL",
+      examples: ["REEL_NORMAL_MENSUEL"],
       description:
         "The company's French VAT regime: `REEL_NORMAL_MENSUEL` (régime réel normal), `REEL_SIMPLIFIE` (régime réel simplifié) or `FRANCHISE_EN_BASE` (franchise en base de TVA). Changing it after registration can leave the current reporting period unfiled; contact support before changing it.",
     }),
     vatExigibility: vatExigibilitySchema.openapi({
-      example: "DEBITS",
+      examples: ["DEBITS"],
       description:
         "When VAT becomes due: `ENCAISSEMENTS` (on payment, typical for services) or `DEBITS` (on invoicing, typical for goods). Payment reports can only be submitted under `ENCAISSEMENTS`.",
     }),
