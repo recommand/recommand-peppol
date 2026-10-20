@@ -7,12 +7,13 @@
  * certain is sent as it was before.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import { invoiceDocument, frenchInvoiceDocument } from "./e2e/documents";
 import { SendingFailure } from "../utils/pipelines/sending/errors";
 import { prepareJsonDocument } from "../utils/pipelines/sending/prepare-json-document";
 import { prepareXmlDocument } from "../utils/pipelines/sending/prepare-xml-document";
 import { sendDocumentSchema } from "../utils/parsing/send-document";
+import * as xmlDetection from "../utils/type-repository/document-formats/xml-detection";
 
 const BILLING = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 const SELF_BILLING = "urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0";
@@ -249,10 +250,31 @@ describe("raw XML that is sent as before", () => {
 
   it("still derives the process when the caller names none", () => {
     // The check only compares a process the caller supplied; a derived one is
-    // left as it was, even where it is not the document's own.
+    // left as it was, even where it is not the document's own: this self-billing
+    // invoice declares the billing process, and goes out over self-billing.
     expect(prepare(messageLevelResponse(MLR)).processId).toBe(MLR);
-    const selfBillingDocType = `urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##${SELF_BILLING_CUSTOMIZATION_ID}::2.1`;
-    expect(prepare(ublInvoice(BILLING), { doctypeId: selfBillingDocType }).processId).toBe(SELF_BILLING);
+    expect(prepare(ublInvoice(BILLING, SELF_BILLING_CUSTOMIZATION_ID)).processId).toBe(SELF_BILLING);
+  });
+
+  it("passes a document the check itself fails on", () => {
+    const parse = spyOn(xmlDetection, "parseXmlForDetection").mockImplementation(() => {
+      throw new Error("unexpected");
+    });
+    const logged = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      // Refused when the check works, see above; the doc type is named, so
+      // nothing else reads the document through the failing parser.
+      const doctypeId = `urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##${BIS3_CUSTOMIZATION_ID}::2.1`;
+      expect(prepare(ublInvoice(BILLING), { doctypeId, processId: SELF_BILLING }).processId).toBe(SELF_BILLING);
+      expect(parse).toHaveBeenCalled();
+      expect(logged).toHaveBeenCalledWith(
+        "Failed to compare the process id with the XML document:",
+        expect.any(Error),
+      );
+    } finally {
+      parse.mockRestore();
+      logged.mockRestore();
+    }
   });
 });
 

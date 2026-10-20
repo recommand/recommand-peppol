@@ -81,6 +81,18 @@ function declaredPeppolBisProfile(
     : undefined;
 }
 
+/** The profile a Peppol BIS document declares, when it names another process than the one requested. */
+function contradictingProfile(
+  xml: string,
+  requested: string,
+): { value: string; element: string } | undefined {
+  if (!PEPPOL_BIS_PROCESS_IDS.has(requested)) return undefined;
+
+  const declared = declaredPeppolBisProfile(xml);
+  if (!declared || !PEPPOL_BIS_PROCESS_IDS.has(declared.value)) return undefined;
+  return declared.value === requested ? undefined : declared;
+}
+
 /**
  * Refuses raw XML whose requested process contradicts the process the document
  * declares for itself. The requested process goes into the envelope and the AS4
@@ -91,15 +103,21 @@ function declaredPeppolBisProfile(
  * Only an unambiguous contradiction is refused: a Peppol BIS document whose profile
  * and requested process are both in `PEPPOL_BIS_PROCESS_IDS` and differ. Anything
  * else, a document without a profile, one that cannot be parsed, another
- * specification or a process this check does not know, is sent as before.
+ * specification or a process this check does not know, is sent as before. So is a
+ * document the check itself fails on: an error in reading it is no reason to stop a
+ * send that would otherwise go out.
  */
 export function assertProcessIdMatchesDocument(xml: string, processId: string): void {
-  const requested = processIdValue(processId);
-  if (!PEPPOL_BIS_PROCESS_IDS.has(requested)) return;
-
-  const declared = declaredPeppolBisProfile(xml);
-  if (!declared || !PEPPOL_BIS_PROCESS_IDS.has(declared.value)) return;
-  if (declared.value === requested) return;
+  let requested: string;
+  let declared: { value: string; element: string } | undefined;
+  try {
+    requested = processIdValue(processId);
+    declared = contradictingProfile(xml, requested);
+  } catch (error) {
+    console.error("Failed to compare the process id with the XML document:", error);
+    return;
+  }
+  if (!declared) return;
 
   throw new SendingFailure(
     `The processId '${processId}' does not match the process the XML document declares in ${declared.element}: '${declared.value}'. ` +
