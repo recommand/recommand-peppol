@@ -29,6 +29,10 @@ import { recordSendDocumentDelivery } from "@peppol/utils/metrics";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { ulid } from "ulid";
+import {
+  matchEnvelopeToDocument,
+  readEnvelopeParties,
+} from "./envelope-parties";
 import { SendingFailure } from "./errors";
 import { assertFranceRegulatedSendingSupported } from "./france-regulated-guard";
 import { prepareJsonDocument } from "./prepare-json-document";
@@ -72,7 +76,23 @@ export async function sendingPipeline(c: SendingContext) {
       );
     }
 
-    const senderIdentifier = await getSendingCompanyIdentifier(company, recipientAddress);
+    // A raw XML invoice or credit note names its own sender and receiver, which a
+    // receiving access point may hold against the envelope. The sender it names decides
+    // which of the company's identifiers it goes out under, and both are matched with
+    // the envelope below. Not through the French access point, which addresses the
+    // envelope under rules of its own.
+    const envelopeParties =
+      input.documentType === "xml" &&
+      recipientAddress !== null &&
+      company.accessPointProvider !== "at-shared-ap-fr"
+        ? readEnvelopeParties(input.document)
+        : undefined;
+
+    const senderIdentifier = await getSendingCompanyIdentifier(
+      company,
+      recipientAddress,
+      envelopeParties?.sender?.participant,
+    );
     const senderAddress = `${senderIdentifier.scheme}:${senderIdentifier.identifier}`;
 
     // Raw XML already is one specific format, and states the process it belongs to, so
@@ -124,6 +144,17 @@ export async function sendingPipeline(c: SendingContext) {
     const xmlDocument = recipientAddress === null ? null : prepared.xml;
     c.set("sendDocumentRecordingXml", xmlDocument);
 
+    // A recipient given without a scheme is assumed to be a Belgian enterprise number,
+    // so the receiver the document names is not held against it.
+    const envelope =
+      recipientAddress === null
+        ? null
+        : matchEnvelopeToDocument(envelopeParties, {
+            senderAddress,
+            recipientAddress,
+            checkReceiver: input.recipient === recipientAddress,
+          });
+
     const validation = xmlDocument
       ? await validateDocument(xmlDocument, prepared.docTypeId)
       : undefined;
@@ -172,8 +203,8 @@ export async function sendingPipeline(c: SendingContext) {
         as4Response = await getAccessPointProvider(
           company.accessPointProvider,
         ).sendAs4({
-          senderId: senderAddress,
-          receiverId: recipientAddress,
+          senderId: envelope?.senderId ?? senderAddress,
+          receiverId: envelope?.receiverId ?? recipientAddress,
           docTypeId: prepared.docTypeId,
           processId: prepared.processId,
           countryC1: company.country,

@@ -2,6 +2,7 @@ import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
 import { derivedDefaultIdentifiers, hasOptionalPrefix, isSiren, normalizeIdentifierValue, sameIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
 import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
+import { sameParticipant, type PeppolParticipant } from "@peppol/utils/parsing/peppol-address";
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { db } from "@recommand/db";
@@ -136,9 +137,15 @@ const LEITWEG_ID_ROUTE_SENDER_SCHEMES = ["9930", "0088"];
  */
 export async function getSendingCompanyIdentifier(
   company: Pick<Company, "id" | "accessPointProvider">,
-  recipientAddress?: string | null
+  recipientAddress?: string | null,
+  documentSender?: PeppolParticipant | null
 ): Promise<CompanyIdentifier> {
-  return chooseSendingCompanyIdentifier(company, await getCompanyIdentifiers(company.id), recipientAddress);
+  return chooseSendingCompanyIdentifier(
+    company,
+    await getCompanyIdentifiers(company.id),
+    recipientAddress,
+    documentSender
+  );
 }
 
 type SenderCandidate = Pick<CompanyIdentifier, "scheme" | "identifier">;
@@ -172,6 +179,11 @@ function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly Send
  * without a database.
  *
  * Outside the French access point:
+ * - A raw XML document that names its own sender goes out under that address when
+ *   it is one of the company's identifiers: a receiving access point may hold the
+ *   envelope's sender against the document's, so any other choice could get the
+ *   document rejected. An address that is not the company's is refused before it is
+ *   sent; see matchEnvelopeToDocument.
  * - A document addressed to a Leitweg-ID goes out under the company's VAT number
  *   (9930) or GLN (0088), the senders German federal reception lists, when the company
  *   has one. A company without either, such as a supplier from another country, sends
@@ -186,7 +198,8 @@ function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly Send
 export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier, "scheme" | "identifier">>(
   company: Pick<Company, "accessPointProvider">,
   identifiers: T[],
-  recipientAddress?: string | null
+  recipientAddress?: string | null,
+  documentSender?: PeppolParticipant | null
 ): T {
   if (identifiers.length === 0) {
     throw new UserFacingError("No sending company identifier found. Ensure you have added a company identifier to your company.");
@@ -202,6 +215,13 @@ export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier,
       );
     }
     return sirenAddress;
+  }
+
+  if (documentSender) {
+    const named = identifiers.find((identifier) => sameParticipant(identifier, documentSender));
+    if (named) {
+      return named;
+    }
   }
 
   if (recipientAddress?.split(":")[0]?.trim() === LEITWEG_ID_SCHEME) {

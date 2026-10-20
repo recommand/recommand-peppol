@@ -189,10 +189,30 @@ export function messageLevelResponseDocument(
 }
 
 /**
+ * The Peppol addresses a raw XML document names as its supplier and customer. The API
+ * refuses a BIS Billing document whose parties are not the company it is sent from and
+ * the recipient it is sent to, so the suite writes in the ones it sends between.
+ */
+export type XmlParties = { sender: string; receiver: string };
+
+const DEFAULT_XML_PARTIES: XmlParties = {
+  sender: "0208:1234567894",
+  receiver: "0208:0598726857",
+};
+
+function endpointId(address: string): string {
+  const separator = address.indexOf(":");
+  return `<cbc:EndpointID schemeID="${address.slice(0, separator)}">${address.slice(separator + 1)}</cbc:EndpointID>`;
+}
+
+/**
  * A minimal, valid PEPPOL BIS Billing 3.0 UBL invoice. Element order follows
  * the UBL XSD sequence, which the validator enforces.
  */
-export function invoiceXmlDocument(options: { buyerReference?: string | null } = {}) {
+export function invoiceXmlDocument(
+  options: { buyerReference?: string | null; parties?: XmlParties } = {}
+) {
+  const parties = options.parties ?? DEFAULT_XML_PARTIES;
   const id = nextRef("E2E-XML");
   const buyerReference =
     options.buyerReference === null
@@ -210,7 +230,7 @@ export function invoiceXmlDocument(options: { buyerReference?: string | null } =
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
 ${buyerReference}  <cac:AccountingSupplierParty>
     <cac:Party>
-      <cbc:EndpointID schemeID="0208">1234567894</cbc:EndpointID>
+      ${endpointId(parties.sender)}
       <cac:PartyName>
         <cbc:Name>Recommand E2E Seller</cbc:Name>
       </cac:PartyName>
@@ -235,7 +255,7 @@ ${buyerReference}  <cac:AccountingSupplierParty>
   </cac:AccountingSupplierParty>
   <cac:AccountingCustomerParty>
     <cac:Party>
-      <cbc:EndpointID schemeID="0208">0598726857</cbc:EndpointID>
+      ${endpointId(parties.receiver)}
       <cac:PartyName>
         <cbc:Name>Recommand E2E Buyer</cbc:Name>
       </cac:PartyName>
@@ -300,8 +320,8 @@ ${buyerReference}  <cac:AccountingSupplierParty>
 }
 
 /** Same document without a buyer reference, which PEPPOL-EN16931-R003 rejects. */
-export function invalidInvoiceXmlDocument() {
-  return invoiceXmlDocument({ buyerReference: null });
+export function invalidInvoiceXmlDocument(parties?: XmlParties) {
+  return invoiceXmlDocument({ buyerReference: null, parties });
 }
 
 /** Doctype and process identifiers the API is expected to store. */
@@ -347,7 +367,8 @@ export type DocumentVariant = {
   /** Name used in the test title. */
   key: string;
   documentType: string;
-  document: () => unknown;
+  /** Raw XML names the parties it is sent between; the JSON variants ignore them. */
+  document: (parties: XmlParties) => unknown;
   doctypeId?: string;
   processId?: string;
   /** Only billing documents may be sent with a null recipient. */
@@ -423,7 +444,7 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
   {
     key: "xml",
     documentType: "xml",
-    document: () => invoiceXmlDocument(),
+    document: (parties) => invoiceXmlDocument({ parties }),
     isBillingType: false,
     supportsPdf: false,
     storedDocTypeId: DOC_TYPE_ID.invoice,
@@ -433,7 +454,7 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
   {
     key: "xml+doctypeId",
     documentType: "xml",
-    document: () => invoiceXmlDocument(),
+    document: (parties) => invoiceXmlDocument({ parties }),
     doctypeId: DOC_TYPE_ID.invoice,
     isBillingType: false,
     supportsPdf: false,
@@ -444,7 +465,7 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
   {
     key: "xml+processId",
     documentType: "xml",
-    document: () => invoiceXmlDocument(),
+    document: (parties) => invoiceXmlDocument({ parties }),
     processId: CUSTOM_PROCESS_ID,
     isBillingType: false,
     supportsPdf: false,
@@ -457,7 +478,7 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
   {
     key: "xml+doctypeId+processId",
     documentType: "xml",
-    document: () => invoiceXmlDocument(),
+    document: (parties) => invoiceXmlDocument({ parties }),
     doctypeId: DOC_TYPE_ID.invoice,
     processId: CUSTOM_PROCESS_ID,
     isBillingType: false,
