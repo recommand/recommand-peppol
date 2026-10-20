@@ -5,11 +5,15 @@ import {
   resolveFormatProcessId,
 } from "@peppol/utils/type-repository/document-formats";
 import { selfDeclaredDocTypeId } from "@peppol/utils/type-repository/document-formats/xml-detection";
+import { assertDocTypeIdMatchesXml } from "./doctype-consistency";
 import { SendingFailure } from "./errors";
 import type { PreparedDocument, SendingInput } from "./types";
 
 export function prepareXmlDocument(input: SendingInput): PreparedDocument {
   const xml = input.document as string;
+  if (input.doctypeId) {
+    assertDocTypeIdMatchesXml(xml, input.doctypeId, input.processId);
+  }
   const format = input.doctypeId
     ? getDocumentFormatByDocTypeId(input.doctypeId)
     : detectDocumentFormat(xml, {
