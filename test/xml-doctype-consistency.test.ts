@@ -4,8 +4,9 @@
  * contradicts is refused; everything else is sent as before.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import { join } from "node:path";
+import * as doctypeConsistency from "../utils/pipelines/sending/doctype-consistency";
 import { SendingFailure } from "../utils/pipelines/sending/errors";
 import { prepareJsonDocument } from "../utils/pipelines/sending/prepare-json-document";
 import { prepareXmlDocument } from "../utils/pipelines/sending/prepare-xml-document";
@@ -235,6 +236,16 @@ describe("a doctypeId that cannot be compared", () => {
     expect(prepare(document, { doctypeId: ublInvoiceDocType(BIS3) }).docTypeId).toBe(ublInvoiceDocType(BIS3));
   });
 
+  it("is sent as given when it names a customization no format is sent under", async () => {
+    const xrechnung = await xrechnungFixture("01.01a-INVOICE_ubl.xml");
+    // Another XRechnung version than the one the document declares.
+    const xrechnung23 = ublInvoiceDocType("urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.3");
+    expect(prepare(xrechnung, { doctypeId: xrechnung23 }).docTypeId).toBe(xrechnung23);
+    // A PINT specialisation for a Peppol BIS document.
+    const pint = `peppol-doctype-wildcard::${ublInvoiceDocType("urn:peppol:pint:billing-1@eu-1")}`;
+    expect(prepare(ublInvoice(BIS3), { doctypeId: pint }).docTypeId).toBe(pint);
+  });
+
   it("is sent as given when the document declares no customization", () => {
     expect(prepare(ublInvoice(), { doctypeId: ublInvoiceDocType(XRECHNUNG) }).docTypeId).toBe(
       ublInvoiceDocType(XRECHNUNG)
@@ -260,6 +271,26 @@ describe("a doctypeId that cannot be compared", () => {
     expect(prepare("this is not an xml document", { doctypeId: ublInvoiceDocType(BIS3) }).docTypeId).toBe(
       ublInvoiceDocType(BIS3)
     );
+  });
+});
+
+describe("a check that fails", () => {
+  it("does not stop the send", () => {
+    const check = spyOn(doctypeConsistency, "assertDocTypeIdMatchesXml").mockImplementation(() => {
+      throw new Error("unexpected");
+    });
+    const logged = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      // A contradiction the check would otherwise refuse.
+      expect(prepare(ublCreditNote(BIS3), { doctypeId: ublInvoiceDocType(BIS3) }).docTypeId).toBe(
+        ublInvoiceDocType(BIS3)
+      );
+      expect(check).toHaveBeenCalledTimes(1);
+      expect(logged).toHaveBeenCalledWith("Failed to compare the doctypeId with the XML document:", expect.any(Error));
+    } finally {
+      check.mockRestore();
+      logged.mockRestore();
+    }
   });
 });
 

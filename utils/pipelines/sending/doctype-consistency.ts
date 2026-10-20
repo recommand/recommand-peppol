@@ -24,9 +24,10 @@ import { SendingFailure } from "./errors";
  *
  * Only a plain contradiction is refused. Whatever the document does not state, an
  * identifier this does not understand, and the version part are left alone, as are
- * differences in case and whitespace. A customization id only counts when the document's
- * is one a registered format recognises: some specifications, the French ones, name
- * their documents differently from their doc type ids on purpose.
+ * differences in case and whitespace. A customization id only counts when both the
+ * document's and the requested one belong to registered formats: a doc type id this
+ * platform has no format for is sent as it always was, and some specifications, the French
+ * ones, name their documents differently from their doc type ids on purpose.
  */
 export function assertDocTypeIdMatchesXml(
   xml: string,
@@ -166,15 +167,25 @@ function child(element: any, localName: string): any {
 }
 
 /**
- * Whether the document is one a registered format recognises, under no format that is sent
- * with the requested customization id. A French CIUS invoice declares plain EN 16931, and
- * a French CDAR a guideline of its own, while their doc type ids say otherwise.
+ * Whether the document and the requested customization id belong to different registered
+ * formats. Both have to be known: a doc type id no format is sent under, another XRechnung
+ * version or a PINT specialisation say, may well be meant for this document. And a format
+ * that recognises the document counts under its own doc type id, because a French CIUS
+ * invoice declares plain EN 16931, and a French CDAR a guideline of its own, while their
+ * doc type ids say otherwise.
  */
 function contradictsKnownFormat(
   xml: string,
   requestedCustomizationId: string,
   processId: string | undefined
 ): boolean {
+  const formatCustomizationId = (docTypeId: string) => parseDocTypeId(docTypeId)?.customizationId;
+  const requestedIsKnown = documentFormats.some((format) => {
+    const customizationId = formatCustomizationId(format.docTypeId);
+    return customizationId !== undefined && same(customizationId, requestedCustomizationId);
+  });
+  if (!requestedIsKnown) return false;
+
   const parsed = parseXmlForDetection(xml);
   if (!parsed) return false;
   const recognising = documentFormats.filter((format) =>
@@ -184,8 +195,8 @@ function contradictsKnownFormat(
   );
   if (recognising.length === 0) return false;
   return !recognising.some((format) => {
-    const parts = parseDocTypeId(format.docTypeId);
-    return parts !== undefined && related(parts.customizationId, requestedCustomizationId);
+    const customizationId = formatCustomizationId(format.docTypeId);
+    return customizationId !== undefined && related(customizationId, requestedCustomizationId);
   });
 }
 

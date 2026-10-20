@@ -12,7 +12,14 @@ import type { PreparedDocument, SendingInput } from "./types";
 export function prepareXmlDocument(input: SendingInput): PreparedDocument {
   const xml = input.document as string;
   if (input.doctypeId) {
-    assertDocTypeIdMatchesXml(xml, input.doctypeId, input.processId);
+    try {
+      assertDocTypeIdMatchesXml(xml, input.doctypeId, input.processId);
+    } catch (error) {
+      // Only a contradiction it established refuses the send; a failure of the check
+      // itself leaves the send as it would have been without it.
+      if (error instanceof SendingFailure) throw error;
+      console.error("Failed to compare the doctypeId with the XML document:", error);
+    }
   }
   const format = input.doctypeId
     ? getDocumentFormatByDocTypeId(input.doctypeId)
