@@ -6,6 +6,7 @@ import {
 } from "@peppol/utils/type-repository/document-formats";
 import { selfDeclaredDocTypeId } from "@peppol/utils/type-repository/document-formats/xml-detection";
 import { SendingFailure } from "./errors";
+import { assertProcessIdMatchesDocument } from "./process-id-consistency";
 import type { PreparedDocument, SendingInput } from "./types";
 
 export function prepareXmlDocument(input: SendingInput): PreparedDocument {
@@ -24,6 +25,7 @@ export function prepareXmlDocument(input: SendingInput): PreparedDocument {
       400,
     );
   }
+  if (input.processId) assertProcessIdMatchesDocument(xml, input.processId);
 
   let type = "unknown";
   let parsed: any = null;
