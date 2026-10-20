@@ -181,9 +181,9 @@ function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly Send
  * Outside the French access point:
  * - A raw XML document that names its own sender goes out under that address when
  *   it is one of the company's identifiers: a receiving access point may hold the
- *   envelope's sender against the document's, so any other choice could get the
- *   document rejected. An address that is not the company's is refused before it is
- *   sent; see matchEnvelopeToDocument.
+ *   envelope's sender against the document's. Addressed to a Leitweg-ID, only a VAT
+ *   number or GLN named that way is followed, the senders listed below; any other
+ *   leaves the choice below as it is.
  * - A document addressed to a Leitweg-ID goes out under the company's VAT number
  *   (9930) or GLN (0088), the senders German federal reception lists, when the company
  *   has one. A company without either, such as a supplier from another country, sends
@@ -217,14 +217,16 @@ export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier,
     return sirenAddress;
   }
 
-  if (documentSender) {
+  const toLeitwegId = recipientAddress?.split(":")[0]?.trim() === LEITWEG_ID_SCHEME;
+
+  if (documentSender && (!toLeitwegId || LEITWEG_ID_ROUTE_SENDER_SCHEMES.includes(documentSender.scheme.trim()))) {
     const named = identifiers.find((identifier) => sameParticipant(identifier, documentSender));
     if (named) {
       return named;
     }
   }
 
-  if (recipientAddress?.split(":")[0]?.trim() === LEITWEG_ID_SCHEME) {
+  if (toLeitwegId) {
     for (const scheme of LEITWEG_ID_ROUTE_SENDER_SCHEMES) {
       const accepted = identifiers.find((identifier) => identifier.scheme === scheme);
       if (accepted) {

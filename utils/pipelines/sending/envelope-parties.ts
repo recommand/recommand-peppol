@@ -5,6 +5,10 @@ import {
   splitPeppolAddress,
   type PeppolParticipant,
 } from "@peppol/utils/parsing/peppol-address";
+import {
+  identifierFailsSchemeValidation,
+  identifierNamesAnotherCompany,
+} from "@peppol/utils/identifier-validation";
 import { SendingFailure } from "./errors";
 
 /** An endpoint a document names, spelled as the document spells it, and where. */
@@ -65,16 +69,18 @@ function readEndpoint(party: any, element: string): EnvelopePartyEndpoint | null
  * under the BIS Self-Billing customization from the customer to the supplier
  * (BR-SBDH-3 and 4).
  *
- * Undefined for every other document, and for one that cannot be parsed: no rule says
+ * Undefined for every other document, and for one that cannot be read: no rule says
  * which of its parties the envelope has to name, so nothing is held against it.
  */
 export function readEnvelopeParties(xml: string): EnvelopeParties | undefined {
-  let parsed: Record<string, any>;
   try {
-    parsed = parser.parse(xml);
+    return readParties(parser.parse(xml));
   } catch {
     return undefined;
   }
+}
+
+function readParties(parsed: Record<string, any>): EnvelopeParties | undefined {
   const root = parsed?.Invoice ?? parsed?.CreditNote;
   if (!root || typeof root !== "object") return undefined;
 
@@ -104,68 +110,88 @@ function spell({ scheme, identifier }: PeppolParticipant): string {
 }
 
 /**
- * The sender and receiver to put on the envelope of a raw XML document, given the
- * parties the document names and the participants the transmission goes between.
+ * Refuses a raw XML document whose sender or receiver is certainly wrong, before
+ * anything is sent.
  *
- * The enveloping rules compare the envelope with the document character for
- * character, while participant identifiers are case insensitive on the network. A side
- * the document names as the same participant, written in other case or spacing, is
- * therefore not refused: the envelope takes the document's spelling, so the comparison
- * holds literally. A side naming another participant is refused before anything is
- * sent, since the receiving access point would reject the document after it left:
- * - a receiver other than the recipient of the request;
- * - a sender that is not the address the company sends from. The caller has already
- *   chosen, as that address, the company identifier the document names where it is
- *   one (see chooseSendingCompanyIdentifier), so a sender left over here is not the
- *   company's.
+ * The enveloping rules want the envelope and the document to name the same
+ * participants. A difference is only refused where it cannot be right, because a
+ * document that differs from the envelope may still arrive: participant identifiers are
+ * case insensitive (Peppol Policy for use of Identifiers, POLICY 2), and companies are
+ * reachable under more than one identifier. So:
+ * - the receiver is refused when it is not the recipient and its value is not a valid
+ *   identifier under its scheme, such as an email address under 0002;
+ * - the sender is refused, when `checkSender` is set, when it is not the address the
+ *   company sends from and is a valid national number of another company of the
+ *   company's country (see identifierNamesAnotherCompany).
+ * Any other difference, including case, is left as it is.
  *
- * `checkReceiver` is false when the recipient's scheme was not given but assumed, in
- * which case the receiver the document names is left as it is.
+ * The check fails open: an unexpected error in it is logged and the send goes on as if
+ * it had not run.
  */
-export function matchEnvelopeToDocument(
+export function assertEnvelopePartiesPlausible(
   parties: EnvelopeParties | undefined,
-  transmission: { senderAddress: string; recipientAddress: string; checkReceiver: boolean }
-): { senderId: string; receiverId: string } {
-  const envelope = {
-    senderId: transmission.senderAddress,
-    receiverId: transmission.recipientAddress,
-  };
-  if (!parties) return envelope;
+  transmission: {
+    senderAddress: string;
+    recipientAddress: string;
+    company: { enterpriseNumber: string | null; vatNumber: string | null; country: string };
+    checkSender: boolean;
+  }
+): void {
+  let errors: string[];
+  try {
+    errors = envelopePartyErrors(parties, transmission);
+  } catch (error) {
+    console.error("Failed to check the parties of an XML document against its envelope:", error);
+    return;
+  }
+  if (errors.length === 0) return;
 
+  throw new SendingFailure(
+    {
+      root: [
+        "The sender or receiver in the document cannot be the Peppol participant it is sent between. Peppol BIS Billing requires the document's party endpoints to match the envelope (rules BR-SBDH-1 to BR-SBDH-4), and the receiving access point may reject the document otherwise.",
+        ...errors,
+      ],
+    },
+    400
+  );
+}
+
+function envelopePartyErrors(
+  parties: EnvelopeParties | undefined,
+  transmission: Parameters<typeof assertEnvelopePartiesPlausible>[1]
+): string[] {
+  if (!parties) return [];
   const errors: string[] = [];
 
   const sender = splitPeppolAddress(transmission.senderAddress);
-  if (parties.sender && sender) {
-    if (sameParticipant(parties.sender.participant, sender)) {
-      envelope.senderId = spell(parties.sender.participant);
-    } else {
-      errors.push(
-        `The document names ${spell(parties.sender.participant)} as its sender in ${parties.sender.element}, which is not a Peppol identifier of this company. Write one of the company's identifiers there, such as ${transmission.senderAddress} (schemeID "${sender.scheme}", value "${sender.identifier}").`
-      );
-    }
+  if (
+    transmission.checkSender &&
+    parties.sender &&
+    sender &&
+    !sameParticipant(parties.sender.participant, sender) &&
+    identifierNamesAnotherCompany({
+      scheme: parties.sender.participant.scheme,
+      identifier: parties.sender.participant.identifier,
+      company: transmission.company,
+    })
+  ) {
+    errors.push(
+      `The document names ${spell(parties.sender.participant)} as its sender in ${parties.sender.element}, which is another company's number. Write one of this company's Peppol identifiers there, such as ${transmission.senderAddress} (schemeID "${sender.scheme}", value "${sender.identifier}").`
+    );
   }
 
   const receiver = splitPeppolAddress(transmission.recipientAddress);
-  if (transmission.checkReceiver && parties.receiver && receiver) {
-    if (sameParticipant(parties.receiver.participant, receiver)) {
-      envelope.receiverId = spell(parties.receiver.participant);
-    } else {
-      errors.push(
-        `The document names ${spell(parties.receiver.participant)} as its receiver in ${parties.receiver.element}, but the request sends it to ${transmission.recipientAddress}. Write the recipient's Peppol address there (schemeID "${receiver.scheme}", value "${receiver.identifier}"), or set \`recipient\` to the address the document names.`
-      );
-    }
-  }
-
-  if (errors.length > 0) {
-    throw new SendingFailure(
-      {
-        root: [
-          "The sender and receiver in the document do not match the Peppol sender and recipient it is sent between (Peppol BIS Billing rules BR-SBDH-1 to BR-SBDH-4). The receiving access point compares them and would reject the document.",
-          ...errors,
-        ],
-      },
-      400
+  if (
+    parties.receiver &&
+    receiver &&
+    !sameParticipant(parties.receiver.participant, receiver) &&
+    identifierFailsSchemeValidation(parties.receiver.participant.scheme, parties.receiver.participant.identifier)
+  ) {
+    errors.push(
+      `The document names ${spell(parties.receiver.participant)} as its receiver in ${parties.receiver.element}, which is not a valid identifier under scheme ${parties.receiver.participant.scheme}. Write the recipient's Peppol address there, such as ${transmission.recipientAddress} (schemeID "${receiver.scheme}", value "${receiver.identifier}").`
     );
   }
-  return envelope;
+
+  return errors;
 }

@@ -241,6 +241,71 @@ export function sameIdentifierValue(scheme: string, left: string, right: string)
   );
 }
 
+/** A national number as an identifier under the scheme is stored, or null when there is none. */
+function cleanNationalNumber(scheme: string, national: NationalNumberScheme, value: string | null): string | null {
+  const cleaned = national.number === "vatNumber" ? cleanVatNumber(value) : cleanEnterpriseNumber(value);
+  if (!cleaned) {
+    return null;
+  }
+  const normalizeVatNumber =
+    getCountryIdentifierRules(national.country)?.normalizeVatNumber ?? ((vatNumber: string) => vatNumber);
+  return normalizeIdentifierValue(scheme, national.number === "vatNumber" ? normalizeVatNumber(cleaned) : cleaned);
+}
+
+/**
+ * Whether a value is certainly not an identifier under its scheme: the scheme has a
+ * validator of its own and the value fails it, as an email address under the French
+ * SIRENE scheme (0002) does. False for a scheme without a validator, and for a scheme
+ * removed from the code list, whose use is not a question of the value.
+ */
+export function identifierFailsSchemeValidation(scheme: string, identifier: string): boolean {
+  if (!schemeValidators[scheme] || scheme in REMOVED_SCHEMES) {
+    return false;
+  }
+  try {
+    validateIdentifier(scheme, identifier);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Whether an identifier certainly names another company than this one: a valid national
+ * VAT or enterprise number of the company's own country, of a kind the company has a
+ * number for, that is not that number. Anything less certain is false: a scheme that
+ * names no national number, a scheme whose identifiers name a company in a way of their
+ * own (see validateIdentifierBelongsToCompany), a scheme of another country, a company
+ * without such a number, and a value that is not a valid number at all.
+ */
+export function identifierNamesAnotherCompany({
+  scheme,
+  identifier,
+  company,
+}: {
+  scheme: string;
+  identifier: string;
+  company: { enterpriseNumber: string | null; vatNumber: string | null; country: string };
+}): boolean {
+  if (countryIdentifierRules.some((rules) => rules.companyIdentifiers?.schemes.includes(scheme))) {
+    return false;
+  }
+  const national = nationalNumberSchemes[scheme];
+  if (!national || national.country !== company.country.toUpperCase()) {
+    return false;
+  }
+  const companyNumber = cleanNationalNumber(scheme, national, company[national.number]);
+  if (!companyNumber) {
+    return false;
+  }
+  try {
+    validateIdentifier(scheme, identifier);
+  } catch {
+    return false;
+  }
+  return cleanNationalNumber(scheme, national, identifier) !== companyNumber;
+}
+
 /** A country's name as it reads in a sentence: "the Netherlands", "Belgium". */
 function countryInProse(code: string): string {
   const name = getCountryName(code);
@@ -285,15 +350,7 @@ export function validateIdentifierBelongsToCompany({
   }
 
   const label = national.number === "vatNumber" ? "VAT number" : "enterprise number";
-  const normalizeVatNumber =
-    getCountryIdentifierRules(national.country)?.normalizeVatNumber ?? ((vatNumber: string) => vatNumber);
-  const clean = (value: string | null) => {
-    const cleaned = national.number === "vatNumber" ? cleanVatNumber(value) : cleanEnterpriseNumber(value);
-    if (!cleaned) {
-      return null;
-    }
-    return normalizeIdentifierValue(scheme, national.number === "vatNumber" ? normalizeVatNumber(cleaned) : cleaned);
-  };
+  const clean = (value: string | null) => cleanNationalNumber(scheme, national, value);
   const companyNumber = clean(company[national.number]);
 
   if (!companyNumber) {

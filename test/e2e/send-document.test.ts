@@ -31,7 +31,6 @@ import {
   createCompany,
   deleteCompany,
   getCompany,
-  getCompanyIdentifiers,
   getDocument,
   normaliseRecipient,
   requireConfig,
@@ -54,7 +53,6 @@ import {
   selfBillingInvoiceDocument,
   UNKNOWN_DOC_TYPE_ID,
   type DocumentVariant,
-  type XmlParties,
 } from "./documents";
 
 const TIMEOUT = 120_000;
@@ -261,7 +259,7 @@ function requestBody(combination: Combination): Record<string, unknown> {
   const body: Record<string, unknown> = {
     recipient: recipient.value,
     documentType: variant.documentType,
-    document: variant.document(xmlParties(recipient.receiverId ?? RECIPIENT)),
+    document: variant.document(),
   };
   if (variant.doctypeId) body.doctypeId = variant.doctypeId;
   if (variant.processId) body.processId = variant.processId;
@@ -384,12 +382,6 @@ async function runCombination(combination: Combination): Promise<void> {
 }
 
 let company: any;
-// One of the company's own Peppol addresses, which raw XML has to name as its supplier.
-let xmlSender = "";
-
-function xmlParties(receiver: string = RECIPIENT): XmlParties {
-  return { sender: xmlSender, receiver };
-}
 
 // Generous timeouts: the hook may have to boot the dev server, and hooks are
 // subject to the (5 second) test timeout unless one is given explicitly.
@@ -412,12 +404,6 @@ beforeAll(async () => {
   expect(response.status).toBe(200);
   expect(response.body.company?.id).toBe(COMPANY_ID);
   company = response.body.company;
-
-  const identifiers = await getCompanyIdentifiers();
-  expect(identifiers.status).toBe(200);
-  const [identifier] = identifiers.body.identifiers ?? [];
-  expect(identifier).toBeDefined();
-  xmlSender = `${identifier.scheme}:${identifier.identifier}`;
 }, 180_000);
 
 e2eDescribe("send document: every parameter combination", () => {
@@ -704,7 +690,7 @@ e2eDescribe("send document: raw XML", () => {
       const response = await sendDocument({
         recipient: RECIPIENT,
         documentType: "xml",
-        document: invoiceXmlDocument({ parties: xmlParties() }),
+        document: invoiceXmlDocument(),
         doctypeId: UNKNOWN_DOC_TYPE_ID,
       });
       expectFailure(response, 400, ERROR.processIdNotDetected);
@@ -720,7 +706,7 @@ e2eDescribe("send document: raw XML", () => {
       const response = await sendDocument({
         recipient: RECIPIENT,
         documentType: "xml",
-        document: invoiceXmlDocument({ parties: xmlParties() }),
+        document: invoiceXmlDocument(),
         doctypeId: UNKNOWN_DOC_TYPE_ID,
         processId: CUSTOM_PROCESS_ID,
         ...STORED_DESPITE_PEPPOL_REFUSAL,
@@ -742,7 +728,7 @@ e2eDescribe("send document: raw XML", () => {
       const response = await sendDocument({
         recipient: RECIPIENT,
         documentType: "xml",
-        document: invoiceXmlDocument({ parties: xmlParties() }),
+        document: invoiceXmlDocument(),
         doctypeId: DOC_TYPE_ID.selfBillingInvoice,
       });
       expect(response.status).toBe(200);
@@ -761,7 +747,7 @@ e2eDescribe("send document: raw XML", () => {
       const response = await sendDocument({
         recipient: RECIPIENT,
         documentType: "xml",
-        document: invalidInvoiceXmlDocument(xmlParties()),
+        document: invalidInvoiceXmlDocument(),
       });
 
       expect(response.status).toBe(400);

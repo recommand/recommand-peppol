@@ -106,10 +106,6 @@ export function getCompany(): Promise<ApiResponse> {
   return api(`/api/peppol/companies/${COMPANY_ID}`);
 }
 
-export function getCompanyIdentifiers(): Promise<ApiResponse> {
-  return api(`/api/peppol/companies/${COMPANY_ID}/identifiers`);
-}
-
 /**
  * Readiness check used while waiting for the server to boot. Looking up the
  * company the tests send from proves more than a plain request to `/`: the API
