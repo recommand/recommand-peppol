@@ -26,7 +26,9 @@ export async function validateXmlDocument(
       console.error(`Failed to validate XML document: ${response.status}`);
       sendTelegramNotification(
         `Failed to reach validation service successfully: ${response.status}`,
-      );
+      ).catch((error) => {
+        console.error("Failed to send Telegram notification:", error);
+      });
       return { result: "error", errors: [] };
     }
 
@@ -39,14 +41,18 @@ export async function validateXmlDocument(
       );
       sendTelegramNotification(
         `Failed to parse validation response: ${JSON.stringify(parsed.error)}`,
-      );
+      ).catch((error) => {
+        console.error("Failed to send Telegram notification:", error);
+      });
       return { result: "error", errors: [] };
     }
 
     return parsed.data;
   } catch (error) {
     console.error("Failed to validate XML document:", error);
-    sendTelegramNotification(`Failed to validate XML document: ${error}`);
+    sendTelegramNotification(`Failed to validate XML document: ${error}`).catch((notificationError) => {
+      console.error("Failed to send Telegram notification:", notificationError);
+    });
     return { result: "error", errors: [] };
   }
 }
