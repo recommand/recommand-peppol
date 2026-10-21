@@ -280,6 +280,16 @@ export function prebuildCreditNoteUBL({
               }),
             },
           }),
+          ...(payment.mandate && {
+            "cac:PaymentMandate": {
+              "cbc:ID": payment.mandate.reference,
+              ...(payment.mandate.debitedAccount && {
+                "cac:PayerFinancialAccount": {
+                  "cbc:ID": payment.mandate.debitedAccount,
+                },
+              }),
+            },
+          }),
         })),
       }),
       ...(creditNote.paymentTerms && {

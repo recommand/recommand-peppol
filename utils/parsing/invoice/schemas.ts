@@ -237,6 +237,25 @@ export const periodSchema = z
 
 export type Period = z.infer<typeof periodSchema>;
 
+export const paymentMandateSchema = z
+  .object({
+    reference: z.string().min(1).openapi({
+      examples: ["MANDATE-2026-001"],
+      description:
+        "The reference of the mandate under which the amount is collected (BT-89), as agreed with the buyer.",
+    }),
+    debitedAccount: z.string().nullish().openapi({
+      examples: ["BE71096123456769"],
+      description:
+        "The buyer's account the amount is collected from (BT-91), usually an IBAN.",
+    }),
+  })
+  .openapi({
+    ref: "PaymentMandate",
+    description:
+      "The direct debit mandate the amount is collected under. A SEPA direct debit (`sepa_direct_debit`) needs one: Peppol rule PEPPOL-EN16931-R061 refuses a direct debit without a mandate reference.",
+  });
+
 export const paymentMeansSchema = z
   .object({
     name: z.string().nullish().openapi({
@@ -273,6 +292,7 @@ export const paymentMeansSchema = z
       description:
         "An identifier for the payment service provider where a payment account is located. Such as a BIC or a national clearing code where required.",
     }),
+    mandate: paymentMandateSchema.nullish(),
   })
   .openapi({ ref: "PaymentMeans" });
 

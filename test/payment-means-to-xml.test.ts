@@ -4,6 +4,7 @@ import { invoiceToUBL } from "../utils/parsing/invoice/peppol-ubl-bis3/to-xml";
 import { invoiceToCII } from "../utils/parsing/invoice/cii-d22b/to-xml";
 import { parseInvoiceFromXML } from "../utils/parsing/invoice/peppol-ubl-bis3/from-xml";
 import { parseInvoiceFromCII } from "../utils/parsing/invoice/cii-d22b/from-xml";
+import { validateXml } from "./utils/utils";
 
 const profile = {
   customizationId: "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0",
@@ -17,7 +18,7 @@ function invoiceWith(paymentMeans: PaymentMeans[]): Invoice {
     dueDate: "2026-01-01",
     currency: "EUR",
     seller: { name: "Seller", street: "Seller Street 1", city: "Brussels", postalZone: "1000", country: "BE", vatNumber: "BE1234567894", street2: null },
-    buyer: { name: "Buyer", street: "Buyer Street 1", city: "Antwerp", postalZone: "2000", country: "BE", vatNumber: "BE9876543210", street2: null },
+    buyer: { name: "Buyer", street: "Buyer Street 1", city: "Antwerp", postalZone: "2000", country: "BE", vatNumber: "BE0598726857", street2: null },
     paymentMeans,
     paymentTerms: { note: "Collected by direct debit." },
     lines: [
@@ -34,11 +35,11 @@ function invoiceWith(paymentMeans: PaymentMeans[]): Invoice {
 }
 
 function toUBL(invoice: Invoice) {
-  return invoiceToUBL({ invoice, senderAddress: "0208:1234567894", recipientAddress: "0208:9876543210", isDocumentValidationEnforced: false, profile });
+  return invoiceToUBL({ invoice, senderAddress: "0208:1234567894", recipientAddress: "0208:0598726857", isDocumentValidationEnforced: false, profile });
 }
 
 function toCII(invoice: Invoice) {
-  return invoiceToCII({ invoice, senderAddress: "0208:1234567894", recipientAddress: "0208:9876543210", isDocumentValidationEnforced: false, profile });
+  return invoiceToCII({ invoice, senderAddress: "0208:1234567894", recipientAddress: "0208:0598726857", isDocumentValidationEnforced: false, profile });
 }
 
 describe("payment means without a payee account", () => {
@@ -91,5 +92,68 @@ describe("payment means without a payee account", () => {
       { paymentMethod: "credit_transfer", name: null, reference: "", iban: null, financialInstitutionBranch: null },
     ]));
     expect(xml).not.toContain("PayeeFinancialAccount");
+  });
+});
+
+/** The XML without the indentation between elements. */
+function compact(xml: string) {
+  return xml.replace(/>\s+</g, "><");
+}
+
+describe("direct debit mandate", () => {
+  const directDebit = invoiceWith([
+    {
+      paymentMethod: "sepa_direct_debit",
+      name: "SEPA direct debit",
+      reference: "PM-001",
+      iban: null,
+      financialInstitutionBranch: null,
+      mandate: { reference: "MANDATE-001", debitedAccount: "BE71096123456769" },
+    },
+  ]);
+
+  it("writes the mandate in UBL", () => {
+    const xml = compact(toUBL(directDebit));
+    expect(xml).toContain("<cac:PaymentMandate><cbc:ID>MANDATE-001</cbc:ID><cac:PayerFinancialAccount><cbc:ID>BE71096123456769</cbc:ID></cac:PayerFinancialAccount></cac:PaymentMandate>");
+  });
+
+  it("writes the mandate in CII", () => {
+    const xml = compact(toCII(directDebit));
+    expect(xml).toContain("<ram:PayerPartyDebtorFinancialAccount><ram:IBANID>BE71096123456769</ram:IBANID></ram:PayerPartyDebtorFinancialAccount>");
+    expect(xml).toContain("<ram:DirectDebitMandateID>MANDATE-001</ram:DirectDebitMandateID>");
+  });
+
+  it("parses the mandate back", () => {
+    const mandate = { reference: "MANDATE-001", debitedAccount: "BE71096123456769" };
+    expect(parseInvoiceFromXML(toUBL(directDebit)).paymentMeans?.[0].mandate).toEqual(mandate);
+    expect(parseInvoiceFromCII(toCII(directDebit)).paymentMeans?.[0].mandate).toEqual(mandate);
+  });
+
+  it("parses a payment means without a mandate as having none", () => {
+    const transfer = invoiceWith([
+      { paymentMethod: "credit_transfer", name: null, reference: "", iban: "BE71096123456769", financialInstitutionBranch: null },
+    ]);
+    expect(parseInvoiceFromXML(toUBL(transfer)).paymentMeans?.[0].mandate).toBeNull();
+    expect(parseInvoiceFromCII(toCII(transfer)).paymentMeans?.[0].mandate).toBeNull();
+  });
+
+  it("passes Peppol validation with a mandate", async () => {
+    await validateXml(toUBL(directDebit), "direct debit with mandate UBL");
+    await validateXml(toCII(directDebit), "direct debit with mandate CII D22B");
+  });
+
+  it("passes Peppol validation with only a mandate reference", async () => {
+    const xml = toUBL(invoiceWith([
+      {
+        paymentMethod: "sepa_direct_debit",
+        name: null,
+        reference: "PM-001",
+        iban: null,
+        financialInstitutionBranch: null,
+        mandate: { reference: "MANDATE-001", debitedAccount: null },
+      },
+    ]));
+    expect(xml).not.toContain("PayerFinancialAccount");
+    await validateXml(xml, "direct debit with only a mandate reference UBL");
   });
 });

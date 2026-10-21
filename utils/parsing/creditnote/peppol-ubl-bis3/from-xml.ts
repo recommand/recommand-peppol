@@ -130,6 +130,10 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     iban: getNullableTextContent(payment.PayeeFinancialAccount?.ID),
     name: getNullableTextContent(payment.PayeeFinancialAccount?.Name),
     financialInstitutionBranch: getNullableTextContent(payment.PayeeFinancialAccount?.FinancialInstitutionBranch?.ID),
+    mandate: payment.PaymentMandate ? {
+      reference: getTextContent(payment.PaymentMandate.ID),
+      debitedAccount: getNullableTextContent(payment.PaymentMandate.PayerFinancialAccount?.ID),
+    } : null,
   }));
 
   // UBL-SR-45 allows one PaymentDueDate, on whichever payment means carries it.

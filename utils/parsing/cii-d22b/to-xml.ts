@@ -412,6 +412,8 @@ export function billingDocumentToCII({
     document.paymentMeans
       ?.map((payment) => payment.reference)
       .filter((reference): reference is string => Boolean(reference)) ?? [];
+  // CII has one place for a mandate reference (BT-89), in the payment terms.
+  const directDebitMandateId = document.paymentMeans?.find((payment) => payment.mandate)?.mandate?.reference;
   const documentNotes = includedNotes(document, additionalNotes);
   const headerBillingPeriod = document.billingPeriod && billingPeriod(document.billingPeriod);
 
@@ -498,6 +500,11 @@ export function billingDocumentToCII({
             "ram:SpecifiedTradeSettlementPaymentMeans": document.paymentMeans.map((payment) => ({
               "ram:TypeCode": getPaymentCodeByKey(payment.paymentMethod),
               ...(payment.name && { "ram:Information": payment.name }),
+              ...(payment.mandate?.debitedAccount && {
+                "ram:PayerPartyDebtorFinancialAccount": {
+                  "ram:IBANID": payment.mandate.debitedAccount,
+                },
+              }),
               ...(hasPayeeAccount(payment) && {
                 "ram:PayeePartyCreditorFinancialAccount": {
                   "ram:IBANID": payment.iban,
@@ -547,15 +554,11 @@ export function billingDocumentToCII({
               ) || []),
             ],
           }),
-          ...(document.paymentTerms && {
+          ...((document.paymentTerms || dueDate || directDebitMandateId) && {
             "ram:SpecifiedTradePaymentTerms": {
-              "ram:Description": document.paymentTerms.note,
+              ...(document.paymentTerms && { "ram:Description": document.paymentTerms.note }),
               ...(dueDate && { "ram:DueDateDateTime": dateTime(dueDate) }),
-            },
-          }),
-          ...(!document.paymentTerms && dueDate && {
-            "ram:SpecifiedTradePaymentTerms": {
-              "ram:DueDateDateTime": dateTime(dueDate),
+              ...(directDebitMandateId && { "ram:DirectDebitMandateID": directDebitMandateId }),
             },
           }),
           "ram:SpecifiedTradeSettlementHeaderMonetarySummation": {

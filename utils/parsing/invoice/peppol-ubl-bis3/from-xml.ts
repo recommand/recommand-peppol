@@ -126,6 +126,10 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     iban: getNullableTextContent(payment.PayeeFinancialAccount?.ID),
     name: getNullableTextContent(payment.PayeeFinancialAccount?.Name),
     financialInstitutionBranch: getNullableTextContent(payment.PayeeFinancialAccount?.FinancialInstitutionBranch?.ID),
+    mandate: payment.PaymentMandate ? {
+      reference: getTextContent(payment.PaymentMandate.ID),
+      debitedAccount: getNullableTextContent(payment.PaymentMandate.PayerFinancialAccount?.ID),
+    } : null,
   }));
 
   // Extract payment terms if present

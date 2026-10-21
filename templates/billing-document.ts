@@ -226,6 +226,9 @@ export const BILLING_DOCUMENT_TEMPLATE = `<!DOCTYPE html>
                 {{#financialInstitutionBranch}}
                   <p class="text-xs text-slate-500">BIC/Branch: {{financialInstitutionBranch}}</p>
                 {{/financialInstitutionBranch}}
+                {{#mandateReference}}
+                  <p class="text-xs text-slate-500">Mandate reference: {{mandateReference}}</p>
+                {{/mandateReference}}
               </div>
             {{/paymentMeans}}
           </div>

@@ -74,6 +74,7 @@ type TemplatePaymentMeans = {
   reference?: string | null;
   iban: string;
   financialInstitutionBranch?: string | null;
+  mandateReference?: string | null;
 };
 
 type TemplateVatSubtotal = {
@@ -454,6 +455,7 @@ function buildTemplateData(
           reference: payment.reference || null,
           iban: payment.iban || "",
           financialInstitutionBranch: payment.financialInstitutionBranch || null,
+          mandateReference: payment.mandate?.reference || null,
         };
       })
     : null;

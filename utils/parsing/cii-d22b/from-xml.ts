@@ -113,6 +113,19 @@ function attachment(ref: any) {
   };
 }
 
+/**
+ * The mandate of a direct debit payment means. CII states the mandate reference
+ * (BT-89) once, in the payment terms, so it belongs to the payment means that
+ * debit an account: a direct debit, or one that names the debited account.
+ */
+function paymentMandate(payment: any, mandateId: any) {
+  const reference = getNullableTextContent(mandateId);
+  const debitedAccount = getNullableTextContent(payment.PayerPartyDebtorFinancialAccount?.IBANID);
+  const isDirectDebit = getPaymentKeyByCode(getTextContent(payment.TypeCode)) === "sepa_direct_debit";
+  if (!reference || (!isDirectDebit && !debitedAccount)) return null;
+  return { reference, debitedAccount };
+}
+
 export function parseBillingDocumentFromCII(xml: string) {
   const parsed = parser.parse(xml);
   const invoice = parsed.CrossIndustryInvoice;
@@ -228,6 +241,10 @@ export function parseBillingDocumentFromCII(xml: string) {
         ),
         financialInstitutionBranch: getNullableTextContent(
           payment.PayeeSpecifiedCreditorFinancialInstitution?.BICID
+        ),
+        mandate: paymentMandate(
+          payment,
+          settlement.SpecifiedTradePaymentTerms?.DirectDebitMandateID
         ),
       })
     ),
