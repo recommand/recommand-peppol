@@ -15,7 +15,7 @@ import {
 } from "@peppol/data/transmitted-documents";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { renderDocumentHtml, renderDocumentPdf } from "@peppol/utils/document-renderer";
-import { describeErrorResponse, parameterSchema } from "@core/lib/api-docs";
+import { describeErrorResponse } from "@core/lib/api-docs";
 
 const server = new Server();
 
@@ -43,10 +43,10 @@ const renderDocumentRouteDescription = describeRoute({
       headers: {
         "Content-Disposition": {
           description: "Offers a PDF as a download named after the document. Not sent with HTML.",
-          schema: parameterSchema({
+          schema: {
             examples: ["attachment; filename=\"doc_01JQZ8X0M4T7RB6K9V2NDHW3PA.pdf\""],
             type: "string",
-          }),
+          },
         },
       },
     },
