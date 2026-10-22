@@ -1,6 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import { COUNTRIES } from "../utils/countries";
 import { countryIdentifierRules } from "../utils/identifiers/countries";
+import { cleanEnterpriseNumber } from "../utils/util";
 import {
   getVatNumberPrefixes,
   isPlaceholderNumber,
@@ -460,6 +461,40 @@ describe("a placeholder number", () => {
     expect(isPlaceholderNumber("100")).toBe(false);
     expect(isPlaceholderNumber("0202239951")).toBe(false);
     expect(isPlaceholderNumber("FR40303265045")).toBe(false);
+  });
+
+  it("leaves round register numbers alone", () => {
+    // Register numbers are handed out in sequence, so round ones are as real as any
+    // other: a leading digit or two followed by zeros, with or without a register
+    // prefix, is no placeholder. Each of these passes its country's own rules.
+    const numbers: [string, string][] = [
+      ["DE", "HRB 12000"],
+      ["DE", "HRB 5000"],
+      ["DE", "HRA 1100"],
+      ["LU", "B10000"],
+      ["LU", "B 250000"],
+      ["AT", "FN 100000a"],
+      ["DK", "21000000"],
+      ["NO", "930000000"],
+      ["NL", "30000000"],
+    ];
+    for (const [country, enterpriseNumber] of numbers) {
+      expect(
+        () => validateCompanyNumbers({ country, enterpriseNumber: cleanEnterpriseNumber(enterpriseNumber) }),
+        `${country} ${enterpriseNumber}`
+      ).not.toThrow();
+    }
+    expect(() => validateCompanyNumbers({ country: "DK", vatNumber: "DK21000000", enterpriseNumber: "21000000" })).not.toThrow();
+    expect(() => validateCompanyNumbers({ country: "NO", vatNumber: "NO930000000MVA", enterpriseNumber: "930000000" })).not.toThrow();
+    expect(() => validateIdentifier("0184", "DK21000000")).not.toThrow();
+    expect(() => validateIdentifier("0192", "930000000")).not.toThrow();
+    expect(() => validateIdentifier("0106", "30000000")).not.toThrow();
+  });
+
+  it("is refused with a register prefix or a sub-address", () => {
+    expect(() => validateCompanyNumbers({ country: "DE", enterpriseNumber: "HRB00000" })).toThrow("is a placeholder");
+    expect(() => validateCompanyNumbers({ country: "AT", enterpriseNumber: "FN000000A" })).toThrow("is a placeholder");
+    expect(() => validateIdentifier("0246", "DE000000000-00001")).toThrow("is a placeholder");
   });
 });
 

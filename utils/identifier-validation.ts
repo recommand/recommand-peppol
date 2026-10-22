@@ -42,22 +42,31 @@ const schemeValidators: Record<string, IdentifierValidator> = {
 };
 
 /**
- * Whether a number is a placeholder: zeros only, apart from at most two characters at
- * its start or at its end, as in 000000000, FR12000000000 or BE0000000097. Several
- * national checks let these through, because zero passes Luhn and a mod 97 check
- * digit of 97 or a French key of 12 is computed from it. Senders type them when they
- * do not know their buyer's number, so a company that publishes one receives
- * documents meant for others.
+ * Whether a number is a placeholder: its digits are zeros only, apart from the check
+ * digits a national check computes from zero, as in 000000000, BE0000000097 or
+ * FR12000000000. Several national checks let these through, because zero passes Luhn
+ * and a mod 97 check digit of 97 or a French key of 12 is computed from it. Senders
+ * type them when they do not know their buyer's number, so a company that publishes
+ * one receives documents meant for others.
+ *
+ * Only zeros make a placeholder. Register numbers are handed out in sequence, so a
+ * round one such as HRB 12000, B10000 or the CVR number 21000000 is a real number.
  */
 export function isPlaceholderNumber(identifier: string): boolean {
-  const digits = identifier
-    .toUpperCase()
-    .replace(/^[A-Z]{2}(?=[\d\s.\-]*\d)/, "")
-    .replace(/\D/g, "");
+  const digits = identifier.replace(/\D/g, "");
   if (digits.length < 4) {
     return false;
   }
-  return /^0+$/.test(digits.slice(2)) || /^0+$/.test(digits.slice(0, -2));
+  if (/^0+$/.test(digits)) {
+    return true;
+  }
+  // Check digits at the end, as the mod 97 pair of a Belgian number. National numbers
+  // with check digits have at least 8 digits, so shorter codes are left alone.
+  if (digits.length >= 8 && /^0+$/.test(digits.slice(0, -2))) {
+    return true;
+  }
+  // The French VAT key, which comes before the SIREN.
+  return /^FR[0-9A-Z]{2}0{9}$/.test(identifier.toUpperCase().replace(/[\s.\-]/g, ""));
 }
 
 function assertNotPlaceholderNumber(identifier: string): void {
