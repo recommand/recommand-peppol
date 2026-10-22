@@ -65,19 +65,28 @@ async function resolveEnterpriseAddress({
 
 const DEFAULT_CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
+function isYoungerThan(updatedAt: Date, maxAgeMs: number): boolean {
+  return new Date(updatedAt).getTime() > Date.now() - maxAgeMs;
+}
+
 /**
  * Reads an enterprise from the CBE, or from the cache while the cached copy is
  * younger than `maxAgeMs` (30 days by default).
+ *
+ * A caller that asks for a fresher copy than 30 days still gets the cached copy
+ * when the CBE cannot be reached and that copy is younger than 30 days: the copy
+ * every other caller would be served is better than no answer.
  */
 export async function getEnterpriseData(
   enterpriseNumber: string,
   country: string,
   { maxAgeMs = DEFAULT_CACHE_MAX_AGE_MS }: { maxAgeMs?: number } = {}
 ): Promise<EnterpriseData> {
+  let fallback: EnterpriseData | null = null;
 
   try {
     const cache = await getEnterpriseDataFromCache(enterpriseNumber, country);
-    if (cache && new Date(cache.updatedAt).getTime() > Date.now() - maxAgeMs) {
+    if (cache && isYoungerThan(cache.updatedAt, maxAgeMs)) {
       if (hasCompleteCbeAddress(cache.enterpriseData.address)) {
         return cache.enterpriseData;
       }
@@ -100,8 +109,23 @@ export async function getEnterpriseData(
 
       return cache.enterpriseData;
     }
+    if (cache && isYoungerThan(cache.updatedAt, DEFAULT_CACHE_MAX_AGE_MS)) {
+      fallback = cache.enterpriseData;
+    }
   } catch (error) { }
 
+  try {
+    return await readEnterpriseFromCbe(enterpriseNumber);
+  } catch (error) {
+    if (!fallback) {
+      throw error;
+    }
+    console.error(`Could not read enterprise ${enterpriseNumber} from the CBE, using the cached copy:`, error);
+    return fallback;
+  }
+}
+
+async function readEnterpriseFromCbe(enterpriseNumber: string): Promise<EnterpriseData> {
   const credentials = getKboCredentials();
 
   const xml = await callKboSoap({

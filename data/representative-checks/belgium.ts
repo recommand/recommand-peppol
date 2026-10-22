@@ -28,10 +28,22 @@ export const belgianRepresentativeCheck: CountryRepresentativeCheck = {
   /**
    * The representative has to be one of the company's representatives. A company for
    * which the register lists no named representative goes through on an unknown
-   * name, so the identity check still runs.
+   * name, so the identity check still runs. When the register cannot be read, the
+   * representative is asked to try again rather than let through unchecked.
    */
   beforeIdentity: async (company, name, dependencies) => {
-    const representatives = await namedRepresentatives(company, dependencies);
+    let representatives: ListedRepresentative[];
+    try {
+      representatives = await namedRepresentatives(company, dependencies);
+    } catch (error) {
+      if (error instanceof UserFacingError) {
+        throw error;
+      }
+      console.error(`Failed to read the representatives of company ${company.id} from the CBE:`, error);
+      throw new UserFacingError(
+        "The representatives of this company could not be read from the CBE registry. Please try again later, or contact support@recommand.eu if this persists."
+      );
+    }
     if (representatives.length === 0) {
       return { firstName: "UNKNOWN", lastName: "UNKNOWN" };
     }
