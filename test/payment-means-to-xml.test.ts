@@ -4,6 +4,9 @@ import { invoiceToUBL } from "../utils/parsing/invoice/peppol-ubl-bis3/to-xml";
 import { invoiceToCII } from "../utils/parsing/invoice/cii-d22b/to-xml";
 import { parseInvoiceFromXML } from "../utils/parsing/invoice/peppol-ubl-bis3/from-xml";
 import { parseInvoiceFromCII } from "../utils/parsing/invoice/cii-d22b/from-xml";
+import type { CreditNote } from "../utils/parsing/creditnote/schemas";
+import { creditNoteToUBL } from "../utils/parsing/creditnote/peppol-ubl-bis3/to-xml";
+import { parseCreditNoteFromXML } from "../utils/parsing/creditnote/peppol-ubl-bis3/from-xml";
 import { validateXml } from "./utils/utils";
 
 const profile = {
@@ -135,6 +138,36 @@ describe("direct debit mandate", () => {
     ]);
     expect(parseInvoiceFromXML(toUBL(transfer)).paymentMeans?.[0].mandate).toBeNull();
     expect(parseInvoiceFromCII(toCII(transfer)).paymentMeans?.[0].mandate).toBeNull();
+  });
+
+  // BT-89 is optional in UBL: PEPPOL-EN16931-R061 requires it only on a direct debit.
+  // A received document may carry a cac:PaymentMandate without a cbc:ID, or with an
+  // empty one, and must still be read.
+  describe("a received mandate without a reference", () => {
+    const withMandateId = (xml: string, id: string) =>
+      xml.replace("<cbc:ID>MANDATE-001</cbc:ID>", id);
+
+    it("reads an invoice whose mandate has no ID as having no mandate", () => {
+      const xml = withMandateId(toUBL(directDebit), "");
+      expect(xml).toContain("<cac:PaymentMandate>");
+      expect(parseInvoiceFromXML(xml).paymentMeans?.[0].mandate).toBeNull();
+    });
+
+    it("reads an invoice whose mandate ID is empty as having no mandate", () => {
+      const xml = withMandateId(toUBL(directDebit), "<cbc:ID></cbc:ID>");
+      expect(parseInvoiceFromXML(xml).paymentMeans?.[0].mandate).toBeNull();
+    });
+
+    it("reads a credit note whose mandate has no ID as having no mandate", () => {
+      const { invoiceNumber: _, ...rest } = directDebit;
+      const creditNote = { ...rest, creditNoteNumber: "CN-001" } as CreditNote;
+      const xml = withMandateId(
+        creditNoteToUBL({ creditNote, senderAddress: "0208:1234567894", recipientAddress: "0208:0598726857", isDocumentValidationEnforced: false, profile }),
+        "",
+      );
+      expect(xml).toContain("<cac:PaymentMandate>");
+      expect(parseCreditNoteFromXML(xml).paymentMeans?.[0].mandate).toBeNull();
+    });
   });
 
   it("passes Peppol validation with a mandate", async () => {

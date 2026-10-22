@@ -5,6 +5,7 @@ import type { SelfBillingInvoice } from "../../self-billing-invoice/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 import { parseUblBillingPeriod } from "../../billing-period";
 import { parseUblPartyIdentifiers } from "../../party-identifiers";
+import { parseUblPaymentMandate } from "../../payment-mandate";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -126,10 +127,7 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     iban: getNullableTextContent(payment.PayeeFinancialAccount?.ID),
     name: getNullableTextContent(payment.PayeeFinancialAccount?.Name),
     financialInstitutionBranch: getNullableTextContent(payment.PayeeFinancialAccount?.FinancialInstitutionBranch?.ID),
-    mandate: payment.PaymentMandate ? {
-      reference: getTextContent(payment.PaymentMandate.ID),
-      debitedAccount: getNullableTextContent(payment.PaymentMandate.PayerFinancialAccount?.ID),
-    } : null,
+    mandate: parseUblPaymentMandate(payment.PaymentMandate),
   }));
 
   // Extract payment terms if present

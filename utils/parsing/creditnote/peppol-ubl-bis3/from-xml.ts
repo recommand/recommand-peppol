@@ -5,6 +5,7 @@ import type { SelfBillingCreditNote } from "../../self-billing-creditnote/schema
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 import { parseUblBillingPeriod } from "../../billing-period";
 import { parseUblPartyIdentifiers } from "../../party-identifiers";
+import { parseUblPaymentMandate } from "../../payment-mandate";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -130,10 +131,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     iban: getNullableTextContent(payment.PayeeFinancialAccount?.ID),
     name: getNullableTextContent(payment.PayeeFinancialAccount?.Name),
     financialInstitutionBranch: getNullableTextContent(payment.PayeeFinancialAccount?.FinancialInstitutionBranch?.ID),
-    mandate: payment.PaymentMandate ? {
-      reference: getTextContent(payment.PaymentMandate.ID),
-      debitedAccount: getNullableTextContent(payment.PaymentMandate.PayerFinancialAccount?.ID),
-    } : null,
+    mandate: parseUblPaymentMandate(payment.PaymentMandate),
   }));
 
   // UBL-SR-45 allows one PaymentDueDate, on whichever payment means carries it.
