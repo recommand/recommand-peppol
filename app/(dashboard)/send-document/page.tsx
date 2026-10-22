@@ -87,10 +87,6 @@ export default function SendDocumentPage() {
 
   const client = useMemo(() => rc<PreviewDocumentApi>("peppol"), []);
 
-  const handleFormChange = (data: Partial<SendDocument>) => {
-    setFormData(data);
-  };
-
   useEffect(() => {
     setDocumentType(DocumentType.INVOICE);
     setSelectedCompanyId("");
@@ -111,8 +107,8 @@ export default function SendDocumentPage() {
     const newDocumentType =
       value as (typeof DocumentType)[keyof typeof DocumentType];
 
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       documentType: newDocumentType,
       document:
         newDocumentType === DocumentType.XML
@@ -122,10 +118,10 @@ export default function SendDocumentPage() {
             ? ({ creditNoteNumber: "", lines: [] } as any)
             : ({ invoiceNumber: "", lines: [] } as any),
       doctypeId:
-        newDocumentType === DocumentType.XML ? formData.doctypeId : undefined,
+        newDocumentType === DocumentType.XML ? prev.doctypeId : undefined,
       processId:
-        newDocumentType === DocumentType.XML ? formData.processId : undefined,
-    });
+        newDocumentType === DocumentType.XML ? prev.processId : undefined,
+    }));
   };
 
   useEffect(() => {
@@ -356,7 +352,7 @@ export default function SendDocumentPage() {
                 key={activeTeam?.id ?? "no-team"}
                 type={getFormType(documentType)}
                 formData={formData}
-                onFormChange={handleFormChange}
+                onFormChange={setFormData}
                 selectedCompanyId={selectedCompanyId}
                 onCompanyChange={setSelectedCompanyId}
                 mode={developerMode ? "developer" : "billing"}
