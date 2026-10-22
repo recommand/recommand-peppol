@@ -108,6 +108,62 @@ export function createSmpRouting(dependencies: SmpRoutingDependencies) {
     },
 
     /**
+     * Publishes a document type whose record changed from `previous` to `next`. An
+     * SMP keeps a registration per document type, so the previous one is taken off
+     * before the company's current document types are published.
+     *
+     * The identifiers are checked before the SMP is touched, so a refusal leaves the
+     * published document types as they were. If the SMP fails after the previous
+     * document type was taken off, whatever was published of `next` is taken off,
+     * `restoreRecord` puts the stored document type back, and the company is
+     * published again as it was. `restoreRecord` runs on every failure.
+     */
+    async replaceCompanyDocumentType({
+      previous,
+      next,
+      useTestNetwork,
+      restoreRecord,
+    }: {
+      previous: CompanyDocumentType;
+      next: CompanyDocumentType;
+      useTestNetwork: boolean;
+      restoreRecord: () => Promise<void>;
+    }) {
+      const companyId = previous.companyId;
+      let adapter: SmpProviderAdapter;
+      try {
+        const routed = await route(companyId);
+        adapter = routed.adapter;
+        if (routed.company.isSmpRecipient) {
+          await dependencies.checkIdentifiers(await dependencies.loadIdentifiers(companyId), { useTestNetwork });
+        }
+      } catch (error) {
+        await restoreRecord();
+        throw error;
+      }
+
+      try {
+        await adapter.unregisterCompanyDocumentType({ documentType: previous, useTestNetwork });
+        await adapter.upsertCompanyRegistrations({ companyId, useTestNetwork });
+      } catch (error) {
+        try {
+          await adapter.unregisterCompanyDocumentType({ documentType: next, useTestNetwork });
+        } catch (cleanupError) {
+          console.error(`Failed to take document type ${next.id} of company ${companyId} off its SMP after publishing it failed:`, cleanupError);
+        }
+        await restoreRecord();
+        try {
+          // The identifiers were checked when the company was published with them, and
+          // this puts back what was published then, so it is not checked again.
+          await adapter.upsertCompanyRegistrations({ companyId, useTestNetwork });
+        } catch (restoreError) {
+          console.error(`Failed to publish company ${companyId} again after changing document type ${previous.id} failed:`, restoreError);
+        }
+        throw error;
+      }
+    },
+
+    /**
      * Moves a company to another SMP. A company that is published is taken off its
      * current SMP and registered on the new one; if the new SMP refuses, the company
      * goes back to the old one. A company that is not published only changes its
@@ -202,4 +258,5 @@ export const unregisterCompanyRegistrations = routing.unregisterCompanyRegistrat
 export const upsertCompanyRegistration = routing.upsertCompanyRegistration;
 export const unregisterCompanyDocumentType = routing.unregisterCompanyDocumentType;
 export const unregisterCompanyIdentifier = routing.unregisterCompanyIdentifier;
+export const replaceCompanyDocumentType = routing.replaceCompanyDocumentType;
 export const moveCompanyToSmpProvider = routing.moveCompanyToSmpProvider;

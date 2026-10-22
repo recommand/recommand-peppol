@@ -2,7 +2,7 @@ import { companyDocumentTypes } from "@peppol/db/schema";
 import { UserFacingError } from "@peppol/utils/util";
 import { db } from "@recommand/db";
 import { eq, and, asc } from "drizzle-orm";
-import { unregisterCompanyDocumentType, upsertCompanyRegistrations } from "./smp-providers";
+import { replaceCompanyDocumentType, unregisterCompanyDocumentType, upsertCompanyRegistrations } from "./smp-providers";
 
 export type CompanyDocumentType = typeof companyDocumentTypes.$inferSelect;
 export type InsertCompanyDocumentType = typeof companyDocumentTypes.$inferInsert;
@@ -139,14 +139,15 @@ export async function updateCompanyDocumentType({
     .then((rows) => rows[0]);
 
   if(!skipSmpRegistration){
-    try {
-      await unregisterCompanyDocumentType({documentType: oldDocumentType, useTestNetwork}); // Unregister the old document type
-      await upsertCompanyRegistrations({companyId: companyDocumentType.companyId, useTestNetwork}); // Register the new document type
-    } catch (error) {
-      // If registration fails, rollback the update of the document type
-      await db.update(companyDocumentTypes).set(oldDocumentType).where(eq(companyDocumentTypes.id, companyDocumentType.id));
-      throw error;
-    }
+    // If registration fails, the previous document type is put back, in the record and on the SMP
+    await replaceCompanyDocumentType({
+      previous: oldDocumentType,
+      next: updatedDocumentType,
+      useTestNetwork,
+      restoreRecord: async () => {
+        await db.update(companyDocumentTypes).set(oldDocumentType).where(eq(companyDocumentTypes.id, companyDocumentType.id));
+      },
+    });
   }
 
   return updatedDocumentType;

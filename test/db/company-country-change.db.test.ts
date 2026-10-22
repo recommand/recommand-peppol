@@ -81,6 +81,7 @@ describe.skipIf(!testDatabaseUrl)("company country changes against PostgreSQL", 
       upsertCompanyRegistration: async () => { smpCalls.push("upsert-one"); },
       unregisterCompanyIdentifier: async () => { smpCalls.push("unregister-one"); },
       unregisterCompanyDocumentType: async () => { smpCalls.push("unregister-doctype"); },
+      replaceCompanyDocumentType: async () => { smpCalls.push("replace-doctype"); },
     }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
     process.env.BASE_URL = "https://app.example";

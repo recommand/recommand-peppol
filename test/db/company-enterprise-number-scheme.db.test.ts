@@ -47,6 +47,7 @@ describe.skipIf(!testDatabaseUrl)("Enterprise number scheme of a new company aga
       upsertCompanyRegistration: async () => {},
       unregisterCompanyIdentifier: async () => {},
       unregisterCompanyDocumentType: async () => {},
+      replaceCompanyDocumentType: async () => {},
       upsertCompanyDocumentTypeRegistration: async () => {},
     }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));

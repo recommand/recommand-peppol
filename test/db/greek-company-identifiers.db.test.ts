@@ -49,6 +49,7 @@ describe.skipIf(!testDatabaseUrl)("Greek company identifiers against PostgreSQL"
       upsertCompanyRegistration: async () => {},
       unregisterCompanyIdentifier: async () => {},
       unregisterCompanyDocumentType: async () => {},
+      replaceCompanyDocumentType: async () => {},
       upsertCompanyDocumentTypeRegistration: async () => {},
     }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));

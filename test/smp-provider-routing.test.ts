@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 import { getSupportedIdentifierSchemes, resolveDefaultPeppolProviders } from "@peppol/data/peppol-providers";
 import { findUnsupportedIdentifiers } from "@peppol/data/company-identifier-policy";
 import { smpProviderDescriptors, type SmpProviderId } from "@peppol/data/smp-providers/descriptors";
+import { assertIdentifiersRegistrable } from "@peppol/data/identifier-registration-checks";
+import { assertNorwegianOrganisationsRegistrable } from "@peppol/data/bronnoysund/organisation-check";
+import type { CompanyDocumentType } from "@peppol/data/company-document-types";
 
 // Routing is tested through injected adapters; the database is never reached.
 mock.module("@recommand/db", () => ({ db: {} }));
@@ -74,6 +77,7 @@ function fakeRouting(company: { smpProvider: SmpProviderId; isSmpRecipient: bool
   registered?: boolean;
   identifiers?: { scheme: string; identifier: string }[];
   failOn?: string;
+  checkIdentifiers?: Dependencies["checkIdentifiers"];
 } = {}) {
   const calls: string[] = [];
   const state = { ...company };
@@ -98,8 +102,9 @@ function fakeRouting(company: { smpProvider: SmpProviderId; isSmpRecipient: bool
     },
     loadCompany: async () => ({ ...state }),
     loadIdentifiers: async () => options.identifiers ?? [{ scheme: "0192", identifier: "923609016" }],
-    checkIdentifiers: async (identifiers) => {
+    checkIdentifiers: async (identifiers, network) => {
       calls.push(`check ${identifiers.map((identifier) => `${identifier.scheme}:${identifier.identifier}`).join(",")}`);
+      await options.checkIdentifiers?.(identifiers, network);
     },
     loadRegistrationState: async () => ({ registered: options.registered ?? true, useTestNetwork: true }),
     setSmpProvider: async (_companyId, provider) => {
@@ -180,5 +185,74 @@ describe("moving a company to another SMP", () => {
     const { routing, calls } = fakeRouting({ smpProvider: "elma-smp-no", isSmpRecipient: true });
     expect(await routing.moveCompanyToSmpProvider({ companyId: "c_no", to: "elma-smp-no" })).toBe("unchanged");
     expect(calls).toEqual([]);
+  });
+});
+
+describe("changing a published document type", () => {
+  const documentType = (id: string, docTypeId: string): CompanyDocumentType =>
+    ({ id, companyId: "c", docTypeId, processId: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0" }) as CompanyDocumentType;
+  const previous = documentType("dt", "invoice");
+  const next = documentType("dt", "credit-note");
+  // A Belgian company that also holds a Norwegian organisation number: every
+  // identifier is published on our own SMP, and the 0192 one is checked against
+  // Enhetsregisteret before the company is published.
+  const identifiers = [{ scheme: "0208", identifier: "0123456749" }, { scheme: "0192", identifier: "974760673" }];
+  const unknownInEnhetsregisteret: Dependencies["checkIdentifiers"] = (checked, network) =>
+    assertIdentifiersRegistrable(checked, network, {
+      "0192": (underScheme) =>
+        assertNorwegianOrganisationsRegistrable(underScheme, {
+          fetch: (async () => new Response("{}", { status: 404 })) as unknown as typeof fetch,
+          retryDelaysMs: [],
+        }),
+    });
+
+  it("takes the previous document type off and publishes the current ones after checking the identifiers", async () => {
+    const { routing, calls } = fakeRouting({ smpProvider: "recommand-smp1", isSmpRecipient: true }, { identifiers });
+    await routing.replaceCompanyDocumentType({ previous, next, useTestNetwork: false, restoreRecord: async () => { calls.push("restore record"); } });
+    expect(calls).toEqual([
+      "check 0208:0123456749,0192:974760673",
+      "recommand-smp1.unregisterCompanyDocumentType",
+      "recommand-smp1.upsertCompanyRegistrations",
+    ]);
+  });
+
+  it("leaves the SMP alone when the register refuses an identifier", async () => {
+    const { routing, calls } = fakeRouting(
+      { smpProvider: "recommand-smp1", isSmpRecipient: true },
+      { identifiers, checkIdentifiers: unknownInEnhetsregisteret }
+    );
+    await expect(
+      routing.replaceCompanyDocumentType({ previous, next, useTestNetwork: false, restoreRecord: async () => { calls.push("restore record"); } })
+    ).rejects.toThrow("not registered in Enhetsregisteret");
+    expect(calls).toEqual(["check 0208:0123456749,0192:974760673", "restore record"]);
+  });
+
+  it("publishes the previous document type again when the SMP fails after it was taken off", async () => {
+    const { routing, calls } = fakeRouting(
+      { smpProvider: "recommand-smp1", isSmpRecipient: true },
+      { identifiers, failOn: "recommand-smp1.upsertCompanyRegistrations" }
+    );
+    await expect(
+      routing.replaceCompanyDocumentType({ previous, next, useTestNetwork: false, restoreRecord: async () => { calls.push("restore record"); } })
+    ).rejects.toThrow("recommand-smp1 refused");
+    expect(calls).toEqual([
+      "check 0208:0123456749,0192:974760673",
+      "recommand-smp1.unregisterCompanyDocumentType",
+      "recommand-smp1.upsertCompanyRegistrations",
+      // What the failed publication may have left of the new document type goes,
+      // then the company is published again from the restored record.
+      "recommand-smp1.unregisterCompanyDocumentType",
+      "restore record",
+      "recommand-smp1.upsertCompanyRegistrations",
+    ]);
+  });
+
+  it("does not check the identifiers of a company that does not receive", async () => {
+    const { routing, calls } = fakeRouting(
+      { smpProvider: "recommand-smp1", isSmpRecipient: false },
+      { identifiers, checkIdentifiers: unknownInEnhetsregisteret }
+    );
+    await routing.replaceCompanyDocumentType({ previous, next, useTestNetwork: false, restoreRecord: async () => { calls.push("restore record"); } });
+    expect(calls).toEqual(["recommand-smp1.unregisterCompanyDocumentType", "recommand-smp1.upsertCompanyRegistrations"]);
   });
 });
