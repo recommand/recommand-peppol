@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { resolveDefaultPeppolProviders } from "../data/peppol-providers";
 import { isVerificationEnforced, requiresCompanyVerification, shouldRegisterWithSmp } from "../utils/playground";
 
 // The team's verification level decides whether a company has to be verified, except
@@ -48,11 +49,36 @@ describe("publishing a company on its SMP", () => {
 });
 
 describe("the requirement as screens see it", () => {
-  it("is enforced for strict teams and for French companies", () => {
-    expect(isVerificationEnforced({ verificationRequirements: "strict", country: "BE" })).toBe(true);
-    expect(isVerificationEnforced({ verificationRequirements: "trusted", country: "FR" })).toBe(true);
-    expect(isVerificationEnforced({ verificationRequirements: "lax", country: "fr" })).toBe(true);
-    expect(isVerificationEnforced({ verificationRequirements: "lax", country: "BE" })).toBe(false);
-    expect(isVerificationEnforced({ verificationRequirements: "trusted", country: undefined })).toBe(false);
+  it("is enforced for strict teams and for French companies on the production network", () => {
+    expect(isVerificationEnforced({ verificationRequirements: "strict", country: "BE", useTestNetwork: false })).toBe(true);
+    expect(isVerificationEnforced({ verificationRequirements: "trusted", country: "FR", useTestNetwork: false })).toBe(true);
+    expect(isVerificationEnforced({ verificationRequirements: "lax", country: "fr", useTestNetwork: false })).toBe(true);
+    expect(isVerificationEnforced({ verificationRequirements: "lax", country: "BE", useTestNetwork: false })).toBe(false);
+    expect(isVerificationEnforced({ verificationRequirements: "trusted", country: undefined, useTestNetwork: false })).toBe(false);
+  });
+
+  it("follows the team's level for French companies on the test network", () => {
+    expect(isVerificationEnforced({ verificationRequirements: "lax", country: "FR", useTestNetwork: true })).toBe(false);
+    expect(isVerificationEnforced({ verificationRequirements: "trusted", country: "FR", useTestNetwork: true })).toBe(false);
+    expect(isVerificationEnforced({ verificationRequirements: "strict", country: "FR", useTestNetwork: true })).toBe(true);
+  });
+
+  // Screens only know a company's country; the server decides on the providers the
+  // country resolves to. Both have to agree, or a screen calls a published company
+  // unpublished or asks for a verification the server does not need.
+  it("agrees with the server for every level, country and network", () => {
+    for (const verificationRequirements of ["strict", "trusted", "lax", null]) {
+      for (const country of ["BE", "FR", "fr", "NL", "DE", "NO"]) {
+        for (const useTestNetwork of [false, true]) {
+          const { smpProvider } = resolveDefaultPeppolProviders(country, { useTestNetwork });
+          expect({ verificationRequirements, country, useTestNetwork, enforced: isVerificationEnforced({ verificationRequirements, country, useTestNetwork }) }).toEqual({
+            verificationRequirements,
+            country,
+            useTestNetwork,
+            enforced: requiresCompanyVerification({ verificationRequirements, smpProvider, useTestNetwork }),
+          });
+        }
+      }
+    }
   });
 });

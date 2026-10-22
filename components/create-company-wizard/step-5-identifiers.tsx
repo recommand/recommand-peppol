@@ -8,10 +8,11 @@ type Step5Props = {
     teamId: string;
     company: Company;
     verificationRequirements: "strict" | "trusted" | "lax" | null;
+    useTestNetwork: boolean;
     onNext: () => void;
 };
 
-export function Step5Identifiers({ teamId, company, verificationRequirements, onNext }: Step5Props) {
+export function Step5Identifiers({ teamId, company, verificationRequirements, useTestNetwork, onNext }: Step5Props) {
     const { t } = useTranslation();
     return (
         <div className="space-y-4">
@@ -29,7 +30,7 @@ export function Step5Identifiers({ teamId, company, verificationRequirements, on
                 teamId={teamId}
                 companyId={company.id}
                 isSmpRecipient={company.isSmpRecipient}
-                publishedOnSmp={company.isSmpRecipient && (!isVerificationEnforced({ verificationRequirements, country: company.country }) || company.isVerified)}
+                publishedOnSmp={company.isSmpRecipient && (!isVerificationEnforced({ verificationRequirements, country: company.country, useTestNetwork }) || company.isVerified)}
             />
             <div className="flex justify-end pt-2">
                 <Button type="button" onClick={onNext}>

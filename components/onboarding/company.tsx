@@ -18,6 +18,7 @@ export default function CompanyOnboarding({ onComplete }: { onComplete: () => Pr
     const [prefillNotice, setPrefillNotice] = useState<string | null>(null);
     const [checked, setChecked] = useState(false);
     const [verificationRequirements, setVerificationRequirements] = useState<"strict" | "trusted" | "lax" | null>(null);
+    const [useTestNetwork, setUseTestNetwork] = useState(false);
 
     useEffect(() => {
         if (!activeTeam?.id) return;
@@ -37,6 +38,7 @@ export default function CompanyOnboarding({ onComplete }: { onComplete: () => Pr
             const teamExtensionJson = await teamExtensionResponse.json();
             if (teamExtensionJson.success) {
                 setVerificationRequirements(teamExtensionJson.verificationRequirements);
+                setUseTestNetwork(teamExtensionJson.useTestNetwork);
             }
 
             if (!isPlayground) {
@@ -74,6 +76,7 @@ export default function CompanyOnboarding({ onComplete }: { onComplete: () => Pr
             <CreateCompanyWizard
                 teamId={activeTeam.id}
                 verificationRequirements={verificationRequirements}
+                useTestNetwork={useTestNetwork}
                 initialData={initialData}
                 onComplete={handleComplete}
                 onCancel={handleCancel}

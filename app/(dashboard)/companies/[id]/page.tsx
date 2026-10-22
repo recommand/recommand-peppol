@@ -45,11 +45,12 @@ export default function CompanyDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationRequirements, setVerificationRequirements] = useState<"strict" | "trusted" | "lax" | null>(null);
+  const [useTestNetwork, setUseTestNetwork] = useState(false);
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
   const activeTeam = useActiveTeam();
   const isPlayground = useIsPlayground();
   const verificationPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const verificationEnforced = isVerificationEnforced({ verificationRequirements, country: company?.country });
+  const verificationEnforced = isVerificationEnforced({ verificationRequirements, country: company?.country, useTestNetwork });
   const isVerificationRequired = verificationRequirements !== null && (verificationEnforced || verificationRequirements === "lax") && !(isVerified ?? company?.isVerified);
   const countryChanged = Boolean(company && formData.country !== company.country);
   const verificationIdentityChanged = Boolean(
@@ -167,6 +168,7 @@ export default function CompanyDetailPage() {
       const data = await response.json();
 
       if (data.success) {
+        setUseTestNetwork(data.useTestNetwork);
         setVerificationRequirements(data.verificationRequirements);
       }
     } catch (error) {

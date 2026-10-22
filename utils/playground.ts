@@ -68,17 +68,24 @@ export function shouldRegisterWithSmp({
 }
 
 /**
- * The same rule for screens, which know a company's country but not its providers:
- * a French company is on the French providers (resolveDefaultPeppolProviders), so it
- * has to be verified whatever its team's level. Screens do not know whether the team
- * is on the test network, where the French platform skips KYC, and ask anyway.
+ * The same rule for screens, which know a company's country and the team's network
+ * but not the company's providers: a French company is on the French providers
+ * (resolveDefaultPeppolProviders), so on the production network it has to be
+ * verified whatever its team's level. On the test network the French platform skips
+ * KYC and the team's level decides, as it does on the server.
  */
 export function isVerificationEnforced({
     verificationRequirements,
     country,
+    useTestNetwork,
 }: {
     verificationRequirements?: string | null;
     country?: string | null;
+    useTestNetwork: boolean | null | undefined;
 }): boolean {
-    return verificationRequirements === "strict" || country?.toUpperCase() === "FR";
+    return requiresCompanyVerification({
+        verificationRequirements,
+        smpProvider: country?.toUpperCase() === "FR" ? "at-shared-smp-fr" : "recommand-smp1",
+        useTestNetwork,
+    });
 }

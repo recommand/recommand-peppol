@@ -13,6 +13,8 @@ import { isVerificationEnforced } from "@peppol/utils/playground";
 type CreateCompanyWizardProps = {
     teamId: string;
     verificationRequirements: "strict" | "trusted" | "lax" | null;
+    /** Whether the team is on the Peppol test network, where French companies follow the team's verification level. */
+    useTestNetwork: boolean;
     initialData?: Partial<CompanyFormData>;
     onComplete: (company: Company) => void;
     onCancel: () => void;
@@ -24,7 +26,7 @@ type CreateCompanyWizardProps = {
     offerSetUpLater?: boolean;
 };
 
-export function CreateCompanyWizard({ teamId, verificationRequirements, initialData, onComplete, onCancel, offerSetUpLater = false }: CreateCompanyWizardProps) {
+export function CreateCompanyWizard({ teamId, verificationRequirements, useTestNetwork, initialData, onComplete, onCancel, offerSetUpLater = false }: CreateCompanyWizardProps) {
     const { t } = useTranslation();
     const displayStepTitles: Record<number, string> = {
         1: t`Country & VAT`,
@@ -45,7 +47,7 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
 
     const verificationRequired =
         verificationRequirements === "lax" ||
-        isVerificationEnforced({ verificationRequirements, country: createdCompany?.country ?? formData.country });
+        isVerificationEnforced({ verificationRequirements, country: createdCompany?.country ?? formData.country, useTestNetwork });
 
     // Step 4 is a hidden transition; display steps = internal steps minus 1
     const totalDisplaySteps = verificationRequired ? 5 : 4;
@@ -135,6 +137,7 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, initialD
                     teamId={teamId}
                     company={createdCompany}
                     verificationRequirements={verificationRequirements}
+                    useTestNetwork={useTestNetwork}
                     onNext={afterIdentifiers}
                 />
             )}
