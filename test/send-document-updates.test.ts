@@ -88,7 +88,12 @@ describe("send-document updates", () => {
   it("starts from an empty document when the form holds none", () => {
     const update = updateFormDocument(setDocumentField("invoiceNumber", "INV-1"));
     expect(update({}).document as any).toEqual({ invoiceNumber: "INV-1" });
-    expect(update({ document: "" as any }).document as any).toEqual({ invoiceNumber: "INV-1" });
+  });
+
+  it("leaves a raw XML document alone", () => {
+    const update = updateFormDocument(setDocumentField("invoiceNumber", "INV-1"));
+    const xml: Partial<SendDocument> = { documentType: "xml" as any, document: "<Invoice/>" as any };
+    expect(update(xml)).toBe(xml);
   });
 
   describe("applyCustomerParty", () => {

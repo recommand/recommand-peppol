@@ -84,6 +84,9 @@ export function CreditNoteForm({
 
   // Auto-populate company info when company changes
   useEffect(() => {
+    // A late answer must not land in the next document: this form may be gone,
+    // or showing another company, by the time it arrives.
+    let cancelled = false;
     const loadCompanyInfo = async () => {
       if (!companyId || !activeTeam?.id) return;
 
@@ -95,6 +98,7 @@ export function CreditNoteForm({
         });
         const json = await response.json();
 
+        if (cancelled) return;
         if (json.success && json.company) {
           const company = json.company;
           const companyInfo = {
@@ -123,9 +127,13 @@ export function CreditNoteForm({
     };
 
     loadCompanyInfo();
+    return () => {
+      cancelled = true;
+    };
   }, [companyId, activeTeam?.id, isSelfBilling]);
 
   useEffect(() => {
+    let cancelled = false;
     const run = async () => {
       if (!companyId) return;
 
@@ -141,7 +149,7 @@ export function CreditNoteForm({
           query: { documentType },
         });
         const json: any = await response.json();
-        if (!json?.success) return;
+        if (cancelled || !json?.success) return;
 
         const suggestedNumberRaw = json?.documentNumber;
         const suggestedNumber =
@@ -225,6 +233,9 @@ export function CreditNoteForm({
     };
 
     run();
+    return () => {
+      cancelled = true;
+    };
   }, [companyId, isSelfBilling, mode]);
 
   useEffect(() => {

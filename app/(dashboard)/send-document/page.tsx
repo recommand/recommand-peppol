@@ -87,7 +87,12 @@ export default function SendDocumentPage() {
 
   const client = useMemo(() => rc<PreviewDocumentApi>("peppol"), []);
 
-  useEffect(() => {
+  // Start over when the team changes. This happens while rendering, not in an
+  // effect: the form's own effects run before the page's and fill in the new
+  // document's defaults, which a reset in an effect would then wipe.
+  const [formTeamId, setFormTeamId] = useState(activeTeam?.id);
+  if (formTeamId !== activeTeam?.id) {
+    setFormTeamId(activeTeam?.id);
     setDocumentType(DocumentType.INVOICE);
     setSelectedCompanyId("");
     setFormData({
@@ -100,7 +105,7 @@ export default function SendDocumentPage() {
     });
     setPreviewHtml(null);
     setIsPreviewLoading(false);
-  }, [activeTeam?.id]);
+  }
 
   const handleDocumentTypeChange = (value: string) => {
     setDocumentType(value);

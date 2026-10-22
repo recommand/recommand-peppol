@@ -21,7 +21,10 @@ export function updateFormDocument(
 ): Updater<Partial<SendDocument>> {
   // A draft does not satisfy any one document type's schema yet.
   return (prev) =>
-    ({ ...prev, document: update(asDraft(prev.document)) }) as Partial<SendDocument>;
+    // A raw XML document is a string; a structured update never applies to it.
+    typeof prev.document === "string"
+      ? prev
+      : ({ ...prev, document: update(asDraft(prev.document)) } as Partial<SendDocument>);
 }
 
 export function setDocumentField(field: string, value: unknown): Updater<DocumentDraft> {
