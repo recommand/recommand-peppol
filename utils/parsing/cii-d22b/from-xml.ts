@@ -8,6 +8,7 @@ import {
   getTextContent,
 } from "../xml-helpers";
 import { parseCiiPartyIdentifiers } from "../party-identifiers";
+import { parseCiiCommodityClassifications } from "../commodity-classifications";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -282,14 +283,8 @@ export function parseBillingDocumentFromCII(xml: string) {
           lineAgreement?.BuyerOrderReferencedDocument?.LineID
         ),
         billingPeriod: billingPeriod(lineSettlement?.BillingSpecifiedPeriod),
-        commodityClassifications: (product?.DesignatedProductClassification || []).map(
-          (classification: any) => ({
-            scheme: getTextContent(classification.ClassCode?.["@_listID"]),
-            schemeVersion: getNullableTextContent(
-              classification.ClassCode?.["@_listVersionID"]
-            ),
-            value: getTextContent(classification.ClassCode?.["#text"]),
-          })
+        commodityClassifications: parseCiiCommodityClassifications(
+          product?.DesignatedProductClassification
         ),
         additionalItemProperties: (product?.ApplicableProductCharacteristic || []).map(
           (property: any) => ({

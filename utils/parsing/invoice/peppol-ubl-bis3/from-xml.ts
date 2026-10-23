@@ -6,6 +6,7 @@ import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 import { parseUblBillingPeriod } from "../../billing-period";
 import { parseUblPartyIdentifiers } from "../../party-identifiers";
 import { parseUblPaymentMandate } from "../../payment-mandate";
+import { parseUblCommodityClassifications } from "../../commodity-classifications";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -150,11 +151,7 @@ export function parseInvoiceFromXML(xml: string): Invoice & SelfBillingInvoice {
     documentReference: getNullableTextContent(line.DocumentReference?.ID),
     orderLineReference: getNullableTextContent(line.OrderLineReference?.LineID),
     billingPeriod: parseUblBillingPeriod(line.InvoicePeriod),
-    commodityClassifications: (line.Item?.CommodityClassification || []).map((classification: any) => ({
-      scheme: getTextContent(classification.ItemClassificationCode["@_listID"]),
-      schemeVersion: getNullableTextContent(classification.ItemClassificationCode["@_listVersionID"]),
-      value: getTextContent(classification.ItemClassificationCode["#text"]),
-    })),
+    commodityClassifications: parseUblCommodityClassifications(line.Item?.CommodityClassification),
     additionalItemProperties: (line.Item?.AdditionalItemProperty || []).map((property: any) => ({
       name: getTextContent(property.Name),
       value: getTextContent(property.Value),
