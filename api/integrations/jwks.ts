@@ -32,7 +32,7 @@ const jsonWebKey = z
     });
 
 // The key set is served as defined by RFC 7517, so it has no `success` envelope
-// and is described directly instead of with `describeSuccessResponseWithZod`.
+// and is described directly instead of with `describeSuccessResponse`.
 const jsonWebKeySet = z.object({
     keys: z.array(jsonWebKey).openapi({
         description: "The keys any token signed for an integration can be verified with. Empty when none are configured.",

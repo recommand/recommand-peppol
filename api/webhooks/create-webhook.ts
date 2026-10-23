@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { webhookResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -19,7 +19,7 @@ const createWebhookRouteDescription = describeRoute({
     summary: "Create Webhook",
     tags: ["Webhooks"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created webhook", z.object({ webhook: webhookResponse.openapi({ description: "The webhook, as created." }) })),
+        ...describeSuccessResponse("Successfully created webhook", z.object({ webhook: webhookResponse.openapi({ description: "The webhook, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create webhook"),

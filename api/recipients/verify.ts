@@ -7,7 +7,7 @@ import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@c
 import { describeRoute } from "hono-openapi";
 import {
     describeErrorResponse,
-    describeSuccessResponseWithZod,
+    describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { verifyRecipient, fetchServiceMetadata, fetchBusinessCard } from "@peppol/data/recipient";
@@ -38,7 +38,7 @@ const verifyRecipientRouteDescription = describeRoute({
     summary: "Verify Recipient",
     tags: ["Recipients"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully verified recipient", z.object({
+        ...describeSuccessResponse("Successfully verified recipient", z.object({
             isValid: z.boolean().openapi({ description: "Whether the recipient could be resolved in the Peppol network. A lookup failure also returns false." }),
             smpUrl: z.string().optional().openapi({ description: "The SMP URL of the recipient. Absent when the lookup failed." }),
             serviceMetadataReferences: z.array(z.string()).optional().openapi({ description: "The service metadata references of the recipient. Absent when the lookup failed." }),

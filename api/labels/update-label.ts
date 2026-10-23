@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { labelResponse } from "./shared";
 import { UserFacingError } from "@peppol/utils/util";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -22,7 +22,7 @@ const updateLabelRouteDescription = describeRoute({
     summary: "Update Label",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated label", z.object({ label: labelResponse.openapi({ description: "The label, as updated." }) })),
+        ...describeSuccessResponse("Successfully updated label", z.object({ label: labelResponse.openapi({ description: "The label, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Label not found"),

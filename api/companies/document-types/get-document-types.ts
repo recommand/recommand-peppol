@@ -4,7 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyDocumentTypeResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -18,7 +18,7 @@ const getDocumentTypesRouteDescription = describeRoute({
     summary: "List Company Document Types",
     tags: ["Company Document Types"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved company document types", z.object({
+        ...describeSuccessResponse("Successfully retrieved company document types", z.object({
             documentTypes: z.array(companyDocumentTypeResponse).openapi({ description: "The document types the company is registered to receive." }),
         })),
         ...describeErrorResponse(401, "Unauthorized"),

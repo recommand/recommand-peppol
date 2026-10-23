@@ -12,7 +12,7 @@ import {
 import { resolveDocumentXml } from "@peppol/data/offload/storage";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
@@ -27,7 +27,7 @@ const getTransmittedDocumentRouteDescription = describeRoute({
     summary: "Get Document",
     tags: ["Documents"],
     responses: {
-      ...describeSuccessResponseWithZod("Successfully retrieved the document", z.object({ document: transmittedDocumentResponse.openapi({ description: "The document." }) })),
+      ...describeSuccessResponse("Successfully retrieved the document", z.object({ document: transmittedDocumentResponse.openapi({ description: "The document." }) })),
       ...describeErrorResponse(401, "Unauthorized"),
       ...describeErrorResponse(404, "Document not found"),
       ...describeErrorResponse(500, "Failed to fetch document"),

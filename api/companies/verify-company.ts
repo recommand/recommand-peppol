@@ -6,7 +6,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
 
@@ -18,7 +18,7 @@ const verifyCompanyRouteDescription = describeRoute({
     summary: "Verify Company",
     tags: ["Companies"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created verification session", z.object({ verificationUrl: z.string().openapi({ description: "The URL of the secure form where an official representative of the company provides proof of identity." }) })),
+        ...describeSuccessResponse("Successfully created verification session", z.object({ verificationUrl: z.string().openapi({ description: "The URL of the secure form where an official representative of the company provides proof of identity." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),

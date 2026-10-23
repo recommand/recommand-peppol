@@ -10,7 +10,7 @@ import {
 } from "@peppol/data/transmitted-documents";
 import {
     describeErrorResponse,
-    describeSuccessResponseWithZod,
+    describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
@@ -28,7 +28,7 @@ const getInboxRouteDescription = describeRoute({
     summary: "Inbox",
     tags: ["Documents"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved inbox documents", z.object({
+        ...describeSuccessResponse("Successfully retrieved inbox documents", z.object({
             // Incoming documents are never filed reports, so the inbox carries no
             // reporting status either.
             documents: z.array(inboxDocumentResponse).openapi({ description: "The incoming documents that have not been marked as read." }),

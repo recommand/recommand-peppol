@@ -1,6 +1,6 @@
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   describeValidationErrorResponse,
 } from "@core/lib/api-docs";
 import type {
@@ -112,7 +112,7 @@ const routeDescription = describeRoute({
   summary: "Generate Document",
   tags: ["Sending"],
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "Successfully generated document",
       generateResponse,
     ),

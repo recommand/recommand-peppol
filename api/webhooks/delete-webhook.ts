@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { deleteWebhook } from "@peppol/data/webhooks";
@@ -18,7 +18,7 @@ const deleteWebhookRouteDescription = describeRoute({
     summary: "Delete Webhook",
     tags: ["Webhooks"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully deleted webhook"),
+        ...describeSuccessResponse("Successfully deleted webhook"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to delete webhook"),
     },

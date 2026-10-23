@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod, paginationQuery, paginationResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse, paginationQuery, paginationResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { integrationTaskLogResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -18,7 +18,7 @@ const getIntegrationTaskLogsRouteDescription = describeRoute({
     summary: "Get Integration Task Logs",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved integration task logs", z.object({
+        ...describeSuccessResponse("Successfully retrieved integration task logs", z.object({
             logs: z.array(integrationTaskLogResponse).openapi({ description: "The task logs on this page." }),
             pagination: paginationResponse,
         })),

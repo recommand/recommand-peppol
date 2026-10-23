@@ -10,7 +10,7 @@ import {
 } from "@peppol/data/suppliers";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   paginationQuery,
   paginationResponse,
 } from "@core/lib/api-docs";
@@ -25,7 +25,7 @@ const getSuppliersRouteDescription = describeRoute({
   summary: "List Suppliers",
   tags: ["Suppliers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved suppliers", z.object({
+    ...describeSuccessResponse("Successfully retrieved suppliers", z.object({
       suppliers: z.array(supplierResponse).openapi({ description: "The suppliers on this page." }),
       pagination: paginationResponse,
     })),

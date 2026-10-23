@@ -6,7 +6,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { participantMigrationResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -19,7 +19,7 @@ const getMigrationsRouteDescription = describeRoute({
     summary: "List Company Identifier Migrations",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved the identifier's migrations", z.object({ migrations: z.array(participantMigrationResponse).openapi({ description: "The identifier's migrations between Peppol providers, newest first." }) })),
+        ...describeSuccessResponse("Successfully retrieved the identifier's migrations", z.object({ migrations: z.array(participantMigrationResponse).openapi({ description: "The identifier's migrations between Peppol providers, newest first." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),
         ...describeErrorResponse(500, "Failed to fetch company identifier migrations"),

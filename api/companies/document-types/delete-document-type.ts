@@ -4,7 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { deleteCompanyDocumentType } from "@peppol/data/company-document-types";
@@ -19,7 +19,7 @@ const deleteDocumentTypeRouteDescription = describeRoute({
     summary: "Delete Company Document Type",
     tags: ["Company Document Types"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully deleted company document type"),
+        ...describeSuccessResponse("Successfully deleted company document type"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company document type not found"),
         ...describeErrorResponse(500, "Failed to delete company document type"),

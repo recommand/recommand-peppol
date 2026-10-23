@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { labelResponse } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
@@ -21,7 +21,7 @@ const getLabelRouteDescription = describeRoute({
     summary: "Get Label",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved label", z.object({ label: labelResponse.openapi({ description: "The label." }) })),
+        ...describeSuccessResponse("Successfully retrieved label", z.object({ label: labelResponse.openapi({ description: "The label." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Label not found"),
         ...describeErrorResponse(500, "Failed to fetch label"),

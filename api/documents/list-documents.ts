@@ -11,7 +11,7 @@ import {
 import {
   booleanStringSchema,
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   paginationQuery,
   paginationResponse,
 } from "@core/lib/api-docs";
@@ -38,7 +38,7 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
   summary: "List Documents",
   tags: ["Documents"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved transmitted documents", z.object({
+    ...describeSuccessResponse("Successfully retrieved transmitted documents", z.object({
       documents: z.array(transmittedDocumentSummaryResponse).openapi({ description: "The documents on this page." }),
       pagination: paginationResponse,
     })),

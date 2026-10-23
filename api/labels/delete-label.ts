@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
@@ -21,7 +21,7 @@ const deleteLabelRouteDescription = describeRoute({
     summary: "Delete Label",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully deleted label"),
+        ...describeSuccessResponse("Successfully deleted label"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Label not found"),
         ...describeErrorResponse(500, "Failed to delete label"),

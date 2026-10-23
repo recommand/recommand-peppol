@@ -10,7 +10,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod, describeValidationErrorResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse, describeValidationErrorResponse } from "@core/lib/api-docs";
 import { companyCountrySchema, companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
@@ -25,7 +25,7 @@ const createCompanyRouteDescription = describeRoute({
     summary: "Create Company",
     tags: ["Companies"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created company", z.object({
+        ...describeSuccessResponse("Successfully created company", z.object({
             company: companyResponse,
             verificationUrl: z.string().openapi({
                 description: "A one-time URL where an authorised representative completes the company's identity check. If its identifiers are registered elsewhere, we recommend preparing their migration or deregistration before completing verification to avoid registration conflicts. Identifiers can also be migrated after verification. Call the verify company endpoint if you need a fresh URL.",

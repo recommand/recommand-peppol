@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { webhookResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -18,7 +18,7 @@ const getWebhookRouteDescription = describeRoute({
     summary: "Get Webhook",
     tags: ["Webhooks"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved webhook", z.object({ webhook: webhookResponse.openapi({ description: "The webhook." }) })),
+        ...describeSuccessResponse("Successfully retrieved webhook", z.object({ webhook: webhookResponse.openapi({ description: "The webhook." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Webhook not found"),
         ...describeErrorResponse(500, "Failed to fetch webhook"),

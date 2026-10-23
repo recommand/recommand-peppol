@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { integrationResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -18,7 +18,7 @@ const getIntegrationRouteDescription = describeRoute({
     summary: "Get Integration",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved integration", z.object({ integration: integrationResponse.openapi({ description: "The integration." }) })),
+        ...describeSuccessResponse("Successfully retrieved integration", z.object({ integration: integrationResponse.openapi({ description: "The integration." }) })),
         ...describeErrorResponse(404, "Integration not found"),
         ...describeErrorResponse(500, "Failed to fetch integration"),
     },

@@ -7,7 +7,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -23,7 +23,7 @@ const updateIdentifierRouteDescription = describeRoute({
     summary: "Update Company Identifier",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated company identifier", z.object({ identifier: companyIdentifierResponse.openapi({ description: "The identifier, as updated." }) })),
+        ...describeSuccessResponse("Successfully updated company identifier", z.object({ identifier: companyIdentifierResponse.openapi({ description: "The identifier, as updated." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),
         ...describeErrorResponse(500, "Failed to update company identifier"),

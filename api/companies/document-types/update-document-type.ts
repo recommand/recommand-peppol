@@ -4,7 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyDocumentTypeResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -20,7 +20,7 @@ const updateDocumentTypeRouteDescription = describeRoute({
     summary: "Update Company Document Type",
     tags: ["Company Document Types"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated company document type", z.object({ documentType: companyDocumentTypeResponse.openapi({ description: "The document type, as updated." }) })),
+        ...describeSuccessResponse("Successfully updated company document type", z.object({ documentType: companyDocumentTypeResponse.openapi({ description: "The document type, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company document type not found"),

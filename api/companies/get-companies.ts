@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { companyResponse, toCompanyResponse } from "./shared";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 
@@ -20,7 +20,7 @@ const getCompaniesRouteDescription = describeRoute({
     summary: "List Companies",
     tags: ["Companies"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved companies", z.object({ companies: z.array(companyResponse).openapi({ description: "Every company registered under the team." }) })),
+        ...describeSuccessResponse("Successfully retrieved companies", z.object({ companies: z.array(companyResponse).openapi({ description: "Every company registered under the team." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch companies"),
     },

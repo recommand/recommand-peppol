@@ -6,7 +6,7 @@ import { describeRoute } from "hono-openapi";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { z } from "zod";
 import "zod-openapi/extend";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
@@ -31,7 +31,7 @@ const getPlaygroundRouteDescription = describeRoute({
   summary: "Get Playground",
   tags: ["Playgrounds"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved playground", z.object({
+    ...describeSuccessResponse("Successfully retrieved playground", z.object({
       playground: playgroundResponse.openapi({ description: "The team's playground settings." }),
     })),
     ...describeErrorResponse(401, "Unauthorized"),
@@ -75,7 +75,7 @@ const createPlaygroundRouteDescription = describeRoute({
   summary: "Create Playground",
   tags: ["Playgrounds"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully created playground", z.object({
+    ...describeSuccessResponse("Successfully created playground", z.object({
       playground: playgroundResponse.openapi({ description: "The playground team, as created." }),
     })),
     ...describeErrorResponse(400, "Invalid request data"),

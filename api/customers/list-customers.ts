@@ -11,7 +11,7 @@ import { describeRoute } from "hono-openapi";
 import { getCustomers } from "@peppol/data/customers";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   paginationQuery,
   paginationResponse,
 } from "@core/lib/api-docs";
@@ -26,7 +26,7 @@ const getCustomersRouteDescription = describeRoute({
   summary: "List Customers",
   tags: ["Customers"],
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "Successfully retrieved customers",
       z.object({
         customers: z.array(customerResponse).openapi({ description: "The customers on this page." }),

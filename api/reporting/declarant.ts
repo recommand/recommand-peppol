@@ -4,7 +4,7 @@ import type {
 } from "@core/lib/auth-middleware";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   describeValidationErrorResponse,
 } from "@core/lib/api-docs";
 import { audit } from "@core/lib/audit";
@@ -141,7 +141,7 @@ const getRouteDescription = describeRoute({
   description:
     "Returns the company's French e-reporting registration, or `null` when the company has not been registered yet. Reports can be submitted once the state is `registered`.",
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "The registration, or null when there is none",
       z.object({ declarant: frenchReportingDeclarantResponse.nullable().openapi({ description: "The company's French e-reporting registration, or `null` when it has not been registered yet." }) }),
     ),
@@ -160,7 +160,7 @@ The company must be registered in France with a valid SIREN or SIRET, and must b
 
 Calling this endpoint again updates the VAT regime and exigibility. Changing the regime mid-period can leave that period unfiled, so coordinate such a change with support.`,
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "The registration as it stands after this request",
       z.object({ declarant: frenchReportingDeclarantResponse.openapi({ description: "The registration, as it stands after this request." }) }),
     ),

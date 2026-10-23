@@ -7,7 +7,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -23,7 +23,7 @@ const createIdentifierRouteDescription = describeRoute({
     summary: "Create Company Identifier",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created company identifier", z.object({ identifier: companyIdentifierResponse.openapi({ description: "The identifier, as created." }) })),
+        ...describeSuccessResponse("Successfully created company identifier", z.object({ identifier: companyIdentifierResponse.openapi({ description: "The identifier, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create company identifier"),

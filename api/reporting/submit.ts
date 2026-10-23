@@ -4,7 +4,7 @@ import type {
 } from "@core/lib/auth-middleware";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   describeValidationErrorResponse,
 } from "@core/lib/api-docs";
 import { audit } from "@core/lib/audit";
@@ -107,7 +107,7 @@ ${referenceGuidance}
 
 A submitted report is recorded alongside your sent documents and counts towards your document quota.`,
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "The report was accepted for processing",
       frenchReportResponseSchema
     ),
@@ -144,7 +144,7 @@ ${referenceGuidance}
 
 A submitted report is recorded alongside your sent documents and counts towards your document quota.`,
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "The report was accepted for processing",
       frenchReportResponseSchema
     ),

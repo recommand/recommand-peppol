@@ -7,7 +7,7 @@ import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@c
 import { describeRoute } from "hono-openapi";
 import {
     describeErrorResponse,
-    describeSuccessResponseWithZod,
+    describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { searchPeppolDirectory } from "@peppol/data/peppol-directory";
@@ -38,7 +38,7 @@ const searchDirectoryRouteDescription = describeRoute({
     summary: "Search Directory",
     tags: ["Recipients"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully searched directory", z.object({
+        ...describeSuccessResponse("Successfully searched directory", z.object({
         results: z.array(directoryMatchResponse).openapi({ description: "The matching participants, in the order the Peppol Directory returned them." }),
     })),
         ...describeErrorResponse(401, "Unauthorized"),

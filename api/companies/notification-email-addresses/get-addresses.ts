@@ -4,7 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyNotificationEmailAddressResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -18,7 +18,7 @@ const getAddressesRouteDescription = describeRoute({
     summary: "List Company Notification Email Addresses",
     tags: ["Company Notification Email Addresses"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved company notification email addresses", z.object({ notificationEmailAddresses: z.array(companyNotificationEmailAddressResponse).openapi({ description: "The company's notification email addresses." }) })),
+        ...describeSuccessResponse("Successfully retrieved company notification email addresses", z.object({ notificationEmailAddresses: z.array(companyNotificationEmailAddressResponse).openapi({ description: "The company's notification email addresses." }) })),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch company notification email addresses"),
     },

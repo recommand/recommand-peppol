@@ -11,7 +11,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { customerResponse } from "./shared";
@@ -26,7 +26,7 @@ const upsertCustomerRouteDescription = describeRoute({
   summary: "Upsert Customer",
   tags: ["Customers"],
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "Successfully upserted customer",
       z.object({ customer: customerResponse.openapi({ description: "The customer, as created or updated." }) })
     ),

@@ -7,7 +7,7 @@ import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@c
 import { describeRoute } from "hono-openapi";
 import {
     describeErrorResponse,
-    describeSuccessResponseWithZod,
+    describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { verifyDocumentSupport } from "@peppol/data/recipient";
@@ -27,7 +27,7 @@ const verifyDocumentSupportRouteDescription = describeRoute({
     summary: "Verify Document Support",
     tags: ["Recipients"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully verified document support", z.object({
+        ...describeSuccessResponse("Successfully verified document support", z.object({
             isValid: z.boolean().openapi({ description: "Whether the recipient could be resolved in the Peppol network for this document type. A lookup failure also returns false." }),
             smpUrl: z.string().optional().openapi({ description: "The SMP URL of the recipient. Absent when the lookup failed." }),
             serviceProvider: z.string().nullable().optional().openapi({ description: "Service description from the endpoint metadata. Absent when the lookup failed." }),

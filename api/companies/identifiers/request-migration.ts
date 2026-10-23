@@ -5,7 +5,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { participantMigrationResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -20,7 +20,7 @@ const requestMigrationRouteDescription = describeRoute({
     summary: "Migrate Company Identifier to Recommand",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("The migration completed or was stored to run at registration", z.object({ migration: participantMigrationResponse.openapi({ description: "The migration, completed or stored to run when the identifier is registered." }) })),
+        ...describeSuccessResponse("The migration completed or was stored to run at registration", z.object({ migration: participantMigrationResponse.openapi({ description: "The migration, completed or stored to run when the identifier is registered." }) })),
         ...describeErrorResponse(400, "The key was refused, is malformed, or the identifier cannot be migrated"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),

@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierResponse } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -21,7 +21,7 @@ const upsertSupplierRouteDescription = describeRoute({
   summary: "Upsert Supplier",
   tags: ["Suppliers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully upserted supplier", z.object({ supplier: supplierResponse.openapi({ description: "The supplier, as created or updated." }) })),
+    ...describeSuccessResponse("Successfully upserted supplier", z.object({ supplier: supplierResponse.openapi({ description: "The supplier, as created or updated." }) })),
     ...describeErrorResponse(400, "Invalid request data"),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to upsert supplier"),

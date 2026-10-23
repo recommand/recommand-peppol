@@ -11,7 +11,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 
 const server = new Server();
 
@@ -42,7 +42,7 @@ const verifyCompanyByContractRouteDescription = describeRoute({
         },
     },
     responses: {
-        ...describeSuccessResponseWithZod("Successfully verified company by contract"),
+        ...describeSuccessResponse("Successfully verified company by contract"),
         ...describeErrorResponse(400, "Invalid request data, invalid contract, or the team is not enabled for contract verification"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),

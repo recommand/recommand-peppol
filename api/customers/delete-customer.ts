@@ -11,7 +11,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { customerIdParamSchema } from "./shared";
@@ -25,7 +25,7 @@ const deleteCustomerRouteDescription = describeRoute({
   summary: "Delete Customer",
   tags: ["Customers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully deleted customer"),
+    ...describeSuccessResponse("Successfully deleted customer"),
     ...describeErrorResponse(400, "Invalid request data"),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to delete customer"),

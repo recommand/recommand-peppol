@@ -6,7 +6,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierIdParamSchema } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -19,7 +19,7 @@ const assignLabelRouteDescription = describeRoute({
     summary: "Assign Label to Supplier",
     tags: ["Suppliers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully assigned label to supplier"),
+        ...describeSuccessResponse("Successfully assigned label to supplier"),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Supplier or label not found"),
