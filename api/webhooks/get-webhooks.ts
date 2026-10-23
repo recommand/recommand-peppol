@@ -25,7 +25,7 @@ const getWebhooksRouteDescription = describeRoute({
 });
 
 const getWebhooksQuerySchema = z.object({
-    companyId: z.string().nullish().openapi({
+    companyId: z.string().optional().openapi({
         description: "Return the webhooks that deliver this company's events: the ones limited to it, plus the team-wide webhooks that receive every company's events. Leave it out to list all of the team's webhooks.",
         examples: ["c_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
     }),
