@@ -121,9 +121,11 @@ async function sendTelegramMessage(
 }
 
 /**
- * Send a message to all configured Telegram recipients
+ * Send a message to all configured Telegram recipients. Rejects when the
+ * recipients are not configured, so callers go through sendSystemAlert,
+ * which never rejects.
  */
-export async function sendTelegramNotification(
+async function sendTelegramNotification(
   message: string,
   options: Partial<SendTelegramOptions> = {}
 ): Promise<{ success: boolean; sentTo: string[]; errors: string[] }> {
