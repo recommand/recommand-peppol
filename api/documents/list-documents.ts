@@ -9,7 +9,7 @@ import {
   getTransmittedDocuments,
 } from "@peppol/data/transmitted-documents";
 import {
-  booleanStringSchema,
+  booleanQuerySchema,
   describeErrorResponse,
   describeSuccessResponseWithZod,
   paginationQuery,
@@ -79,7 +79,7 @@ const getTransmittedDocumentsQuerySchema = paginationQuery({ defaultLimit: 10, m
     description: "Filter documents created until this timestamp (exclusive). ISO 8601 format.",
     examples: ["2024-12-31T23:59:59Z"],
   }),
-  isUnread: booleanStringSchema.optional().openapi({
+  isUnread: booleanQuerySchema.optional().openapi({
     description: "Filter documents by read status: true for unread documents (readAt is null), false for read documents.",
   }),
   envelopeId: z.string().optional().openapi({
@@ -89,7 +89,7 @@ const getTransmittedDocumentsQuerySchema = paginationQuery({ defaultLimit: 10, m
     description: "Filter outgoing documents by their summarised delivery status: `delivered` (confirmed on at least one channel), `failed` (every delivery failed) or `pending` (still awaiting confirmation). Documents without deliveries never match.",
     examples: ["failed"],
   }),
-  deliveryFailed: booleanStringSchema.optional().openapi({
+  deliveryFailed: booleanQuerySchema.optional().openapi({
     description: "When true, only documents with at least one failed delivery, whatever their other deliveries did. Use it to find the sends that need attention.",
   }),
   excludeAttachments: z
@@ -151,10 +151,10 @@ async function _getTransmittedDocumentsImplementation(c: GetTransmittedDocuments
         type,
         from,
         to,
-        isUnread: isUnread === "true" ? true : isUnread === "false" ? false : undefined,
+        isUnread,
         envelopeId,
         deliveryStatus,
-        deliveryFailed: deliveryFailed === "true" ? true : deliveryFailed === "false" ? false : undefined,
+        deliveryFailed,
         excludeAttachments,
       }
     );
