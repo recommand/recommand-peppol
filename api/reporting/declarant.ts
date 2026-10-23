@@ -173,9 +173,14 @@ Calling this endpoint again updates the VAT regime and exigibility. Changing the
   },
 });
 
+const getFrenchReportingDeclarantParamSchema = z.object({
+  companyId: z.string(),
+});
+
 const _getFrenchReportingDeclarant = server.get(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
+  zodValidator("param", getFrenchReportingDeclarantParamSchema),
   getRouteDescription,
   async (c: FrenchReportingDeclarantContext) => {
     const declarant = await getFrenchReportingDeclarant(
@@ -201,9 +206,14 @@ type RegisterFrenchReportingDeclarantContext = Context<
   }
 >;
 
+const registerFrenchReportingDeclarantParamSchema = z.object({
+  companyId: z.string(),
+});
+
 const _registerFrenchReportingDeclarant = server.put(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
+  zodValidator("param", registerFrenchReportingDeclarantParamSchema),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   registerRouteDescription,

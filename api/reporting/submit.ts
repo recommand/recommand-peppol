@@ -450,9 +450,14 @@ type FrenchB2CReportingContext = Context<
   }
 >;
 
+const submitFrenchB2CReportParamSchema = z.object({
+  companyId: z.string(),
+});
+
 const _submitFrenchB2CReport = server.post(
   "/:companyId/reporting/fr/b2c",
   requireIntegrationSupportedCompanyAccess(),
+  zodValidator("param", submitFrenchB2CReportParamSchema),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   b2cRouteDescription,
@@ -501,9 +506,14 @@ type FrenchB2BiReportingContext = Context<
   }
 >;
 
+const submitFrenchB2BiReportParamSchema = z.object({
+  companyId: z.string(),
+});
+
 const _submitFrenchB2BiReport = server.post(
   "/:companyId/reporting/fr/b2bi",
   requireIntegrationSupportedCompanyAccess(),
+  zodValidator("param", submitFrenchB2BiReportParamSchema),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   b2biRouteDescription,
