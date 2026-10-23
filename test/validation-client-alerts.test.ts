@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { validateXmlDocument } from "../data/validation/client";
-import { sendSystemAlert } from "../utils/system-notifications/telegram";
+import { sendSystemAlert, sendTelegramNotification } from "../utils/system-notifications/telegram";
 
 // Without Telegram recipients, an alert must not reject: validateXmlDocument does not
 // await it, and an unhandled rejection stops a Bun server. Bun test fails a test that
@@ -33,6 +33,14 @@ afterEach(() => {
 describe("system alerts without Telegram recipients", () => {
   it("resolves instead of rejecting", async () => {
     await expect(sendSystemAlert("Title", "Message", "error")).resolves.toBeUndefined();
+  });
+
+  it("reports the missing recipients in the notification result instead of rejecting", async () => {
+    await expect(sendTelegramNotification("Message")).resolves.toEqual({
+      success: false,
+      sentTo: [],
+      errors: ["TELEGRAM_CHAT_IDS environment variable is not set"],
+    });
   });
 
   const failures: [string, () => Promise<Response>][] = [
