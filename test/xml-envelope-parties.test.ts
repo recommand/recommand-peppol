@@ -162,6 +162,19 @@ describe("the sender of a raw XML invoice or credit note", () => {
     ).not.toThrow();
   });
 
+  it("is accepted when it is the company's own number and the company's number is stored in another form", () => {
+    // A VAT number stored without its country prefix, and an enterprise number stored with it.
+    const stored = { ...company, vatNumber: "0795374462", enterpriseNumber: "BE0795374462" };
+    for (const supplier of [
+      { scheme: "9925", id: "BE0795374462" },
+      { scheme: "0208", id: "0795374462" },
+    ]) {
+      expect(
+        check(ubl({ supplier, customer: them }), { senderAddress: "0088:5400000000003", company: stored })
+      ).not.toThrow();
+    }
+  });
+
   it("is not checked when the caller says so", () => {
     expect(
       check(ubl({ supplier: { scheme: "0208", id: "1012081766" }, customer: them }), { checkSender: false })

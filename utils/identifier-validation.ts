@@ -276,7 +276,14 @@ export function identifierFailsSchemeValidation(scheme: string, identifier: stri
  * number for, that is not that number. Anything less certain is false: a scheme that
  * names no national number, a scheme whose identifiers name a company in a way of their
  * own (see validateIdentifierBelongsToCompany), a scheme of another country, a company
- * without such a number, and a value that is not a valid number at all.
+ * without such a number, a company whose number is not itself valid under the scheme,
+ * and a value that is not a valid number at all.
+ *
+ * A company's number is only compared once it is valid under the scheme, because stored
+ * numbers do not all have the form the scheme uses: a Belgian VAT number saved without
+ * its "BE", or an enterprise number saved with it. Compared as stored, such a number
+ * differs from the company's own identifier and would make that identifier look like
+ * someone else's.
  */
 export function identifierNamesAnotherCompany({
   scheme,
@@ -299,6 +306,7 @@ export function identifierNamesAnotherCompany({
     return false;
   }
   try {
+    validateIdentifier(scheme, companyNumber);
     validateIdentifier(scheme, identifier);
   } catch {
     return false;
