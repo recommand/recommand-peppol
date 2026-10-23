@@ -24,7 +24,7 @@ const getIntegrationsRouteDescription = describeRoute({
 });
 
 const getIntegrationsQuerySchema = z.object({
-    companyId: z.string().nullish(),
+    companyId: z.string().optional(),
 });
 
 const getIntegrationsParamSchemaWithTeamId = z.object({
