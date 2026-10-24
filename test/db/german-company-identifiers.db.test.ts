@@ -89,7 +89,11 @@ describe.skipIf(!testDatabaseUrl)("German company identifiers against PostgreSQL
     process.env.AP_CERT = "test certificate";
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
-    mock.module("@peppol/utils/naptr", () => ({ resolveNaptr: async () => smlAnswer }));
+    mock.module("@peppol/utils/naptr", () => ({
+      resolveNaptr: async () => (smlAnswer ? { status: "found", smpUrl: smlAnswer } : { status: "absent" }),
+      lookUpCname: async () => ({ status: "absent" }),
+      smlResolver: {},
+    }));
     ({ createCompany, updateCompany, findCompanyByPeppolId } = await import("../../data/companies"));
     ({ createCompanyIdentifier, getSendingCompanyIdentifier } = await import("../../data/company-identifiers"));
     await seedTeam(PLAYGROUND, true);

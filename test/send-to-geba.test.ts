@@ -9,12 +9,13 @@ import { createHash } from "crypto";
 
 mock.module("@recommand/db", () => ({ db: {} }));
 const naptrLookups: string[] = [];
-mock.module("@peppol/utils/naptr", () => ({
-  resolveNaptr: async (domain: string) => {
-    naptrLookups.push(domain);
-    return "https://smp.example";
-  },
-}));
+// Spied on rather than replaced as a module: a module mock lasts for the whole test run
+// and would hand its stand-in to the files that test the real lookups.
+const naptr = await import("../utils/naptr");
+const naptrSpy = spyOn(naptr, "resolveNaptr").mockImplementation(async (domain: string) => {
+  naptrLookups.push(domain);
+  return { status: "found", smpUrl: "https://smp.example" };
+});
 
 const { base32Encode } = await import("../utils/base32");
 const { chooseSendingCompanyIdentifier } = await import("../data/company-identifiers");
@@ -63,6 +64,7 @@ fetchMock.mockImplementation(
 
 afterAll(() => {
   fetchMock.mockRestore();
+  naptrSpy.mockRestore();
 });
 
 const germanCompany = {
