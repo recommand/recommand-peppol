@@ -5,6 +5,7 @@ import {
   isFranceBillingProcessId,
 } from "@peppol/utils/type-repository/document-formats/france-process";
 import type { AccessPointProviderId } from "@peppol/data/peppol-providers";
+import { normalizeProcessId } from "@peppol/utils/parsing/process-id";
 import { SendingFailure } from "./errors";
 
 /** The access point the French regulated flows are transmitted over. */
@@ -98,15 +99,19 @@ export function isFranceRegulatedSendingSupported(options: {
  * the French regime does not recognise. That covers the French formats and the regulated
  * process. The non-regulated process carries an ordinary Peppol BIS 3 document, which
  * email may deliver like any other.
+ *
+ * Checked on what the request names before the document is written, so this is the
+ * answer rather than a field the French formats require, and again on what was chosen,
+ * since a French document may select the regulated process itself.
  */
 export function assertNotFranceRegulatedByEmailOnly(options: {
-  docTypeId: string;
-  processId: string;
+  docTypeId?: string;
+  processId?: string;
 }): void {
-  if (
-    !FRANCE_DOC_TYPE_IDS.has(options.docTypeId) &&
-    options.processId !== FRANCE_REGULATED_PROCESS_ID
-  ) {
+  const isFrenchDocType = !!options.docTypeId && FRANCE_DOC_TYPE_IDS.has(options.docTypeId);
+  const isRegulatedProcess =
+    !!options.processId && normalizeProcessId(options.processId) === FRANCE_REGULATED_PROCESS_ID;
+  if (!isFrenchDocType && !isRegulatedProcess) {
     return;
   }
 

@@ -115,6 +115,36 @@ describe("the receiving party's electronic address on a document emailed in a na
     expect(buyerEndpoint(greek.xml)).toEqual(["9933", "EL094259216"]);
   });
 
+  it("gives a VAT number written without its prefix the prefix of the buyer's country", async () => {
+    const german = await prepare(invoiceInput(party({ vatNumber: "811 569 869" }), BIS3_INVOICE));
+    expect(buyerEndpoint(german.xml)).toEqual(["9930", "DE811569869"]);
+
+    const greek = await prepare(invoiceInput(party({ country: "GR", vatNumber: "094259216" }), BIS3_INVOICE));
+    expect(buyerEndpoint(greek.xml)).toEqual(["9933", "EL094259216"]);
+  });
+
+  it("refuses a Peppol BIS document whose buyer's VAT number has no Peppol VAT scheme, saying so", async () => {
+    const refused = prepare(invoiceInput(party({ country: "DK", vatNumber: "DK13585628" }), BIS3_INVOICE));
+
+    await expect(refused).rejects.toMatchObject({
+      status: 400,
+      message:
+        "Peppol BIS documents need the buyer's electronic address, and do not accept an email address for it. The buyer's VAT number names no country with a Peppol VAT scheme. Provide its enterpriseNumber and enterpriseNumberScheme, or choose a doctypeId that accepts an email address, such as XRechnung.",
+    });
+  });
+
+  it("keeps the hyphens of a Leitweg-ID, which BT-10 is copied from", async () => {
+    const input = invoiceInput(
+      party({ name: "Bundesamt für Beispiele", enterpriseNumberScheme: "0204", enterpriseNumber: "991-33333test-33" }),
+      XRECHNUNG_UBL_INVOICE
+    );
+    delete input.document.buyerReference;
+    const prepared = await prepare(input);
+
+    expect(buyerEndpoint(prepared.xml)).toEqual(["0204", "991-33333TEST-33"]);
+    expect(prepared.xml).toContain("<cbc:BuyerReference>991-33333TEST-33</cbc:BuyerReference>");
+  });
+
   it("is the first email address when the buyer has neither number and the format takes one", async () => {
     const prepared = await prepare(invoiceInput(party(), XRECHNUNG_UBL_INVOICE));
 
@@ -166,15 +196,34 @@ describe("the receiving party's electronic address on a document emailed in a na
 
   describe.skipIf(!VALIDATE)("against the validation rules", () => {
     it("writes valid Peppol BIS, XRechnung UBL and XRechnung CII documents", async () => {
-      for (const [doctypeId, buyer] of [
-        [BIS3_INVOICE, party({ vatNumber: "DE811569869" })],
-        [XRECHNUNG_UBL_INVOICE, party()],
-        [XRECHNUNG_CII, party()],
+      const toAuthority = () => {
+        const input = invoiceInput(
+          party({ name: "Bundesamt für Beispiele", enterpriseNumberScheme: "0204", enterpriseNumber: "991-33333TEST-33" }),
+          XRECHNUNG_UBL_INVOICE
+        );
+        delete input.document.buyerReference;
+        return input;
+      };
+      for (const [label, input] of [
+        ["Peppol BIS, VAT number", () => invoiceInput(party({ vatNumber: "DE811569869" }), BIS3_INVOICE)],
+        ["XRechnung UBL, email address", () => invoiceInput(party(), XRECHNUNG_UBL_INVOICE)],
+        ["XRechnung CII, email address", () => invoiceInput(party(), XRECHNUNG_CII)],
+        ["XRechnung UBL, Leitweg-ID", toAuthority],
       ] as const) {
-        const prepared = await prepare(invoiceInput(buyer, doctypeId));
+        const prepared = await prepare(input());
         const validation = await validateDocument(prepared.xml, prepared.docTypeId);
-        expect(validation.result, doctypeId).toBe("valid");
+        expect(validation.result, label).toBe("valid");
       }
+    });
+
+    it("refuses a VAT number without prefix for the VAT identifier itself (BR-CO-09), not for the address", async () => {
+      const prepared = await prepare(invoiceInput(party({ vatNumber: "811569869" }), BIS3_INVOICE));
+      const refused = validateDocument(prepared.xml, prepared.docTypeId);
+
+      await expect(refused).rejects.toMatchObject({ status: 400 });
+      const errors = await refused.catch((error) => JSON.stringify(error.payload));
+      expect(errors).toContain("BR-CO-09");
+      expect(errors).not.toContain("CL008");
     });
   });
 });
@@ -195,6 +244,16 @@ describe("French regulated documents delivered by email only", () => {
     expect(() =>
       assertNotFranceRegulatedByEmailOnly({ docTypeId: BIS3_INVOICE, processId: "urn:peppol:france:billing:regulated" })
     ).toThrow(expect.objectContaining(refusal));
+  });
+
+  it("are recognised by a process id written with its scheme", () => {
+    expect(() =>
+      assertNotFranceRegulatedByEmailOnly({ processId: "cenbii-procid-ubl::urn:peppol:france:billing:regulated" })
+    ).toThrow(expect.objectContaining(refusal));
+  });
+
+  it("are not assumed when the request names neither", () => {
+    expect(() => assertNotFranceRegulatedByEmailOnly({})).not.toThrow();
   });
 
   it("leave a Peppol BIS document alone, over the non-regulated process too", () => {

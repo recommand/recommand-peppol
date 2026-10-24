@@ -125,6 +125,12 @@ export async function sendingPipeline(c: SendingContext) {
     // it would be for a Peppol recipient, so a buyer who is not on Peppol still receives
     // a structured document.
     const isStructuredEmail = recipientAddress === null && !!input.doctypeId;
+    if (isStructuredEmail) {
+      assertNotFranceRegulatedByEmailOnly({
+        docTypeId: input.doctypeId,
+        processId: input.processId,
+      });
+    }
 
     const prepared =
       input.documentType === "xml"
