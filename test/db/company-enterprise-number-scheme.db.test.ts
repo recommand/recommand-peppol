@@ -101,6 +101,6 @@ describe.skipIf(!testDatabaseUrl)("Enterprise number scheme of a new company aga
       enterpriseNumberScheme: "0204",
       vatNumber: "DE136695976",
     });
-    expect(await identifierRows(company.id)).toEqual(["9930:de136695976"]);
+    expect(await identifierRows(company.id)).toEqual(["0246:de136695976", "9930:de136695976"]);
   });
 });

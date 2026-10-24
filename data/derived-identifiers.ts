@@ -9,11 +9,12 @@ import { isRecommandSmpUrl } from "./phoss-smp/client";
 import { getSmpUrlNaptr } from "./recipient";
 
 // Some countries give a company a default identifier built from its numbers, such as
-// the Finnish OVT code. Unlike the numbers themselves, that identifier is ours to add
-// rather than something the customer asked for, so it must never be the reason a
-// company cannot be registered: when it turns out to be published already, it is
-// taken off the company and the registration goes ahead without it. The customer can
-// still add it, with a migration key from the SMP that publishes it.
+// the Finnish OVT code or the German GEBA. Unlike the numbers themselves, that
+// identifier is ours to add rather than something the customer asked for, so it must
+// never be the reason a company cannot be registered: when it turns out to be
+// published already, it is taken off the company and the registration goes ahead
+// without it. The customer can still add it, with a migration key from the SMP that
+// publishes it.
 
 type DerivedIdentifierCompany = Pick<Company, "id" | "country" | "enterpriseNumber" | "vatNumber" | "smpProvider">;
 
@@ -103,4 +104,36 @@ export async function derivedIdentifiersNamedBy(company: DerivedIdentifierCompan
   return (await getHeldDerivedIdentifiers(company)).filter((identifier) =>
     message.includes(`${identifier.scheme}:${identifier.identifier}`.toLowerCase())
   );
+}
+
+/**
+ * Registers the company on its SMP without letting a derived identifier hold it up:
+ * the ones published elsewhere are taken off first, and one the SMP refuses is taken
+ * off and the registration tried once more without it. `register` runs the
+ * registration; `undoRegistration` rolls back what a refused attempt registered, and
+ * is the caller's to make a no-op when nothing was registered yet.
+ */
+export async function registerReleasingDerivedIdentifiers({
+  company,
+  useTestNetwork,
+  register,
+  undoRegistration,
+}: {
+  company: DerivedIdentifierCompany;
+  useTestNetwork: boolean;
+  register: () => Promise<void>;
+  undoRegistration: () => Promise<void>;
+}): Promise<void> {
+  await releaseDerivedIdentifiersPublishedElsewhere({ company, useTestNetwork });
+  try {
+    await register();
+  } catch (error) {
+    const refused = await derivedIdentifiersNamedBy(company, error);
+    if (refused.length === 0) {
+      throw error;
+    }
+    await undoRegistration();
+    await removeDerivedIdentifiers(company, refused, error instanceof Error ? error.message : String(error));
+    await register();
+  }
 }

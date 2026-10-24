@@ -112,6 +112,19 @@ function validateGebaBelongsToCompany(
   }
 }
 
+/**
+ * The company's W-IdNr, which is its VAT number (KoSIT, Germany Identifier Guideline
+ * v1.3), when that is a well-formed German VAT number; null otherwise, so a stored
+ * number that predates the format check derives nothing.
+ */
+function companyWIdNr(company: { vatNumber: string | null }): string | null {
+  const vatNumber = cleanVatNumber(company.vatNumber);
+  if (!vatNumber || !/^DE\d{9}$/.test(vatNumber) || /^DE0+$/.test(vatNumber) || !passesMod11_10(vatNumber.substring(2))) {
+    return null;
+  }
+  return vatNumber;
+}
+
 export const germany: CountryIdentifierRules = {
   country: "DE",
   vatNumber: validateGermanVatNumber,
@@ -123,5 +136,13 @@ export const germany: CountryIdentifierRules = {
   companyIdentifiers: {
     schemes: [GEBA_SCHEME],
     validate: validateGebaBelongsToCompany,
+  },
+  // A German business is addressed by its VAT number (9930) and by its GEBA, the
+  // address KoSIT recommends senders look a business up under. The GEBA a company gets
+  // by default is the bare W-IdNr, without a distinctive feature or sub-address; the
+  // VAT number stays the address it sends from (see SENDER_ADDITIONS).
+  derivedIdentifiers: (company) => {
+    const wIdNr = companyWIdNr(company);
+    return wIdNr ? [{ scheme: GEBA_SCHEME, identifier: wIdNr }] : [];
   },
 };
