@@ -18,7 +18,7 @@ export const peppolUblSelfbillingInvoiceFormat: DocumentFormat<
   supportedDocumentTypes: [selfBillingInvoiceDocumentType],
   supportedProcessIds: [processId],
   smpRegistration: [
-    { processId, translatableTitle: "Self Billing Invoice" },
+    { processId, translatableTitle: "Peppol BIS Self-Billing 3.0 Invoice" },
   ],
 
   encode: (document, processId, context) =>

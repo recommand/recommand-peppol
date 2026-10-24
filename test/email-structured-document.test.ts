@@ -13,7 +13,7 @@ import { assertNotFranceRegulatedByEmailOnly } from "../utils/pipelines/sending/
 import { prepareJsonDocument } from "../utils/pipelines/sending/prepare-json-document";
 import { validateDocument } from "../utils/pipelines/sending/validate-document";
 import { documentFormats, getDocumentFormat } from "../utils/type-repository/document-formats";
-import { receivingCapabilities } from "../utils/type-repository/receiving-capabilities";
+import { getReceivingCapability } from "../utils/type-repository/receiving-capabilities";
 
 const BIS3_INVOICE =
   "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1";
@@ -304,15 +304,17 @@ describe("the formats that accept an email address as electronic address", () =>
 });
 
 describe("the Peppol BIS format names", () => {
-  it("name the format in messages, while the receiving document types keep their short labels", () => {
+  it("name the format in messages and in the receiving document types", () => {
     const title = (key: string) => documentFormats.find((format) => format.key === key)?.translatableTitle;
     expect(title("peppol-ubl-bis3-invoice")).toBe("Peppol BIS Billing 3.0 Invoice");
     expect(title("peppol-ubl-selfbilling-creditnote")).toBe("Peppol BIS Self-Billing 3.0 Credit Note");
 
-    const label = (docTypeId: string) =>
-      receivingCapabilities.find((capability) => capability.docTypeId === docTypeId && capability.processId === BILLING_PROCESS_ID)
-        ?.translatableTitle;
-    expect(label(BIS3_INVOICE)).toBe("Invoice");
+    const label = (formatKey: string, processId: string) => getReceivingCapability(formatKey, processId).translatableTitle;
+    const selfBillingProcessId = "urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0";
+    expect(label("peppol-ubl-bis3-invoice", BILLING_PROCESS_ID)).toBe("Peppol BIS Billing 3.0 Invoice");
+    expect(label("peppol-ubl-bis3-creditnote", BILLING_PROCESS_ID)).toBe("Peppol BIS Billing 3.0 Credit Note");
+    expect(label("peppol-ubl-selfbilling-invoice", selfBillingProcessId)).toBe("Peppol BIS Self-Billing 3.0 Invoice");
+    expect(label("peppol-ubl-selfbilling-creditnote", selfBillingProcessId)).toBe("Peppol BIS Self-Billing 3.0 Credit Note");
   });
 });
 

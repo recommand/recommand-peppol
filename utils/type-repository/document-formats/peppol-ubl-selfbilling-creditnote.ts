@@ -18,7 +18,7 @@ export const peppolUblSelfbillingCreditnoteFormat: DocumentFormat<
   supportedDocumentTypes: [selfBillingCreditNoteDocumentType],
   supportedProcessIds: [processId],
   smpRegistration: [
-    { processId, translatableTitle: "Self Billing Credit Note" },
+    { processId, translatableTitle: "Peppol BIS Self-Billing 3.0 Credit Note" },
   ],
 
   encode: (document, processId, context) =>

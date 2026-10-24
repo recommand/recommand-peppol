@@ -28,7 +28,7 @@ export const peppolUblBis3InvoiceFormat: DocumentFormat<
     nonRegulatedProcessId,
   ],
   smpRegistration: [
-    { processId: billingProcessId, translatableTitle: "Invoice" },
+    { processId: billingProcessId, translatableTitle: "Peppol BIS Billing 3.0 Invoice" },
     {
       processId: regulatedProcessId,
       translatableTitle: "France Peppol BIS Billing 3.0 UBL Invoice",
