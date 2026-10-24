@@ -422,7 +422,7 @@ export async function sendingPipeline(c: SendingContext) {
  *
  * Only the network's own answer that the participant does not exist counts. A lookup
  * that failed for any other reason leaves the transmission to be attempted, so a passing
- * fault never diverts a document meant for a Peppol recipient to email.
+ * fault in the lookup is not taken to mean the recipient is not on Peppol.
  */
 async function isRecipientUnregistered(options: {
   recipientAddress: string;
