@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 // The reconciliation poll asks the access point about deliveries it never reported
 // on, one after the other. What is under test here is what the loop does when a
@@ -53,33 +53,36 @@ mock.module("@recommand/db", () => ({
     }),
   },
 }));
-mock.module("@peppol/data/at/client", () => ({
-  getArratechConfig: () => ({ orgId: "org-1" }),
-  fetchArratechJson: async (path: string, options: { signal?: AbortSignal | null }) => {
+// Spied on rather than replaced as modules: a module mock lasts for the whole test
+// run, and these stand-ins lack exports that other files import.
+const atClient = await import("../data/at/client");
+const deliveries = await import("../data/deliveries");
+const emailFallback = await import("../data/deliveries/email-fallback-db");
+const spies = [
+  spyOn(atClient, "getArratechConfig").mockImplementation(() => ({ orgId: "org-1" }) as never),
+  spyOn(atClient, "fetchArratechJson").mockImplementation((async (path: string, options: { signal?: AbortSignal | null }) => {
     const transactionId = path.split("/").at(-1)!;
     requested.push(transactionId);
     return await respond(transactionId, options.signal);
-  },
-}));
-const model = await import("../data/deliveries/model");
-mock.module("@peppol/data/deliveries", () => ({
-  ...model,
-  applyProviderDeliveryReport: async (report: { providerTransactionId: string }) => {
+  }) as never),
+  spyOn(deliveries, "applyProviderDeliveryReport").mockImplementation((async (report: { providerTransactionId: string }) => {
     applied.push(report.providerTransactionId);
     return "applied";
-  },
-  drainStagedDeliveryReports: async () => 0,
-  pruneStagedDeliveryReports: async () => {
+  }) as never),
+  spyOn(deliveries, "drainStagedDeliveryReports").mockResolvedValue(0),
+  spyOn(deliveries, "pruneStagedDeliveryReports").mockImplementation(async () => {
     pruned.push(1);
     return 1;
-  },
-}));
-mock.module("@peppol/data/deliveries/email-fallback-db", () => ({
-  resumeStalledEmailFallbacks: async () => {
+  }),
+  spyOn(emailFallback, "resumeStalledEmailFallbacks").mockImplementation(async () => {
     resumed.push(1);
     return { found: 1, resumed: 1 };
-  },
-}));
+  }),
+];
+
+afterAll(() => {
+  for (const spy of spies) spy.mockRestore();
+});
 
 const { reconcilePendingArratechDeliveries, runDeliveryReconciliationTick } = await import(
   "../data/deliveries/reconcile"

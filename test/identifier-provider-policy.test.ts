@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, describe, expect, it, mock, spyOn } from "bun:test";
 import {
   assertIdentifiersAllowed,
   findUnsupportedIdentifiers,
@@ -98,13 +98,18 @@ mock.module("@recommand/db", () => ({
     delete: () => { dbWrites.push("delete"); throw new Error("database must not be written"); },
   },
 }));
-mock.module("@peppol/data/teams", () => ({
-  getTeamExtensionAndCompanyByCompanyId: async () => ({ teamExtension: team, company }),
-}));
-mock.module("@peppol/data/smp-providers", () => ({
-  upsertCompanyRegistration: async () => { smpCalls.push("upsert"); },
-  unregisterCompanyIdentifier: async () => { smpCalls.push("unregister"); },
-}));
+// Spied on rather than replaced as modules: a module mock lasts for the whole test
+// run, and these stand-ins lack exports that other files import.
+const teams = await import("../data/teams");
+const smpProviders = await import("../data/smp-providers");
+const spies = [
+  spyOn(teams, "getTeamExtensionAndCompanyByCompanyId").mockImplementation(async () => ({ teamExtension: team, company })),
+  spyOn(smpProviders, "upsertCompanyRegistration").mockImplementation(async () => { smpCalls.push("upsert"); }),
+  spyOn(smpProviders, "unregisterCompanyIdentifier").mockImplementation(async () => { smpCalls.push("unregister"); }),
+];
+afterAll(() => {
+  for (const spy of spies) spy.mockRestore();
+});
 const { createCompanyIdentifier, updateCompanyIdentifier, validateIdentifierAgainstCompany } = await import("../data/company-identifiers");
 
 describe("identifier creation against the company's SMP", () => {

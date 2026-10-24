@@ -2,13 +2,19 @@ import { describe, expect, it } from "bun:test";
 import { playgroundEmailSender } from "../data/playground/email";
 
 describe("mailing a document from a playground", () => {
-  const mailed: string[] = [];
-  const send = playgroundEmailSender(["Dev@Example.com"], async ({ to }) => {
-    mailed.push(to);
-    return { messageId: `msg-${mailed.length}` };
-  });
+  // Each test gets its own sender and mailbox, so neither depends on the other
+  // having run first.
+  const setUp = () => {
+    const mailed: string[] = [];
+    const send = playgroundEmailSender(["Dev@Example.com"], async ({ to }) => {
+      mailed.push(to);
+      return { messageId: `msg-${mailed.length}` };
+    });
+    return { mailed, send };
+  };
 
   it("mails a member of the team, whatever the case of the address", async () => {
+    const { mailed, send } = setUp();
     const result = await send({ to: " dev@example.COM", metadata: {} });
 
     expect(result).toEqual({ messageId: "msg-1" });
@@ -16,9 +22,10 @@ describe("mailing a document from a playground", () => {
   });
 
   it("simulates any other address without mailing it", async () => {
+    const { mailed, send } = setUp();
     const result = await send({ to: "accounting@customer.example", metadata: {} });
 
     expect(result).toEqual({ messageId: null, simulated: true });
-    expect(mailed).toHaveLength(1);
+    expect(mailed).toEqual([]);
   });
 });
