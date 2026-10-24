@@ -7,8 +7,9 @@ import submitPlaygroundVerificationServer, { type SubmitPlaygroundVerification }
 import restartIdVerificationServer, { type RestartIdVerification } from "./restart-id-verification";
 import forwardVerificationServer, { type ForwardVerification } from "./forward-verification";
 import getMandateDraftServer, { type GetMandateDraft } from "./get-mandate-draft";
+import continueVerificationServer, { type ContinueVerification } from "./continue-verification";
 
-export type CompanyVerification = GetVerificationContext | GetVerificationStatus | SubmitIdentityForm | SubmitPlaygroundVerification | RestartIdVerification | ForwardVerification | GetMandateDraft;
+export type CompanyVerification = GetVerificationContext | GetVerificationStatus | SubmitIdentityForm | SubmitPlaygroundVerification | RestartIdVerification | ForwardVerification | GetMandateDraft | ContinueVerification;
 
 const server = new Server();
 server.route("/", getVerificationContextServer);
@@ -18,4 +19,5 @@ server.route("/", submitPlaygroundVerificationServer);
 server.route("/", restartIdVerificationServer);
 server.route("/", forwardVerificationServer);
 server.route("/", getMandateDraftServer);
+server.route("/", continueVerificationServer);
 export default server;

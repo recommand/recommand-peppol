@@ -7,9 +7,10 @@ import { useUser } from "@core/hooks/user";
 import { Button } from "@core/components/ui/button";
 import { Card, CardContent } from "@core/components/ui/card";
 import { StatusHero, StatusMessage } from "@recommand/components/status-feedback";
-import { Loader2, AlertCircle, ShieldCheck, XCircle, RefreshCw, Clock } from "lucide-react";
+import { Loader2, AlertCircle, ShieldCheck, XCircle, RefreshCw, Clock, History } from "lucide-react";
 import { useTranslation } from "@core/hooks/use-translation";
 import { WithdrawnNotice } from "../verify/withdrawn-notice";
+import { ContinueVerificationButton } from "./continue-verification-button";
 
 const client = rc<Companies>("v1");
 
@@ -18,6 +19,7 @@ const POLLING_STATUSES = ["idVerificationRequested", "inReview"] as const;
 const POLL_INTERVAL = 5000;
 
 type VerificationStatus = "opened" | "idVerificationRequested" | "inReview" | "verified" | "rejected" | "error";
+type VerificationFollowUp = "companyVerified" | "continue" | "startNew" | "retry";
 
 type StatusData = {
     status: VerificationStatus;
@@ -25,6 +27,7 @@ type StatusData = {
     companyName: string;
     companyId: string;
     withdrawn?: boolean;
+    followUp?: VerificationFollowUp | null;
     activationPending?: boolean;
     supportReviewPending?: boolean;
 };
@@ -73,6 +76,7 @@ export default function Page() {
                 companyName: string;
                 companyId: string;
                 withdrawn?: boolean;
+                followUp?: VerificationFollowUp | null;
                 activationPending?: boolean;
                 supportReviewPending?: boolean;
             };
@@ -163,6 +167,48 @@ export default function Page() {
 
     if (statusData.withdrawn) {
         return <WithdrawnNotice companyName={statusData.companyName} />;
+    }
+
+    const followUp = statusData.followUp ?? null;
+
+    if (followUp === "companyVerified") {
+        return (
+            <div className="min-h-svh flex items-center justify-center bg-muted/30 px-4 py-12">
+                <div className="w-full max-w-lg space-y-8">
+                    <StatusHero
+                        tone="success"
+                        icon={ShieldCheck}
+                        title={t`Company Already Verified`}
+                        description={t`This link belongs to an earlier verification attempt. ${statusData.companyName} has since been verified, so there is nothing left to do here.`}
+                    />
+
+                    <DashboardLink />
+                </div>
+            </div>
+        );
+    }
+
+    // The link of an earlier attempt. How that attempt ended no longer matters; what
+    // the visitor needs is the way on to the company's verification as it stands.
+    if (companyVerificationLogId && (followUp === "continue" || followUp === "startNew")) {
+        return (
+            <div className="min-h-svh flex items-center justify-center bg-muted/30 px-4 py-12">
+                <div className="w-full max-w-lg space-y-8">
+                    <StatusHero
+                        tone="info"
+                        icon={History}
+                        title={t`This Link Is No Longer Active`}
+                        description={followUp === "continue"
+                            ? t`This link belongs to an earlier verification attempt for ${statusData.companyName}. A newer verification is already in progress: continue there to complete it.`
+                            : t`This link belongs to an earlier verification attempt for ${statusData.companyName}. The company is not verified yet: start a new verification to continue.`}
+                    />
+
+                    <ContinueVerificationButton companyVerificationLogId={companyVerificationLogId} followUp={followUp} />
+
+                    <DashboardLink />
+                </div>
+            </div>
+        );
     }
 
     if (statusData.status === "idVerificationRequested") {
@@ -310,15 +356,28 @@ export default function Page() {
                     description={t`The identity verification for ${statusData.companyName} was not successful.`}
                 />
 
-                <StatusMessage tone="error" icon={XCircle}>
-                    <div className="text-sm text-pretty text-muted-foreground">
-                        {statusData.errorMessage || (
-                            <>
-                                {t`Your identity could not be verified. Please contact`} <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${statusData.companyId}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a> {t`for assistance.`}
-                            </>
-                        )}
-                    </div>
-                </StatusMessage>
+                {companyVerificationLogId && followUp === "retry" ? (
+                    <>
+                        <StatusMessage tone="error" icon={XCircle} description={statusData.errorMessage || t`Your identity could not be verified.`} />
+
+                        <div className="space-y-3">
+                            <ContinueVerificationButton companyVerificationLogId={companyVerificationLogId} followUp="retry" />
+                            <p className="text-center text-xs text-pretty text-muted-foreground">
+                                {t`Questions? Contact`} <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${statusData.companyId}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a>.
+                            </p>
+                        </div>
+                    </>
+                ) : (
+                    <StatusMessage tone="error" icon={XCircle}>
+                        <div className="text-sm text-pretty text-muted-foreground">
+                            {statusData.errorMessage || (
+                                <>
+                                    {t`Your identity could not be verified. Please contact`} <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${statusData.companyId}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a> {t`for assistance.`}
+                                </>
+                            )}
+                        </div>
+                    </StatusMessage>
+                )}
 
                 <DashboardLink />
             </div>

@@ -73,7 +73,7 @@ describe.skipIf(!testDatabaseUrl)("public verification routes for a withdrawn se
     const status = await json(statusApp, "/companies/verification/cvl_withdrawn/status");
     expect(status).toMatchObject({ success: true, status: "rejected", withdrawn: true, errorMessage: null, companyName: "Example BV" });
     const context = await json(contextApp, "/companies/verification/cvl_withdrawn/context");
-    expect(context.verificationLog).toEqual({ id: "cvl_withdrawn", status: "rejected", withdrawn: true, companyName: "Example BV", errorMessage: null });
+    expect(context.verificationLog).toEqual({ id: "cvl_withdrawn", status: "rejected", withdrawn: true, companyName: "Example BV", errorMessage: null, representativeName: null });
     expect(JSON.stringify([status, context])).not.toContain("cvl_earlier");
   });
 

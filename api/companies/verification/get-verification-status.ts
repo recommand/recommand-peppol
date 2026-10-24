@@ -1,5 +1,5 @@
 import { getCompanyById } from "@peppol/data/companies";
-import { getCompanyVerificationLog } from "@peppol/data/company-verification";
+import { getCompanyVerificationLog, getVerificationFollowUp } from "@peppol/data/company-verification";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { z } from "zod";
@@ -48,6 +48,9 @@ async function _getVerificationStatusImplementation(c: GetVerificationStatusCont
             errorMessage: verificationLog.arratechOnboarding || withdrawn ? null : verificationLog.errorMessage,
             companyName: company.name,
             companyId: company.id,
+            // Where an old link leads on to, so the page shows the company's
+            // verification as it stands instead of stopping at the old outcome.
+            followUp: await getVerificationFollowUp(verificationLog, company),
             ...getArratechVerificationProgress(verificationLog.arratechOnboarding, verificationLog.status),
         }));
     } catch (error) {

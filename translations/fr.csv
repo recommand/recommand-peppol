@@ -1,5 +1,4 @@
 A playground is used to test the Recommand API without affecting production data or communicating over the Peppol network. {0} You can switch to a production environment by clicking the team switcher in the top left.,Un environnement de test permet de tester l'API Recommand sans affecter les données de production ni communiquer sur le réseau Peppol. {0} Vous pouvez passer à un environnement de production en cliquant sur le sélecteur d'équipe en haut à gauche.
-A verification session has already been started for {0}. If the previous link expired or was closed\, you can request a new one below.,Une session de vérification a déjà été lancée pour {0}. Si le lien précédent a expiré ou a été fermé\, vous pouvez en demander un nouveau ci-dessous.
 Accept,Accepter
 Accepting...,Acceptation...
 Active,Actif
@@ -265,7 +264,6 @@ Representative Details,Informations sur le représentant
 Request failed,Échec de la demande
 Reset Integration State,Réinitialiser l'état de l'intégration
 Reset State,Réinitialiser l'état
-Restart Identity Verification,Recommencer la vérification d'identité
 Restart identity verification,Recommencer la vérification d'identité
 Restarting...,Redémarrage...
 Save Changes,Enregistrer les modifications
@@ -318,7 +316,7 @@ This is a production team. You can use it to send and receive Peppol documents.,
 This may take some time. You can safely close this page and check back later.,Cette opération peut prendre un certain temps. Vous pouvez fermer cette page et revenir plus tard en toute sécurité.
 This playground is connected to the Peppol test network.,Cet environnement de test est connecté au réseau de test Peppol.
 This playground is not connected to the Peppol test network.,Cet environnement de test n'est pas connecté au réseau de test Peppol.
-This verification for {0} has already reached a final state.,Cette vérification de {0} a déjà atteint un état final.
+This link belongs to an earlier verification attempt. {0} has since been verified\, so there is nothing left to do here.,Ce lien appartient à une tentative de vérification antérieure. L'entreprise {0} a depuis été vérifiée\, il n'y a donc plus rien à faire ici.
 Total Excl. VAT,Total hors TVA
 Total Incl. VAT,Total TVA comprise
 Type,Type
@@ -332,12 +330,24 @@ VAT Number,Numéro de TVA
 Validation,Validation
 Value,Valeur
 Verification,Vérification
-Verification Already Finalized,Vérification déjà terminée
-Verification Already in Progress,Vérification déjà en cours
+Company Already Verified,Entreprise déjà vérifiée
+Continue Verification,Poursuivre la vérification
+Start New Verification,Lancer une nouvelle vérification
 Verification Could Not Be Completed,La vérification n'a pas pu être effectuée
 Verification Rejected,Vérification rejetée
 Verification Successful,Vérification réussie
 Verification Under Review,Vérification en cours d'examen
+Complete the Identity Check,Finaliser la vérification d'identité
+Start Identity Check,Lancer la vérification d'identité
+The identity check for {0} is ready for {1}. Only {2} can complete it.,La vérification d'identité pour {0} est prête pour {1}. Seul(e) {2} peut la finaliser.
+The identity check for {0} was started but not completed yet.,La vérification d'identité pour {0} a été lancée mais n'est pas encore finalisée.
+Should another representative complete it? Contact,Un autre représentant doit-il la finaliser ? Contactez
+This Link Is No Longer Active,Ce lien n'est plus actif
+This link belongs to an earlier verification attempt for {0}. A newer verification is already in progress: continue there to complete it.,Ce lien appartient à une tentative de vérification antérieure pour {0}. Une vérification plus récente est déjà en cours : poursuivez-la pour la terminer.
+This link belongs to an earlier verification attempt for {0}. The company is not verified yet: start a new verification to continue.,Ce lien appartient à une tentative de vérification antérieure pour {0}. L'entreprise n'est pas encore vérifiée : lancez une nouvelle vérification pour continuer.
+Try Again,Réessayer
+Your identity could not be verified.,Votre identité n'a pas pu être vérifiée.
+Questions? Contact,Des questions ? Contactez
 Verification data could not be loaded.,Les données de vérification n'ont pas pu être chargées.
 Verification in Progress,Vérification en cours
 Verification link sent,Lien de vérification envoyé

@@ -1,7 +1,7 @@
 import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
 import { useEffect, useState, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { Button } from "@core/components/ui/button";
 import { Input } from "@core/components/ui/input";
@@ -10,7 +10,7 @@ import { Checkbox } from "@core/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@core/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@core/components/ui/radio-group";
 import { StatusHero, StatusMessage } from "@recommand/components/status-feedback";
-import { Loader2, AlertCircle, ShieldCheck, RefreshCw, XCircle, FileSignature } from "lucide-react";
+import { Loader2, AlertCircle, ShieldCheck, XCircle, FileSignature, ScanFace } from "lucide-react";
 import { ForwardSection } from "./forward-section";
 import { MandateSection } from "./mandate-section";
 import { WithdrawnNotice } from "./withdrawn-notice";
@@ -37,6 +37,7 @@ type VerificationContext = {
         withdrawn: boolean;
         companyName: string | null;
         errorMessage: string | null;
+        representativeName: string | null;
     };
     company: {
         id: string;
@@ -274,16 +275,21 @@ export default function Page() {
         return <WithdrawnNotice companyName={companyName} />;
     }
 
+    // The identity check was started but not completed. Opening the link again is
+    // how the representative gets back to it, so the page says whose check it is
+    // and leads straight into it.
     if (context.verificationLog.status === "idVerificationRequested") {
+        const representativeName = context.verificationLog.representativeName;
         return (
             <div className="min-h-svh flex items-center justify-center bg-muted/30 px-4 py-12">
                 <div className="w-full max-w-lg space-y-8">
                     <StatusHero
                         tone="info"
-                        icon={Loader2}
-                        iconClassName="animate-spin"
-                        title={t`Verification Already in Progress`}
-                        description={t`A verification session has already been started for ${companyName}. If the previous link expired or was closed, you can request a new one below.`}
+                        icon={ScanFace}
+                        title={t`Complete the Identity Check`}
+                        description={representativeName
+                            ? t`The identity check for ${companyName} is ready for ${representativeName}. Only ${representativeName} can complete it.`
+                            : t`The identity check for ${companyName} was started but not completed yet.`}
                     />
 
                     {restartError && (
@@ -298,28 +304,17 @@ export default function Page() {
                             size="lg"
                         >
                             {isRestarting ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                    {t`Restarting...`}
-                                </>
+                                <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                                <>
-                                    <RefreshCw className="h-4 w-4" />
-                                    {t`Restart Identity Verification`}
-                                </>
+                                <ScanFace className="h-4 w-4" />
                             )}
+                            {t`Start Identity Check`}
                         </Button>
 
-                        {statusPageUrl && (
-                            <Button
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => {
-                                    window.location.href = statusPageUrl;
-                                }}
-                            >
-                                {t`View Verification Status`}
-                            </Button>
+                        {representativeName && (
+                            <p className="text-center text-xs text-pretty text-muted-foreground">
+                                {t`Should another representative complete it? Contact`} <a href={`mailto:support@recommand.eu?subject=Company Verification Assistance for ${context.company.id}`} className="underline underline-offset-4 hover:text-primary/80">support@recommand.eu</a>.
+                            </p>
                         )}
                     </div>
 
@@ -357,31 +352,10 @@ export default function Page() {
         );
     }
 
-    if (context.verificationLog.status === "verified" || context.verificationLog.status === "rejected" || context.verificationLog.status === "error") {
-        return (
-            <div className="min-h-svh flex items-center justify-center bg-muted/30 px-4 py-12">
-                <div className="w-full max-w-lg space-y-8">
-                    <StatusHero
-                        tone="info"
-                        icon={ShieldCheck}
-                        title={t`Verification Already Finalized`}
-                        description={t`This verification for ${companyName} has already reached a final state.`}
-                    />
-
-                    {statusPageUrl && (
-                        <Button
-                            className="w-full"
-                            size="lg"
-                            onClick={() => {
-                                window.location.href = statusPageUrl;
-                            }}
-                        >
-                            {t`View Verification Status`}
-                        </Button>
-                    )}
-                </div>
-            </div>
-        );
+    // A finished session has nothing left to fill in. Its status page says how it
+    // ended and leads on to the company's verification as it stands.
+    if (statusPageUrl && (context.verificationLog.status === "verified" || context.verificationLog.status === "rejected" || context.verificationLog.status === "error")) {
+        return <Navigate to={statusPageUrl} replace />;
     }
 
     return (

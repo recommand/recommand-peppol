@@ -62,6 +62,9 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
                 withdrawn: verificationLog.withdrawal !== null,
                 companyName: verificationLog.companyName,
                 errorMessage: verificationLog.withdrawal !== null ? null : verificationLog.errorMessage,
+                // Whose identity check a started session waits for, so whoever opens
+                // the link can tell whether it is theirs to complete.
+                representativeName: verificationLog.status === "idVerificationRequested" ? getRepresentativeName(verificationLog) : null,
             },
             company: {
                 id: company.id,
@@ -89,6 +92,12 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
         }
         return c.json(actionFailure("Could not fetch verification context"), 500);
     }
+}
+
+/** The name the session was started for, or null while it is unknown. */
+function getRepresentativeName({ firstName, lastName }: { firstName: string | null; lastName: string | null }): string | null {
+    const name = [firstName, lastName].filter((part) => part && part.trim() && part !== "UNKNOWN").join(" ").trim();
+    return name || null;
 }
 
 export type GetVerificationContext = typeof _getVerificationContext;

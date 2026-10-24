@@ -5,7 +5,7 @@ import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { requiresArratechKycReview } from "./at/kyc";
 import { UserFacingError } from "@peppol/utils/util";
 import { verifyCompany } from "./companies";
-import { getCompany, type Company } from "@peppol/data/companies";
+import { getCompany, getCompanyById, type Company } from "@peppol/data/companies";
 import { getTeamExtension } from "./teams";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
@@ -367,6 +367,59 @@ export async function createCompanyVerificationLog({
 
   const verificationUrl = `${baseUrl}/company-verification/${log.id}/verify`;
   return { log, verificationUrl, created };
+}
+
+export type VerificationFollowUp = "companyVerified" | "continue" | "startNew" | "retry";
+
+/**
+ * What the link of a finished session leads on to. Links stay in inboxes long after
+ * their session ended, rejected or replaced by a newer link, so whoever opens one is
+ * shown where the company's verification stands now rather than only the old
+ * outcome: `companyVerified` when nothing is left to do, `continue` when the company
+ * has an open session to continue, and `startNew` when a new one has to be started.
+ * `retry` is `startNew` for the company's current session itself, whose link is not
+ * old but whose attempt failed. Null when the session is not finished, was withdrawn
+ * by support, or is the company's current session and ended in an activation error,
+ * which a new identity check would not resolve.
+ */
+export async function getVerificationFollowUp(
+  log: CompanyVerificationLog,
+  company: Company
+): Promise<VerificationFollowUp | null> {
+  if (log.withdrawal !== null || !isFinalVerificationStatus(log.status)) {
+    return null;
+  }
+  if (company.isVerified) {
+    return log.status === "verified" ? null : "companyVerified";
+  }
+  const current = await getCurrentVerificationSession(company.id);
+  if (current?.id === log.id) {
+    return log.status === "error" ? null : "retry";
+  }
+  return canContinueVerificationSession(current, company) ? "continue" : "startNew";
+}
+
+/**
+ * Leads on from the link of a finished session to the company's verification as it
+ * stands, by the same rule as asking to verify the company again: its open session
+ * is continued, or a new one is started. Refused when the link leads on to nothing.
+ */
+export async function continueVerificationFromSession(
+  companyVerificationLogId: string
+): Promise<{ log: CompanyVerificationLog; verificationUrl: string; created: boolean }> {
+  const log = await getCompanyVerificationLog(companyVerificationLogId);
+  if (!log) {
+    throw new UserFacingError("Company verification log not found");
+  }
+  const company = await getCompanyById(log.companyId);
+  if (!company) {
+    throw new UserFacingError("Company not found");
+  }
+  const followUp = await getVerificationFollowUp(log, company);
+  if (followUp !== "continue" && followUp !== "startNew" && followUp !== "retry") {
+    throw new UserFacingError("This verification cannot be continued.");
+  }
+  return await createCompanyVerificationLog({ teamId: company.teamId, companyId: company.id });
 }
 
 /**
