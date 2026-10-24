@@ -25,7 +25,8 @@ const OTHER_KEY = "Zz98@!abYX7~Qq";
 
 const smpRequests: { url: string; method?: string }[] = [];
 let smpScript: (url: string) => Response | undefined;
-// Where the SML resolves participants to; null means "no NAPTR record".
+// Where the SML resolves participants to; null means "no NAPTR record", and "unanswered"
+// that DNS gives no answer.
 let smlTarget: string | null = null;
 
 const fetchMock = spyOn(globalThis, "fetch");
@@ -100,7 +101,8 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
     mock.module("@peppol/utils/naptr", () => ({
-      resolveNaptr: async () => (smlTarget ? { status: "found", smpUrl: smlTarget } : { status: "absent" }),
+      resolveNaptr: async () =>
+        smlTarget === "unanswered" ? { status: "unknown" } : smlTarget ? { status: "found", smpUrl: smlTarget } : { status: "absent" },
       lookUpCname: async () => ({ status: "absent" }),
       smlResolver: {},
     }));
@@ -241,6 +243,12 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
       smlTarget = "https://smp.net.recommand.com";
       await expect(finalizeOutboundMigration({ migrationId: migration.id })).rejects.toThrow("still routes");
       expect(smpUrls("/migration/outbound/finalize/")).toEqual([]);
+
+      // No answer from the SML is not an answer that the participant moved.
+      smlTarget = "unanswered";
+      await expect(finalizeOutboundMigration({ migrationId: migration.id })).rejects.toThrow("Could not look up");
+      expect(smpUrls("/migration/outbound/finalize/")).toEqual([]);
+      expect(await identifierRows("c_out")).toEqual(["0208:0123456749", "9925:be0123456749"]);
 
       smlTarget = "https://smp.other-provider.example";
       const result = await finalizeOutboundMigration({ migrationId: migration.id });

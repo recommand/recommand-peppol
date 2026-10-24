@@ -21,6 +21,7 @@ const OVT = "0216:003702454583";
 const requests: { url: string; method?: string }[] = [];
 // The service groups the SMP refuses to create, and where the SML says participants are.
 let refusedServiceGroups: string[] = [];
+// null means "no NAPTR record", and "unanswered" that DNS gives no answer.
 let smlAnswer: string | null = null;
 
 const fetchMock = spyOn(globalThis, "fetch");
@@ -101,7 +102,8 @@ describe.skipIf(!testDatabaseUrl)("Finnish company identifiers against PostgreSQ
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
     mock.module("@peppol/utils/naptr", () => ({
-      resolveNaptr: async () => (smlAnswer ? { status: "found", smpUrl: smlAnswer } : { status: "absent" }),
+      resolveNaptr: async () =>
+        smlAnswer === "unanswered" ? { status: "unknown" } : smlAnswer ? { status: "found", smpUrl: smlAnswer } : { status: "absent" },
       lookUpCname: async () => ({ status: "absent" }),
       smlResolver: {},
     }));
@@ -183,6 +185,14 @@ describe.skipIf(!testDatabaseUrl)("Finnish company identifiers against PostgreSQ
     expect(await verify(company)).toMatchObject({ status: "verified" });
     expect(await identifierRows(COMPANY)).toEqual(["0088:4000001000005"]);
     expect(await identifierRows("c_fi_other")).toEqual([OVT]);
+  });
+
+  it("keeps the OVT code when the SML gives no answer about it", async () => {
+    smlAnswer = "unanswered";
+    const company = await seedCompanyInReview();
+
+    expect(await verify(company)).toMatchObject({ status: "verified" });
+    expect(await identifierRows(COMPANY)).toEqual([OVT]);
   });
 
   it("keeps the OVT code when our own SMP is the one the SML names", async () => {

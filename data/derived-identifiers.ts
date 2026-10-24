@@ -6,7 +6,7 @@ import type { Company } from "./companies";
 import { canUpsertCompanyIdentifier, getCompanyIdentifiers, isDerivedDefaultIdentifier, type CompanyIdentifier } from "./company-identifiers";
 import { getPendingInboundMigration } from "./participant-migrations";
 import { isRecommandSmpUrl } from "./phoss-smp/client";
-import { getSmpUrlNaptr } from "./recipient";
+import { lookUpSmpUrl, SmlLookupError } from "./recipient";
 
 // Some countries give a company a default identifier built from its numbers, such as
 // the Finnish OVT code or the German GEBA. Unlike the numbers themselves, that
@@ -18,13 +18,20 @@ import { getSmpUrlNaptr } from "./recipient";
 
 type DerivedIdentifierCompany = Pick<Company, "id" | "country" | "enterpriseNumber" | "vatNumber" | "smpProvider">;
 
-/** Whether the participant is published on the network by an SMP other than ours. */
+/**
+ * Whether the participant is published on the network by an SMP other than ours. Throws
+ * SmlLookupError when the SML gives no answer, which says nothing either way.
+ */
 export async function isPublishedOnAnotherSmp(
   identifier: { scheme: string; identifier: string },
   useTestNetwork: boolean
 ): Promise<boolean> {
-  const smpUrl = await getSmpUrlNaptr({ recipientAddress: `${identifier.scheme}:${identifier.identifier}`, useTestNetwork });
-  return smpUrl !== null && !isRecommandSmpUrl(smpUrl, useTestNetwork);
+  const recipientAddress = `${identifier.scheme}:${identifier.identifier}`;
+  const lookup = await lookUpSmpUrl({ recipientAddress, useTestNetwork });
+  if (lookup.status === "unknown") {
+    throw new SmlLookupError(recipientAddress);
+  }
+  return lookup.status === "found" && !isRecommandSmpUrl(lookup.smpUrl, useTestNetwork);
 }
 
 /** The identifiers the company holds that its country derives for it. */

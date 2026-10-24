@@ -6,8 +6,9 @@
  * participant possibly registered, and the transmission is attempted as before.
  */
 
-import { describe, expect, it, mock } from "bun:test";
-import { isParticipantUnregistered } from "../data/recipient";
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { getSmpUrl, isParticipantUnregistered, lookUpSmpUrl, SmlLookupError } from "../data/recipient";
+import * as naptr from "../utils/naptr";
 import { lookUpCname, resolveNaptr } from "../utils/naptr";
 
 const dnsError = (code: string) => Object.assign(new Error(`query ${code}`), { code });
@@ -77,5 +78,54 @@ describe("isParticipantUnregistered", () => {
   it("is false when only the older CNAME record exists, or DNS gives no answer for it", async () => {
     expect(await isParticipantUnregistered(PARTICIPANT, resolver({ naptr: dnsError("ENOTFOUND"), cname: ["smp.example"] }))).toBe(false);
     expect(await isParticipantUnregistered(PARTICIPANT, resolver({ naptr: dnsError("ENOTFOUND"), cname: dnsError("ETIMEOUT") }))).toBe(false);
+  });
+});
+
+describe("lookUpSmpUrl", () => {
+  const PARTICIPANT_PATH = "/iso6523-actorid-upis::9930%3Ade999999999";
+
+  it("points to the participant on the SMP its NAPTR record names", async () => {
+    const answers = resolver({ naptr: [SMP_RECORD], cname: dnsError("ENOTFOUND") });
+    expect(await lookUpSmpUrl(PARTICIPANT, answers)).toEqual({ status: "found", smpUrl: `https://smp.example${PARTICIPANT_PATH}` });
+    expect(answers.resolveCname).not.toHaveBeenCalled();
+  });
+
+  it("gives no answer, rather than guessing the CNAME host, when DNS gives none for the NAPTR record", async () => {
+    for (const naptrAnswer of [dnsError("ETIMEOUT"), dnsError("ESERVFAIL"), [{ ...SMP_RECORD, regexp: "", replacement: "" }]]) {
+      const answers = resolver({ naptr: naptrAnswer, cname: ["smp.example"] });
+      expect(await lookUpSmpUrl(PARTICIPANT, answers)).toEqual({ status: "unknown" });
+      expect(answers.resolveCname).not.toHaveBeenCalled();
+    }
+  });
+
+  it("falls back to the CNAME host only when the NAPTR record is absent and the CNAME record exists", async () => {
+    const found = await lookUpSmpUrl(PARTICIPANT, resolver({ naptr: dnsError("ENOTFOUND"), cname: ["smp.example"] }));
+    expect(found.status).toBe("found");
+    const smpUrl = found.status === "found" ? found.smpUrl : "";
+    expect(smpUrl).toStartWith("http://B-");
+    expect(smpUrl).toEndWith(`.iso6523-actorid-upis.participant.sml.prod.tech.peppol.org${PARTICIPANT_PATH}`);
+    expect(await lookUpSmpUrl(PARTICIPANT, resolver({ naptr: dnsError("ENOTFOUND"), cname: dnsError("ENODATA") }))).toEqual({ status: "absent" });
+    expect(await lookUpSmpUrl(PARTICIPANT, resolver({ naptr: dnsError("ENOTFOUND"), cname: dnsError("ETIMEOUT") }))).toEqual({ status: "unknown" });
+  });
+});
+
+describe("getSmpUrl", () => {
+  const spies: { mockRestore(): void }[] = [];
+  afterEach(() => {
+    for (const spy of spies.splice(0)) spy.mockRestore();
+  });
+
+  it("throws SmlLookupError when the SML gives no answer", async () => {
+    spies.push(spyOn(naptr, "resolveNaptr").mockResolvedValue({ status: "unknown" }));
+    await expect(getSmpUrl(PARTICIPANT)).rejects.toBeInstanceOf(SmlLookupError);
+  });
+
+  it("throws a plain error when the SML has no entry for the participant", async () => {
+    spies.push(spyOn(naptr, "resolveNaptr").mockResolvedValue({ status: "absent" }));
+    spies.push(spyOn(naptr, "lookUpCname").mockResolvedValue({ status: "absent" }));
+    const error = await getSmpUrl(PARTICIPANT).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(SmlLookupError);
+    expect((error as Error).message).toContain("is not registered in the SML");
   });
 });

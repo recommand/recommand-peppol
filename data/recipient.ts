@@ -26,18 +26,6 @@ function getNaptrDomain({recipientAddress, useTestNetwork}: {recipientAddress: s
   return `${base32Hash}.${PARTICIPANT_SCHEME}.${dnsZone}`.toLowerCase();
 }
 
-/** The URL of the SMP the SML points a participant to, or null when the SML has no entry for it. */
-export async function getSmpUrlNaptr({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string | null> {
-  const naptr = await resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}));
-  if (naptr.status === "found") {
-    const smpUrl = naptr.smpUrl;
-    const encodedAddress = encodeURIComponent(recipientAddress);
-    const baseUrl = smpUrl.endsWith("/") ? smpUrl.slice(0, -1) : smpUrl;
-    return `${baseUrl}/${PARTICIPANT_SCHEME}::${encodedAddress}`;
-  }
-  return null;
-}
-
 /** The host name the SML published a participant under before it moved to NAPTR records. */
 function getCnameHost({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): string {
   const dnsZone = useTestNetwork ? SML_TEST_ZONE : SML_ZONE;
@@ -49,18 +37,47 @@ function getCnameHost({recipientAddress, useTestNetwork}: {recipientAddress: str
   return `B-${md5Hash}.${PARTICIPANT_SCHEME}.${dnsZone}`;
 }
 
-function getSmpUrlCname({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): string {
-  const encodedAddress = encodeURIComponent(recipientAddress);
+/** A participant's URL on an SMP: its service group, which the service metadata paths extend. */
+function participantUrl(smpBaseUrl: string, recipientAddress: string): string {
+  const baseUrl = smpBaseUrl.endsWith("/") ? smpBaseUrl.slice(0, -1) : smpBaseUrl;
+  return `${baseUrl}/${PARTICIPANT_SCHEME}::${encodeURIComponent(recipientAddress)}`;
+}
 
-  return `http://${getCnameHost({recipientAddress, useTestNetwork})}/${PARTICIPANT_SCHEME}::${encodedAddress}`;
+export type SmpLookup = { status: "found"; smpUrl: string } | { status: "absent" } | { status: "unknown" };
+
+/**
+ * Where the SML points a participant: `found` with the participant's URL on its SMP,
+ * `absent` when DNS answered that the SML holds no entry for it, and `unknown` when no
+ * such answer came (a timeout, a failing DNS server, a record that names no usable SMP).
+ *
+ * The NAPTR record decides. Only when it is absent is the CNAME record asked about,
+ * which is how the SML published participants before NAPTR. An `unknown` NAPTR answer
+ * is never replaced by a CNAME guess: that would point the caller at a host the SML may
+ * no longer publish while the real answer is merely late.
+ */
+export async function lookUpSmpUrl(
+  {recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean},
+  resolver: Parameters<typeof resolveNaptr>[1] = smlResolver,
+): Promise<SmpLookup> {
+  const naptr = await resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}), resolver);
+  if (naptr.status === "found") {
+    return { status: "found", smpUrl: participantUrl(naptr.smpUrl, recipientAddress) };
+  }
+  if (naptr.status === "unknown") {
+    return naptr;
+  }
+  const cnameHost = getCnameHost({recipientAddress, useTestNetwork});
+  const cname = await lookUpCname(cnameHost, resolver);
+  if (cname.status === "found") {
+    return { status: "found", smpUrl: participantUrl(`http://${cnameHost}`, recipientAddress) };
+  }
+  return cname;
 }
 
 /**
  * Whether the SML answers that it holds no entry for a participant: DNS says there is no
- * NAPTR record for it, and no CNAME record either, which is how the SML published
- * participants before NAPTR. The CNAME is only asked about when the NAPTR record is
- * absent. The access point resolves a recipient through the same records, so a
- * transmission to such a participant cannot be delivered.
+ * NAPTR record for it, and no CNAME record either. The access point resolves a recipient
+ * through the same records, so a transmission to such a participant cannot be delivered.
  *
  * Only that answer counts. A lookup that fails in any other way (a timeout, a failing
  * DNS server) returns false, so a caller treats the participant as possibly registered.
@@ -69,21 +86,31 @@ export async function isParticipantUnregistered(
   {recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean},
   resolver: Parameters<typeof resolveNaptr>[1] = smlResolver,
 ): Promise<boolean> {
-  const naptr = await resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}), resolver);
-  if (naptr.status !== "absent") {
-    return false;
-  }
-  const cname = await lookUpCname(getCnameHost({recipientAddress, useTestNetwork}), resolver);
-  return cname.status === "absent";
+  return (await lookUpSmpUrl({recipientAddress, useTestNetwork}, resolver)).status === "absent";
 }
 
-export async function getSmpUrl({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string> {  
-  const naptrUrl = await getSmpUrlNaptr({recipientAddress, useTestNetwork});
-  if (naptrUrl) {
-    return naptrUrl;
+/**
+ * Raised when the SML gives no answer about a participant, as opposed to answering that
+ * it holds no entry for it. The participant may well be registered, so a caller retries
+ * or refuses rather than concluding either way.
+ */
+export class SmlLookupError extends Error {
+  constructor(recipientAddress: string) {
+    super(`Could not look up ${PARTICIPANT_SCHEME}::${recipientAddress} in the SML: DNS gave no usable answer`);
+    this.name = "SmlLookupError";
   }
-  
-  return getSmpUrlCname({recipientAddress, useTestNetwork});
+}
+
+/** The participant's URL on its SMP. Throws when the SML has no entry for it, or gives no answer (SmlLookupError). */
+export async function getSmpUrl({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string> {
+  const lookup = await lookUpSmpUrl({recipientAddress, useTestNetwork});
+  if (lookup.status === "unknown") {
+    throw new SmlLookupError(recipientAddress);
+  }
+  if (lookup.status === "absent") {
+    throw new Error(`${PARTICIPANT_SCHEME}::${recipientAddress} is not registered in the SML`);
+  }
+  return lookup.smpUrl;
 }
 
 const smpXmlParser = new XMLParser({
