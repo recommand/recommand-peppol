@@ -112,7 +112,7 @@ export function documentRequestSchema<
 export const sendDocumentBaseShape = {
   recipient: z.string().nullable().openapi({
     description:
-      "The Peppol address of the recipient. If null, the document will be sent via email only (requires `email.to`): as a PDF, or, when `doctypeId` is set, as a structured document in that format, validated as it would be for a Peppol recipient and attached as XML. The receiving party's electronic address in that document is its enterprise number under `enterpriseNumberScheme`, else its VAT number, else the first address in `email.to`; Peppol BIS does not accept an email address there and needs one of the numbers. French regulated documents cannot be delivered by email only.",
+      "The Peppol address of the recipient. If null, the document will be sent via email only (requires `email.to`): as a PDF, or, when `doctypeId` is set, as a structured document in that format, validated as it would be for a Peppol recipient and attached as XML. The receiving party's electronic address in that document is its enterprise number under `enterpriseNumberScheme`, else its VAT number, else the first address in `email.to`; Peppol BIS does not accept an email address there and needs one of the numbers. French regulated documents cannot be delivered by email only. A recipient the Peppol network says is not registered is not attempted: the Peppol delivery fails with `recipient_not_found` and email delivery, if configured, applies.",
     examples: ["0208:987654321"],
   }),
   email: z

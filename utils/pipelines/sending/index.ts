@@ -22,7 +22,11 @@ import type { DeliveryFailureCategory } from "@peppol/data/deliveries/model";
 import { sendDocumentResponseBody } from "./response";
 import { emailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
 import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
-import { getRecipientCapabilities } from "@peppol/data/recipient-capabilities";
+import { isParticipantUnregistered } from "@peppol/data/recipient";
+import {
+  lookUpRecipient,
+  type RecipientLookup,
+} from "@peppol/data/recipient-capabilities";
 import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { recordSendDocumentDelivery } from "@peppol/utils/metrics";
@@ -102,17 +106,19 @@ export async function sendingPipeline(c: SendingContext) {
     // there is nothing to route: only a JSON document, which we still have to write,
     // can be adapted to what the recipient is able to receive. Looking the recipient up
     // costs a request, so it only happens when something is left to decide.
-    const recipientCapabilities =
+    const recipientLookup =
       recipientAddress !== null &&
       input.documentType !== "xml" &&
       (!input.doctypeId || !input.processId)
-        ? await getRecipientCapabilities({
+        ? await lookUpRecipient({
             recipientAddress,
             isPlayground,
             useTestNetwork,
             teamId: team.id,
           })
         : null;
+    const recipientCapabilities =
+      recipientLookup?.status === "found" ? recipientLookup.capabilities : null;
 
     // Without a Peppol recipient a document is emailed as a PDF, unless the caller names
     // the format it is to be written in: it is then written, validated and attached as
@@ -191,6 +197,18 @@ export async function sendingPipeline(c: SendingContext) {
         // return the same answer. Email delivery, if configured, still applies.
         peppolFailure = prepared.peppolRoutingFailure;
         peppolFailureCategory = "document_not_supported";
+      } else if (
+        await isRecipientUnregistered({
+          recipientAddress,
+          recipientLookup,
+          isPlayground,
+          useTestNetwork,
+        })
+      ) {
+        // The network says the participant does not exist, which is all an access point
+        // would find out as well. Email delivery, if configured, still applies.
+        peppolFailure = `Recipient ${recipientAddress} is not registered on the Peppol ${useTestNetwork ? "test network" : "network"}.`;
+        peppolFailureCategory = "recipient_not_found";
       } else if (isPlayground && !useTestNetwork) {
         try {
           await simulateSendAs4({
@@ -386,6 +404,36 @@ export async function sendingPipeline(c: SendingContext) {
       400,
     );
   }
+}
+
+/**
+ * Whether the recipient is known not to be registered on the network, so a transmission
+ * cannot be delivered. A recipient lookup that ran has answered it already. A send that
+ * named its format, or is raw XML, did not look the recipient up, and only the SML is
+ * asked: one DNS query rather than a request to the recipient's SMP. A simulated
+ * playground is left to its simulator, which answers for the playground's own companies
+ * that the SML does not know.
+ *
+ * Only the network's own answer that the participant does not exist counts. A lookup
+ * that failed for any other reason leaves the transmission to be attempted, so a passing
+ * fault never diverts a document meant for a Peppol recipient to email.
+ */
+async function isRecipientUnregistered(options: {
+  recipientAddress: string;
+  recipientLookup: RecipientLookup | null;
+  isPlayground: boolean;
+  useTestNetwork: boolean;
+}): Promise<boolean> {
+  if (options.recipientLookup) {
+    return options.recipientLookup.status === "not_registered";
+  }
+  if (options.isPlayground && !options.useTestNetwork) {
+    return false;
+  }
+  return isParticipantUnregistered({
+    recipientAddress: options.recipientAddress,
+    useTestNetwork: options.useTestNetwork,
+  });
 }
 
 export default sendingPipeline;
