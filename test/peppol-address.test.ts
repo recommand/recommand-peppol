@@ -36,6 +36,13 @@ describe("parsePeppolAddress", () => {
     );
   });
 
+  it("writes an email address (scheme EM) as it was given", () => {
+    expect(parsePeppolAddress("EM:Rechnung@Kunde.de")).toEqual({
+      schemeId: "EM",
+      identifier: "Rechnung@Kunde.de",
+    });
+  });
+
   it("throws on a malformed address", () => {
     expect(() => parsePeppolAddress("0208")).toThrow();
     expect(() => parsePeppolAddress("0208:1:2")).toThrow();

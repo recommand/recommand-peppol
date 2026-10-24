@@ -87,6 +87,8 @@ const ERROR = {
     "This company is not set up for French regulated document flows. Please contact support@recommand.eu.",
   validationFailed:
     "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
+  bisNeedsBuyerNumber:
+    "Peppol BIS documents need the buyer's electronic address, and do not accept an email address for it. Provide the buyer's vatNumber, or its enterpriseNumber and enterpriseNumberScheme, or choose a doctypeId that accepts an email address, such as XRechnung.",
   unauthorized: "Unauthorized",
   companyNotFound: "Company not found",
 } as const;
@@ -342,7 +344,8 @@ async function expectStoredDocument(
   });
   expect(typeof document.senderId).toBe("string");
 
-  // The XML is only built and stored when there is a Peppol recipient.
+  // The XML is only stored when there is a Peppol recipient: the matrix sends no
+  // JSON document with a doctypeId, which would have an email-only one stored too.
   if (combination.recipient.value === null) {
     expect(document.xml).toBeNull();
   } else {
@@ -1218,6 +1221,79 @@ e2eDescribe("send document: provided totals", () => {
       expect(response.body.errors.root).toEqual([ERROR.validationFailed]);
       // BR-S-09: standard rated VAT = taxable amount x rate.
       expect(JSON.stringify(response.body.errors)).toContain("BR-S-09");
+    },
+    TIMEOUT
+  );
+});
+
+// Without a Peppol recipient a JSON document is emailed as a PDF, unless the request
+// names a doctypeId: the document is then written in that format, validated and stored,
+// and the email carries it as XML. The matrix above covers the PDF-only case.
+e2eDescribe("send document: email only with a doctypeId", () => {
+  const withoutBuyerNumbers = () => {
+    const document = invoiceDocument();
+    return { ...document, buyer: { ...document.buyer, vatNumber: null } };
+  };
+
+  test(
+    "writes, validates and stores the document, named by the buyer's VAT number",
+    async () => {
+      const response = await sendDocument({
+        recipient: null,
+        documentType: "invoice",
+        document: invoiceDocument(),
+        doctypeId: DOC_TYPE_ID.invoice,
+        email: { to: [EMAIL_TO] },
+      });
+      expectSuccess(response, {
+        kind: "success",
+        sentOverPeppol: false,
+        sentOverEmail: true,
+        emailRecipients: [EMAIL_TO],
+      });
+
+      const stored = await getDocument(response.body.id);
+      expect(stored.body.document.receiverId).toBeNull();
+      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.invoice);
+      expect(stored.body.document.xml).toContain(
+        '<cbc:EndpointID schemeID="9925">BE0598726857</cbc:EndpointID>'
+      );
+    },
+    TIMEOUT
+  );
+
+  test(
+    "names a buyer without numbers by the email address, in a format that accepts one",
+    async () => {
+      const response = await sendDocument({
+        recipient: null,
+        documentType: "invoice",
+        document: withoutBuyerNumbers(),
+        doctypeId: DOC_TYPE_ID.ciiInvoice,
+        email: { to: [EMAIL_TO] },
+      });
+      expect(response.status).toBe(200);
+
+      const stored = await getDocument(response.body.id);
+      expect(stored.body.document.docTypeId).toBe(DOC_TYPE_ID.ciiInvoice);
+      expect(stored.body.document.xml).toContain(
+        `<ram:URIID schemeID="EM">${EMAIL_TO}</ram:URIID>`
+      );
+    },
+    TIMEOUT
+  );
+
+  test(
+    "refuses a Peppol BIS document for a buyer without numbers",
+    async () => {
+      const response = await sendDocument({
+        recipient: null,
+        documentType: "invoice",
+        document: withoutBuyerNumbers(),
+        doctypeId: DOC_TYPE_ID.invoice,
+        email: { to: [EMAIL_TO] },
+      });
+      expectFailure(response, 400, ERROR.bisNeedsBuyerNumber);
     },
     TIMEOUT
   );

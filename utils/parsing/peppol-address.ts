@@ -10,8 +10,14 @@ export function parsePeppolAddress(address: string): {
   // require it), but several BIS content rules expect the uppercase form in the
   // document itself, e.g. PEPPOL-COMMON-R042 for Danish CVR numbers (0184).
   // Identifier values are case insensitive on the network, so uppercasing here
-  // is safe for every scheme.
-  return { schemeId: parts[0].trim(), identifier: parts[1].trim().toUpperCase() };
+  // is safe for every participant scheme. An email address (scheme EM) is not a
+  // participant identifier, and is written as it was given.
+  const schemeId = parts[0].trim();
+  const identifier = parts[1].trim();
+  return {
+    schemeId,
+    identifier: schemeId.toUpperCase() === "EM" ? identifier : identifier.toUpperCase(),
+  };
 }
 
 export function normalizePeppolAddress(address: string | null): string | null {

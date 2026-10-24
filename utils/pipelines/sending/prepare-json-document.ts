@@ -4,6 +4,7 @@ import { UserFacingError } from "@peppol/utils/util";
 import type { AnyDocumentFormat } from "@peppol/utils/type-repository/document-formats/types";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";
+import { emailRecipientAddress } from "./email-recipient-address";
 import { SendingFailure } from "./errors";
 import { selectFormatAndProcess, type FormatSelection } from "./select-format";
 import type { PreparedDocument, SendingContext, SendingInput } from "./types";
@@ -65,6 +66,13 @@ export async function prepareJsonDocument(options: {
    * the endpoints that only generate a document, which have no transmission to route.
    */
   recipientCapabilities?: RecipientCapabilities | null;
+  /**
+   * Where a document without a Peppol recipient is emailed, when it is delivered as a
+   * structured document. It then names its receiver by an address taken from the
+   * document, or the first of these (see emailRecipientAddress), instead of the
+   * placeholder a document nobody receives as XML is written with.
+   */
+  structuredEmailTo?: string[];
 }): Promise<PreparedDocument> {
   const {
     input,
@@ -75,6 +83,7 @@ export async function prepareJsonDocument(options: {
     wrapContainer = true,
     isPlayground = false,
     recipientCapabilities = null,
+    structuredEmailTo,
   } = options;
   const documentType = getDocumentType(input.documentType);
   if (!documentType) {
@@ -105,10 +114,20 @@ export async function prepareJsonDocument(options: {
       isPlayground,
       capabilities,
     });
+  const documentRecipientAddress = (selection: FormatSelection, value: any) =>
+    recipientAddress ??
+    (structuredEmailTo
+      ? emailRecipientAddress({
+          documentType,
+          document: value,
+          format: selection.format,
+          emailTo: structuredEmailTo,
+        })
+      : NULL_RECIPIENT_ADDRESS);
   const encodeAs = (selection: FormatSelection, value: any) =>
     selection.format.encode(value, selection.processId, {
       senderAddress,
-      recipientAddress: recipientAddress ?? NULL_RECIPIENT_ADDRESS,
+      recipientAddress: documentRecipientAddress(selection, value),
       isDocumentValidationEnforced: true,
     });
 

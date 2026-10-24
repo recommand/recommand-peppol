@@ -34,7 +34,10 @@ import {
   readEnvelopeParties,
 } from "./envelope-parties";
 import { SendingFailure } from "./errors";
-import { assertFranceRegulatedSendingSupported } from "./france-regulated-guard";
+import {
+  assertFranceRegulatedSendingSupported,
+  assertNotFranceRegulatedByEmailOnly,
+} from "./france-regulated-guard";
 import { prepareJsonDocument } from "./prepare-json-document";
 import { prepareXmlDocument } from "./prepare-xml-document";
 import type { SendingContext } from "./types";
@@ -111,6 +114,12 @@ export async function sendingPipeline(c: SendingContext) {
           })
         : null;
 
+    // Without a Peppol recipient a document is emailed as a PDF, unless the caller names
+    // the format it is to be written in: it is then written, validated and attached as
+    // it would be for a Peppol recipient, so a buyer who is not on Peppol still receives
+    // a structured document.
+    const isStructuredEmail = recipientAddress === null && !!input.doctypeId;
+
     const prepared =
       input.documentType === "xml"
         ? prepareXmlDocument(input)
@@ -122,6 +131,7 @@ export async function sendingPipeline(c: SendingContext) {
             documentId,
             isPlayground,
             recipientCapabilities,
+            structuredEmailTo: isStructuredEmail ? input.email?.to : undefined,
           });
 
     // Recorded as soon as it is known, before the guard below can refuse the send: how a
@@ -141,7 +151,15 @@ export async function sendingPipeline(c: SendingContext) {
       isPlayground,
     });
 
-    const xmlDocument = recipientAddress === null ? null : prepared.xml;
+    if (isStructuredEmail) {
+      assertNotFranceRegulatedByEmailOnly({
+        docTypeId: prepared.docTypeId,
+        processId: prepared.processId,
+      });
+    }
+
+    const xmlDocument =
+      recipientAddress === null && !isStructuredEmail ? null : prepared.xml;
     c.set("sendDocumentRecordingXml", xmlDocument);
 
     // The sender is not checked in the playground, whose transmissions are simulated

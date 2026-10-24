@@ -112,7 +112,7 @@ export function documentRequestSchema<
 export const sendDocumentBaseShape = {
   recipient: z.string().nullable().openapi({
     description:
-      "The Peppol address of the recipient. If null, the document will be sent via email only (requires `email.to`).",
+      "The Peppol address of the recipient. If null, the document will be sent via email only (requires `email.to`): as a PDF, or, when `doctypeId` is set, as a structured document in that format, validated as it would be for a Peppol recipient and attached as XML. The receiving party's electronic address in that document is its enterprise number under `enterpriseNumberScheme`, else its VAT number, else the first address in `email.to`; Peppol BIS does not accept an email address there and needs one of the numbers. French regulated documents cannot be delivered by email only.",
     examples: ["0208:987654321"],
   }),
   email: z
@@ -142,7 +142,7 @@ export const sendDocumentBaseShape = {
     .openapi({
       ref: "Email",
       description:
-        "Email delivery options. When a Peppol recipient is provided, email is optional and you can choose to always send the email, or only when Peppol delivery fails, whether that is refused at send time or reported later by the access point. When the Peppol recipient is null, email becomes the primary delivery method and `email.to` is required. Each email counts towards your document quota at the moment it is sent.",
+        "Email delivery options. When a Peppol recipient is provided, email is optional and you can choose to always send the email, or only when Peppol delivery fails, whether that is refused at send time or reported later by the access point. When the Peppol recipient is null, email becomes the primary delivery method and `email.to` is required. Every email carries the document's attachments, and the document as XML whenever one was written: always for a Peppol recipient, and for a null recipient when `doctypeId` is set. Each email counts towards your document quota at the moment it is sent.",
     }),
   pdfGeneration: z
     .object({

@@ -43,8 +43,8 @@ const generateDocumentTypes = documentTypeSchema.options.filter(
 );
 
 // Nothing is delivered here, so the delivery options of the send endpoint have
-// no meaning, and a null recipient means email-only delivery there, which throws
-// the generated XML away instead of transmitting or storing it: there is no
+// no meaning, and a null recipient means email-only delivery there, which only
+// keeps the generated XML when the request names its format: there is no
 // document to generate for one here.
 const { email: _email, ...generateBaseShape } = {
   ...sendDocumentBaseShape,
