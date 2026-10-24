@@ -22,7 +22,7 @@ export function Step5Identifiers({ teamId, company, verificationRequirements, us
                 </p>
                 {company.country === "DE" && !company.vatNumber && (
                     <p className="text-sm text-muted-foreground">
-                        {t`German companies are addressed on Peppol by their VAT number (scheme 9930). Without a VAT number, add your GLN (scheme 0088) or IBAN (scheme 9918) here. Public authorities add their Leitweg-ID under scheme 0204.`}
+                        {t`German companies are addressed on Peppol by their VAT number, under scheme 9930 and as GEBA under scheme 0246. Without a VAT number, add your GLN (scheme 0088) or IBAN (scheme 9918) here. Public authorities add their Leitweg-ID under scheme 0204.`}
                     </p>
                 )}
             </div>

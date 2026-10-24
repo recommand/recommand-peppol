@@ -20,6 +20,7 @@ import { getSmpProviderDescriptor } from "./smp-providers/descriptors";
 import { planCompanyCountryChange } from "./company-country-change";
 import { lockCompanyRow } from "./company-row-lock";
 import { getPartnerRegisteredFrenchReportingDeclarants } from "./fr-reporting-declarants";
+import { registerReleasingDerivedIdentifiers } from "./derived-identifiers";
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = typeof companies.$inferInsert;
@@ -373,23 +374,37 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     .then((rows) => rows[0]);
 
   if (!wasRegistered && shouldBeRegistered) {
-    try {
-      await assertIdentifiersFreeForRecipient(updatedCompany.id);
-    } catch (error) {
-      // Nothing was registered yet, so only the update of the company is rolled back
-      await db.update(companies).set(oldCompany).where(eq(companies.id, company.id));
-      throw error;
-    }
-    try {
-      await upsertCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
-    } catch (error) {
-      // If registration fails, unregister any company registrations that might have been registered
+    // A refusal before anything was registered only rolls back the update of the
+    // company: unregistering would reach the participant of the company that holds
+    // the identifier.
+    let registrationStarted = false;
+    const undoRegistration = async () => {
+      if (!registrationStarted) {
+        return;
+      }
+      registrationStarted = false;
       try {
         await unregisterCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
       } catch (rollbackError) {
         // If this fails, we can't do much about it, we at least want to rollback the update of the company
         console.error(`Failed to unregister company registrations for company ${updatedCompany.id} after registration failed: ${rollbackError}`);
       }
+    };
+    try {
+      // An identifier the company's country derives for it, such as the German GEBA,
+      // never holds up the registration.
+      await registerReleasingDerivedIdentifiers({
+        company: updatedCompany,
+        useTestNetwork,
+        register: async () => {
+          await assertIdentifiersFreeForRecipient(updatedCompany.id);
+          registrationStarted = true;
+          await upsertCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
+        },
+        undoRegistration,
+      });
+    } catch (error) {
+      await undoRegistration();
       // Also rollback the update of the company
       await db.update(companies).set(oldCompany).where(eq(companies.id, company.id));
       throw error;

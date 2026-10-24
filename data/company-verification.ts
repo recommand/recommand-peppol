@@ -13,7 +13,7 @@ import { publishCompanyVerificationEvent } from "./company-verification-webhooks
 import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { submitVerificationIdentity, restartVerificationIdentity } from '@peppol/data/verification-submission';
 import { assertCompanyIdentifiersAllowed, assertIdentifiersFreeForRecipient } from "./company-identifiers";
-import { derivedIdentifiersNamedBy, releaseDerivedIdentifiersPublishedElsewhere, removeDerivedIdentifiers } from "./derived-identifiers";
+import { registerReleasingDerivedIdentifiers } from "./derived-identifiers";
 import { lockCompanyRow, sameCompanyIdentity } from "./company-row-lock";
 import { getCurrentVerificationSession } from "./current-verification-session";
 import { sessionMatchesCompany } from "./at/kyc-onboarding-state";
@@ -196,24 +196,18 @@ export async function finalizeCompanyVerification({
     };
     try {
       // An identifier the company's country derives for it, such as the Finnish OVT
-      // code, never holds up the verification: one that is published elsewhere is
-      // taken off first, and one the SMP refuses is taken off and the registration
-      // tried once more without it.
-      await releaseDerivedIdentifiersPublishedElsewhere({ company, useTestNetwork });
-      try {
-        await register();
-      } catch (error) {
-        const refused = await derivedIdentifiersNamedBy(company, error);
-        if (refused.length === 0) {
-          throw error;
-        }
-        if (registrationStarted) {
-          await rollbackSmpTransition();
-          registrationStarted = false;
-        }
-        await removeDerivedIdentifiers(company, refused, error instanceof Error ? error.message : String(error));
-        await register();
-      }
+      // code, never holds up the verification.
+      await registerReleasingDerivedIdentifiers({
+        company,
+        useTestNetwork,
+        register,
+        undoRegistration: async () => {
+          if (registrationStarted) {
+            await rollbackSmpTransition();
+            registrationStarted = false;
+          }
+        },
+      });
     } catch (error) {
       if (registrationStarted) {
         await rollbackSmpTransition();
