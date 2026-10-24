@@ -99,7 +99,11 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
     pool = await connectTestDatabase();
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
-    mock.module("@peppol/utils/naptr", () => ({ resolveNaptr: async () => smlTarget }));
+    mock.module("@peppol/utils/naptr", () => ({
+      resolveNaptr: async () => (smlTarget ? { status: "found", smpUrl: smlTarget } : { status: "absent" }),
+      lookUpCname: async () => ({ status: "absent" }),
+      smlResolver: {},
+    }));
     ({ requestInboundMigration, startOutboundMigration, cancelOutboundMigration, finalizeOutboundMigration, getParticipantMigrations } =
       await import("../../data/participant-migrations"));
     ({ createCompanyIdentifier } = await import("../../data/company-identifiers"));

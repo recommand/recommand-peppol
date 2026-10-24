@@ -1,9 +1,8 @@
 import { createHash } from "crypto";
-import { promises as dns } from "dns";
 import { PARTICIPANT_SCHEME, DOCUMENT_SCHEME, PROCESS_SCHEME } from "./phoss-smp/service-metadata";
 import { XMLParser } from "fast-xml-parser";
 import { base32Encode } from "@peppol/utils/base32";
-import { resolveNaptr } from "@peppol/utils/naptr";
+import { lookUpCname, resolveNaptr, smlResolver } from "@peppol/utils/naptr";
 import { resolveDocTypeId } from "@peppol/utils/type-repository/receiving-capabilities";
 import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
 import { parseCertificateExpiry } from "@peppol/utils/certificate";
@@ -29,8 +28,9 @@ function getNaptrDomain({recipientAddress, useTestNetwork}: {recipientAddress: s
 
 /** The URL of the SMP the SML points a participant to, or null when the SML has no entry for it. */
 export async function getSmpUrlNaptr({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string | null> {
-  const smpUrl = await resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}));
-  if (smpUrl) {
+  const naptr = await resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}));
+  if (naptr.status === "found") {
+    const smpUrl = naptr.smpUrl;
     const encodedAddress = encodeURIComponent(recipientAddress);
     const baseUrl = smpUrl.endsWith("/") ? smpUrl.slice(0, -1) : smpUrl;
     return `${baseUrl}/${PARTICIPANT_SCHEME}::${encodedAddress}`;
@@ -55,42 +55,26 @@ function getSmpUrlCname({recipientAddress, useTestNetwork}: {recipientAddress: s
   return `http://${getCnameHost({recipientAddress, useTestNetwork})}/${PARTICIPANT_SCHEME}::${encodedAddress}`;
 }
 
-// A DNS server's answer that a name does not exist (NXDOMAIN), or holds no record of
-// the type asked for. Every other error, such as a timeout or a failing server, is the
-// absence of an answer.
-const NO_SUCH_RECORD_CODES = new Set(["ENOTFOUND", "ENODATA"]);
-
-// Bounded, so a resolver that does not answer delays a send by seconds rather than
-// by the minute the system defaults allow.
-const smlResolver = new dns.Resolver({ timeout: 2000, tries: 2 });
-
-async function isRecordAbsent(lookup: () => Promise<unknown>): Promise<boolean> {
-  try {
-    await lookup();
-    return false;
-  } catch (error) {
-    return NO_SUCH_RECORD_CODES.has((error as { code?: string })?.code ?? "");
-  }
-}
-
 /**
- * Whether the SML answers that it holds no entry for a participant: DNS says there is
- * neither the NAPTR record lookups read today nor the CNAME record they read before.
- * The access point resolves a recipient through the same records, so a transmission to
- * such a participant cannot be delivered.
+ * Whether the SML answers that it holds no entry for a participant: DNS says there is no
+ * NAPTR record for it, and no CNAME record either, which is how the SML published
+ * participants before NAPTR. The CNAME is only asked about when the NAPTR record is
+ * absent. The access point resolves a recipient through the same records, so a
+ * transmission to such a participant cannot be delivered.
  *
  * Only that answer counts. A lookup that fails in any other way (a timeout, a failing
  * DNS server) returns false, so a caller treats the participant as possibly registered.
  */
 export async function isParticipantUnregistered(
   {recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean},
-  resolver: Pick<InstanceType<typeof dns.Resolver>, "resolveNaptr" | "resolveCname"> = smlResolver,
+  resolver: Parameters<typeof resolveNaptr>[1] = smlResolver,
 ): Promise<boolean> {
-  const [noNaptr, noCname] = await Promise.all([
-    isRecordAbsent(() => resolver.resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}))),
-    isRecordAbsent(() => resolver.resolveCname(getCnameHost({recipientAddress, useTestNetwork}))),
-  ]);
-  return noNaptr && noCname;
+  const naptr = await resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}), resolver);
+  if (naptr.status !== "absent") {
+    return false;
+  }
+  const cname = await lookUpCname(getCnameHost({recipientAddress, useTestNetwork}), resolver);
+  return cname.status === "absent";
 }
 
 export async function getSmpUrl({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string> {  

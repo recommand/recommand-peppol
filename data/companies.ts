@@ -14,6 +14,7 @@ import { getCompanyVerificationLog, revokeOpenCompanyVerificationSessions } from
 import { companyDocumentsS3Prefix } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
 import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, validateCompanyNumbers } from "@peppol/utils/identifier-validation";
+import { vatNumberIdentifier } from "@peppol/utils/identifiers/vat-number";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
 import { getSmpProviderDescriptor } from "./smp-providers/descriptors";
@@ -230,14 +231,13 @@ async function setupCompanyDefaults({ company, isPlayground, useTestNetwork, ver
       console.error(`Failed to create enterprise number identifier for company ${company.id}: ${error}`);
     }
   }
-  const cleanedVatNumber = cleanVatNumber(company.vatNumber);
-  if (countryInfo?.defaultVatScheme && cleanedVatNumber) {
+  const vatIdentifier = vatNumberIdentifier(company.country, company.vatNumber);
+  if (vatIdentifier) {
     try {
       await createCompanyIdentifier({
         companyIdentifier: {
           companyId: company.id,
-          scheme: countryInfo.defaultVatScheme,
-          identifier: cleanedVatNumber,
+          ...vatIdentifier,
         },
         skipSmpRegistration,
         useTestNetwork,

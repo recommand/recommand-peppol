@@ -6,103 +6,76 @@
  * participant possibly registered, and the transmission is attempted as before.
  */
 
-import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
-
-// Nothing under test touches the database, but the playground lookups connect at
-// import time.
-mock.module("@recommand/db", () => ({ db: {} }));
-
-const recipient = await import("../data/recipient");
-const { getRecipientCapabilities, lookUpRecipient } = await import("../data/recipient-capabilities");
+import { describe, expect, it, mock } from "bun:test";
+import { isParticipantUnregistered } from "../data/recipient";
+import { lookUpCname, resolveNaptr } from "../utils/naptr";
 
 const dnsError = (code: string) => Object.assign(new Error(`query ${code}`), { code });
 
+const SMP_RECORD = { flags: "U", service: "Meta:SMP", regexp: "!.*!https://smp.example!", replacement: "", order: 100, preference: 10 };
+
 function resolver(answers: { naptr: unknown; cname: unknown }) {
-  const answer = (value: unknown) => async () => {
-    if (value instanceof Error) throw value;
-    return value as any;
-  };
+  const answer = (value: unknown) =>
+    mock(async () => {
+      if (value instanceof Error) throw value;
+      return value as any;
+    });
   return { resolveNaptr: answer(answers.naptr), resolveCname: answer(answers.cname) };
 }
 
 const PARTICIPANT = { recipientAddress: "9930:de999999999", useTestNetwork: false };
 
-describe("isParticipantUnregistered", () => {
-  it("is true when DNS says neither the NAPTR nor the CNAME record exists", async () => {
-    const answers = { naptr: dnsError("ENOTFOUND"), cname: dnsError("ENODATA") };
-    expect(await recipient.isParticipantUnregistered(PARTICIPANT, resolver(answers))).toBe(true);
+describe("resolveNaptr", () => {
+  it("finds the SMP a record points to", async () => {
+    const answers = resolver({ naptr: [SMP_RECORD], cname: [] });
+    expect(await resolveNaptr("example", answers)).toEqual({ status: "found", smpUrl: "https://smp.example" });
   });
 
-  it("is false when the NAPTR record exists", async () => {
-    const answers = {
-      naptr: [{ flags: "U", service: "Meta:SMP", regexp: "!.*!https://smp.example!", replacement: "", order: 100, preference: 10 }],
-      cname: dnsError("ENOTFOUND"),
-    };
-    expect(await recipient.isParticipantUnregistered(PARTICIPANT, resolver(answers))).toBe(false);
-  });
-
-  it("is false when only the older CNAME record exists", async () => {
-    const answers = { naptr: dnsError("ENOTFOUND"), cname: ["smp.example"] };
-    expect(await recipient.isParticipantUnregistered(PARTICIPANT, resolver(answers))).toBe(false);
-  });
-
-  it("is false when DNS gives no answer", async () => {
-    for (const code of ["ETIMEOUT", "ESERVFAIL", "ECONNREFUSED"]) {
-      const answers = { naptr: dnsError(code), cname: dnsError("ENOTFOUND") };
-      expect(await recipient.isParticipantUnregistered(PARTICIPANT, resolver(answers)), code).toBe(false);
+  it("is absent when DNS says the name or record does not exist", async () => {
+    for (const code of ["ENOTFOUND", "ENODATA"]) {
+      expect(await resolveNaptr("example", resolver({ naptr: dnsError(code), cname: [] })), code).toEqual({ status: "absent" });
     }
-    const unexpected = { naptr: new Error("no code at all"), cname: dnsError("ENOTFOUND") };
-    expect(await recipient.isParticipantUnregistered(PARTICIPANT, resolver(unexpected))).toBe(false);
+  });
+
+  it("is unknown when DNS gives no answer, or a record names no usable SMP", async () => {
+    for (const code of ["ETIMEOUT", "ESERVFAIL", "ECONNREFUSED"]) {
+      expect(await resolveNaptr("example", resolver({ naptr: dnsError(code), cname: [] })), code).toEqual({ status: "unknown" });
+    }
+    const unusable = { ...SMP_RECORD, regexp: "", replacement: "" };
+    expect(await resolveNaptr("example", resolver({ naptr: [unusable], cname: [] }))).toEqual({ status: "unknown" });
   });
 });
 
-describe("lookUpRecipient", () => {
-  const spies: { mockRestore(): void }[] = [];
-  afterEach(() => {
-    for (const spy of spies.splice(0)) spy.mockRestore();
+describe("lookUpCname", () => {
+  it("tells a record, its absence and no answer apart", async () => {
+    expect(await lookUpCname("example", resolver({ naptr: [], cname: ["smp.example"] }))).toEqual({ status: "found" });
+    expect(await lookUpCname("example", resolver({ naptr: [], cname: dnsError("ENOTFOUND") }))).toEqual({ status: "absent" });
+    expect(await lookUpCname("example", resolver({ naptr: [], cname: dnsError("ETIMEOUT") }))).toEqual({ status: "unknown" });
+  });
+});
+
+describe("isParticipantUnregistered", () => {
+  it("is true when DNS says neither the NAPTR nor the CNAME record exists", async () => {
+    const answers = resolver({ naptr: dnsError("ENOTFOUND"), cname: dnsError("ENODATA") });
+    expect(await isParticipantUnregistered(PARTICIPANT, answers)).toBe(true);
   });
 
-  // Each test looks up an address of its own: what is found is cached.
-  const lookUp = (recipientAddress: string, options?: { checkRegistration?: boolean }) =>
-    lookUpRecipient({ recipientAddress, isPlayground: false, useTestNetwork: false, teamId: "team_1" }, options);
-
-  function smpLookupFails(unregistered: boolean) {
-    spies.push(spyOn(console, "log").mockImplementation(() => {}));
-    spies.push(spyOn(recipient, "verifyRecipient").mockRejectedValue(new Error("Failed to verify recipient: Unable to connect")));
-    const check = spyOn(recipient, "isParticipantUnregistered").mockResolvedValue(unregistered);
-    spies.push(check);
-    return check;
-  }
-
-  it("reports a participant the network does not know as not registered", async () => {
-    smpLookupFails(true);
-    expect(await lookUp("9930:de000000001")).toEqual({ status: "not_registered" });
+  it("is false, without asking about the CNAME, when the NAPTR record exists", async () => {
+    const answers = resolver({ naptr: [SMP_RECORD], cname: dnsError("ENOTFOUND") });
+    expect(await isParticipantUnregistered(PARTICIPANT, answers)).toBe(false);
+    expect(answers.resolveCname).not.toHaveBeenCalled();
   });
 
-  it("reports any other failed lookup as unavailable", async () => {
-    smpLookupFails(false);
-    expect(await lookUp("9930:de000000002")).toEqual({ status: "unavailable" });
+  it("is false, without asking about the CNAME, when DNS gives no answer for the NAPTR record", async () => {
+    for (const code of ["ETIMEOUT", "ESERVFAIL", "ECONNREFUSED"]) {
+      const answers = resolver({ naptr: dnsError(code), cname: dnsError("ENOTFOUND") });
+      expect(await isParticipantUnregistered(PARTICIPANT, answers), code).toBe(false);
+      expect(answers.resolveCname).not.toHaveBeenCalled();
+    }
   });
 
-  it("does not ask the network when only the capabilities are wanted", async () => {
-    const check = smpLookupFails(true);
-    expect(await lookUp("9930:de000000003", { checkRegistration: false })).toEqual({ status: "unavailable" });
-    expect(await getRecipientCapabilities({ recipientAddress: "9930:de000000004", isPlayground: false, useTestNetwork: false, teamId: "team_1" })).toBeNull();
-    expect(check).not.toHaveBeenCalled();
-  });
-
-  it("does not ask the network about a participant it found", async () => {
-    spies.push(spyOn(recipient, "verifyRecipient").mockResolvedValue({
-      smpUrl: "https://smp.example/iso6523-actorid-upis::9930:de000000005",
-      serviceMetadataReferences: [],
-      smpHostnames: ["smp.example"],
-      supportedDocuments: [],
-    }));
-    const check = spyOn(recipient, "isParticipantUnregistered").mockResolvedValue(true);
-    spies.push(check);
-
-    const lookup = await lookUp("9930:de000000005");
-    expect(lookup.status).toBe("found");
-    expect(check).not.toHaveBeenCalled();
+  it("is false when only the older CNAME record exists, or DNS gives no answer for it", async () => {
+    expect(await isParticipantUnregistered(PARTICIPANT, resolver({ naptr: dnsError("ENOTFOUND"), cname: ["smp.example"] }))).toBe(false);
+    expect(await isParticipantUnregistered(PARTICIPANT, resolver({ naptr: dnsError("ENOTFOUND"), cname: dnsError("ETIMEOUT") }))).toBe(false);
   });
 });

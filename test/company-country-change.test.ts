@@ -59,6 +59,20 @@ describe("planning a country change", () => {
     expect(plan.enterpriseNumberScheme).toBe("0208");
   });
 
+  it("replaces a VAT identifier registered from a number stored without its prefix", () => {
+    // Stored before VAT numbers were held to the country's prefix, and registered as written.
+    const legacy = { ...belgian, vatNumber: "0123456749" };
+    const plan = planCompanyCountryChange({
+      ...base, oldCompany: legacy, newCountry: "FR", enterpriseNumber: "303265045", vatNumber: null,
+      identifiers: [
+        { id: "en", scheme: "0208", identifier: "0123456749" },
+        { id: "vat", scheme: "9925", identifier: "0123456749" },
+      ],
+    });
+    expect(plan.deleteIdentifierIds).toEqual(["en", "vat"]);
+    expect(plan.keptIdentifiers).toEqual([]);
+  });
+
   it("keeps the providers between countries served by the same ones", () => {
     const plan = planCompanyCountryChange({
       ...base, oldCompany: { ...belgian, country: "DE", enterpriseNumberScheme: "0204" }, newCountry: "BE",

@@ -16,6 +16,7 @@ export const siUblCreditnoteFormat: DocumentFormat<
   docTypeId: `urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##${customizationId}::2.1`,
   supportedDocumentTypes: [creditNoteDocumentType],
   supportedProcessIds: [processId],
+  acceptsEmailEndpoint: true,
   smpRegistration: [
     { processId, translatableTitle: "SI-UBL 2.0 Credit Note" },
   ],

@@ -14,6 +14,7 @@ export const xrechnungUblCreditnoteFormat: DocumentFormat<
   docTypeId: `urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##${XRECHNUNG_CUSTOMIZATION_ID}::2.1`,
   supportedDocumentTypes: [creditNoteDocumentType],
   supportedProcessIds: [XRECHNUNG_PROCESS_ID],
+  acceptsEmailEndpoint: true,
   smpRegistration: [
     { processId: XRECHNUNG_PROCESS_ID, translatableTitle: "XRechnung 3.0 UBL Credit Note" },
   ],

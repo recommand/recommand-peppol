@@ -88,7 +88,7 @@ const ERROR = {
   validationFailed:
     "Document validation failed. Please ensure your document complies with all requirements (e.g. EN16931, PEPPOL BIS 3.0, etc.).",
   bisNeedsBuyerNumber:
-    "Peppol BIS documents need the buyer's electronic address, and do not accept an email address for it. Provide the buyer's vatNumber, or its enterpriseNumber and enterpriseNumberScheme, or choose a doctypeId that accepts an email address, such as XRechnung.",
+    "Peppol BIS Billing 3.0 Invoice needs the buyer's electronic address, and does not accept an email address for it. Provide the buyer's vatNumber, or its enterpriseNumber and enterpriseNumberScheme, or choose a doctypeId whose format accepts an email address: SI-UBL 2.0 Invoice, XRechnung 3.0 UBL Invoice, EN 16931 CII Invoice + Credit Note D22B or XRechnung 3.0 CII Invoice + Credit Note.",
   unauthorized: "Unauthorized",
   companyNotFound: "Company not found",
 } as const;

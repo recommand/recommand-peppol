@@ -12,6 +12,8 @@ import { SendingFailure } from "../utils/pipelines/sending/errors";
 import { assertNotFranceRegulatedByEmailOnly } from "../utils/pipelines/sending/france-regulated-guard";
 import { prepareJsonDocument } from "../utils/pipelines/sending/prepare-json-document";
 import { validateDocument } from "../utils/pipelines/sending/validate-document";
+import { documentFormats, getDocumentFormat } from "../utils/type-repository/document-formats";
+import { receivingCapabilities } from "../utils/type-repository/receiving-capabilities";
 
 const BIS3_INVOICE =
   "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1";
@@ -109,27 +111,39 @@ describe("the receiving party's electronic address on a document emailed in a na
   it("takes the country from the VAT number rather than the address", async () => {
     const austrian = await prepare(invoiceInput(party({ vatNumber: "ATU13585627" }), BIS3_INVOICE));
     expect(buyerEndpoint(austrian.xml)).toEqual(["9914", "ATU13585627"]);
+  });
 
-    // Greece has no default VAT scheme here and its VAT numbers start with EL.
+  it("uses the code list's VAT scheme for a country without a default one", async () => {
+    // Greek VAT numbers start with EL.
     const greek = await prepare(invoiceInput(party({ vatNumber: "EL094259216" }), BIS3_INVOICE));
     expect(buyerEndpoint(greek.xml)).toEqual(["9933", "EL094259216"]);
+
+    const french = await prepare(invoiceInput(party({ vatNumber: "FR40303265045" }), BIS3_INVOICE));
+    expect(buyerEndpoint(french.xml)).toEqual(["9957", "FR40303265045"]);
+
+    const czech = await prepare(invoiceInput(party({ vatNumber: "CZ25596641" }), BIS3_INVOICE));
+    expect(buyerEndpoint(czech.xml)).toEqual(["9929", "CZ25596641"]);
   });
 
   it("gives a VAT number written without its prefix the prefix of the buyer's country", async () => {
     const german = await prepare(invoiceInput(party({ vatNumber: "811 569 869" }), BIS3_INVOICE));
     expect(buyerEndpoint(german.xml)).toEqual(["9930", "DE811569869"]);
 
+    const austrian = await prepare(invoiceInput(party({ country: "AT", vatNumber: "U13585627" }), BIS3_INVOICE));
+    expect(buyerEndpoint(austrian.xml)).toEqual(["9914", "ATU13585627"]);
+
     const greek = await prepare(invoiceInput(party({ country: "GR", vatNumber: "094259216" }), BIS3_INVOICE));
     expect(buyerEndpoint(greek.xml)).toEqual(["9933", "EL094259216"]);
   });
 
   it("refuses a Peppol BIS document whose buyer's VAT number has no Peppol VAT scheme, saying so", async () => {
+    // The code list has no VAT scheme for Denmark.
     const refused = prepare(invoiceInput(party({ country: "DK", vatNumber: "DK13585628" }), BIS3_INVOICE));
 
     await expect(refused).rejects.toMatchObject({
       status: 400,
       message:
-        "Peppol BIS documents need the buyer's electronic address, and do not accept an email address for it. The buyer's VAT number names no country with a Peppol VAT scheme. Provide its enterpriseNumber and enterpriseNumberScheme, or choose a doctypeId that accepts an email address, such as XRechnung.",
+        "Peppol BIS Billing 3.0 Invoice needs the buyer's electronic address, and does not accept an email address for it. The buyer's VAT number cannot be used as a Peppol identifier. Provide its enterpriseNumber and enterpriseNumberScheme, or choose a doctypeId whose format accepts an email address: SI-UBL 2.0 Invoice, XRechnung 3.0 UBL Invoice, EN 16931 CII Invoice + Credit Note D22B or XRechnung 3.0 CII Invoice + Credit Note.",
     });
   });
 
@@ -164,7 +178,40 @@ describe("the receiving party's electronic address on a document emailed in a na
     await expect(refused).rejects.toMatchObject({
       status: 400,
       message:
-        "Peppol BIS documents need the buyer's electronic address, and do not accept an email address for it. Provide the buyer's vatNumber, or its enterpriseNumber and enterpriseNumberScheme, or choose a doctypeId that accepts an email address, such as XRechnung.",
+        "Peppol BIS Billing 3.0 Invoice needs the buyer's electronic address, and does not accept an email address for it. Provide the buyer's vatNumber, or its enterpriseNumber and enterpriseNumberScheme, or choose a doctypeId whose format accepts an email address: SI-UBL 2.0 Invoice, XRechnung 3.0 UBL Invoice, EN 16931 CII Invoice + Credit Note D22B or XRechnung 3.0 CII Invoice + Credit Note.",
+    });
+  });
+
+  it("refuses a self-billing invoice for a seller with neither number, without suggesting a format that cannot carry it", async () => {
+    const refused = prepare({
+      documentType: "selfBillingInvoice",
+      recipient: null,
+      doctypeId: BIS3_SELF_BILLING_INVOICE,
+      email: { when: "on_peppol_failure", to: EMAIL_TO },
+      document: { invoiceNumber: "SB-2026-002", issueDate: "2026-10-01", seller: party({ name: "Lieferant GmbH" }), lines, paymentMeans },
+    });
+
+    await expect(refused).rejects.toMatchObject({
+      status: 400,
+      message:
+        "Peppol BIS Self-Billing 3.0 Invoice needs the seller's electronic address, and does not accept an email address for it. Provide the seller's vatNumber, or its enterpriseNumber and enterpriseNumberScheme.",
+    });
+  });
+
+  it("falls back to the VAT number when the enterprise number is only separators", async () => {
+    const prepared = await prepare(
+      invoiceInput(party({ vatNumber: "DE811569869", enterpriseNumberScheme: "0208", enterpriseNumber: " - " }), BIS3_INVOICE)
+    );
+
+    expect(buyerEndpoint(prepared.xml)).toEqual(["9930", "DE811569869"]);
+  });
+
+  it("says a VAT number that names no country cannot be used", async () => {
+    const refused = prepare(invoiceInput(party({ vatNumber: "QQ123456789" }), BIS3_INVOICE));
+
+    await expect(refused).rejects.toMatchObject({
+      status: 400,
+      message: expect.stringContaining("The buyer's VAT number cannot be used as a Peppol identifier."),
     });
   });
 
@@ -195,7 +242,15 @@ describe("the receiving party's electronic address on a document emailed in a na
   });
 
   describe.skipIf(!VALIDATE)("against the validation rules", () => {
-    it("writes valid Peppol BIS, XRechnung UBL and XRechnung CII documents", async () => {
+    it("writes valid documents, with an email address in every format that accepts one", async () => {
+      const docTypeId = (key: string) => getDocumentFormat(key)!.docTypeId;
+      const creditNote = (doctypeId: string) => ({
+        documentType: "creditNote",
+        recipient: null,
+        doctypeId,
+        email: { when: "on_peppol_failure", to: EMAIL_TO },
+        document: { creditNoteNumber: "GS-2026-001", issueDate: "2026-10-01", buyerReference: "Abt. 4", buyer: party(), lines, paymentMeans },
+      }) as any;
       const toAuthority = () => {
         const input = invoiceInput(
           party({ name: "Bundesamt für Beispiele", enterpriseNumberScheme: "0204", enterpriseNumber: "991-33333TEST-33" }),
@@ -206,9 +261,14 @@ describe("the receiving party's electronic address on a document emailed in a na
       };
       for (const [label, input] of [
         ["Peppol BIS, VAT number", () => invoiceInput(party({ vatNumber: "DE811569869" }), BIS3_INVOICE)],
+        ["Peppol BIS, code list VAT scheme", () => invoiceInput(party({ country: "GR", vatNumber: "EL094259216" }), BIS3_INVOICE)],
         ["XRechnung UBL, email address", () => invoiceInput(party(), XRECHNUNG_UBL_INVOICE)],
         ["XRechnung CII, email address", () => invoiceInput(party(), XRECHNUNG_CII)],
         ["XRechnung UBL, Leitweg-ID", toAuthority],
+        ["EN 16931 CII, email address", () => invoiceInput(party(), docTypeId("cii-d22b-en16931"))],
+        ["SI-UBL invoice, email address", () => invoiceInput(party(), docTypeId("si-ubl-invoice"))],
+        ["SI-UBL credit note, email address", () => creditNote(docTypeId("si-ubl-creditnote"))],
+        ["XRechnung UBL credit note, email address", () => creditNote(docTypeId("xrechnung-ubl-creditnote"))],
       ] as const) {
         const prepared = await prepare(input());
         const validation = await validateDocument(prepared.xml, prepared.docTypeId);
@@ -225,6 +285,34 @@ describe("the receiving party's electronic address on a document emailed in a na
       expect(errors).toContain("BR-CO-09");
       expect(errors).not.toContain("CL008");
     });
+  });
+});
+
+describe("the formats that accept an email address as electronic address", () => {
+  it("are the ones confirmed against their rules, and never a Peppol BIS format", () => {
+    const accepting = documentFormats.filter((format) => format.acceptsEmailEndpoint).map((format) => format.key);
+
+    expect(accepting.sort()).toEqual([
+      "cii-d22b-en16931",
+      "si-ubl-creditnote",
+      "si-ubl-invoice",
+      "xrechnung-cii",
+      "xrechnung-ubl-creditnote",
+      "xrechnung-ubl-invoice",
+    ]);
+  });
+});
+
+describe("the Peppol BIS format names", () => {
+  it("name the format in messages, while the receiving document types keep their short labels", () => {
+    const title = (key: string) => documentFormats.find((format) => format.key === key)?.translatableTitle;
+    expect(title("peppol-ubl-bis3-invoice")).toBe("Peppol BIS Billing 3.0 Invoice");
+    expect(title("peppol-ubl-selfbilling-creditnote")).toBe("Peppol BIS Self-Billing 3.0 Credit Note");
+
+    const label = (docTypeId: string) =>
+      receivingCapabilities.find((capability) => capability.docTypeId === docTypeId && capability.processId === BILLING_PROCESS_ID)
+        ?.translatableTitle;
+    expect(label(BIS3_INVOICE)).toBe("Invoice");
   });
 });
 

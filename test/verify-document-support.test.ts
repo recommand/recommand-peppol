@@ -1,12 +1,13 @@
-import { afterAll, afterEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterAll, afterEach, describe, expect, it, spyOn } from "bun:test";
 import {
   DOCUMENT_SCHEME,
   PARTICIPANT_SCHEME,
 } from "../data/phoss-smp/service-metadata";
 
-mock.module("@peppol/utils/naptr", () => ({
-  resolveNaptr: async () => "https://smp.example",
-}));
+// Spied on rather than replaced as a module: a module mock lasts for the whole test run
+// and would hand its stand-in to the files that test the real lookups.
+const naptr = await import("../utils/naptr");
+const naptrSpy = spyOn(naptr, "resolveNaptr").mockResolvedValue({ status: "found", smpUrl: "https://smp.example" });
 
 const { verifyDocumentSupport } = await import("../data/recipient");
 
@@ -87,6 +88,7 @@ afterEach(() => {
 // — are left with a `fetch` that answers nothing.
 afterAll(() => {
   fetchMock.mockRestore();
+  naptrSpy.mockRestore();
 });
 
 describe("verifyDocumentSupport", () => {

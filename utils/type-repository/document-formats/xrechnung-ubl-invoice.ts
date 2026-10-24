@@ -14,6 +14,7 @@ export const xrechnungUblInvoiceFormat: DocumentFormat<
   docTypeId: `urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##${XRECHNUNG_CUSTOMIZATION_ID}::2.1`,
   supportedDocumentTypes: [invoiceDocumentType],
   supportedProcessIds: [XRECHNUNG_PROCESS_ID],
+  acceptsEmailEndpoint: true,
   smpRegistration: [
     { processId: XRECHNUNG_PROCESS_ID, translatableTitle: "XRechnung 3.0 UBL Invoice" },
   ],

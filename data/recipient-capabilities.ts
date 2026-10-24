@@ -5,7 +5,6 @@ import {
 import {
   docTypeIdFromServiceMetadataRef,
   fetchServiceProcessIds,
-  isParticipantUnregistered,
   verifyRecipient,
 } from "@peppol/data/recipient";
 
@@ -119,60 +118,47 @@ async function getSmpCapabilities(options: {
 }
 
 /**
- * The outcome of looking a recipient up. `not_registered` is the network's own answer
- * that the participant does not exist (see isParticipantUnregistered); `unavailable`
- * covers everything else that left the recipient unknown, such as an SMP that could not
- * be reached or one of the addresses a playground reserves for an unknown recipient.
- */
-export type RecipientLookup =
-  | { status: "found"; capabilities: RecipientCapabilities }
-  | { status: "not_registered" }
-  | { status: "unavailable" };
-
-/**
  * Look up what a recipient is able to receive, so a send that names no document type
  * identifier can be routed over a combination the recipient is registered for.
  *
  * A playground that is not on the test network answers an address that belongs to one
  * of its companies from that company's registrations, and any other address from the
  * production SMP, as production would; see isSimulatedPlayground. The playground's
- * registrations are read fresh each time, the network's are cached. A participant the
- * network does not know is not cached, so one that registers is found straight away.
+ * registrations are read fresh each time, the network's are cached.
+ *
+ * Returns null when the recipient could not be looked up at all — an unreachable SMP, an
+ * unregistered participant, one of the addresses a playground reserves for that case.
+ * Nothing is known then, so the caller keeps to its own default rather than refusing to
+ * send.
  */
-export async function lookUpRecipient(
-  options: {
-    recipientAddress: string;
-    isPlayground: boolean;
-    useTestNetwork: boolean;
-    teamId: string;
-  },
-  { checkRegistration = true }: { checkRegistration?: boolean } = {},
-): Promise<RecipientLookup> {
+export async function getRecipientCapabilities(options: {
+  recipientAddress: string;
+  isPlayground: boolean;
+  useTestNetwork: boolean;
+  teamId: string;
+}): Promise<RecipientCapabilities | null> {
   try {
     if (options.isPlayground && !options.useTestNetwork) {
       const playgroundAddress = await resolvePlaygroundAddress({
         recipientAddress: options.recipientAddress,
         playgroundTeamId: options.teamId,
       });
-      if (playgroundAddress?.kind === "unknown") return { status: "unavailable" };
+      if (playgroundAddress?.kind === "unknown") return null;
       if (playgroundAddress?.kind === "company") {
-        return {
-          status: "found",
-          capabilities: getPlaygroundCapabilities(playgroundAddress.recipient),
-        };
+        return getPlaygroundCapabilities(playgroundAddress.recipient);
       }
     }
 
     const key = cacheKey(options);
     const cached = readCache(key);
-    if (cached) return { status: "found", capabilities: cached };
+    if (cached) return cached;
 
     const capabilities = await getSmpCapabilities({
       recipientAddress: options.recipientAddress,
       useTestNetwork: options.useTestNetwork,
     });
     writeCache(key, capabilities);
-    return { status: "found", capabilities };
+    return capabilities;
   } catch (error) {
     // Not an error in itself: an address that is not registered on this network is one
     // the send fails on anyway. Logged rather than raised, because the send carries on
@@ -181,29 +167,6 @@ export async function lookUpRecipient(
       `Could not look up receiving capabilities for ${options.recipientAddress}:`,
       error instanceof Error ? error.message : error,
     );
-    const unregistered =
-      checkRegistration &&
-      (await isParticipantUnregistered({
-        recipientAddress: options.recipientAddress,
-        useTestNetwork: options.useTestNetwork,
-      }));
-    return { status: unregistered ? "not_registered" : "unavailable" };
+    return null;
   }
-}
-
-/**
- * What a recipient is able to receive, or null when the recipient could not be looked
- * up at all, for whatever reason. Nothing is known then, so the caller keeps to its own
- * default rather than refusing to send.
- */
-export async function getRecipientCapabilities(options: {
-  recipientAddress: string;
-  isPlayground: boolean;
-  useTestNetwork: boolean;
-  teamId: string;
-}): Promise<RecipientCapabilities | null> {
-  // Whether the recipient exists at all is not this question, so the network is not
-  // asked about it.
-  const lookup = await lookUpRecipient(options, { checkRegistration: false });
-  return lookup.status === "found" ? lookup.capabilities : null;
 }

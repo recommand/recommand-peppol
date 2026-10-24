@@ -18,7 +18,7 @@ export const peppolUblBis3CreditnoteFormat: DocumentFormat<
   [typeof creditNoteDocumentType]
 > = {
   key: "peppol-ubl-bis3-creditnote",
-  translatableTitle: "Credit Note",
+  translatableTitle: "Peppol BIS Billing 3.0 Credit Note",
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
   supportedDocumentTypes: [creditNoteDocumentType],

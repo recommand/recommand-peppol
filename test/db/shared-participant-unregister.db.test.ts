@@ -95,8 +95,10 @@ describe.skipIf(!testDatabaseUrl)("unregistering an identifier another company p
     mock.module("@peppol/utils/naptr", () => ({
       resolveNaptr: async () => {
         naptrLookups++;
-        return null;
+        return { status: "absent" };
       },
+      lookUpCname: async () => ({ status: "absent" }),
+      smlResolver: {},
     }));
     // The event registry is set up when the app starts, which these tests do not do.
     mock.module("@peppol/data/company-verification-webhooks", () => ({ publishCompanyVerificationEvent: async () => {} }));

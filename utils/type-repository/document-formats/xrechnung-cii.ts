@@ -25,6 +25,7 @@ export const xrechnungCiiFormat: DocumentFormat<
   docTypeId: `urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##${XRECHNUNG_CUSTOMIZATION_ID}::D16B`,
   supportedDocumentTypes: [invoiceDocumentType, creditNoteDocumentType],
   supportedProcessIds: [XRECHNUNG_PROCESS_ID],
+  acceptsEmailEndpoint: true,
   smpRegistration: [
     {
       processId: XRECHNUNG_PROCESS_ID,

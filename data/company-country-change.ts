@@ -1,6 +1,7 @@
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { COUNTRIES } from "@peppol/utils/countries";
 import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
+import { vatNumberIdentifier } from "@peppol/utils/identifiers/vat-number";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { cleanIdentifier, cleanScheme, validateIdentifierAgainstCompany } from "./company-identifiers";
 import { findUnsupportedIdentifiers } from "./company-identifier-policy";
@@ -77,7 +78,6 @@ function defaultIdentifiersFor(
   vatNumber: string | null,
   options: { includeLegacy?: boolean } = {}
 ): NewIdentifier[] {
-  const countryInfo = COUNTRIES.find((entry) => entry.code === country);
   const defaults: NewIdentifier[] = [];
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(enterpriseNumber);
   const enterpriseNumberSchemes = [
@@ -92,12 +92,23 @@ function defaultIdentifiersFor(
       });
     }
   }
-  const cleanedVatNumber = cleanVatNumber(vatNumber);
-  if (countryInfo?.defaultVatScheme && cleanedVatNumber) {
+  const vatIdentifier = vatNumberIdentifier(country, vatNumber);
+  if (vatIdentifier) {
     defaults.push({
-      scheme: cleanScheme(countryInfo.defaultVatScheme),
-      identifier: cleanIdentifier(cleanedVatNumber),
+      scheme: cleanScheme(vatIdentifier.scheme),
+      identifier: cleanIdentifier(vatIdentifier.identifier),
     });
+  }
+  // A VAT number stored before it was held to the country's prefix was registered as
+  // written, under the country's default scheme, which may differ from what
+  // vatNumberIdentifier makes of it now. That form is a default too.
+  const legacyVatScheme = COUNTRIES.find((entry) => entry.code === country)?.defaultVatScheme;
+  const cleanedVatNumber = cleanVatNumber(vatNumber);
+  if (options.includeLegacy && legacyVatScheme && cleanedVatNumber) {
+    const legacy = { scheme: cleanScheme(legacyVatScheme), identifier: cleanIdentifier(cleanedVatNumber) };
+    if (!defaults.some((identifier) => sameIdentifier(identifier, legacy))) {
+      defaults.push(legacy);
+    }
   }
   for (const identifier of derivedDefaultIdentifiers(country, { enterpriseNumber, vatNumber })) {
     defaults.push({ scheme: cleanScheme(identifier.scheme), identifier: cleanIdentifier(identifier.identifier) });

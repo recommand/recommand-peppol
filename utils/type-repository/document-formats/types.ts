@@ -74,6 +74,16 @@ export type DocumentFormat<DocumentTypes extends readonly AnyDocumentType[]> = {
    */
   validationProfile?: ValidationProfile;
 
+  /**
+   * Whether the format accepts an email address (scheme EM) as a party's electronic
+   * address (BT-34, BT-49), which is the full EN 16931 scheme list. Absent for formats
+   * that restrict those schemes, as Peppol BIS does to the schemes a participant can be
+   * registered under (PEPPOL-EN16931-CL008), and for formats where it has not been
+   * confirmed against the rules. A document emailed without a Peppol recipient names
+   * its receiver by email address only in a format that sets this.
+   */
+  acceptsEmailEndpoint?: true;
+
   /** Absent for the XML formats, which are transmitted as the bytes `encode` returns. */
   container?: DocumentContainer<ParsedDocumentOf<DocumentTypes[number]>>;
 }

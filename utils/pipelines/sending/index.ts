@@ -24,8 +24,8 @@ import { emailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
 import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
 import { isParticipantUnregistered } from "@peppol/data/recipient";
 import {
-  lookUpRecipient,
-  type RecipientLookup,
+  getRecipientCapabilities,
+  type RecipientCapabilities,
 } from "@peppol/data/recipient-capabilities";
 import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
@@ -106,19 +106,17 @@ export async function sendingPipeline(c: SendingContext) {
     // there is nothing to route: only a JSON document, which we still have to write,
     // can be adapted to what the recipient is able to receive. Looking the recipient up
     // costs a request, so it only happens when something is left to decide.
-    const recipientLookup =
+    const recipientCapabilities =
       recipientAddress !== null &&
       input.documentType !== "xml" &&
       (!input.doctypeId || !input.processId)
-        ? await lookUpRecipient({
+        ? await getRecipientCapabilities({
             recipientAddress,
             isPlayground,
             useTestNetwork,
             teamId: team.id,
           })
         : null;
-    const recipientCapabilities =
-      recipientLookup?.status === "found" ? recipientLookup.capabilities : null;
 
     // Without a Peppol recipient a document is emailed as a PDF, unless the caller names
     // the format it is to be written in: it is then written, validated and attached as
@@ -206,7 +204,7 @@ export async function sendingPipeline(c: SendingContext) {
       } else if (
         await isRecipientUnregistered({
           recipientAddress,
-          recipientLookup,
+          recipientCapabilities,
           isPlayground,
           useTestNetwork,
         })
@@ -414,11 +412,11 @@ export async function sendingPipeline(c: SendingContext) {
 
 /**
  * Whether the recipient is known not to be registered on the network, so a transmission
- * cannot be delivered. A recipient lookup that ran has answered it already. A send that
- * named its format, or is raw XML, did not look the recipient up, and only the SML is
- * asked: one DNS query rather than a request to the recipient's SMP. A simulated
- * playground is left to its simulator, which answers for the playground's own companies
- * that the SML does not know.
+ * cannot be delivered. A recipient whose capabilities were looked up is registered. For
+ * any other, whether its lookup failed or the send named its format or is raw XML and
+ * did not look it up, the SML is asked: one DNS query rather than a request to the
+ * recipient's SMP. A simulated playground is always left to its simulator, which answers
+ * for the playground's own companies that the SML does not know.
  *
  * Only the network's own answer that the participant does not exist counts. A lookup
  * that failed for any other reason leaves the transmission to be attempted, so a passing
@@ -426,12 +424,12 @@ export async function sendingPipeline(c: SendingContext) {
  */
 async function isRecipientUnregistered(options: {
   recipientAddress: string;
-  recipientLookup: RecipientLookup | null;
+  recipientCapabilities: RecipientCapabilities | null;
   isPlayground: boolean;
   useTestNetwork: boolean;
 }): Promise<boolean> {
-  if (options.recipientLookup) {
-    return options.recipientLookup.status === "not_registered";
+  if (options.recipientCapabilities) {
+    return false;
   }
   if (options.isPlayground && !options.useTestNetwork) {
     return false;

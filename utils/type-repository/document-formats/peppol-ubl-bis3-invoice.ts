@@ -18,7 +18,7 @@ export const peppolUblBis3InvoiceFormat: DocumentFormat<
   [typeof invoiceDocumentType]
 > = {
   key: "peppol-ubl-bis3-invoice",
-  translatableTitle: "Invoice",
+  translatableTitle: "Peppol BIS Billing 3.0 Invoice",
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
   supportedDocumentTypes: [invoiceDocumentType],

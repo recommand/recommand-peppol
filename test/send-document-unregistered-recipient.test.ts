@@ -3,9 +3,10 @@
  *
  * The transmission is skipped when the network itself answers that the participant does
  * not exist: the Peppol delivery fails as recipient_not_found, and the email fallback,
- * when configured, runs with the XML attached. A send that left the format open learns
- * this from its recipient lookup; one that named its format, or is raw XML, asks the SML
- * alone. Any other outcome of the lookup leaves the transmission to be attempted.
+ * when configured, runs with the XML attached. A recipient whose capabilities were looked
+ * up is registered; for any other, whether the lookup failed or a send that named its
+ * format or is raw XML did not look it up, the SML is asked. Any other answer leaves the
+ * transmission to be attempted.
  */
 
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
@@ -123,9 +124,12 @@ afterEach(() => {
 });
 
 describe("a JSON send that leaves the format open", () => {
+  // The recipient lookup found nothing, which is where the SML is asked.
+  const lookupFailed = () => stub(recipientCapabilities, "getRecipientCapabilities").mockResolvedValue(null);
+
   it("skips the transmission to an unregistered participant and falls back to email with the XML", async () => {
-    stub(recipientCapabilities, "lookUpRecipient").mockResolvedValue({ status: "not_registered" });
-    const smlCheck = stub(recipient, "isParticipantUnregistered");
+    lookupFailed();
+    const smlCheck = stub(recipient, "isParticipantUnregistered").mockResolvedValue(true);
 
     const response = await send(jsonInvoice({ email: { to: [EMAIL_TO] } }));
 
@@ -137,9 +141,8 @@ describe("a JSON send that leaves the format open", () => {
       emailRecipients: [EMAIL_TO],
       additionalPeppolFailureContext: NOT_REGISTERED,
     });
+    expect(smlCheck).toHaveBeenCalledWith({ recipientAddress: RECIPIENT, useTestNetwork: false });
     expect(sendAs4).not.toHaveBeenCalled();
-    // The lookup already answered, so the SML is not asked a second time.
-    expect(smlCheck).not.toHaveBeenCalled();
     expect(sentEmails).toHaveLength(1);
     expect(sentEmails[0].xmlDocument).toContain(`<cbc:EndpointID schemeID="0208">0598726857</cbc:EndpointID>`);
     expect(recorded[0].delivery.peppolFailure).toEqual({
@@ -151,7 +154,8 @@ describe("a JSON send that leaves the format open", () => {
   });
 
   it("answers 422 with the reason when no email is configured", async () => {
-    stub(recipientCapabilities, "lookUpRecipient").mockResolvedValue({ status: "not_registered" });
+    lookupFailed();
+    stub(recipient, "isParticipantUnregistered").mockResolvedValue(true);
 
     const response = await send(jsonInvoice());
 
@@ -166,23 +170,51 @@ describe("a JSON send that leaves the format open", () => {
   });
 
   it("names the test network on a test network team", async () => {
-    stub(recipientCapabilities, "lookUpRecipient").mockResolvedValue({ status: "not_registered" });
+    lookupFailed();
+    const smlCheck = stub(recipient, "isParticipantUnregistered").mockResolvedValue(true);
 
     const response = await send(jsonInvoice(), { isPlayground: true, useTestNetwork: true });
 
+    expect(smlCheck).toHaveBeenCalledWith({ recipientAddress: RECIPIENT, useTestNetwork: true });
     expect(response.body.errors.root).toEqual([
       `Failed to send document over Peppol network. Recipient ${RECIPIENT} is not registered on the Peppol test network.`,
     ]);
   });
 
-  it("still attempts the transmission when the lookup failed for another reason", async () => {
-    stub(recipientCapabilities, "lookUpRecipient").mockResolvedValue({ status: "unavailable" });
+  it("still attempts the transmission when the SML does not say not registered", async () => {
+    lookupFailed();
+    stub(recipient, "isParticipantUnregistered").mockResolvedValue(false);
 
     const response = await send(jsonInvoice({ email: { to: [EMAIL_TO] } }));
 
     expect(sendAs4).toHaveBeenCalledTimes(1);
     expect(response.status).toBe(200);
     expect(recorded[0].delivery.peppolFailure.category).toBe("transport");
+  });
+
+  it("does not ask the SML about a recipient whose capabilities were found", async () => {
+    stub(recipientCapabilities, "getRecipientCapabilities").mockResolvedValue({
+      supportsDocType: (docTypeId: string) => docTypeId === DOC_TYPE_ID,
+      getProcessIds: async () => [PROCESS_ID],
+    });
+    const smlCheck = stub(recipient, "isParticipantUnregistered").mockResolvedValue(true);
+
+    await send(jsonInvoice({ email: { to: [EMAIL_TO] } }));
+
+    expect(smlCheck).not.toHaveBeenCalled();
+    expect(sendAs4).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a simulated playground to its simulator, whatever the SML says", async () => {
+    lookupFailed();
+    const smlCheck = stub(recipient, "isParticipantUnregistered").mockResolvedValue(true);
+    const simulate = stub(simulator, "simulateSendAs4").mockResolvedValue(undefined);
+
+    const response = await send(jsonInvoice(), { isPlayground: true });
+
+    expect(smlCheck).not.toHaveBeenCalled();
+    expect(simulate).toHaveBeenCalledTimes(1);
+    expect(response.body.sentOverPeppol).toBe(true);
   });
 });
 
@@ -206,7 +238,7 @@ describe("a send that names its format", () => {
     ["as raw XML", async () => ({ ...(await rawXml()), email: { to: [EMAIL_TO] } })],
   ] as const) {
     it(`${name}: asks the SML alone, and skips the transmission when it says not registered`, async () => {
-      const lookup = stub(recipientCapabilities, "lookUpRecipient");
+      const lookup = stub(recipientCapabilities, "getRecipientCapabilities");
       const smlCheck = stub(recipient, "isParticipantUnregistered").mockResolvedValue(true);
 
       const response = await send(await input());

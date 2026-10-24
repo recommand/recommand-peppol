@@ -100,7 +100,11 @@ describe.skipIf(!testDatabaseUrl)("Finnish company identifiers against PostgreSQ
     pool = await connectTestDatabase();
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
-    mock.module("@peppol/utils/naptr", () => ({ resolveNaptr: async () => smlAnswer }));
+    mock.module("@peppol/utils/naptr", () => ({
+      resolveNaptr: async () => (smlAnswer ? { status: "found", smpUrl: smlAnswer } : { status: "absent" }),
+      lookUpCname: async () => ({ status: "absent" }),
+      smlResolver: {},
+    }));
     // The event registry is set up when the app starts, which these tests do not do.
     mock.module("@peppol/data/company-verification-webhooks", () => ({ publishCompanyVerificationEvent: async () => {} }));
     ({ createCompany } = await import("../../data/companies"));
