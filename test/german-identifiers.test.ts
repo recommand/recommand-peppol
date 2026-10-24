@@ -3,7 +3,7 @@ import { describe, expect, it, mock } from "bun:test";
 // The identifier module connects to the database on import; nothing here needs one.
 mock.module("@recommand/db", () => ({ db: {} }));
 
-const { validateIdentifier, validateCountryIdentifier, validateLeitwegId } = await import("../utils/identifier-validation");
+const { derivedDefaultIdentifiers, validateIdentifier, validateCountryIdentifier, validateLeitwegId } = await import("../utils/identifier-validation");
 const { COUNTRIES } = await import("../utils/countries");
 const { planCompanyCountryChange } = await import("../data/company-country-change");
 const { validateIdentifierAgainstCompany } = await import("../data/company-identifiers");
@@ -13,8 +13,9 @@ const { validateIdentifierAgainstCompany } = await import("../data/company-ident
 // explicitly; its predecessor 9958 is no longer allowed on the network. GLN (0088)
 // and IBAN (9918) are the fallbacks the German identifier guideline names for a
 // business without a VAT number. A GEBA (0246), the address the guideline recommends
-// to private businesses, is the W-IdNr, which has the value of the VAT number, and is
-// added explicitly.
+// to private businesses, is the W-IdNr, which has the value of the VAT number. A
+// company gets the bare W-IdNr under 0246 next to its VAT number by default, and can
+// add GEBAs with a distinctive feature or sub-address itself.
 
 describe("German identifier validation", () => {
   it("accepts Leitweg-IDs with valid check digits, with and without a fine address", () => {
@@ -61,7 +62,7 @@ describe("German company defaults", () => {
     expect(germany.defaultEnterpriseNumberScheme).toBeUndefined();
   });
 
-  it("give a company moving to Germany only its VAT number as identifier", () => {
+  it("give a company moving to Germany its VAT number and GEBA, and no register number", () => {
     const plan = planCompanyCountryChange({
       oldCompany: {
         country: "BE", enterpriseNumber: "0123456749", vatNumber: "BE0123456749", enterpriseNumberScheme: "0208",
@@ -78,7 +79,10 @@ describe("German company defaults", () => {
       verificationStarted: false,
       networkRegistered: false,
     });
-    expect(plan.createIdentifiers).toEqual([{ scheme: "9930", identifier: "de136695976" }]);
+    expect(plan.createIdentifiers).toEqual([
+      { scheme: "9930", identifier: "de136695976" },
+      { scheme: "0246", identifier: "de136695976" },
+    ]);
     expect(plan.deleteIdentifierIds.sort()).toEqual(["en", "vat"]);
     expect(plan.enterpriseNumberScheme).toBeNull();
   });
@@ -159,20 +163,54 @@ describe("German Electronic Business Address (0246)", () => {
     ).toThrow(/requires a company VAT number/);
   });
 
-  it("is not created by default", () => {
+  it("is the bare VAT number a German company gets by default", () => {
+    const derived = (vatNumber: string | null) => derivedDefaultIdentifiers("DE", { enterpriseNumber: "HRB 12345", vatNumber });
+    expect(derived("DE136695976")).toEqual([{ scheme: "0246", identifier: "DE136695976" }]);
+    expect(derived("de 136.695.976")).toEqual([{ scheme: "0246", identifier: "DE136695976" }]);
+    // Nothing from a missing number, or one that predates the VAT number check.
+    for (const vatNumber of [null, "", "DE136695977", "DE13669597", "DE000000000", "ATU37866403"]) {
+      expect(derived(vatNumber), String(vatNumber)).toEqual([]);
+    }
+    // Only for German companies.
+    expect(derivedDefaultIdentifiers("AT", { enterpriseNumber: null, vatNumber: "DE136695976" })).toEqual([]);
+  });
+
+  const german = {
+    country: "DE", enterpriseNumber: "HRB12345", vatNumber: "DE136695976", enterpriseNumberScheme: null,
+    accessPointProvider: "recommand-ap1" as const, smpProvider: "recommand-smp1" as const,
+  };
+  const unregistered = {
+    teamExtension: { isPlayground: false, useTestNetwork: false },
+    verificationStarted: false,
+    networkRegistered: false,
+  };
+
+  it("goes with a move out of Germany, while a GEBA the customer chose stays and is checked", () => {
+    const defaults = [
+      { id: "geba", scheme: "0246", identifier: "de136695976" },
+      { id: "vat", scheme: "9930", identifier: "de136695976" },
+    ];
     const plan = planCompanyCountryChange({
-      oldCompany: {
-        country: "BE", enterpriseNumber: "0123456749", vatNumber: "BE0123456749", enterpriseNumberScheme: "0208",
-        accessPointProvider: "recommand-ap1", smpProvider: "recommand-smp1",
-      },
-      newCountry: "DE",
-      enterpriseNumber: "HRB12345",
-      vatNumber: "DE136695976",
-      identifiers: [],
-      teamExtension: { isPlayground: false, useTestNetwork: false },
-      verificationStarted: false,
-      networkRegistered: false,
+      ...unregistered,
+      oldCompany: german,
+      newCountry: "BE",
+      enterpriseNumber: "0123456749",
+      vatNumber: "BE0123456749",
+      identifiers: defaults,
     });
-    expect(plan.createIdentifiers).toEqual([{ scheme: "9930", identifier: "de136695976" }]);
+    expect(plan.deleteIdentifierIds).toEqual(["geba", "vat"]);
+
+    // A GEBA with a distinctive feature was the customer's, so it is held against the
+    // company's new VAT number, which it no longer starts with.
+    expect(() =>
+      planCompanyCountryChange({
+        ...unregistered,
+        oldCompany: german,
+        newCountry: "BE",
+        enterpriseNumber: "0123456749",
+        vatNumber: "BE0123456749",
+        identifiers: [...defaults, { id: "feature", scheme: "0246", identifier: "de136695976-00001" }],
+      })
+    ).toThrow(/must start with the company VAT number/);
   });
 });
