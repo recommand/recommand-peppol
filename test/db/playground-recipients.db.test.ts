@@ -110,7 +110,6 @@ describe.skipIf(!testDatabaseUrl)("playground recipients against PostgreSQL", ()
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
     mock.module("@peppol/utils/naptr", () => ({
       resolveNaptr: async () => ({ status: "found", smpUrl: "https://smp.example" }),
-      lookUpCname: async () => ({ status: "absent" }),
       smlResolver: {},
     }));
     mock.module("@peppol/utils/pipelines/receiving", () => ({

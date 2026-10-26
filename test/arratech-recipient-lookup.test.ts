@@ -8,7 +8,6 @@ import { afterAll, afterEach, describe, expect, it, mock, spyOn } from "bun:test
 mock.module("@recommand/db", () => ({ db: {} }));
 const naptr = await import("../utils/naptr");
 const naptrSpy = spyOn(naptr, "resolveNaptr");
-const cnameSpy = spyOn(naptr, "lookUpCname").mockResolvedValue({ status: "absent" });
 const fetchMock = spyOn(globalThis, "fetch");
 
 const { sendAs4 } = await import("../data/at/ap");
@@ -30,13 +29,11 @@ const send = () =>
 
 afterEach(() => {
   naptrSpy.mockReset();
-  cnameSpy.mockClear();
   fetchMock.mockReset();
 });
 
 afterAll(() => {
   naptrSpy.mockRestore();
-  cnameSpy.mockRestore();
   fetchMock.mockRestore();
 });
 
@@ -49,13 +46,12 @@ describe("sending through Arratech to a recipient the SML cannot place", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("fails as a transport error, without guessing a host, when the SML gives no answer", async () => {
+  it("fails as a transport error when the SML gives no answer", async () => {
     naptrSpy.mockResolvedValue({ status: "unknown" });
     const sent = await send();
     expect(sent.ok).toBe(false);
     expect(sent.sendingException?.category).toBe("transport");
     expect(sent.sendingException?.message).toContain("the SML gave no usable answer");
-    expect(cnameSpy).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

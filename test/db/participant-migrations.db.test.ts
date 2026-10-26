@@ -103,7 +103,6 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
     mock.module("@peppol/utils/naptr", () => ({
       resolveNaptr: async () =>
         smlTarget === "unanswered" ? { status: "unknown" } : smlTarget ? { status: "found", smpUrl: smlTarget } : { status: "absent" },
-      lookUpCname: async () => ({ status: "absent" }),
       smlResolver: {},
     }));
     ({ requestInboundMigration, startOutboundMigration, cancelOutboundMigration, finalizeOutboundMigration, getParticipantMigrations } =

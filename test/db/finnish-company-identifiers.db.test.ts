@@ -104,7 +104,6 @@ describe.skipIf(!testDatabaseUrl)("Finnish company identifiers against PostgreSQ
     mock.module("@peppol/utils/naptr", () => ({
       resolveNaptr: async () =>
         smlAnswer === "unanswered" ? { status: "unknown" } : smlAnswer ? { status: "found", smpUrl: smlAnswer } : { status: "absent" },
-      lookUpCname: async () => ({ status: "absent" }),
       smlResolver: {},
     }));
     // The event registry is set up when the app starts, which these tests do not do.

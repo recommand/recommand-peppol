@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { PARTICIPANT_SCHEME, DOCUMENT_SCHEME, PROCESS_SCHEME } from "./phoss-smp/service-metadata";
 import { XMLParser } from "fast-xml-parser";
 import { base32Encode } from "@peppol/utils/base32";
-import { lookUpCname, resolveNaptr, smlResolver } from "@peppol/utils/naptr";
+import { resolveNaptr, smlResolver } from "@peppol/utils/naptr";
 import { resolveDocTypeId } from "@peppol/utils/type-repository/receiving-capabilities";
 import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
 import { parseCertificateExpiry } from "@peppol/utils/certificate";
@@ -26,17 +26,6 @@ function getNaptrDomain({recipientAddress, useTestNetwork}: {recipientAddress: s
   return `${base32Hash}.${PARTICIPANT_SCHEME}.${dnsZone}`.toLowerCase();
 }
 
-/** The host name the SML published a participant under before it moved to NAPTR records. */
-function getCnameHost({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): string {
-  const dnsZone = useTestNetwork ? SML_TEST_ZONE : SML_ZONE;
-
-  const md5Hash = createHash("md5")
-    .update(recipientAddress.toLowerCase())
-    .digest("hex");
-
-  return `B-${md5Hash}.${PARTICIPANT_SCHEME}.${dnsZone}`;
-}
-
 /** A participant's URL on an SMP: its service group, which the service metadata paths extend. */
 function participantUrl(smpBaseUrl: string, recipientAddress: string): string {
   const baseUrl = smpBaseUrl.endsWith("/") ? smpBaseUrl.slice(0, -1) : smpBaseUrl;
@@ -50,10 +39,9 @@ export type SmpLookup = { status: "found"; smpUrl: string } | { status: "absent"
  * `absent` when DNS answered that the SML holds no entry for it, and `unknown` when no
  * such answer came (a timeout, a failing DNS server, a record that names no usable SMP).
  *
- * The NAPTR record decides. Only when it is absent is the CNAME record asked about,
- * which is how the SML published participants before NAPTR. An `unknown` NAPTR answer
- * is never replaced by a CNAME guess: that would point the caller at a host the SML may
- * no longer publish while the real answer is merely late.
+ * Only the participant's NAPTR record is consulted. Peppol has forbidden looking up an
+ * SMP through the older CNAME records since November 2025, and the SML no longer has to
+ * publish them.
  */
 export async function lookUpSmpUrl(
   {recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean},
@@ -63,21 +51,13 @@ export async function lookUpSmpUrl(
   if (naptr.status === "found") {
     return { status: "found", smpUrl: participantUrl(naptr.smpUrl, recipientAddress) };
   }
-  if (naptr.status === "unknown") {
-    return naptr;
-  }
-  const cnameHost = getCnameHost({recipientAddress, useTestNetwork});
-  const cname = await lookUpCname(cnameHost, resolver);
-  if (cname.status === "found") {
-    return { status: "found", smpUrl: participantUrl(`http://${cnameHost}`, recipientAddress) };
-  }
-  return cname;
+  return naptr;
 }
 
 /**
  * Whether the SML answers that it holds no entry for a participant: DNS says there is no
- * NAPTR record for it, and no CNAME record either. The access point resolves a recipient
- * through the same records, so a transmission to such a participant cannot be delivered.
+ * NAPTR record for it. The access point resolves a recipient through the same record, so
+ * a transmission to such a participant cannot be delivered.
  *
  * Only that answer counts. A lookup that fails in any other way (a timeout, a failing
  * DNS server) returns false, so a caller treats the participant as possibly registered.
