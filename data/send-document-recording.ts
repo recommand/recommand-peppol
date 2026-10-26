@@ -82,7 +82,15 @@ export const captureSendDocumentRecording =
       return;
     }
 
-    const request = structuredClone(await c.req.json());
+    let request: unknown;
+    try {
+      request = structuredClone(await c.req.json());
+    } catch {
+      // A body that is not JSON is the request validator's to refuse, with a 400.
+      // There is no send to record.
+      await next();
+      return;
+    }
     await next();
 
     const response = c.res.clone();
