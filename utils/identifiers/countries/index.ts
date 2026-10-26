@@ -5,6 +5,7 @@ import { belgium } from "./belgium";
 import { bulgaria } from "./bulgaria";
 import { croatia } from "./croatia";
 import { cyprus } from "./cyprus";
+import { czechia } from "./czechia";
 import { denmark } from "./denmark";
 import { estonia } from "./estonia";
 import { finland } from "./finland";
@@ -16,7 +17,9 @@ import { iceland } from "./iceland";
 import { ireland } from "./ireland";
 import { italy } from "./italy";
 import { latvia } from "./latvia";
+import { lithuania } from "./lithuania";
 import { luxembourg } from "./luxembourg";
+import { malta } from "./malta";
 import { netherlands } from "./netherlands";
 import { norway } from "./norway";
 import { poland } from "./poland";
@@ -36,6 +39,7 @@ export const countryIdentifierRules: readonly CountryIdentifierRules[] = [
   bulgaria,
   croatia,
   cyprus,
+  czechia,
   denmark,
   estonia,
   finland,
@@ -47,7 +51,9 @@ export const countryIdentifierRules: readonly CountryIdentifierRules[] = [
   ireland,
   italy,
   latvia,
+  lithuania,
   luxembourg,
+  malta,
   netherlands,
   norway,
   poland,

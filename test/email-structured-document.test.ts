@@ -121,8 +121,8 @@ describe("the receiving party's electronic address on a document emailed in a na
     const french = await prepare(invoiceInput(party({ vatNumber: "FR40303265045" }), BIS3_INVOICE));
     expect(buyerEndpoint(french.xml)).toEqual(["9957", "FR40303265045"]);
 
-    const czech = await prepare(invoiceInput(party({ vatNumber: "CZ25596641" }), BIS3_INVOICE));
-    expect(buyerEndpoint(czech.xml)).toEqual(["9929", "CZ25596641"]);
+    const macedonian = await prepare(invoiceInput(party({ vatNumber: "MK4030003475089" }), BIS3_INVOICE));
+    expect(buyerEndpoint(macedonian.xml)).toEqual(["9942", "MK4030003475089"]);
   });
 
   it("gives a VAT number written without its prefix the prefix of the buyer's country", async () => {
