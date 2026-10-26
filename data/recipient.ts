@@ -6,6 +6,7 @@ import { resolveNaptr, smlResolver } from "@peppol/utils/naptr";
 import { resolveDocTypeId } from "@peppol/utils/type-repository/receiving-capabilities";
 import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
 import { parseCertificateExpiry } from "@peppol/utils/certificate";
+import { UserFacingError } from "@peppol/utils/util";
 
 const SML_ZONE = "participant.sml.prod.tech.peppol.org";
 const SML_TEST_ZONE = "participant.sml.test.tech.peppol.org";
@@ -74,9 +75,9 @@ export async function isParticipantUnregistered(
  * it holds no entry for it. The participant may well be registered, so a caller retries
  * or refuses rather than concluding either way.
  */
-export class SmlLookupError extends Error {
+export class SmlLookupError extends UserFacingError {
   constructor(recipientAddress: string) {
-    super(`Could not look up ${PARTICIPANT_SCHEME}::${recipientAddress} in the SML: DNS gave no usable answer`);
+    super(`Could not look up ${PARTICIPANT_SCHEME}::${recipientAddress} in the SML: DNS gave no usable answer. Try again later.`);
     this.name = "SmlLookupError";
   }
 }
@@ -124,11 +125,32 @@ export function docTypeIdFromServiceMetadataRef(ref: string): string | null {
   }
 }
 
+/**
+ * Raised when a participant's SMP gives no usable answer: an error status other than
+ * 404, a network error, a timeout or a response that cannot be read. Like an SML that
+ * gives no answer, it says nothing about whether the participant is registered.
+ */
+export class SmpLookupError extends UserFacingError {
+  constructor(url: string, reason: string) {
+    super(`Could not read ${url} from the participant's SMP: ${reason}. Try again later.`);
+    this.name = "SmpLookupError";
+  }
+}
+
+// How long an SMP may take to answer. A send waits for its recipient's SMP, so one that
+// hangs must not hold the send up indefinitely.
+const SMP_TIMEOUT_MS = 10_000;
+
+/** Fetch from a participant's SMP, giving up after SMP_TIMEOUT_MS. */
+function fetchFromSmp(url: string): Promise<Response> {
+  return fetch(url, { signal: AbortSignal.timeout(SMP_TIMEOUT_MS) });
+}
+
 export async function verifyRecipient({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}) {
   const smpUrl = await getSmpUrl({recipientAddress, useTestNetwork});
 
   try {
-    const response = await fetch(smpUrl);
+    const response = await fetchFromSmp(smpUrl);
     if (!response.ok) {
       throw new Error(`Failed to verify recipient: ${response.statusText}`);
     }
@@ -220,48 +242,63 @@ function qualifiedProcessId(value: unknown): string | null {
 /**
  * Fetch a ServiceMetadata XML from an SMP and parse endpoint details.
  * When a processId is given, only the matching process is considered.
+ *
+ * Returns null when the SMP answers that it has no such registration: a 404, or service
+ * metadata without the process or an endpoint for it. Throws SmpLookupError when the
+ * SMP gives no usable answer, such as an error status or a page that is not service
+ * metadata, which says nothing about the registration.
  */
 export async function fetchServiceMetadata(serviceMetadataUrl: string, options?: { processId?: string }): Promise<ServiceMetadataResult | null> {
+  let xml: string;
   try {
-    const response = await fetch(serviceMetadataUrl);
-    if (!response.ok) return null;
-
-    const xml = await response.text();
-    const doc = smpXmlParser.parse(xml);
-
-    // Navigate: ServiceMetadata > ServiceInformation > ProcessList > Process > ServiceEndpointList > Endpoint
-    const serviceMetadata = doc.ServiceMetadata || doc.SignedServiceMetadata?.ServiceMetadata;
-    const serviceInfo = serviceMetadata?.ServiceInformation;
-    const processList = serviceInfo?.ProcessList;
-    const processes = Array.isArray(processList?.Process)
-      ? processList.Process
-      : processList?.Process
-        ? [processList.Process]
-        : [];
-    const expectedProcessId = options?.processId ? qualifiedProcessId(options.processId) : null;
-    const process = expectedProcessId
-      ? processes.find((p: any) => qualifiedProcessId(p?.ProcessIdentifier) === expectedProcessId)
-      : processes[0];
-    const endpointList = process?.ServiceEndpointList;
-    const endpoint = Array.isArray(endpointList?.Endpoint) ? endpointList.Endpoint[0] : endpointList?.Endpoint;
-
-    if (!endpoint) return null;
-
-    const endpointRef = endpoint.EndpointReference;
-    const serviceEndpoint: string | null = endpointRef?.Address ?? null;
-
-    const rawCert: string | null = endpoint.Certificate ?? null;
-    const certificateExpiry = rawCert ? parseCertificateExpiry(rawCert) : null;
-
-    return {
-      serviceProvider: endpoint.ServiceDescription ?? null,
-      serviceEndpoint,
-      technicalContact: endpoint.TechnicalContactUrl ?? null,
-      certificateExpiry,
-    };
-  } catch {
-    return null;
+    const response = await fetchFromSmp(serviceMetadataUrl);
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new SmpLookupError(serviceMetadataUrl, `it answered ${response.status}`);
+    }
+    xml = await response.text();
+  } catch (error) {
+    if (error instanceof SmpLookupError) throw error;
+    const reason = error instanceof Error && error.name === "TimeoutError" ? "it did not answer in time" : `the request failed (${error})`;
+    throw new SmpLookupError(serviceMetadataUrl, reason);
   }
+
+  // The parser does not reject malformed input; it yields no ServiceMetadata element.
+  const doc = smpXmlParser.parse(xml);
+
+  // Navigate: ServiceMetadata > ServiceInformation > ProcessList > Process > ServiceEndpointList > Endpoint
+  const serviceMetadata = doc?.ServiceMetadata || doc?.SignedServiceMetadata?.ServiceMetadata;
+  if (!serviceMetadata) {
+    throw new SmpLookupError(serviceMetadataUrl, "its answer is not service metadata");
+  }
+  const serviceInfo = serviceMetadata?.ServiceInformation;
+  const processList = serviceInfo?.ProcessList;
+  const processes = Array.isArray(processList?.Process)
+    ? processList.Process
+    : processList?.Process
+      ? [processList.Process]
+      : [];
+  const expectedProcessId = options?.processId ? qualifiedProcessId(options.processId) : null;
+  const process = expectedProcessId
+    ? processes.find((p: any) => qualifiedProcessId(p?.ProcessIdentifier) === expectedProcessId)
+    : processes[0];
+  const endpointList = process?.ServiceEndpointList;
+  const endpoint = Array.isArray(endpointList?.Endpoint) ? endpointList.Endpoint[0] : endpointList?.Endpoint;
+
+  if (!endpoint) return null;
+
+  const endpointRef = endpoint.EndpointReference;
+  const serviceEndpoint: string | null = endpointRef?.Address ?? null;
+
+  const rawCert: string | null = endpoint.Certificate ?? null;
+  const certificateExpiry = rawCert ? parseCertificateExpiry(rawCert) : null;
+
+  return {
+    serviceProvider: endpoint.ServiceDescription ?? null,
+    serviceEndpoint,
+    technicalContact: endpoint.TechnicalContactUrl ?? null,
+    certificateExpiry,
+  };
 }
 
 /**
@@ -270,7 +307,7 @@ export async function fetchServiceMetadata(serviceMetadataUrl: string, options?:
  * document format registry declares, which are written unqualified.
  */
 export async function fetchServiceProcessIds(serviceMetadataUrl: string): Promise<string[]> {
-  const response = await fetch(serviceMetadataUrl);
+  const response = await fetchFromSmp(serviceMetadataUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch service metadata: ${response.statusText}`);
   }
@@ -328,7 +365,7 @@ export async function fetchBusinessCard({smpUrl, participantId}: {smpUrl: string
     const baseUrl = `${url.protocol}//${url.host}`;
 
     const bcUrl = `${baseUrl}/businesscard/${PARTICIPANT_SCHEME}::${encodeURIComponent(participantId)}`;
-    const response = await fetch(bcUrl);
+    const response = await fetchFromSmp(bcUrl);
     if (!response.ok) return null;
 
     const xml = await response.text();

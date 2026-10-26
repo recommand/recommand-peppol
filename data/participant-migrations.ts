@@ -23,7 +23,7 @@ import {
   startOutboundMigration as smpStartOutboundMigration,
 } from "./phoss-smp/migration";
 import { isRecommandSmpUrl } from "./phoss-smp/client";
-import { lookUpSmpUrl } from "./recipient";
+import { lookUpSmpUrl, SmlLookupError } from "./recipient";
 
 // A Peppol participant can only be published for receiving by one SMP. Moving it to
 // another SMP without a gap goes through a one-time migration key: the SMP that has
@@ -374,9 +374,7 @@ export async function isPublishedByRecommand(participant: Participant & { useTes
     useTestNetwork: participant.useTestNetwork,
   });
   if (lookup.status === "unknown") {
-    throw new UserFacingError(
-      `Could not look up ${participantAddress(participant)} in the SML, so it is not known whether the Peppol network still routes it to Recommand's SMP. Try again later, or finalize with force if you are sure.`
-    );
+    throw new SmlLookupError(participantAddress(participant));
   }
   return lookup.status === "found" && isRecommandSmpUrl(lookup.smpUrl, participant.useTestNetwork);
 }

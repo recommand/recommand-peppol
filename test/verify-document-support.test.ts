@@ -9,7 +9,7 @@ import {
 const naptr = await import("../utils/naptr");
 const naptrSpy = spyOn(naptr, "resolveNaptr").mockResolvedValue({ status: "found", smpUrl: "https://smp.example" });
 
-const { verifyDocumentSupport } = await import("../data/recipient");
+const { SmpLookupError, verifyDocumentSupport } = await import("../data/recipient");
 
 const serviceMetadata = `
   <ServiceMetadata>
@@ -126,5 +126,73 @@ describe("verifyDocumentSupport", () => {
     expect(requestedUrls[0]).toEndWith(
       `/services/${DOCUMENT_SCHEME}::${encodeURIComponent(documentType)}`,
     );
+  });
+});
+
+// The SMP's answer that it has no such registration is told apart from no usable answer,
+// which says nothing about the registration.
+describe("verifyDocumentSupport when the SMP does not give the registration", () => {
+  const verify = () =>
+    verifyDocumentSupport({ recipientAddress: "0208:0123456789", documentType: "invoice", useTestNetwork: true });
+
+  function answer(response: () => Promise<Response>): void {
+    fetchMock.mockImplementation(Object.assign(response, { preconnect: globalThis.fetch.preconnect }));
+  }
+
+  it("finds no endpoint when the SMP answers 404", async () => {
+    answer(async () => new Response("", { status: 404 }));
+    const error = await verify().catch((caught: unknown) => caught);
+    expect(error).not.toBeInstanceOf(SmpLookupError);
+    expect((error as Error).message).toContain("no endpoint found");
+  });
+
+  it("finds no endpoint when the registration lacks the process", async () => {
+    answer(async () => new Response(serviceMetadata));
+    const error = await verifyDocumentSupport({
+      recipientAddress: "0208:0123456789",
+      documentType: "invoice",
+      processId: "urn:other:process",
+      useTestNetwork: true,
+    }).catch((caught: unknown) => caught);
+    expect(error).not.toBeInstanceOf(SmpLookupError);
+    expect((error as Error).message).toContain("no endpoint found");
+  });
+
+  it("throws SmpLookupError when the SMP answers with another error status", async () => {
+    for (const status of [500, 503, 403]) {
+      answer(async () => new Response("", { status }));
+      await expect(verify()).rejects.toBeInstanceOf(SmpLookupError);
+    }
+  });
+
+  it("throws SmpLookupError when the request fails or times out", async () => {
+    answer(async () => {
+      throw new TypeError("connection reset");
+    });
+    await expect(verify()).rejects.toBeInstanceOf(SmpLookupError);
+
+    answer(async () => {
+      throw new DOMException("The operation timed out.", "TimeoutError");
+    });
+    await expect(verify()).rejects.toThrow("did not answer in time");
+  });
+
+  it("throws SmpLookupError when the SMP answers 200 with something other than service metadata", async () => {
+    for (const body of ["<html><body>Down for maintenance</body></html>", "", "garbage"]) {
+      answer(async () => new Response(body));
+      await expect(verify()).rejects.toThrow("not service metadata");
+    }
+  });
+
+  it("gives the SMP ten seconds", async () => {
+    const timeoutSpy = spyOn(AbortSignal, "timeout");
+    try {
+      answer(async () => new Response(serviceMetadata));
+      await verify();
+      expect(timeoutSpy).toHaveBeenCalledWith(10_000);
+      expect((fetchMock.mock.calls[0]?.[1] as RequestInit | undefined)?.signal).toBe(timeoutSpy.mock.results[0]?.value as AbortSignal);
+    } finally {
+      timeoutSpy.mockRestore();
+    }
   });
 });

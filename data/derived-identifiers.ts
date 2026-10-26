@@ -92,7 +92,7 @@ export async function releaseDerivedIdentifiersPublishedElsewhere({
       elsewhere = company.smpProvider === "recommand-smp1" && (await isPublishedOnAnotherSmp(identifier, useTestNetwork));
     } catch (error) {
       // The lookup failing says nothing either way; the registration itself will tell.
-      console.warn(`Could not look up ${identifier.scheme}:${identifier.identifier} in the SML: ${error}`);
+      console.warn(error instanceof Error ? error.message : String(error));
     }
     if (elsewhere) {
       await removeDerivedIdentifiers(company, [identifier], "another SMP publishes it");

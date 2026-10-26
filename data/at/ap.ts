@@ -4,7 +4,7 @@ import {
   PARTICIPANT_SCHEME,
   PROCESS_SCHEME,
 } from "@peppol/data/phoss-smp/service-metadata";
-import { SmlLookupError, verifyDocumentSupport } from "@peppol/data/recipient";
+import { SmlLookupError, SmpLookupError, verifyDocumentSupport } from "@peppol/data/recipient";
 import {
   buildStandardBusinessDocument,
   extractStandardBusinessDocumentPayload,
@@ -17,8 +17,8 @@ import { fetchArratech, fetchArratechJson, getArratechConfig } from "./client";
 // Raised when the recipient's SMP entry for the document cannot be resolved: the
 // address is not registered, or not for this document type. Told apart from the
 // other ways a send fails so the delivery can say the recipient was not found. An SML
-// that gives no answer is not one of them: the recipient may well be registered, so
-// that send fails as a transport error.
+// or SMP that gives no answer is not one of them: the recipient may well be registered,
+// so that send fails as a transport error.
 class RecipientLookupError extends UserFacingError {}
 
 // Arratech does not synchronously check receiver support before accepting a transaction, so
@@ -43,8 +43,9 @@ async function checkReceiverSupportsDocumentType(options: {
       ? processId
       : `${PROCESS_SCHEME}::${processId}`;
     const endpoint = `${PARTICIPANT_SCHEME}::${receiverId}, ${DOCUMENT_SCHEME}::${docTypeId}, ${encodedProcessId}`;
-    if (error instanceof SmlLookupError) {
-      throw new Error(`Failed to resolve SMP endpoint (${endpoint}): the SML gave no usable answer, try again later`);
+    if (error instanceof SmlLookupError || error instanceof SmpLookupError) {
+      const source = error instanceof SmlLookupError ? "the SML" : "the recipient's SMP";
+      throw new UserFacingError(`Failed to resolve SMP endpoint (${endpoint}): ${source} gave no usable answer, try again later`);
     }
     throw new RecipientLookupError(`Failed to resolve SMP endpoint (${endpoint})`);
   }

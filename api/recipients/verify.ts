@@ -108,7 +108,8 @@ async function _verifyRecipientImplementation(c: VerifyRecipientContext) {
                     );
                     if (!ref) return doc;
 
-                    const details = await fetchServiceMetadata(ref);
+                    // Endpoint details are extra: an SMP that does not give them leaves the document listed without.
+                    const details = await fetchServiceMetadata(ref).catch(() => null);
                     return { ...doc, ...details };
                 })
             );
