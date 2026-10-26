@@ -20,6 +20,7 @@ export const ciiD22bEn16931Format: DocumentFormat<
   docTypeId: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017::D22B",
   supportedDocumentTypes: [invoiceDocumentType, creditNoteDocumentType],
   supportedProcessIds: [processId],
+  acceptsEmailEndpoint: true,
   smpRegistration: [
     {
       processId,

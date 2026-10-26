@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@recommand/db";
 import { companyVerificationLog } from "@peppol/db/schema";
 import { UserFacingError } from "@peppol/utils/util";
-import { finalizeCompanyVerification, getCompanyVerificationLog, isFinalVerificationStatus } from "@peppol/data/company-verification";
+import { createCompanyVerificationLog, finalizeCompanyVerification, getCompanyVerificationLog, holdVerificationForRepresentativeReview, isFinalVerificationStatus } from "@peppol/data/company-verification";
 import { withVerificationLock, VerificationBusyError } from "@peppol/data/verification-lock";
 import { requiresArratechKycReview } from "@peppol/data/at/kyc";
 import { startArratechKycReview } from "@peppol/data/at/kyc-review";
@@ -18,7 +18,7 @@ const server = new Server();
 
 server.post(
   "/didit",
-  describeRoute({ hide: true }),
+  describeRoute({ hide: true, security: [] }),
   async (c) => {
     console.log("Received Didit webhook");
     const webhookSecret = process.env.DIDIT_WEBHOOK_SECRET_KEY;
@@ -67,6 +67,7 @@ server.post(
           }).optional(),
           reviews: z.array(z.object({
             new_status: z.string().nullable(),
+            comment: z.string().optional().nullable(),
           })).optional(),
         }).optional(),
       });
@@ -127,6 +128,16 @@ server.post(
         return c.json(actionSuccess({ message: "Verification status not changed (already verified)" }), 200);
       }
 
+      // The identity is proven; whether the person may act for the company is not,
+      // where the company's register leaves that to support.
+      if (isVerified && await holdVerificationForRepresentativeReview({
+        log: companyVerificationLogRecord,
+        company,
+        verificationProofReference,
+      })) {
+        return c.json(actionSuccess({ message: "Verification is held for a review of the representative's authority" }), 200);
+      }
+
       if (isVerified && await requiresArratechKycReview(company)) {
         const kycReview = await startArratechKycReview({
           companyVerificationLogId: companyVerificationLogRecord.id,
@@ -149,6 +160,7 @@ server.post(
         company,
         status: isVerified ? "verified" : "rejected",
         verificationProofReference,
+        rejectionReason: lastManualReview?.comment?.trim(),
       });
 
       if (lastManualReview && result.status === "verified") {
@@ -162,6 +174,8 @@ server.post(
         await sendManualVerificationDeclinedEmail({
           teamId: company.teamId,
           companyName: company.name,
+          reason: result.errorMessage,
+          verificationUrl: result.errorMessage ? await createRetryVerificationUrl(company) : null,
         });
       }
 
@@ -179,5 +193,20 @@ server.post(
     }
   }
 );
+
+/**
+ * A new session for the company, so a team told why its verification was declined
+ * can verify again straight from the email. Without one the email still goes out,
+ * pointing them to support instead.
+ */
+async function createRetryVerificationUrl(company: { id: string; teamId: string }): Promise<string | null> {
+  try {
+    const { verificationUrl } = await createCompanyVerificationLog({ teamId: company.teamId, companyId: company.id });
+    return verificationUrl;
+  } catch (error) {
+    console.error(`Could not create a new verification session for company ${company.id}:`, error);
+    return null;
+  }
+}
 
 export default server;

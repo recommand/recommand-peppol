@@ -1,14 +1,20 @@
 import {
   validationResponse,
+  type ValidationProfile,
   type ValidationResponse,
 } from "@peppol/types/validation";
-import { sendTelegramNotification } from "@peppol/utils/system-notifications/telegram";
+import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 
 export async function validateXmlDocument(
   xmlDocument: string,
+  options: { profile?: ValidationProfile } = {},
 ): Promise<ValidationResponse> {
   try {
-    const response = await fetch("https://validation.recommand.dev/validate", {
+    const url = new URL(process.env.VALIDATION_SERVICE_URL ?? "https://validation.recommand.dev/validate");
+    if (options.profile) {
+      url.searchParams.set("profile", options.profile);
+    }
+    const response = await fetch(url, {
       method: "POST",
       body: xmlDocument,
       headers: {
@@ -18,8 +24,10 @@ export async function validateXmlDocument(
 
     if (!response.ok) {
       console.error(`Failed to validate XML document: ${response.status}`);
-      sendTelegramNotification(
+      sendSystemAlert(
+        "Validation service error",
         `Failed to reach validation service successfully: ${response.status}`,
+        "error",
       );
       return { result: "error", errors: [] };
     }
@@ -31,8 +39,10 @@ export async function validateXmlDocument(
       console.error(
         `Failed to parse validation response: ${JSON.stringify(parsed.error)}`,
       );
-      sendTelegramNotification(
+      sendSystemAlert(
+        "Validation service error",
         `Failed to parse validation response: ${JSON.stringify(parsed.error)}`,
+        "error",
       );
       return { result: "error", errors: [] };
     }
@@ -40,7 +50,11 @@ export async function validateXmlDocument(
     return parsed.data;
   } catch (error) {
     console.error("Failed to validate XML document:", error);
-    sendTelegramNotification(`Failed to validate XML document: ${error}`);
+    sendSystemAlert(
+      "Validation service error",
+      `Failed to validate XML document: ${error}`,
+      "error",
+    );
     return { result: "error", errors: [] };
   }
 }

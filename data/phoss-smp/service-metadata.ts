@@ -135,7 +135,8 @@ export async function deleteServiceMetadata({
     }
   );
 
-  if (!response.ok) {
+  // A 404 means the SMP has no such metadata, which is what the delete asks for.
+  if (!response.ok && response.status !== 404) {
     throw new UserFacingError("Failed to delete service metadata in SMP");
   }
 

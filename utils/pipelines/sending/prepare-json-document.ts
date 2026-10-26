@@ -4,8 +4,9 @@ import { UserFacingError } from "@peppol/utils/util";
 import type { AnyDocumentFormat } from "@peppol/utils/type-repository/document-formats/types";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";
+import { emailRecipientAddress } from "./email-recipient-address";
 import { SendingFailure } from "./errors";
-import { selectFormatAndProcess } from "./select-format";
+import { selectFormatAndProcess, type FormatSelection } from "./select-format";
 import type { PreparedDocument, SendingContext, SendingInput } from "./types";
 
 const NULL_RECIPIENT_ADDRESS = "0000:0000";
@@ -65,6 +66,13 @@ export async function prepareJsonDocument(options: {
    * the endpoints that only generate a document, which have no transmission to route.
    */
   recipientCapabilities?: RecipientCapabilities | null;
+  /**
+   * Where a document without a Peppol recipient is emailed, when it is delivered as a
+   * structured document. It then names its receiver by an address taken from the
+   * document, or the first of these (see emailRecipientAddress), instead of the
+   * placeholder a document nobody receives as XML is written with.
+   */
+  structuredEmailTo?: string[];
 }): Promise<PreparedDocument> {
   const {
     input,
@@ -75,6 +83,7 @@ export async function prepareJsonDocument(options: {
     wrapContainer = true,
     isPlayground = false,
     recipientCapabilities = null,
+    structuredEmailTo,
   } = options;
   const documentType = getDocumentType(input.documentType);
   if (!documentType) {
@@ -94,8 +103,8 @@ export async function prepareJsonDocument(options: {
     );
   }
 
-  const { format, processId, peppolRoutingFailure } =
-    await selectFormatAndProcess({
+  const selectFormat = (capabilities: RecipientCapabilities | null) =>
+    selectFormatAndProcess({
       documentType,
       document,
       recipientAddress,
@@ -103,16 +112,70 @@ export async function prepareJsonDocument(options: {
       processId: input.processId,
       company,
       isPlayground,
-      capabilities: recipientCapabilities,
+      capabilities,
     });
-  const encode = (value: any) =>
-    format.encode(value, processId, {
+  const documentRecipientAddress = (selection: FormatSelection, value: any) =>
+    recipientAddress ??
+    (structuredEmailTo
+      ? emailRecipientAddress({
+          documentType,
+          document: value,
+          format: selection.format,
+          emailTo: structuredEmailTo,
+        })
+      : NULL_RECIPIENT_ADDRESS);
+  const encodeAs = (selection: FormatSelection, value: any) =>
+    selection.format.encode(value, selection.processId, {
       senderAddress,
-      recipientAddress: recipientAddress ?? NULL_RECIPIENT_ADDRESS,
+      recipientAddress: documentRecipientAddress(selection, value),
       isDocumentValidationEnforced: true,
     });
 
-  let xml = encode(document);
+  // A format refuses a document it cannot write in a way the recipient accepts, such
+  // as a buyer reference a German public authority would reject or a field XRechnung
+  // requires. That is the caller's to correct, so it is a bad request.
+  const asBadRequest = (error: unknown): never => {
+    if (error instanceof UserFacingError) {
+      throw new SendingFailure(error.message, 400);
+    }
+    throw error;
+  };
+
+  let selection = await selectFormat(recipientCapabilities);
+  let initialXml: string;
+  try {
+    initialXml = encodeAs(selection, document);
+  } catch (error) {
+    // A format the recipient lookup chose, rather than the caller, can refuse a
+    // document the default format would write, such as XRechnung without the seller's
+    // contact details. The send then goes on as one to a recipient that takes nothing
+    // this document can be written as, so email delivery, if configured, still applies.
+    const fallback = recipientCapabilities && error instanceof UserFacingError ? await selectFormat(null) : null;
+    if (!fallback || fallback.format === selection.format) {
+      return asBadRequest(error);
+    }
+    const refusal = (error as UserFacingError).message;
+    selection = {
+      ...fallback,
+      peppolRoutingFailure: `Recipient ${recipientAddress} only receives ${documentType.translatableTitle.toLowerCase()} documents as ${selection.format.translatableTitle}, which this document cannot be written as. ${refusal}`,
+    };
+    try {
+      initialXml = encodeAs(selection, document);
+    } catch (fallbackError) {
+      return asBadRequest(fallbackError);
+    }
+  }
+
+  const { format, processId, peppolRoutingFailure } = selection;
+  const encode = (value: any) => {
+    try {
+      return encodeAs(selection, value);
+    } catch (error) {
+      return asBadRequest(error);
+    }
+  };
+
+  let xml = initialXml;
   let parsed = parseEncodedDocument(
     documentType,
     format,

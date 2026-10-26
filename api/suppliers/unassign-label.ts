@@ -6,7 +6,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierIdParamSchema } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -19,7 +19,8 @@ const unassignLabelRouteDescription = describeRoute({
     summary: "Unassign Label from Supplier",
     tags: ["Suppliers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully unassigned label from supplier", z.object({})),
+        ...describeSuccessResponse("Successfully unassigned label from supplier"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Supplier or label not found"),
         ...describeErrorResponse(500, "Failed to unassign label"),
     },

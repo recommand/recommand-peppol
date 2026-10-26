@@ -32,8 +32,12 @@ export function cleanEnterpriseNumber(enterpriseNumber: string | undefined | nul
 }
 
 export class UserFacingError extends Error {
-  constructor(message: string) {
+  /** The request field the error is about, when correcting that field is the remedy. */
+  readonly field?: string;
+
+  constructor(message: string, options?: { field?: string }) {
     super(message);
     this.name = "UserFacingError";
+    this.field = options?.field;
   }
 }

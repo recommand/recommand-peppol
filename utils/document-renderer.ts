@@ -36,6 +36,7 @@ type TemplateLine = {
   name: string;
   description?: string | null;
   note?: string | null;
+  billingPeriod?: string | null;
   quantity: string;
   unitCode: string;
   unitCodeName: string;
@@ -73,6 +74,7 @@ type TemplatePaymentMeans = {
   reference?: string | null;
   iban: string;
   financialInstitutionBranch?: string | null;
+  mandateReference?: string | null;
 };
 
 type TemplateVatSubtotal = {
@@ -93,6 +95,7 @@ type BillingTemplateData = {
   issueDate?: string | null;
   dueDate?: string | null;
   buyerReference?: string | null;
+  billingPeriod?: string | null;
   note?: string | null;
   currency?: string | null;
   seller?: TemplateParty | null;
@@ -304,6 +307,13 @@ type DocumentRenderContext = {
   documentTypeTitle: string;
 };
 
+function formatBillingPeriod(
+  period: { startDate?: string | null; endDate?: string | null } | null | undefined,
+): string | null {
+  if (!period || (!period.startDate && !period.endDate)) return null;
+  return `${period.startDate ?? "…"} – ${period.endDate ?? "…"}`;
+}
+
 function buildTemplateData(
   parsed: ParsedBillingDocument,
   context: DocumentRenderContext,
@@ -352,6 +362,7 @@ function buildTemplateData(
       name: line.name ?? "",
       description: line.description ?? null,
       note: line.note ?? null,
+      billingPeriod: formatBillingPeriod(line.billingPeriod),
       quantity: String(line.quantity ?? ""),
       unitCode,
       unitCodeName: getUnitCodeName(unitCode),
@@ -444,6 +455,7 @@ function buildTemplateData(
           reference: payment.reference || null,
           iban: payment.iban || "",
           financialInstitutionBranch: payment.financialInstitutionBranch || null,
+          mandateReference: payment.mandate?.reference || null,
         };
       })
     : null;
@@ -470,6 +482,7 @@ function buildTemplateData(
     issueDate,
     dueDate,
     buyerReference,
+    billingPeriod: formatBillingPeriod((parsed as any)?.billingPeriod),
     note: (parsed as any)?.note ?? null,
     currency: (parsed as any)?.currency ?? null,
     seller: toParty(sellerRaw),

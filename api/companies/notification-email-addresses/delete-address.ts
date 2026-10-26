@@ -4,7 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { deleteCompanyNotificationEmailAddress } from "@peppol/data/company-notification-emails";
@@ -18,7 +18,8 @@ const deleteAddressRouteDescription = describeRoute({
     summary: "Delete Company Notification Email Address",
     tags: ["Company Notification Email Addresses"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully deleted company notification email address", z.object({})),
+        ...describeSuccessResponse("Successfully deleted company notification email address"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company notification email address not found"),
         ...describeErrorResponse(500, "Failed to delete company notification email address"),
     },

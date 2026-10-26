@@ -12,7 +12,7 @@ export const peppolUblSelfbillingCreditnoteFormat: DocumentFormat<
   [typeof selfBillingCreditNoteDocumentType]
 > = {
   key: "peppol-ubl-selfbilling-creditnote",
-  translatableTitle: "Self Billing Credit Note",
+  translatableTitle: "Peppol BIS Self-Billing 3.0 Credit Note",
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0::2.1",
   supportedDocumentTypes: [selfBillingCreditNoteDocumentType],

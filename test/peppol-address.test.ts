@@ -36,20 +36,32 @@ describe("parsePeppolAddress", () => {
     );
   });
 
+  it("writes an email address (scheme EM) as it was given", () => {
+    expect(parsePeppolAddress("EM:Rechnung@Kunde.de")).toEqual({
+      schemeId: "EM",
+      identifier: "Rechnung@Kunde.de",
+    });
+  });
+
   it("throws on a malformed address", () => {
     expect(() => parsePeppolAddress("0208")).toThrow();
     expect(() => parsePeppolAddress("0208:1:2")).toThrow();
   });
 });
 
+// 10150817 is the CVR number of Erhvervsstyrelsen, the Danish Business Authority.
 describe("validateIdentifier for Danish CVR (0184)", () => {
   it("accepts 8 digits", () => {
-    expect(() => validateIdentifier("0184", "12345678")).not.toThrow();
+    expect(() => validateIdentifier("0184", "10150817")).not.toThrow();
   });
 
   it("accepts a DK prefix in either case", () => {
-    expect(() => validateIdentifier("0184", "DK12345678")).not.toThrow();
-    expect(() => validateIdentifier("0184", "dk12345678")).not.toThrow();
+    expect(() => validateIdentifier("0184", "DK10150817")).not.toThrow();
+    expect(() => validateIdentifier("0184", "dk10150817")).not.toThrow();
+  });
+
+  it("rejects a number that fails the modulus 11 check", () => {
+    expect(() => validateIdentifier("0184", "12345678")).toThrow("invalid check digit");
   });
 
   it("rejects the wrong number of digits", () => {

@@ -44,7 +44,7 @@ const teamsClient = rc<GetTeamExtension>("v1");
 
 // Utility function to handle API responses
 const handleApiResponse = async (
-  response: Response,
+  response: Pick<Response, "json">,
   successMessage: string
 ) => {
   const json = await response.json();
@@ -92,6 +92,7 @@ export default function Page() {
   const [companyCreatedInSession, setCompanyCreatedInSession] = useState(false);
   const [deletingCompanyId, setDeletingCompanyId] = useState<string | null>(null);
   const [verificationRequirements, setVerificationRequirements] = useState<"strict" | "trusted" | "lax" | null>(null);
+  const [useTestNetwork, setUseTestNetwork] = useState(false);
   const activeTeam = useActiveTeam();
 
   const fetchCompanies = useCallback(async () => {
@@ -144,6 +145,7 @@ export default function Page() {
       const data = await response.json();
 
       if (data.success) {
+        setUseTestNetwork(data.useTestNetwork);
         setVerificationRequirements(data.verificationRequirements);
       }
     } catch (error) {
@@ -336,6 +338,7 @@ export default function Page() {
               <CreateCompanyWizard
                 teamId={activeTeam.id}
                 verificationRequirements={verificationRequirements}
+                useTestNetwork={useTestNetwork}
                 onComplete={handleWizardComplete}
                 onCancel={() => setIsDialogOpen(false)}
               />

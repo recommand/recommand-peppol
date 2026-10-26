@@ -9,6 +9,12 @@ import { getTextContent } from "@peppol/utils/parsing/xml-helpers";
  */
 export type ParsedXmlDocument = Record<string, any>;
 
+/**
+ * What the sender says about a document beyond its content. A customization id that more
+ * than one format declares, plain EN 16931 say, is told apart by the process it travels over.
+ */
+export type DetectionContext = { processId?: string };
+
 export function parseXmlForDetection(
   xml: string
 ): ParsedXmlDocument | undefined {
@@ -56,8 +62,8 @@ function rootElement(
  * statement are in the document already — the root element names the schema,
  * and the customization id names the specification it claims compliance with —
  * so an identifier can be written for a document no registered format
- * recognises. That is what keeps a CIUS the platform has never seen, an
- * XRechnung say, sendable at all.
+ * recognises. That is what keeps a CIUS the platform has never seen, an older
+ * XRechnung version say, sendable at all.
  * 
  * UBL only.
  */

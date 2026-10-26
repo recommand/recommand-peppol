@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Decimal } from "decimal.js";
 import "zod-openapi/extend";
-import { CURRENCIES, zCurrencies } from "@peppol/utils/currencies";
+import { zCurrencies } from "@peppol/utils/currencies";
 import { PAYMENT_MEANS } from "@peppol/utils/payment-means";
 import { ITEM_TYPE_IDENTIFICATION_CODES } from "@peppol/utils/item-type-identification-codes";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
@@ -49,7 +49,7 @@ export const decimalSchema = z
   .transform(toDecimalString)
   .openapi({
     type: "string",
-    example: "21.00",
+    examples: ["21.00"],
     description: "Decimal number as a string with 2 decimal places",
   });
 
@@ -69,7 +69,7 @@ export const unlimitedDecimalSchema = z
   .transform(toUnlimitedDecimalString)
   .openapi({
     type: "string",
-    example: "21.00",
+    examples: ["21.00"],
     description: "Decimal number as a string with flexible precision",
   });
 
@@ -89,60 +89,83 @@ export const priceDecimalSchema = z
   .transform(toPriceDecimalString)
   .openapi({
     type: "string",
-    example: "12.40",
+    examples: ["12.40"],
     description:
       "Decimal number as a string with flexible precision",
+  });
+
+export const partyIdentifierSchema = z
+  .object({
+    identifier: z.string().min(1).openapi({
+      examples: ["50012345"],
+      description: "The identifier itself.",
+    }),
+    scheme: z.string().nullish().openapi({
+      examples: ["0088"],
+      description:
+        "The ISO/IEC 6523 scheme the identifier is issued under, as listed [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/). Leave it out for an identifier without a registered scheme, such as a supplier number the buyer assigned to you.",
+    }),
+  })
+  .openapi({
+    ref: "PartyIdentifier",
+    description:
+      "An identifier of a party other than its VAT number, its enterprise number or its Peppol address.",
   });
 
 export const partySchema = z
   .object({
     vatNumber: z.string().nullish().openapi({
-      example: "BE1234567894",
+      examples: ["BE1234567894"],
       description:
         "The VAT number including its country prefix, for example BE0123456789.",
     }),
-    enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish().openapi({ example: "0208", description: "The scheme that corresponds to the enterprise number. Can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/)." }),
+    enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish().openapi({ description: "The scheme that corresponds to the enterprise number. Can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/)." }),
     enterpriseNumber: z.string().nullish().openapi({
-      example: "1234567894",
+      examples: ["1234567894"],
       description:
         "The national registration number without a country prefix, paired with `enterpriseNumberScheme`.",
     }),
+    partyIdentifiers: z.array(partyIdentifierSchema).nullish().openapi({
+      examples: [[{ identifier: "50012345" }]],
+      description:
+        "The seller identifier (BT-29) on the seller and the buyer identifier (BT-46) on the buyer, for example the supplier number a public buyer assigned to you, or the code a public buyer is known by. The seller can have several identifiers, the buyer at most one.",
+    }),
     name: z.string().openapi({
-      example: "Example Company",
+      examples: ["Example Company"],
       description: "The registered name of the party.",
     }),
     street: z.string().openapi({
-      example: "Example Street 1",
+      examples: ["Example Street 1"],
       description: "The street name and number of the party's address.",
     }),
     street2: z.string().nullish().openapi({
-      example: "Suite 100",
+      examples: ["Suite 100"],
       description:
         "An extra address line, for example a suite or a building name.",
     }),
     city: z.string().openapi({
-      example: "Brussels",
+      examples: ["Brussels"],
       description: "The city of the party's address.",
     }),
     postalZone: z.string().openapi({
-      example: "1000",
+      examples: ["1000"],
       description: "The postal code of the party's address.",
     }),
     country: z
       .string()
       .length(2, "Country code must be in ISO 3166-1:Alpha2 format")
       .openapi({
-        example: "BE",
+        examples: ["BE"],
         description:
           "The country of the party's address, as an ISO 3166-1 alpha-2 code.",
       }),
     email: z.string().nullish().openapi({
-      example: "email@example.com",
+      examples: ["email@example.com"],
       description:
         "The email address of the party. If not provided, the email address will not be included in the document.",
     }),
     phone: z.string().nullish().openapi({
-      example: "887 654 321",
+      examples: ["887 654 321"],
       description:
         "The phone number of the party. Must contain at least 3 digits. If not provided, the phone number will not be included in the document.",
     }),
@@ -152,32 +175,35 @@ export const partySchema = z
 export const deliverySchema = z
   .object({
     date: z.string().date().nullish().openapi({
-      example: "2025-03-20",
+      examples: ["2025-03-20"],
       description: "The date of the delivery.",
     }),
     locationIdentifier: z
       .object({
-        scheme: z.string().openapi({ example: "0088" }),
-        identifier: z.string().openapi({ example: "123456789" }),
+        scheme: z.string().openapi({ examples: ["0088"] }),
+        identifier: z.string().openapi({ examples: ["123456789"] }),
       })
-      .nullish()
       .openapi({
-        example: { scheme: "0088", identifier: "123456789" },
         description:
-          "The identifier of the delivery location. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
-      }),
-    location: z.object({
-      street: z.string().nullish().openapi({ example: "Example Street 1" }),
-      street2: z.string().nullish().openapi({ example: "Suite 100" }),
-      city: z.string().nullish().openapi({ example: "Brussels" }),
-      postalZone: z.string().nullish().openapi({ example: "1000" }),
-      country: z
-        .string()
-        .length(2, "Country code must be in ISO 3166-1:Alpha2 format")
-        .openapi({ example: "BE" }),
-    }),
+          "The identifier of a delivery location within a registered scheme. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
+        examples: [{ identifier: "123456789", scheme: "0088" }],
+        ref: "LocationIdentifier",
+      })
+      .nullish(),
+    location: z
+      .object({
+        city: z.string().nullish().openapi({ examples: ["Brussels"] }),
+        country: z
+          .string()
+          .length(2, "Country code must be in ISO 3166-1:Alpha2 format")
+          .openapi({ examples: ["BE"] }),
+        postalZone: z.string().nullish().openapi({ examples: ["1000"] }),
+        street: z.string().nullish().openapi({ examples: ["Example Street 1"] }),
+        street2: z.string().nullish().openapi({ examples: ["Suite 100"] }),
+      })
+      .openapi({ ref: "DeliveryLocation" }),
     recipientName: z.string().openapi({
-      example: "Company Ltd.",
+      examples: ["Company Ltd."],
       description:
         "The name of the party to which the goods and services are delivered.",
     }),
@@ -185,10 +211,55 @@ export const deliverySchema = z
   .partial()
   .openapi({ ref: "Delivery" });
 
+export const periodSchema = z
+  .object({
+    startDate: z.string().date().nullish().openapi({
+      examples: ["2025-03-01"],
+      description: "The first day of the period, as YYYY-MM-DD.",
+    }),
+    endDate: z.string().date().nullish().openapi({
+      examples: ["2025-03-31"],
+      description: "The last day of the period, as YYYY-MM-DD.",
+    }),
+  })
+  .refine((period) => period.startDate || period.endDate, {
+    message: "A period needs a startDate or an endDate.",
+  })
+  .refine(
+    (period) => !period.startDate || !period.endDate || period.startDate <= period.endDate,
+    { message: "The endDate of a period must not be before its startDate." }
+  )
+  .openapi({
+    ref: "Period",
+    description:
+      "A period of time. Give at least a startDate or an endDate; the endDate must not be before the startDate.",
+  });
+
+export type Period = z.infer<typeof periodSchema>;
+
+export const paymentMandateSchema = z
+  .object({
+    reference: z.string().min(1).openapi({
+      examples: ["MANDATE-2026-001"],
+      description:
+        "The reference of the mandate under which the amount is collected (BT-89), as agreed with the buyer.",
+    }),
+    debitedAccount: z.string().nullish().openapi({
+      examples: ["BE71096123456769"],
+      description:
+        "The buyer's account the amount is collected from (BT-91), usually an IBAN.",
+    }),
+  })
+  .openapi({
+    ref: "PaymentMandate",
+    description:
+      "The direct debit mandate the amount is collected under. A SEPA direct debit (`sepa_direct_debit`) needs one: Peppol rule PEPPOL-EN16931-R061 refuses a direct debit without a mandate reference.",
+  });
+
 export const paymentMeansSchema = z
   .object({
     name: z.string().nullish().openapi({
-      example: "Credit Transfer",
+      examples: ["Credit Transfer"],
       description: "The name of the payment means.",
     }),
     paymentMethod: z
@@ -201,35 +272,46 @@ export const paymentMeansSchema = z
       ])
       .default("credit_transfer")
       .openapi({
-        example: "credit_transfer",
+        examples: ["credit_transfer"],
         description: `How the invoice is to be paid. Defaults to \`credit_transfer\`. Accepted values: ${[
           ...PAYMENT_MEANS.map((payment) => `\`${payment.key}\``),
           "`other`",
         ].join(", ")}.`,
       }),
     reference: z.string().default("").openapi({
-      example: "INV-2026-001",
+      examples: ["INV-2026-001"],
       description:
         "The payment reference the buyer should quote when paying, such as a structured communication.",
     }),
-    iban: z.string().openapi({
-      example: "BE1234567890",
-      description: "The account the payment is to be made to, usually an IBAN.",
+    iban: z.string().nullish().openapi({
+      examples: ["BE1234567890"],
+      description:
+        "The account the payment is to be made to, usually an IBAN. A credit transfer needs one. Leave it out when there is no account to pay into, as with a direct debit or a card payment.",
     }),
     financialInstitutionBranch: z.string().nullish().openapi({
       description:
         "An identifier for the payment service provider where a payment account is located. Such as a BIC or a national clearing code where required.",
     }),
+    mandate: paymentMandateSchema.nullish(),
   })
   .openapi({ ref: "PaymentMeans" });
+
+export const paymentTermsSchema = z
+  .object({
+    note: z.string().openapi({
+      description: "The payment terms as free text.",
+      examples: ["Net 30"],
+    }),
+  })
+  .openapi({ description: "Optional payment terms.", ref: "PaymentTerms" });
 
 export const vatCategoryEnum = z
   .enum(Object.keys(VAT_CATEGORIES) as [VatCategory, ...VatCategory[]])
   .openapi({
-    example: "S",
     description:
       "VAT category code. All codes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5305/). When sending regular invoices, you should most often use the `S` category. When sending an invoice to another EU country, use the `AE` category for VAT Reverse Charge. In those cases, it is still recommended to include a note in the invoice explaining that the VAT Reverse Charge applies.",
-    enum: Object.keys(VAT_CATEGORIES),
+    examples: ["S"],
+    ref: "VatCategory",
   });
 
 export const vatSchema = z
@@ -305,12 +387,12 @@ export const totalsSchema = z
 export const lineDiscountSchema = z
   .object({
     reasonCode: z.string().nullish().openapi({
-      example: "95",
+      examples: ["95"],
       description:
         "The reason code for the discount. This must be one of the codes in the [UNCL5189 subset](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5189/) code list. For example, `95` for regular discounts. Either reason or reasonCode must be provided.",
     }),
     reason: z.string().nullish().openapi({
-      example: "Discount",
+      examples: ["Discount"],
       description:
         "The reason for the discount. This is a free text field. Either reason or reasonCode must be provided.",
     }),
@@ -324,12 +406,12 @@ export const lineDiscountSchema = z
 export const lineSurchargeSchema = z
   .object({
     reasonCode: z.string().nullish().openapi({
-      example: "FC",
+      examples: ["FC"],
       description:
         "The reason code for the surcharge. This must be one of the codes in the [UNCL7161 subset](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7161/) code list. For example, `FC` for freight services. Either reason or reasonCode must be provided.",
     }),
     reason: z.string().nullish().openapi({
-      example: "Freight services",
+      examples: ["Freight services"],
       description:
         "The reason for the surcharge. This is a free text field. Either reason or reasonCode must be provided.",
     }),
@@ -342,32 +424,32 @@ export const lineSurchargeSchema = z
 
 export const additionalItemPropertySchema = z
   .object({
-    name: z.string().openapi({ example: "Color" }),
-    value: z.string().openapi({ example: "Red" }),
+    name: z.string().openapi({ examples: ["Color"] }),
+    value: z.string().openapi({ examples: ["Red"] }),
   })
   .openapi({ ref: "AdditionalItemProperty" });
 
 export const itemClassificationCodeSchema = z
   .object({
-    scheme: z.enum(ITEM_TYPE_IDENTIFICATION_CODES.map((code) => code.key) as [string, ...string[]]).openapi({ example: "SN", description: "The scheme of the item classification code. Can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7143/)." }),
+    scheme: z.enum(ITEM_TYPE_IDENTIFICATION_CODES.map((code) => code.key) as [string, ...string[]]).openapi({ examples: ["SN"], description: "The scheme of the item classification code. Can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7143/)." }),
     schemeVersion: z.string().nullish(),
-    value: z.string().min(1).openapi({ example: "123456", description: "The value of the item classification code." }),
+    value: z.string().min(1).openapi({ examples: ["123456"], description: "The value of the item classification code." }),
   })
   .openapi({ ref: "ItemClassificationCode" });
 
 export const lineSchema = z
   .object({
     id: z.string().nullish().openapi({
-      example: "1",
+      examples: ["1"],
       description:
         "A line number. If not provided, it will be calculated automatically.",
     }),
     name: z.string().default("").openapi({
-      example: "Consulting Services",
+      examples: ["Consulting Services"],
       description: "The name of the item or service being billed.",
     }),
     description: z.string().nullish().openapi({
-      example: "Professional consulting services",
+      examples: ["Professional consulting services"],
       description: "A longer description of the item or service.",
     }),
     note: z.string().nullish().openapi({
@@ -375,31 +457,36 @@ export const lineSchema = z
         "A textual note that gives unstructured information that is relevant to this line.",
     }),
     buyersId: z.string().nullish().openapi({
-      example: "CS-001",
+      examples: ["CS-001"],
       description: "The item identifier of the item as defined by the buyer.",
     }),
     sellersId: z.string().nullish().openapi({
-      example: "CS-001",
+      examples: ["CS-001"],
       description:
         "The item identifier of the item as defined by the seller. This is typically a product code or SKU.",
     }),
     standardId: z
       .object({
-        scheme: z.string().openapi({ example: "0160" }),
-        identifier: z.string().openapi({ example: "10986700" }),
+        scheme: z.string().openapi({ examples: ["0160"] }),
+        identifier: z.string().openapi({ examples: ["10986700"] }),
       })
-      .nullish()
       .openapi({
         description:
           "The standard identifier of the item based on a registered scheme. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
-      }),
+        ref: "StandardId",
+      })
+      .nullish(),
     documentReference: z.string().nullish().openapi({
-      example: "INV-2024-001",
+      examples: ["INV-2024-001"],
       description:
         "A reference to a related document, mostly used to refer to a related invoice.",
     }),
     orderLineReference: z.string().nullish().openapi({
       description: "A reference to a related order line.",
+    }),
+    billingPeriod: periodSchema.nullish().openapi({
+      description:
+        "The period this line bills for (BG-26), for example the month of a subscription. When the document has a billing period too, this period must fall within it.",
     }),
     commodityClassifications: z.array(itemClassificationCodeSchema).nullish().openapi({ description: "Optional commodity classifications" }),
     additionalItemProperties: z
@@ -411,7 +498,7 @@ export const lineSchema = z
       .length(2, "Country code must be in ISO 3166-1:Alpha2 format")
       .nullish()
       .openapi({
-        example: "BE",
+        examples: ["BE"],
         description: "The country of origin of the item.",
       }),
     quantity: unlimitedDecimalSchema.default("1.00").openapi({
@@ -419,7 +506,7 @@ export const lineSchema = z
         "The number of units billed on this line, expressed in `unitCode`.",
     }),
     unitCode: z.string().default("C62").openapi({
-      example: "HUR",
+      examples: ["HUR"],
       description:
         "Recommended unit codes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNECERec20/).",
     }),
@@ -428,7 +515,7 @@ export const lineSchema = z
         "The price of one unit excluding VAT, after any discount that is already reflected in the price.",
     }),
     baseQuantity: unlimitedDecimalSchema.nullish().openapi({
-      example: "1",
+      examples: ["1"],
       description:
         "The number of units to which the price refers. When greater than 1, the price is for a batch/pack of this size. The actual unit price is netPriceAmount / baseQuantity.",
     }),
@@ -451,12 +538,12 @@ export const lineSchema = z
 export const discountSchema = z
   .object({
     reasonCode: z.string().nullish().openapi({
-      example: "95",
+      examples: ["95"],
       description:
         "The reason code for the discount. This must be one of the codes in the [UNCL5189 subset](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5189/) code list. For example, `95` for regular discounts. Either reason or reasonCode must be provided.",
     }),
     reason: z.string().nullish().openapi({
-      example: "Discount",
+      examples: ["Discount"],
       description:
         "The reason for the discount. This is a free text field. Either reason or reasonCode must be provided.",
     }),
@@ -471,12 +558,12 @@ export const discountSchema = z
 export const surchargeSchema = z
   .object({
     reasonCode: z.string().nullish().openapi({
-      example: "FC",
+      examples: ["FC"],
       description:
         "The reason code for the surcharge. This must be one of the codes in the [UNCL7161 subset](https://docs.peppol.eu/poacc/billing/3.0/codelist/UNCL7161/) code list. For example, `FC` for freight services. Either reason or reasonCode must be provided.",
     }),
     reason: z.string().nullish().openapi({
-      example: "Freight services",
+      examples: ["Freight services"],
       description:
         "The reason for the surcharge. This is a free text field. Either reason or reasonCode must be provided.",
     }),
@@ -504,21 +591,21 @@ export const vatTotalsSchema = z
 export const attachmentSchema = z
   .object({
     id: z.string().openapi({
-      example: "ATT-001",
+      examples: ["ATT-001"],
       description: "An identifier for the attachment within the document.",
     }),
     mimeCode: z.string().default("application/pdf").openapi({
-      example: "application/pdf",
+      examples: ["application/pdf"],
       description:
         "MIME type of the document (e.g. application/pdf, text/csv, image/png)",
     }),
     filename: z.string().openapi({
-      example: "contract.pdf",
+      examples: ["contract.pdf"],
       description:
         "Filename for an embedded attachment. This is included in the Peppol XML only when `embeddedDocument` is provided. For URL-only attachments, the document contains an external reference and the filename is not embedded.",
     }),
     description: z.string().nullish().openapi({
-      example: "Signed contract",
+      examples: ["Signed contract"],
       description: "A short description of what the attachment contains.",
     }),
     embeddedDocument: z.string().nullish().openapi({
@@ -526,7 +613,7 @@ export const attachmentSchema = z
         "The contents of the attachment, base64 encoded. Provide this or `url`.",
     }),
     url: z.string().nullish().openapi({
-      example: "https://example.com/contract.pdf",
+      examples: ["https://example.com/contract.pdf"],
       description:
         "A link to the attachment, for when the contents are not embedded. Provide this or `embeddedDocument`.",
     }),
@@ -535,35 +622,45 @@ export const attachmentSchema = z
 
 export const baseInvoiceSchema = z.object({
   invoiceNumber: z.string().openapi({
-    example: "INV-2024-001",
+    examples: ["INV-2024-001"],
     description: "The number the seller assigned to the invoice.",
   }),
   issueDate: z.string().date().openapi({
-    example: "2024-03-20",
+    examples: ["2024-03-20"],
     description: "The date the invoice was issued, as YYYY-MM-DD.",
   }),
   dueDate: z.string().date().nullish().openapi({
-    example: "2024-04-20",
+    examples: ["2024-04-20"],
     description: "The date the payment is due, as YYYY-MM-DD.",
   }),
   note: z.string().nullish().openapi({
-    example: "Thank you for your business",
+    examples: ["Thank you for your business"],
     description: "A free text note about the invoice as a whole.",
   }),
   buyerReference: z.string().nullish().openapi({
-    example: "PO-2024-001",
+    examples: ["CC-4120"],
     description:
-      "A reference the buyer asked you to put on the invoice so they can route it internally. If neither this nor `purchaseOrderReference` is provided, the invoice number is used.",
+      "A reference the buyer asked you to put on the invoice so they can route it internally (BT-10). If neither this nor `purchaseOrderReference` is provided, the invoice number is used, as it is when seller and buyer are both located in Germany, where this field is required. For a German public authority addressed by its Leitweg-ID (recipient scheme `0204`), this must be a Leitweg-ID: the recipient's is filled in when left out, a different Leitweg-ID the authority asked for is kept, and any other value is refused.",
   }),
   purchaseOrderReference: z.string().nullish().openapi({
-    example: "PO-2024-001",
-    description: "A reference to a related purchase order",
+    examples: ["4500012345"],
+    description:
+      "The buyer's purchase order number (BT-13), written to the order reference.",
   }),
-  salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
+  salesOrderReference: z.string().nullish().openapi({ examples: ["SO-2024-001"], description: "A reference to a related sales order." }),
   despatchReference: z.string().nullish().openapi({
-    example: "DE-2024-001",
+    examples: ["DE-2024-001"],
     description:
       "A reference to a related despatch advice document (e.g. packing slip)",
+  }),
+  contractReference: z.string().nullish().openapi({
+    examples: ["CT-2024-017"],
+    description:
+      "The identifier of the contract the invoice is issued under (BT-12).",
+  }),
+  billingPeriod: periodSchema.nullish().openapi({
+    description:
+      "The period the document bills for (BG-14), for example the month of a subscription.",
   }),
   seller: partySchema,
   buyer: partySchema,
@@ -574,15 +671,7 @@ export const baseInvoiceSchema = z.object({
     description:
       "Optional payment information. For most invoices, this should be provided. For prepaid invoices, this could be omitted.",
   }),
-  paymentTerms: z
-    .object({
-      note: z.string().openapi({
-        example: "Net 30",
-        description: "The payment terms as free text.",
-      }),
-    })
-    .nullish()
-    .openapi({ description: "Optional payment terms." }),
+  paymentTerms: paymentTermsSchema.nullish(),
   lines: z.array(lineSchema).min(1).openapi({
     description: "The invoice lines. At least one line is required.",
   }),
@@ -604,16 +693,16 @@ export const baseInvoiceSchema = z.object({
     .nullish()
     .openapi({ description: "Optional attachments to the invoice" }),
   currency: zCurrencies.default("EUR").openapi({
-    example: "EUR",
+    examples: ["EUR"],
     description: "The currency of the invoice. Defaults to EUR.",
-    enum: CURRENCIES.map((currency) => currency.code),
   }),
 });
 
 export type DocumentLine = z.infer<typeof lineSchema>;
 export type Party = z.infer<typeof partySchema>;
+export type PartyIdentifier = z.infer<typeof partyIdentifierSchema>;
 export type PaymentMeans = z.infer<typeof paymentMeansSchema>;
-export type PaymentTerms = z.infer<typeof baseInvoiceSchema.shape.paymentTerms>;
+export type PaymentTerms = z.infer<typeof paymentTermsSchema>;
 export type Item = z.infer<typeof lineSchema>;
 export type Vat = z.infer<typeof vatSchema>;
 export type VatSubtotal = z.infer<typeof vatSubtotalSchema>;
@@ -652,11 +741,11 @@ export const sendVatTotalsSchema = z.union([
 
 export const _sendInvoiceSchema = invoiceSchema.extend({
   issueDate: z.string().date().nullish().openapi({
-    example: "2024-03-20",
+    examples: ["2024-03-20"],
     description: "If not provided, the issue date will be the current date.",
   }),
   dueDate: z.string().date().nullish().openapi({
-    example: "2024-04-20",
+    examples: ["2024-04-20"],
     description:
       "If not provided, the due date will be 1 month from the issue date.",
   }),

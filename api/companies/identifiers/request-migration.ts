@@ -5,7 +5,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { participantMigrationResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -20,8 +20,9 @@ const requestMigrationRouteDescription = describeRoute({
     summary: "Migrate Company Identifier to Recommand",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("The migration completed or was stored to run at registration", z.object({ migration: participantMigrationResponse })),
+        ...describeSuccessResponse("The migration completed or was stored to run at registration", z.object({ migration: participantMigrationResponse.openapi({ description: "The migration, completed or stored to run when the identifier is registered." }) })),
         ...describeErrorResponse(400, "The key was refused, is malformed, or the identifier cannot be migrated"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company identifier not found"),
         ...describeErrorResponse(500, "Failed to migrate company identifier"),
     },
@@ -39,7 +40,7 @@ const requestMigrationParamSchema = z.object({
 const requestMigrationJsonBodySchema = z.object({
     migrationKey: z.string().trim().min(8).max(24).openapi({
         description: "The migration key issued by the provider that currently publishes the identifier. 8 to 24 characters with at least two upper case letters, two lower case letters, two digits and two special characters.",
-        example: "Ab12$#xyZ9!kLm",
+        examples: ["Ab12$#xyZ9!kLm"],
     }),
 });
 

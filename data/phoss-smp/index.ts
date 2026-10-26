@@ -3,7 +3,7 @@ import { getCompanyById, type Company, type InsertCompany } from "@peppol/data/c
 import { deleteServiceGroup, registerServiceGroup } from "./service-group";
 import { deleteServiceMetadata, registerServiceMetadata } from "./service-metadata";
 import { registerBusinessCard } from "./business-card";
-import { canUpsertCompanyIdentifier, getCompanyIdentifiers, type CompanyIdentifier } from "../company-identifiers";
+import { canUpsertCompanyIdentifier, getCompanyIdentifiers, isIdentifierPublishedByAnotherCompany, type CompanyIdentifier } from "../company-identifiers";
 import { getCompanyDocumentTypes, type CompanyDocumentType } from "../company-document-types";
 import { verifyRecipient } from "../recipient";
 import { migrateInbound } from "./migration";
@@ -55,6 +55,9 @@ export async function unregisterCompanyDocumentType({documentType, useTestNetwor
   const identifiers = await getCompanyIdentifiers(documentType.companyId);
 
   for (const identifier of identifiers) {
+    if(await isIdentifierPublishedByAnotherCompany({identifier, smpProvider: "recommand-smp1", useTestNetwork})){
+      continue;
+    }
     await deleteServiceMetadata({
       peppolIdentifierEas: identifier.scheme,
       peppolIdentifierAddress: identifier.identifier,
@@ -157,6 +160,9 @@ async function registerCompanyIdentifier({company, identifier, documentTypes, us
 }
 
 export async function unregisterCompanyIdentifier({identifier, useTestNetwork}: {identifier: CompanyIdentifier, useTestNetwork: boolean}) {
+  if(await isIdentifierPublishedByAnotherCompany({identifier, smpProvider: "recommand-smp1", useTestNetwork})){
+    return;
+  }
   await deleteServiceGroup({
     peppolIdentifierEas: identifier.scheme,
     peppolIdentifierAddress: identifier.identifier,

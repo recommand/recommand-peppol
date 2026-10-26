@@ -16,7 +16,7 @@ export const f10ReferenceSchema = z
   .min(1)
   .max(F10_REFERENCE_MAX_LENGTH)
   .openapi({
-    example: "SALES-2026-07-01-GOODS",
+    examples: ["SALES-2026-07-01-GOODS"],
     description:
       "Your unique reference for this submission, at most 128 characters. It is the idempotency key: retrying the exact same request with the same reference files nothing again and returns the report filed the first time, with `duplicate: true`. Every new submission, corrections and cancellations included, needs its own reference.",
   });
@@ -37,9 +37,10 @@ export const f10ActionSchema = z
   .enum(["submit", "correct", "cancel"])
   .default("submit")
   .openapi({
-    example: "submit",
     description:
       "Use `submit` for a new report, `correct` to replace a report you filed earlier for the same period or document, or `cancel` to cancel it. Corrections and cancellations are matched on the data that identifies the report (for example the day and category of a daily total, or the document number of an invoice), and always need a new `reference`. Defaults to `submit`.",
+    examples: ["submit"],
+    ref: "FrenchReportAction",
   });
 
 export type F10Action = z.infer<typeof f10ActionSchema>;

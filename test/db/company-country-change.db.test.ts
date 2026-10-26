@@ -81,6 +81,7 @@ describe.skipIf(!testDatabaseUrl)("company country changes against PostgreSQL", 
       upsertCompanyRegistration: async () => { smpCalls.push("upsert-one"); },
       unregisterCompanyIdentifier: async () => { smpCalls.push("unregister-one"); },
       unregisterCompanyDocumentType: async () => { smpCalls.push("unregister-doctype"); },
+      replaceCompanyDocumentType: async () => { smpCalls.push("replace-doctype"); },
     }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
     process.env.BASE_URL = "https://app.example";
@@ -123,6 +124,23 @@ describe.skipIf(!testDatabaseUrl)("company country changes against PostgreSQL", 
     expect(smpCalls).toEqual([]);
     await updateCompany({ id: "c_move", teamId: TEAM_STRICT, country: "BE", enterpriseNumber: "0123456749", vatNumber: "BE0123456749" });
     expect(await companyRow("c_move")).toMatchObject({ country: "BE", smpProvider: "recommand-smp1" });
+  });
+
+  it("refuses switching a verified French company between receiving and send-only", async () => {
+    await pool.query(
+      `INSERT INTO peppol_companies (id, team_id, name, address, postal_code, city, country, enterprise_number_scheme, enterprise_number,
+         is_smp_recipient, is_verified, access_point_provider, smp_provider)
+       VALUES ('c_fr', $1, 'Exemple SAS', '1 rue Test', '75001', 'Paris', 'FR', '0225', '303265045', false, true, 'at-shared-ap-fr', 'at-shared-smp-fr')`,
+      [TEAM_STRICT]
+    );
+    await expect(updateCompany({ id: "c_fr", teamId: TEAM_STRICT, isSmpRecipient: true })).rejects.toThrow("Contact support@recommand.eu");
+    const { rows } = await pool.query(`SELECT is_smp_recipient AS "isSmpRecipient" FROM peppol_companies WHERE id = 'c_fr'`);
+    expect(rows[0]).toEqual({ isSmpRecipient: false });
+    expect(smpCalls).toEqual([]);
+    await pool.query(`UPDATE peppol_companies SET is_verified = false WHERE id = 'c_fr'`);
+    await updateCompany({ id: "c_fr", teamId: TEAM_STRICT, isSmpRecipient: true });
+    const after = await pool.query(`SELECT is_smp_recipient AS "isSmpRecipient" FROM peppol_companies WHERE id = 'c_fr'`);
+    expect(after.rows[0]).toEqual({ isSmpRecipient: true });
   });
 
   it("keeps an open link valid when the country changes without the numbers", async () => {
@@ -257,14 +275,29 @@ describe.skipIf(!testDatabaseUrl)("company country changes against PostgreSQL", 
       [TEAM_LAX]
     );
     await expect(updateCompany({
-      id: "c_sendonly", teamId: TEAM_LAX, country: "FR", enterpriseNumber: "303265045", vatNumber: null, isSmpRecipient: true,
+      id: "c_sendonly", teamId: TEAM_LAX, country: "NL", enterpriseNumber: "59581883", vatNumber: null, isSmpRecipient: true,
     })).rejects.toThrow("Change the country first");
     expect(await companyRow("c_sendonly")).toMatchObject({ country: "BE", smpProvider: "recommand-smp1" });
     expect(smpCalls).toEqual([]);
-    await updateCompany({ id: "c_sendonly", teamId: TEAM_LAX, country: "FR", enterpriseNumber: "303265045", vatNumber: null });
+    await updateCompany({ id: "c_sendonly", teamId: TEAM_LAX, country: "NL", enterpriseNumber: "59581883", vatNumber: null });
     await updateCompany({ id: "c_sendonly", teamId: TEAM_LAX, isSmpRecipient: true });
     expect(smpCalls).toEqual(["upsert"]);
-    expect(await companyRow("c_sendonly")).toMatchObject({ country: "FR", smpProvider: "at-shared-smp-fr" });
+    expect(await companyRow("c_sendonly")).toMatchObject({ country: "NL", smpProvider: "recommand-smp1" });
+  });
+
+  it("does not publish a French recipient of a lax team before it is verified", async () => {
+    await pool.query(
+      `INSERT INTO peppol_companies (id, team_id, name, address, postal_code, city, country, enterprise_number, vat_number, is_smp_recipient, access_point_provider, smp_provider)
+       VALUES ('c_tofrance', $1, 'Example BV', 'Straat 1', '9000', 'Gent', 'BE', '0123456749', 'BE0123456749', false, 'recommand-ap1', 'recommand-smp1')`,
+      [TEAM_LAX]
+    );
+    // The French network takes a participant only after its KYC, which is the
+    // verification, so the company is not published until then.
+    await updateCompany({
+      id: "c_tofrance", teamId: TEAM_LAX, country: "FR", enterpriseNumber: "303265045", vatNumber: null, isSmpRecipient: true,
+    });
+    expect(smpCalls).toEqual([]);
+    expect(await companyRow("c_tofrance")).toMatchObject({ country: "FR", smpProvider: "at-shared-smp-fr" });
   });
 
   it("waits for a submission holding the company and then refuses the move", async () => {
@@ -296,7 +329,7 @@ describe.skipIf(!testDatabaseUrl)("company country changes against PostgreSQL", 
       let settled = false;
       // Validated as a Belgian GLN while the row is held; the write has to wait.
       const write = createCompanyIdentifier({
-        companyIdentifier: { companyId: "c_ident", scheme: "0088", identifier: "5410000000012" }, skipSmpRegistration: true, useTestNetwork: false,
+        companyIdentifier: { companyId: "c_ident", scheme: "0088", identifier: "5410000000019" }, skipSmpRegistration: true, useTestNetwork: false,
       }).finally(() => { settled = true; });
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(settled).toBe(false);

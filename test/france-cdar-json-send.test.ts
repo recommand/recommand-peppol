@@ -20,6 +20,7 @@ import {
 } from "../utils/parsing/france-cdar/schemas";
 import { sendDocumentSchema } from "../utils/parsing/send-document";
 import { parsePeppolAddress } from "../utils/parsing/peppol-address";
+import { validateXml } from "./utils/utils";
 
 const request = {
   recipient: "0225:987654321_STATUTS",
@@ -142,13 +143,14 @@ describe("France CDAR JSON sending", () => {
     } as const;
 
     // BR-FR-CDV-07: issuerLegalId is allowed at phase 305 when addressed to DFH.
-    expect(franceCdarSchema.safeParse(base).success).toBe(true);
+    expect(sendFranceCdarSchema.safeParse(base).success).toBe(true);
     // BR-FR-CDV-08: a DFH recipient needs no electronic address.
     expect(base).not.toHaveProperty("recipientElectronicAddress");
 
-    // A non-DFH, non-WK recipient still must omit issuerLegalId at phase 305...
+    // A CDAR we send to a non-DFH, non-WK recipient still omits issuerLegalId at
+    // phase 305...
     expect(
-      franceCdarSchema.safeParse({ ...base, recipientRole: "SE" }).success
+      sendFranceCdarSchema.safeParse({ ...base, recipientRole: "SE" }).success
     ).toBe(false);
     // ...and still requires an electronic address.
     expect(
@@ -159,6 +161,39 @@ describe("France CDAR JSON sending", () => {
         issuerLegalIdScheme: undefined,
       }).success
     ).toBe(false);
+  });
+
+  it("reads a received transmission status whose platform identifies itself as issuer", () => {
+    // The official schematron does not enforce BR-FR-CDV-07 at phase 305, and
+    // platforms fill MDT-38 with their PA matricule (0238) or their own SIREN.
+    const sent = franceCdarSchema.parse({
+      ...request.document,
+      id: "CDAR-2026-203",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "305",
+      statusCode: "203",
+      issuerRole: "WK",
+      issuerLegalId: undefined,
+      issuerLegalIdScheme: undefined,
+      recipientElectronicAddress: "987654321",
+      recipientElectronicAddressScheme: "0225",
+    });
+    const xml = franceCdarToXML({ franceCdar: sent });
+
+    for (const [scheme, identifier] of [
+      ["0238", "0042"],
+      ["0002", "111222333"],
+    ] as const) {
+      const received = xml.replace(
+        "<ram:IssuerTradeParty>",
+        `<ram:IssuerTradeParty><ram:GlobalID schemeID="${scheme}">${identifier}</ram:GlobalID>`
+      );
+      expect(parseFranceCdarFromXML(received)).toEqual({
+        ...sent,
+        issuerLegalId: identifier,
+        issuerLegalIdScheme: scheme,
+      });
+    }
   });
 
   it("requires an electronic address and scheme for every non-WK recipient", () => {
@@ -608,28 +643,48 @@ describe("France CDAR JSON sending", () => {
     );
   });
 
-  it("does not validate reason-code compatibility with the status code", () => {
-    expect(
+  it("only sends reason codes the status accepts (BR-FR-CDV-CL-09)", () => {
+    const send = (statusCode: string, reasonCode: string) =>
       sendFranceCdarSchema.safeParse({
         ...request.document,
-        statusCode: "207",
-        reasonCode: "JUSTIF_ABS",
+        statusCode,
+        reasonCode,
+        ...(reasonCode === "AUTRE" ? { reasonNote: "Motif" } : {}),
+      });
+
+    expect(send("207", "JUSTIF_ABS").success).toBe(false);
+    expect(send("207", "LIVR_INCOMP").success).toBe(true);
+    expect(send("210", "AUTRE").success).toBe(false);
+    expect(send("210", "TX_TVA_ERR").success).toBe(true);
+    expect(send("213", "AUTRE").success).toBe(false);
+    // Statuses without a list of their own accept any documented code.
+    expect(send("205", "DOUBLON").success).toBe(true);
+    expect(send("207", "UNKNOWN_REASON").success).toBe(false);
+
+    const refused = send("210", "AUTRE");
+    expect(refused.success ? [] : refused.error.issues.map((issue) => issue.message)).toContain(
+      "reasonCode AUTRE is not allowed for status 210. Allowed: TX_TVA_ERR, MONTANTTOTAL_ERR, CALCUL_ERR, NON_CONFORME, DOUBLON, DEST_ERR, TRANSAC_INC, EMMET_INC, CONTRAT_TERM, DOUBLE_FACT, CMD_ERR, ADR_ERR, REF_CT_ABSENT"
+    );
+  });
+
+  it("keeps received CDARs whose reason code the status no longer accepts", () => {
+    const sendDocument = sendFranceCdarSchema.parse({
+      ...request.document,
+      statusCode: "210",
+      reasonCode: "TX_TVA_ERR",
+    });
+
+    expect(
+      franceCdarSchema.safeParse({
+        ...sendDocument,
+        reasonCode: "AUTRE",
+        reasonNote: "Motif",
+        id: "CDAR-2026-001",
+        issueDate: "2026-07-23T14:05:09",
+        recipientElectronicAddress: "987654321_STATUTS",
+        recipientElectronicAddressScheme: "0225",
       }).success
     ).toBe(true);
-    expect(
-      sendFranceCdarSchema.safeParse({
-        ...request.document,
-        statusCode: "205",
-        reasonCode: "DOUBLON",
-      }).success
-    ).toBe(true);
-    expect(
-      sendFranceCdarSchema.safeParse({
-        ...request.document,
-        statusCode: "207",
-        reasonCode: "UNKNOWN_REASON",
-      }).success
-    ).toBe(false);
   });
 
   it("requires a reason code for status 501 (BR-FR-CDV-15)", () => {
@@ -649,7 +704,7 @@ describe("France CDAR JSON sending", () => {
     expect(
       sendFranceCdarSchema.safeParse({
         ...status501,
-        reasonCode: "REJ_SEMAN",
+        reasonCode: "IRR_SYNTAX",
       }).success
     ).toBe(true);
 
@@ -658,7 +713,7 @@ describe("France CDAR JSON sending", () => {
       id: "CDAR-2026-501",
       issueDate: "2026-07-23T14:05:09",
       phase: "305",
-      reasonCode: "REJ_SEMAN",
+      reasonCode: "IRR_SYNTAX",
       reason: "The submitted file could not be accepted.",
       recipientElectronicAddress:
         parsePeppolAddress(request.recipient).identifier,
@@ -668,12 +723,90 @@ describe("France CDAR JSON sending", () => {
     const xml = franceCdarToXML({ franceCdar: document });
     const parsed = parseFranceCdarFromXML(xml);
 
-    expect(xml).toContain("<ram:ReasonCode>REJ_SEMAN</ram:ReasonCode>");
+    expect(xml).toContain("<ram:ReasonCode>IRR_SYNTAX</ram:ReasonCode>");
     expect(parsed).toMatchObject({
       statusCode: "501",
-      reasonCode: "REJ_SEMAN",
+      reasonCode: "IRR_SYNTAX",
       reason: "The submitted file could not be accepted.",
     });
+  });
+
+  it("only sends the inadmissibility codes with status 501 (BR-FR-CDV-CL-09)", async () => {
+    const status501 = {
+      ...request.document,
+      statusCode: "501",
+      senderRole: "WK",
+      issuerRole: "WK",
+      issuerLegalId: undefined,
+      issuerLegalIdScheme: undefined,
+      invoiceIssueDate: undefined,
+      sellerLegalId: undefined,
+      sellerLegalIdScheme: undefined,
+    } as const;
+
+    for (const reasonCode of [
+      "IRR_VIDE_F",
+      "IRR_TYPE_F",
+      "IRR_SYNTAX",
+      "IRR_TAILLE_PJ",
+      "IRR_NOM_PJ",
+      "IRR_VID_PJ",
+      "IRR_EXT_DOC",
+      "IRR_TAILLE_F",
+      "IRR_ANTIVIRUS",
+      "IRR_NOM_F",
+    ]) {
+      expect(sendFranceCdarSchema.safeParse({ ...status501, reasonCode }).success).toBe(true);
+    }
+    expect(sendFranceCdarSchema.safeParse({ ...status501, reasonCode: "REJ_SEMAN" }).success).toBe(false);
+
+    const document = franceCdarSchema.parse({
+      ...sendFranceCdarSchema.parse({ ...status501, reasonCode: "IRR_SYNTAX" }),
+      id: "CDAR-2026-501",
+      issueDate: "2026-07-23T14:05:09",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme: parsePeppolAddress(request.recipient).schemeId,
+    });
+    await validateXml(franceCdarToXML({ franceCdar: document }), "CDAR 501 IRR_SYNTAX");
+  });
+
+  it("keeps the public-sector refusal codes out of the CDARs it sends", () => {
+    for (const reasonCode of [
+      "RETRAIT_MAN_SERV",
+      "ST_CT_NON_DECLAR",
+      "SUPPR_COMP_AVOIR",
+      "TRANSF_PMNT_REGIE",
+      "CONTACT_ACHTR",
+    ]) {
+      for (const statusCode of ["210", "205"]) {
+        expect(
+          sendFranceCdarSchema.safeParse({ ...request.document, statusCode, reasonCode }).success
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("reads received CDARs with inadmissibility and public-sector refusal codes", () => {
+    const sendDocument = sendFranceCdarSchema.parse({
+      ...request.document,
+      statusCode: "210",
+      reasonCode: "TX_TVA_ERR",
+    });
+    const sent = franceCdarSchema.parse({
+      ...sendDocument,
+      id: "CDAR-2026-210",
+      issueDate: "2026-07-23T14:05:09",
+      recipientElectronicAddress: parsePeppolAddress(request.recipient).identifier,
+      recipientElectronicAddressScheme: parsePeppolAddress(request.recipient).schemeId,
+    });
+
+    for (const reasonCode of ["IRR_SYNTAX", "RETRAIT_MAN_SERV", "CONTACT_ACHTR"] as const) {
+      const received = franceCdarToXML({ franceCdar: sent }).replace(
+        "<ram:ReasonCode>TX_TVA_ERR</ram:ReasonCode>",
+        `<ram:ReasonCode>${reasonCode}</ram:ReasonCode>`
+      );
+      expect(parseFranceCdarFromXML(received).reasonCode).toBe(reasonCode);
+    }
   });
 
   it("requires an explanation for the AUTRE reason code", () => {

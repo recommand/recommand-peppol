@@ -7,6 +7,7 @@ import { actionFailure } from "@recommand/lib/utils";
 import { describeRoute } from "hono-openapi";
 import { z } from "zod";
 import { buildDocumentsArchive } from "./archive";
+import { exportOutputTypeSchema, pdfGenerationModeSchema } from "./shared";
 
 const server = new Server();
 
@@ -16,8 +17,8 @@ const bulkExportParamSchema = z.object({
 
 const bulkExportJsonBodySchema = z.object({
   documentIds: z.array(z.string()).min(1).max(200),
-  outputType: z.enum(["flat", "nested"]),
-  generatePdf: z.enum(["never", "always", "when_no_pdf_attachment"]).default("never"),
+  outputType: exportOutputTypeSchema,
+  generatePdf: pdfGenerationModeSchema.default("never"),
 });
 
 type BulkExportContext = Context<
@@ -58,7 +59,7 @@ const _bulkExport = server.post(
       c.header("Content-Type", "application/zip");
       c.header("Content-Disposition", `attachment; filename="documents-selection.zip"`);
 
-      return c.body(zipBuffer);
+      return c.body(new Uint8Array(zipBuffer));
     } catch (error) {
       if (error instanceof Error && error.message === "Some documents were not found") {
         return c.json(actionFailure("Document not found"), 404);

@@ -10,12 +10,17 @@ import {
 } from "@peppol/data/transmitted-documents";
 import {
     describeErrorResponse,
-    describeSuccessResponseWithZod,
+    describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
 
 const server = new Server();
+
+/** An incoming document. It is never a filed report, so it carries no parsed body or reporting status. */
+const inboxDocumentResponse = transmittedDocumentResponse
+    .omit({ parsed: true, reporting: true, xml: true })
+    .openapi({ ref: "InboxDocument" });
 
 const getInboxRouteDescription = describeRoute({
     operationId: "getInbox",
@@ -23,15 +28,12 @@ const getInboxRouteDescription = describeRoute({
     summary: "Inbox",
     tags: ["Documents"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved inbox documents", z.object({
+        ...describeSuccessResponse("Successfully retrieved inbox documents", z.object({
             // Incoming documents are never filed reports, so the inbox carries no
             // reporting status either.
-            documents: z.array(transmittedDocumentResponse.omit({
-                xml: true,
-                parsed: true,
-                reporting: true,
-            })),
+            documents: z.array(inboxDocumentResponse).openapi({ description: "The incoming documents that have not been marked as read." }),
         })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch inbox documents"),
     },
 });

@@ -1,6 +1,6 @@
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   describeValidationErrorResponse,
 } from "@core/lib/api-docs";
 import type {
@@ -11,7 +11,7 @@ import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import { getRecipientCapabilities } from "@peppol/data/recipient-capabilities";
 import {
   requireIntegrationSupportedCompanyAccess,
-  requireValidSubscription,
+  requireTransactionEntitlement,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
@@ -43,15 +43,15 @@ const generateDocumentTypes = documentTypeSchema.options.filter(
 );
 
 // Nothing is delivered here, so the delivery options of the send endpoint have
-// no meaning, and a null recipient means email-only delivery there, which throws
-// the generated XML away instead of transmitting or storing it: there is no
+// no meaning, and a null recipient means email-only delivery there, which only
+// keeps the generated XML when the request names its format: there is no
 // document to generate for one here.
 const { email: _email, ...generateBaseShape } = {
   ...sendDocumentBaseShape,
   recipient: z.string().openapi({
     description:
       "The Peppol address of the recipient the document is generated for.",
-    example: "0208:987654321",
+    examples: ["0208:987654321"],
   }),
 };
 
@@ -64,7 +64,7 @@ const generateParamSchema = z.object({
   companyId: z.string().openapi({
     description:
       "The ID of the company the document is generated for. Its Peppol identifier is written into the document as the sender.",
-    example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+    examples: ["c_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
   }),
 });
 
@@ -89,17 +89,20 @@ const generateResponse = z.object({
   }),
   documentType: z.string().openapi({
     description: "The type of the generated document.",
-    example: DocumentType.INVOICE,
+    examples: [DocumentType.INVOICE],
   }),
   doctypeId: z.string().openapi({
     description: "The document type identifier the document was generated for.",
-    example:
+    examples: [
       "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+    ],
   }),
   processId: z.string().openapi({
     description: "The process identifier the document was generated for.",
-    example: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+    examples: ["urn:fdc:peppol.eu:2017:poacc:billing:01:1.0"],
   }),
+}).openapi({
+  description: "The generated XML, with the document type and process it was generated for.",
 });
 
 const routeDescription = describeRoute({
@@ -109,10 +112,11 @@ const routeDescription = describeRoute({
   summary: "Generate Document",
   tags: ["Sending"],
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "Successfully generated document",
       generateResponse,
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeValidationErrorResponse(
       "Invalid document data provided, or the generated document failed validation",
     ),
@@ -126,8 +130,8 @@ async function generateImplementation(c: GenerateContext) {
     const team = c.var.team;
     const isPlayground = team.isPlayground ?? false;
     const useTestNetwork = team.useTestNetwork ?? false;
-    const senderIdentifier = await getSendingCompanyIdentifier(company);
     const recipientAddress = normalizePeppolAddress(input.recipient);
+    const senderIdentifier = await getSendingCompanyIdentifier(company, recipientAddress);
 
     // The same lookup the send endpoint does, under the same condition, so the
     // document comes back written as the format the recipient would have received it
@@ -174,7 +178,7 @@ async function generateImplementation(c: GenerateContext) {
     //
     // The same validation the send endpoint runs, so a document that comes back is one
     // the network would accept, whoever it is eventually addressed to.
-    await validateDocument(prepared.xml);
+    await validateDocument(prepared.xml, prepared.docTypeId);
 
     // Currently not mentioned in the API docs yet, so we can still roll this back if needed
     if (c.req.header("accept")?.toLowerCase().startsWith("application/xml")) {
@@ -213,7 +217,7 @@ async function generateImplementation(c: GenerateContext) {
 const generateDocument = server.post(
   "/:companyId/generate",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  requireTransactionEntitlement(),
   routeDescription,
   zodValidator("param", generateParamSchema),
   zodValidator("json", generateSchema),

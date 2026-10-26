@@ -10,11 +10,10 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod, describeValidationErrorResponse } from "@core/lib/api-docs";
-import { companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
+import { describeErrorResponse, describeSuccessResponse, describeValidationErrorResponse } from "@core/lib/api-docs";
+import { companyCountrySchema, companyResponse, toCompanyResponse } from "@peppol/api/companies/shared";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
-import { zodValidCountryCodes } from "@peppol/db/schema";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { audit } from "@core/lib/audit";
 
@@ -22,17 +21,18 @@ const server = new Server();
 
 const createCompanyRouteDescription = describeRoute({
     operationId: "createCompany",
-    description: "Register a business you want to send or receive Peppol documents for. Unless `skipDefaultCompanySetup` is set, the company is given the default Peppol identifiers and document types for its country, and is registered in the SMP so it can receive documents. The response carries a `verificationUrl`: a company has to pass the identity check before it can exchange documents.",
+    description: "Create a business profile for sending or receiving Peppol documents. Unless `skipDefaultCompanySetup` is set, the company is given the default Peppol identifiers and document types for its country. The response includes a `verificationUrl`: verification is required before exchanging documents. After verification, Recommand registers the company for receiving if `isSmpRecipient` is true (the default); false enables sending only. A company can be created while registered with another provider. When onboarding a company whose identifiers are registered elsewhere, we recommend submitting migration keys before completing verification to avoid registration conflicts, or having the previous provider deregister those identifiers first. Identifiers can also be migrated after verification. A company not yet registered on Peppol needs no migration keys.",
     summary: "Create Company",
     tags: ["Companies"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created company", z.object({
+        ...describeSuccessResponse("Successfully created company", z.object({
             company: companyResponse,
             verificationUrl: z.string().openapi({
-                description: "A one-time URL where an authorised representative completes the company's identity check. Present it to your user immediately. Call the verify company endpoint if you need a fresh one.",
+                description: "A one-time URL where an authorised representative completes the company's identity check. If its identifiers are registered elsewhere, we recommend preparing their migration or deregistration before completing verification to avoid registration conflicts. Identifiers can also be migrated after verification. Call the verify company endpoint if you need a fresh URL.",
             }),
-        })),
+        }).openapi({ description: "The company, as created, and the URL to verify it at." })),
         ...describeValidationErrorResponse("Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create company"),
     },
 });
@@ -42,9 +42,8 @@ const createCompanyJsonBodySchema = z.object({
     address: z.string(),
     postalCode: z.string(),
     city: z.string(),
-    country: zodValidCountryCodes.openapi({
+    country: companyCountrySchema.openapi({
         description: "The country the company is registered in, in ISO 3166-1 alpha-2 format. Only countries Recommand supports are accepted; any other country is rejected with a 400.",
-        example: "BE",
     }),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish(),
     enterpriseNumber: z.string().nullish().transform(cleanEnterpriseNumber).openapi({ description: "The enterprise number of the company. Can only contain alphanumeric characters. For Belgian businesses it will be inferred from the VAT number if not provided." }),
@@ -139,6 +138,9 @@ async function _createCompanyImplementation(c: CreateCompanyContext) {
     } catch (error) {
         console.error(error);
         if (error instanceof UserFacingError) {
+            if (error.field) {
+                return c.json(actionFailure({ [error.field]: [error.message] }), 400);
+            }
             return c.json(actionFailure(error), 400);
         }
         return c.json(actionFailure("Could not create company"), 500);

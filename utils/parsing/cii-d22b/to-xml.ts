@@ -3,7 +3,9 @@ import type { Invoice, Party } from "../invoice/schemas";
 import type { CreditNote } from "../creditnote/schemas";
 import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
-import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
+import { resolveBuyerReference } from "../buyer-reference";
+import { partyIdentifiersToCII } from "../party-identifiers";
+import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 const builder = new XMLBuilder({
@@ -67,6 +69,17 @@ function formattedDateTime(date: string): XmlNode {
   };
 }
 
+function billingPeriod(period: { startDate?: string | null; endDate?: string | null }): XmlNode | undefined {
+  if (!period.startDate && !period.endDate) {
+    return undefined;
+  }
+
+  return {
+    ...(period.startDate && { "ram:StartDateTime": dateTime(period.startDate) }),
+    ...(period.endDate && { "ram:EndDateTime": dateTime(period.endDate) }),
+  };
+}
+
 function contact(party: Party): XmlNode | undefined {
   if (!party.phone && !party.email) {
     return undefined;
@@ -102,6 +115,7 @@ function tradeParty(party: Party, peppolAddress: string): XmlNode {
   const partyContact = contact(party);
 
   return {
+    ...partyIdentifiersToCII(party),
     "ram:Name": party.name,
     ...(party.enterpriseNumber && {
       "ram:SpecifiedLegalOrganization": {
@@ -262,6 +276,8 @@ function additionalDocumentReference(attachment: NonNullable<BillingDocument["at
 }
 
 function lineItem(document: BillingDocument, item: BillingDocument["lines"][number], index: number): XmlNode {
+  const lineBillingPeriod = item.billingPeriod && billingPeriod(item.billingPeriod);
+
   return {
     "ram:AssociatedDocumentLineDocument": {
       "ram:LineID":
@@ -325,6 +341,7 @@ function lineItem(document: BillingDocument, item: BillingDocument["lines"][numb
         percentage: item.vat.percentage,
         currency: document.currency,
       }),
+      ...(lineBillingPeriod && { "ram:BillingSpecifiedPeriod": lineBillingPeriod }),
       ...((item.discounts || item.surcharges) && {
         "ram:SpecifiedTradeAllowanceCharge": [
           ...(item.discounts?.map((discount) =>
@@ -395,7 +412,19 @@ export function billingDocumentToCII({
     document.paymentMeans
       ?.map((payment) => payment.reference)
       .filter((reference): reference is string => Boolean(reference)) ?? [];
+  // CII has one place for a mandate reference (BT-89), in the payment terms.
+  const directDebitMandateId = document.paymentMeans?.find((payment) => payment.mandate)?.mandate?.reference;
   const documentNotes = includedNotes(document, additionalNotes);
+  const headerBillingPeriod = document.billingPeriod && billingPeriod(document.billingPeriod);
+
+  const buyerReference = resolveBuyerReference({
+    buyerReference: document.buyerReference,
+    purchaseOrderReference: document.purchaseOrderReference,
+    documentNumber,
+    customerAddress,
+    sellerCountry: document.seller.country,
+    buyerCountry: document.buyer.country,
+  });
 
   return builder.build({
     CrossIndustryInvoice: {
@@ -425,13 +454,9 @@ export function billingDocumentToCII({
           lineItem(document, item, index)
         ),
         "ram:ApplicableHeaderTradeAgreement": {
-          ...(document.buyerReference && {
-            "ram:BuyerReference": document.buyerReference,
+          ...(buyerReference && {
+            "ram:BuyerReference": buyerReference,
           }),
-          ...(!document.buyerReference &&
-            !document.purchaseOrderReference && {
-              "ram:BuyerReference": documentNumber,
-            }),
           "ram:SellerTradeParty": tradeParty(document.seller, supplierAddress),
           "ram:BuyerTradeParty": tradeParty(document.buyer, customerAddress),
           ...(document.salesOrderReference && {
@@ -442,6 +467,11 @@ export function billingDocumentToCII({
           ...(document.purchaseOrderReference && {
             "ram:BuyerOrderReferencedDocument": {
               "ram:IssuerAssignedID": document.purchaseOrderReference,
+            },
+          }),
+          ...(document.contractReference && {
+            "ram:ContractReferencedDocument": {
+              "ram:IssuerAssignedID": document.contractReference,
             },
           }),
           ...(document.attachments && {
@@ -470,10 +500,17 @@ export function billingDocumentToCII({
             "ram:SpecifiedTradeSettlementPaymentMeans": document.paymentMeans.map((payment) => ({
               "ram:TypeCode": getPaymentCodeByKey(payment.paymentMethod),
               ...(payment.name && { "ram:Information": payment.name }),
-              "ram:PayeePartyCreditorFinancialAccount": {
-                "ram:IBANID": payment.iban,
-                ...(payment.name && { "ram:AccountName": payment.name }),
-              },
+              ...(payment.mandate?.debitedAccount && {
+                "ram:PayerPartyDebtorFinancialAccount": {
+                  "ram:IBANID": payment.mandate.debitedAccount,
+                },
+              }),
+              ...(hasPayeeAccount(payment) && {
+                "ram:PayeePartyCreditorFinancialAccount": {
+                  "ram:IBANID": payment.iban,
+                  ...(payment.name && { "ram:AccountName": payment.name }),
+                },
+              }),
               ...(payment.financialInstitutionBranch && {
                 "ram:PayeeSpecifiedCreditorFinancialInstitution": {
                   "ram:BICID": payment.financialInstitutionBranch,
@@ -492,6 +529,7 @@ export function billingDocumentToCII({
               exemptionReason: subtotal.exemptionReason,
             })
           ),
+          ...(headerBillingPeriod && { "ram:BillingSpecifiedPeriod": headerBillingPeriod }),
           ...((document.discounts || document.surcharges) && {
             "ram:SpecifiedTradeAllowanceCharge": [
               ...(document.discounts?.map((discount) =>
@@ -516,15 +554,11 @@ export function billingDocumentToCII({
               ) || []),
             ],
           }),
-          ...(document.paymentTerms && {
+          ...((document.paymentTerms || dueDate || directDebitMandateId) && {
             "ram:SpecifiedTradePaymentTerms": {
-              "ram:Description": document.paymentTerms.note,
+              ...(document.paymentTerms && { "ram:Description": document.paymentTerms.note }),
               ...(dueDate && { "ram:DueDateDateTime": dateTime(dueDate) }),
-            },
-          }),
-          ...(!document.paymentTerms && dueDate && {
-            "ram:SpecifiedTradePaymentTerms": {
-              "ram:DueDateDateTime": dateTime(dueDate),
+              ...(directDebitMandateId && { "ram:DirectDebitMandateID": directDebitMandateId }),
             },
           }),
           "ram:SpecifiedTradeSettlementHeaderMonetarySummation": {

@@ -5,7 +5,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 
@@ -17,12 +17,13 @@ const getIdentifierSchemesRouteDescription = describeRoute({
   summary: "Get Supported Identifier Schemes",
   tags: ["Company Identifiers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved the supported identifier schemes", z.object({
+    ...describeSuccessResponse("Successfully retrieved the supported identifier schemes", z.object({
       supportedSchemes: z.array(z.string()).nullable().openapi({
         description: "The schemes the company can register identifiers under, or null when any scheme is accepted.",
-        example: ["0225"],
+        examples: [["0225"]],
       }),
     })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch supported identifier schemes"),
   },
 });

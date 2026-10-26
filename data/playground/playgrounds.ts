@@ -1,10 +1,11 @@
-import { completeOnboardingStep } from '@core/data/onboarding';
+import { emitBackendEvent } from '@core/lib/backend-events';
 import { teams } from '@core/db/schema';
 import { teamExtensions } from '@peppol/db/schema';
 import { db } from '@recommand/db';
 import { and, eq } from 'drizzle-orm';
 import type { ExtendedTeam } from '../teams';
 import { createPlaygroundTeam } from './create-playground-team';
+import { PEPPOL_BACKEND_EVENTS, type PlaygroundCreatedEvent } from '@peppol/lib/backend-events';
 
 export async function getPlayground(teamId: string): Promise<ExtendedTeam | null> {
   const playgrounds = await db
@@ -31,9 +32,12 @@ export async function createPlayground(
     createPlaygroundTeam(tx, userId, teamName, teamDescription, useTestNetwork),
   );
 
-  // Complete the peppol.billing and peppol.subscription onboarding steps as we don't need to bill or subscribe to anything for playgrounds
-  await completeOnboardingStep(userId, res.id, 'peppol.billing');
-  await completeOnboardingStep(userId, res.id, 'peppol.subscription');
+  // Lets other packages settle what a playground does not need, such as
+  // onboarding steps that only apply to production teams.
+  await emitBackendEvent<PlaygroundCreatedEvent>(PEPPOL_BACKEND_EVENTS.PLAYGROUND_CREATED, {
+    teamId: res.id,
+    userId,
+  });
 
   return res;
 }

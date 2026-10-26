@@ -14,7 +14,7 @@ import {
 } from "@peppol/data/transmitted-documents";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { renderDocumentHtml, renderDocumentPdf } from "@peppol/utils/document-renderer";
-import { describeErrorResponse } from "@core/lib/api-docs";
+import { describeErrorResponse, parameterSchema } from "@core/lib/api-docs";
 
 const server = new Server();
 
@@ -39,19 +39,34 @@ const renderDocumentRouteDescription = describeRoute({
           },
         },
       },
+      headers: {
+        "Content-Disposition": {
+          description: "Offers a PDF as a download named after the document. Not sent with HTML.",
+          schema: parameterSchema({
+            examples: ["attachment; filename=\"doc_01JQZ8X0M4T7RB6K9V2NDHW3PA.pdf\""],
+            type: "string",
+          }),
+        },
+      },
     },
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Document not found"),
     ...describeErrorResponse(500, "Failed to render document"),
   },
+});
+
+const renderFormatSchema = z.enum(["html", "pdf"]).openapi({
+  description: "The format a stored document is rendered as.",
+  ref: "RenderFormat",
 });
 
 const renderDocumentParamSchema = z.object({
   documentId: z.string().openapi({
     description: "The ID of the document to render",
   }),
-  type: z.enum(["html", "pdf"]).openapi({
+  type: renderFormatSchema.openapi({
     description: "The type of the document to render",
-    example: "html",
+    examples: ["html"],
   }),
 });
 
@@ -100,7 +115,7 @@ async function _renderDocumentImplementation(c: RenderDocumentContext) {
       const pdf = await renderDocumentPdf(document);
       c.header("Content-Type", "application/pdf");
       c.header("Content-Disposition", `attachment; filename="${documentId}.pdf"`);
-      return c.body(pdf);
+      return c.body(new Uint8Array(pdf));
     } else {
       return c.json(actionFailure("Invalid document type"), 400);
     }

@@ -1,8 +1,9 @@
+import type { ValidationProfile } from "@peppol/types/validation";
 import {
   isCountrySpecificProcessIdAllowed,
   resolveCountrySpecificProcessId,
 } from "@peppol/utils/parsing/country-specific/process";
-import { parseXmlForDetection } from "./xml-detection";
+import { parseXmlForDetection, type DetectionContext } from "./xml-detection";
 import type { AnyDocumentFormat } from "./types";
 import { peppolUblBis3InvoiceFormat } from "./peppol-ubl-bis3-invoice";
 import { peppolUblBis3CreditnoteFormat } from "./peppol-ubl-bis3-creditnote";
@@ -11,6 +12,9 @@ import { peppolUblSelfbillingCreditnoteFormat } from "./peppol-ubl-selfbilling-c
 import { peppolUblMlrFormat } from "./peppol-ubl-mlr";
 import { siUblInvoiceFormat } from "./si-ubl-invoice";
 import { siUblCreditnoteFormat } from "./si-ubl-creditnote";
+import { xrechnungUblInvoiceFormat } from "./xrechnung-ubl-invoice";
+import { xrechnungUblCreditnoteFormat } from "./xrechnung-ubl-creditnote";
+import { xrechnungCiiFormat } from "./xrechnung-cii";
 import { ciiD22bEn16931Format } from "./cii-d22b-en16931";
 import { ciiD22bFranceCiusFormat } from "./cii-d22b-france-cius";
 import { ciiD22bFranceExtendedFormat } from "./cii-d22b-france-extended";
@@ -30,11 +34,14 @@ export const documentFormats: readonly AnyDocumentFormat[] = [
   peppolUblMlrFormat,
   siUblInvoiceFormat,
   siUblCreditnoteFormat,
+  xrechnungUblInvoiceFormat,
+  xrechnungUblCreditnoteFormat,
   ublFranceCiusInvoiceFormat,
   ublFranceCiusCreditnoteFormat,
   ublFranceExtendedInvoiceFormat,
   ublFranceExtendedCreditnoteFormat,
   ciiD22bEn16931Format,
+  xrechnungCiiFormat,
   ciiD22bFranceCiusFormat,
   ciiD22bFranceExtendedFormat,
   facturxFranceFormat,
@@ -43,6 +50,11 @@ export const documentFormats: readonly AnyDocumentFormat[] = [
 
 export function getDocumentFormat(key: string): AnyDocumentFormat | undefined {
   return documentFormats.find((format) => format.key === key);
+}
+
+/** The validation profile for a document transmitted under this doc type id, if it needs one. */
+export function getValidationProfile(docTypeId: string): ValidationProfile | undefined {
+  return getDocumentFormatByDocTypeId(docTypeId)?.validationProfile;
 }
 
 /** The doc type id is what an incoming transmission names, so reception looks up by it. */
@@ -95,10 +107,22 @@ export function resolveFormatProcessIdCandidates(
   ];
 }
 
+/**
+ * The format a raw XML document is written in. When more than one format recognises it,
+ * one that travels over the requested process wins, then the order of `documentFormats`:
+ * a plain EN 16931 CII is generic EN 16931, unless it is sent over a French billing process.
+ */
 export function detectDocumentFormat(
-  xml: string
+  xml: string,
+  context: DetectionContext = {}
 ): AnyDocumentFormat | undefined {
   const parsed = parseXmlForDetection(xml);
   if (!parsed) return undefined;
-  return documentFormats.find((format) => format.isFormat?.(parsed));
+  const matches = documentFormats.filter((format) => format.isFormat?.(parsed, context));
+  const processId = context.processId;
+  return (
+    (processId
+      ? matches.find((format) => format.supportedProcessIds.includes(processId))
+      : undefined) ?? matches[0]
+  );
 }

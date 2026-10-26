@@ -37,7 +37,7 @@ import { useTranslation } from "@core/hooks/use-translation";
 const client = rc<Labels>("v1");
 
 const handleApiResponse = async (
-  response: Response,
+  response: Pick<Response, "json">,
   successMessage: string
 ) => {
   const json = await response.json();

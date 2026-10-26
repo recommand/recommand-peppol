@@ -27,41 +27,83 @@ export function applyNaptrRegexp(record: NaptrRecord, input: string): string {
     return input.replace(regex, replacement);
 }
 
-export async function resolveNaptr(hostname: string): Promise<string | null> {
+// A DNS server's answer that a name does not exist (NXDOMAIN), or holds no record of
+// the type asked for. Every other error, such as a timeout or a failing server, is the
+// absence of an answer.
+const NO_SUCH_RECORD_CODES = new Set(["ENOTFOUND", "ENODATA"]);
+
+/**
+ * The resolver every SML lookup goes through. Bounded, so a DNS server that does not
+ * answer delays a lookup by seconds rather than by the minute the system defaults allow.
+ */
+export const smlResolver = new dns.Resolver({ timeout: 2000, tries: 2 });
+
+type SmlResolver = Pick<InstanceType<typeof dns.Resolver>, "resolveNaptr" | "resolveCname">;
+
+/**
+ * What DNS said about a name: `found` when it holds the record, `absent` when the DNS
+ * server answered that it does not, and `unknown` when no such answer came.
+ */
+export type DnsLookup = { status: "found" } | { status: "absent" } | { status: "unknown" };
+
+/**
+ * The SMP a participant's NAPTR record points to. A record that exists but names no
+ * usable SMP is `unknown`: the SML knows the participant, but not where to reach it.
+ */
+export type NaptrLookup = { status: "found"; smpUrl: string } | { status: "absent" } | { status: "unknown" };
+
+function failedLookup(error: unknown): { status: "absent" } | { status: "unknown" } {
+    const code = (error as { code?: string } | null)?.code ?? "";
+    return { status: NO_SUCH_RECORD_CODES.has(code) ? "absent" : "unknown" };
+}
+
+export async function resolveNaptr(hostname: string, resolver: SmlResolver = smlResolver): Promise<NaptrLookup> {
+    let records: NaptrRecord[];
     try {
-        const records = await dns.resolveNaptr(hostname);
+        records = await resolver.resolveNaptr(hostname);
+    } catch (error) {
+        return failedLookup(error);
+    }
+    if (!records || records.length === 0) {
+        return { status: "absent" };
+    }
 
-        if (records && records.length > 0) {
-            // Filter for SMP service records and sort by order/preference (lower = better)
-            const smpRecords = records
-                .filter(r => r.service && r.service.toLowerCase().includes("meta:smp"))
-                .sort((a, b) => (a.order - b.order) || (a.preference - b.preference));
+    // Filter for SMP service records and sort by order/preference (lower = better)
+    const smpRecords = records
+        .filter(r => r.service && r.service.toLowerCase().includes("meta:smp"))
+        .sort((a, b) => (a.order - b.order) || (a.preference - b.preference));
 
-            const record = smpRecords[0] ?? records[0];
+    const record = smpRecords[0] ?? records[0];
 
-            let smpUrl: string | null = null;
+    let smpUrl: string | null = null;
 
-            if (record.regexp) {
-                try {
-                    smpUrl = applyNaptrRegexp(record, record.replacement);
-                } catch (error) { }
-            }
+    if (record.regexp) {
+        try {
+            smpUrl = applyNaptrRegexp(record, record.replacement);
+        } catch (error) { }
+    }
 
-            if (!smpUrl && record.replacement && record.replacement.trim() !== "") {
-                smpUrl = record.replacement.trim();
-            }
+    if (!smpUrl && record.replacement && record.replacement.trim() !== "") {
+        smpUrl = record.replacement.trim();
+    }
 
-            if (!smpUrl) {
-                return null;
-            }
+    if (!smpUrl) {
+        return { status: "unknown" };
+    }
 
-            if (!smpUrl.startsWith("http://") && !smpUrl.startsWith("https://")) {
-                smpUrl = `https://${smpUrl}`;
-            }
+    if (!smpUrl.startsWith("http://") && !smpUrl.startsWith("https://")) {
+        smpUrl = `https://${smpUrl}`;
+    }
 
-            return smpUrl;
-        }
-    } catch (error) {}
+    return { status: "found", smpUrl };
+}
 
-    return null;
+/** Whether a CNAME record exists for a name, the way the SML published participants before NAPTR. */
+export async function lookUpCname(hostname: string, resolver: SmlResolver = smlResolver): Promise<DnsLookup> {
+    try {
+        const records = await resolver.resolveCname(hostname);
+        return records && records.length > 0 ? { status: "found" } : { status: "absent" };
+    } catch (error) {
+        return failedLookup(error);
+    }
 }

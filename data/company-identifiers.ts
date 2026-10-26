@@ -1,9 +1,12 @@
 import { companyIdentifiers, teamExtensions } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
-import { isSiren, validateIdentifier } from "@peppol/utils/identifier-validation";
-import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
+import { derivedDefaultIdentifiers, hasOptionalPrefix, isSiren, normalizeIdentifierValue, sameIdentifierValue, validateIdentifier, validateIdentifierBelongsToCompany } from "@peppol/utils/identifier-validation";
+import { LEITWEG_ID_SCHEME } from "@peppol/utils/parsing/buyer-reference";
+import { sameParticipant, type PeppolParticipant } from "@peppol/utils/parsing/peppol-address";
+import { UserFacingError } from "@peppol/utils/util";
+import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { db } from "@recommand/db";
-import { eq, and, asc, ne, or, isNull } from "drizzle-orm";
+import { eq, and, asc, ne, or, isNull, like } from "drizzle-orm";
 import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";
 import { getTeamExtensionAndCompanyByCompanyId } from "./teams";
 import type { Company } from "./companies";
@@ -116,6 +119,12 @@ export async function getDefaultCompanyIdentifier(companyId: string): Promise<Co
 const FRENCH_ACCESS_POINT_PROVIDER: AccessPointProviderId = "at-shared-ap-fr";
 
 /**
+ * The sender schemes German federal invoice reception names for documents addressed to
+ * a Leitweg-ID, in order of preference: the VAT number, then the GLN.
+ */
+const LEITWEG_ID_ROUTE_SENDER_SCHEMES = ["9930", "0088"];
+
+/**
  * The address a company sends under: the sender of the transport envelope and the
  * seller's endpoint in the documents we write for it.
  *
@@ -124,82 +133,118 @@ const FRENCH_ACCESS_POINT_PROVIDER: AccessPointProviderId = "at-shared-ap-fr";
  * registered: that is the address the access point recognises the sender by. A
  * SIRET or a suffixed electronic address under that scheme names an establishment
  * rather than the company and is not accepted in its place. Every other access point
- * takes the company's default identifier, as before.
+ * takes the company's default identifier; see chooseSendingCompanyIdentifier.
  */
 export async function getSendingCompanyIdentifier(
-  company: Pick<Company, "id" | "accessPointProvider">
+  company: Pick<Company, "id" | "accessPointProvider">,
+  recipientAddress?: string | null,
+  documentSender?: PeppolParticipant | null
 ): Promise<CompanyIdentifier> {
-  if (company.accessPointProvider !== FRENCH_ACCESS_POINT_PROVIDER) {
-    return await getDefaultCompanyIdentifier(company.id);
-  }
+  return chooseSendingCompanyIdentifier(
+    company,
+    await getCompanyIdentifiers(company.id),
+    recipientAddress,
+    documentSender
+  );
+}
 
-  return chooseSendingCompanyIdentifier(company, await getCompanyIdentifiers(company.id));
+type SenderCandidate = Pick<CompanyIdentifier, "scheme" | "identifier">;
+
+/**
+ * Identifiers a company can add next to the one it has always sent from, each with the
+ * identifier it gives way to as the sender. Adding one leaves the address the company
+ * sends from as it was, even where it sorts first; without the other it is sent from as
+ * any identifier would be.
+ */
+const SENDER_ADDITIONS: { addition: (identifier: SenderCandidate) => boolean; givesWayTo: (identifier: SenderCandidate) => boolean }[] = [
+  // A GEBA (0246) gives way to the German VAT number (9930).
+  {
+    addition: (identifier) => identifier.scheme === "0246",
+    givesWayTo: (identifier) => identifier.scheme === "9930",
+  },
+  // A Luxembourg matricule under 9938 gives way to a VAT number under the same scheme.
+  {
+    addition: (identifier) => identifier.scheme === "9938" && /^\d{11}$/.test(identifier.identifier),
+    givesWayTo: (identifier) => identifier.scheme === "9938" && /^lu\d{8}$/i.test(identifier.identifier),
+  },
+];
+
+function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly SenderCandidate[]): boolean {
+  return SENDER_ADDITIONS.some((rule) => rule.addition(candidate) && identifiers.some(rule.givesWayTo));
 }
 
 /**
  * The choice getSendingCompanyIdentifier makes, given the company's identifiers in
  * the order getCompanyIdentifiers lists them. Separate so the choice can be asserted
  * without a database.
+ *
+ * Outside the French access point:
+ * - A raw XML document that names its own sender goes out under that address when
+ *   it is one of the company's identifiers: a receiving access point may hold the
+ *   envelope's sender against the document's. Addressed to a Leitweg-ID, only a VAT
+ *   number or GLN named that way is followed, the senders listed below; any other
+ *   leaves the choice below as it is.
+ * - A document addressed to a Leitweg-ID goes out under the company's VAT number
+ *   (9930) or GLN (0088), the senders German federal reception lists, when the company
+ *   has one. A company without either, such as a supplier from another country, sends
+ *   as it otherwise would.
+ * - Otherwise the lowest scheme, as before, except that a Leitweg-ID is passed over
+ *   while the company has any other identifier: it names an authority's invoice
+ *   reception, which is never the address a supplier sends from.
+ * - An identifier a company adds next to the one it sends from, such as a GEBA
+ *   beside the German VAT number or a Luxembourg matricule beside the VAT
+ *   number, is passed over as well; see SENDER_ADDITIONS.
  */
 export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier, "scheme" | "identifier">>(
   company: Pick<Company, "accessPointProvider">,
-  identifiers: T[]
+  identifiers: T[],
+  recipientAddress?: string | null,
+  documentSender?: PeppolParticipant | null
 ): T {
   if (identifiers.length === 0) {
     throw new UserFacingError("No sending company identifier found. Ensure you have added a company identifier to your company.");
   }
 
-  if (company.accessPointProvider !== FRENCH_ACCESS_POINT_PROVIDER) {
-    return identifiers[0]!;
-  }
-
-  const sirenAddress = identifiers.find(
-    (identifier) => identifier.scheme === "0225" && isSiren(identifier.identifier)
-  );
-  if (!sirenAddress) {
-    throw new UserFacingError(
-      "Sending through the French access point requires a company identifier with scheme 0225 and the company's 9 digit SIREN as identifier (for example 0225:123456789). Add it to your company to send documents."
+  if (company.accessPointProvider === FRENCH_ACCESS_POINT_PROVIDER) {
+    const sirenAddress = identifiers.find(
+      (identifier) => identifier.scheme === "0225" && isSiren(identifier.identifier)
     );
+    if (!sirenAddress) {
+      throw new UserFacingError(
+        "Sending through the French access point requires a company identifier with scheme 0225 and the company's 9 digit SIREN as identifier (for example 0225:123456789). Add it to your company to send documents."
+      );
+    }
+    return sirenAddress;
   }
 
-  return sirenAddress;
-}
+  const toLeitwegId = recipientAddress?.split(":")[0]?.trim() === LEITWEG_ID_SCHEME;
 
-/**
- * The identifiers a company may register under a French scheme all have to name
- * the company itself: its SIREN, the SIRET of one of its establishments, or an
- * electronic address of either, all of which open with that SIREN. The form of
- * each scheme is settled by validateIdentifier before this runs.
- */
-function validateProtectedFrenchIdentifier({
-  scheme,
-  identifier,
-  enterpriseNumber,
-}: {
-  scheme: string;
-  identifier: string;
-  enterpriseNumber: string | null;
-}): void {
-  const companySiren = cleanEnterpriseNumber(enterpriseNumber);
-
-  if (!companySiren) {
-    throw new UserFacingError(`Company identifier with scheme ${scheme} requires a company enterprise number to be set.`);
+  if (documentSender && (!toLeitwegId || LEITWEG_ID_ROUTE_SENDER_SCHEMES.includes(documentSender.scheme.trim()))) {
+    const named = identifiers.find((identifier) => sameParticipant(identifier, documentSender));
+    if (named) {
+      return named;
+    }
   }
 
-  if (!isSiren(companySiren)) {
-    throw new UserFacingError(`Company identifier with scheme ${scheme} requires the company enterprise number to be a valid SIREN, got: ${companySiren}`);
+  if (toLeitwegId) {
+    for (const scheme of LEITWEG_ID_ROUTE_SENDER_SCHEMES) {
+      const accepted = identifiers.find((identifier) => identifier.scheme === scheme);
+      if (accepted) {
+        return accepted;
+      }
+    }
   }
 
-  const cleanedIdentifier = cleanEnterpriseNumber(identifier)!;
-
-  if (!cleanedIdentifier.startsWith(companySiren)) {
-    throw new UserFacingError(`Company identifier with scheme ${scheme} must belong to the company. Expected the company SIREN ${companySiren}, or a SIRET or address starting with it. Got: ${identifier}`);
-  }
+  return (
+    identifiers.find((identifier) => identifier.scheme !== LEITWEG_ID_SCHEME && !givesWayAsSender(identifier, identifiers)) ??
+    identifiers[0]!
+  );
 }
 
 /**
  * Holds an identifier against the company it is registered for: the SMP's scheme
- * policy first, then the schemes whose value has to be the company's own number.
+ * policy first, then the schemes whose value has to be the company's own number
+ * (see validateIdentifierBelongsToCompany).
  * Pure so a planned change to the company can be checked against its identifiers
  * before anything is written.
  */
@@ -211,7 +256,7 @@ export function validateIdentifierAgainstCompany({
 }: {
   scheme: string;
   identifier: string;
-  company: Pick<Company, "smpProvider" | "enterpriseNumber" | "vatNumber">;
+  company: Pick<Company, "smpProvider" | "enterpriseNumber" | "vatNumber"> & Partial<Pick<Company, "country">>;
   teamExtension: { isPlayground?: boolean | null; useTestNetwork?: boolean | null } | null | undefined;
 }): void {
   const cleanedScheme = cleanScheme(scheme);
@@ -227,35 +272,7 @@ export function validateIdentifierAgainstCompany({
     cleanedScheme
   );
 
-  if (cleanedScheme === "0225" || cleanedScheme === "0002" || cleanedScheme === "0009") {
-    validateProtectedFrenchIdentifier({
-      scheme: cleanedScheme,
-      identifier,
-      enterpriseNumber: company.enterpriseNumber,
-    });
-  } else if (cleanedScheme === "0208") {
-    const cleanedIdentifier = cleanEnterpriseNumber(identifier);
-    const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
-    
-    if (!cleanedEnterpriseNumber) {
-      throw new UserFacingError("Company identifier with scheme 0208 requires a company enterprise number to be set.");
-    }
-
-    if (cleanedIdentifier !== cleanedEnterpriseNumber) {
-      throw new UserFacingError(`Company identifier with scheme 0208 must match the company enterprise number. Expected: ${cleanedEnterpriseNumber}, got: ${cleanedIdentifier}`);
-    }
-  } else if (cleanedScheme === "9925" || cleanedScheme === "9928") {
-    const cleanedIdentifier = cleanVatNumber(identifier);
-    const cleanedVatNumber = cleanVatNumber(company.vatNumber);
-    
-    if (!cleanedVatNumber) {
-      throw new UserFacingError(`Company identifier with scheme ${cleanedScheme} requires a company VAT number to be set.`);
-    }
-
-    if (cleanedIdentifier !== cleanedVatNumber) {
-      throw new UserFacingError(`Company identifier with scheme ${cleanedScheme} must match the company VAT number. Expected: ${cleanedVatNumber}, got: ${cleanedIdentifier}`);
-    }
-  }
+  validateIdentifierBelongsToCompany({ scheme: cleanedScheme, identifier, company });
 }
 
 /** Validates against the company as it is now and returns what it validated against. */
@@ -302,6 +319,19 @@ async function writeIdentifierAgainst<T>(
   });
 }
 
+/** Whether an identifier is one the company's country derives for it by default, such as the Finnish OVT code. */
+export function isDerivedDefaultIdentifier(
+  company: Pick<Company, "country" | "enterpriseNumber" | "vatNumber">,
+  scheme: string,
+  identifier: string
+): boolean {
+  return derivedDefaultIdentifiers(company.country, company).some(
+    (derived) =>
+      cleanScheme(derived.scheme) === cleanScheme(scheme) &&
+      normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(derived.identifier)) === normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(identifier))
+  );
+}
+
 export async function createCompanyIdentifier({
   companyIdentifier,
   skipSmpRegistration,
@@ -315,17 +345,28 @@ export async function createCompanyIdentifier({
   migrationKey?: string;
 }): Promise<CompanyIdentifier> {
   const cleanedScheme = cleanScheme(companyIdentifier.scheme);
-  const cleanedIdentifierValue = cleanIdentifier(companyIdentifier.identifier);
+  const cleanedIdentifierValue = normalizeIdentifierValue(cleanedScheme, cleanIdentifier(companyIdentifier.identifier));
+  // What is checked, registered with the SMP and stored is the same value.
+  const cleanedIdentifier = { ...companyIdentifier, scheme: cleanedScheme, identifier: cleanedIdentifierValue };
 
   validateIdentifier(cleanedScheme, cleanedIdentifierValue);
 
   const validatedAgainst = await validateProtectedIdentifier({
-    scheme: companyIdentifier.scheme,
-    identifier: companyIdentifier.identifier,
+    scheme: cleanedScheme,
+    identifier: cleanedIdentifierValue,
     companyId: companyIdentifier.companyId,
   });
 
-  const canUpsert = await canUpsertCompanyIdentifier(companyIdentifier.scheme, companyIdentifier.identifier, undefined, companyIdentifier.companyId);
+  // A company now gets this identifier by default, so a request that adds it as it
+  // had to before finds it there and gets it back rather than a refusal.
+  if (!migrationKey && isDerivedDefaultIdentifier(validatedAgainst, cleanedScheme, cleanedIdentifierValue)) {
+    const existing = await getCompanyIdentifierBySchemeAndValue(companyIdentifier.companyId, cleanedScheme, cleanedIdentifierValue);
+    if (existing) {
+      return existing;
+    }
+  }
+
+  const canUpsert = await canUpsertCompanyIdentifier(cleanedScheme, cleanedIdentifierValue, undefined, companyIdentifier.companyId);
   if(!canUpsert){
     throw new UserFacingError(
       `Company identifier with scheme '${companyIdentifier.scheme}' and value '${companyIdentifier.identifier}' already exists`
@@ -343,7 +384,7 @@ export async function createCompanyIdentifier({
   }
 
   if(!skipSmpRegistration){
-    await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: companyIdentifier, useTestNetwork: useTestNetwork});
+    await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: cleanedIdentifier, useTestNetwork: useTestNetwork});
   }
 
   const createdIdentifier = await writeIdentifierAgainst(validatedAgainst, companyIdentifier.companyId, (tx) => tx
@@ -378,31 +419,34 @@ export async function updateCompanyIdentifier({
   }
 
   const cleanedScheme = cleanScheme(companyIdentifier.scheme);
-  const cleanedIdentifierValue = cleanIdentifier(companyIdentifier.identifier);
+  const cleanedIdentifierValue = normalizeIdentifierValue(cleanedScheme, cleanIdentifier(companyIdentifier.identifier));
+  // What is checked, registered with the SMP and stored is the same value.
+  const cleanedIdentifier = { ...companyIdentifier, scheme: cleanedScheme, identifier: cleanedIdentifierValue };
 
   validateIdentifier(cleanedScheme, cleanedIdentifierValue);
 
   const validatedAgainst = await validateProtectedIdentifier({
-    scheme: companyIdentifier.scheme,
-    identifier: companyIdentifier.identifier,
+    scheme: cleanedScheme,
+    identifier: cleanedIdentifierValue,
     companyId: companyIdentifier.companyId,
   });
 
   // Check if the company identifier can be upserted
-  const canUpsert = await canUpsertCompanyIdentifier(companyIdentifier.scheme, companyIdentifier.identifier, companyIdentifier.id, companyIdentifier.companyId);
+  const canUpsert = await canUpsertCompanyIdentifier(cleanedScheme, cleanedIdentifierValue, companyIdentifier.id, companyIdentifier.companyId);
   if (!canUpsert) {
     throw new UserFacingError(
       `Company identifier with scheme '${companyIdentifier.scheme}' and value '${companyIdentifier.identifier}' already exists`
     );
   }
 
-  // Return if there is no change (taking lowercase into account)
-  if(oldIdentifier.scheme === cleanedScheme && oldIdentifier.identifier === cleanedIdentifierValue){
+  // Return if there is no change (taking lowercase and an optional prefix into account,
+  // so repeating the stored identifier in another accepted form changes nothing)
+  if(oldIdentifier.scheme === cleanedScheme && sameIdentifierValue(cleanedScheme, oldIdentifier.identifier, cleanedIdentifierValue)){
     return oldIdentifier;
   }
 
   if(!skipSmpRegistration){
-    await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: companyIdentifier, useTestNetwork: useTestNetwork}); // Register the new identifier
+    await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: cleanedIdentifier, useTestNetwork: useTestNetwork}); // Register the new identifier
     await unregisterCompanyIdentifier({identifier: oldIdentifier, useTestNetwork: useTestNetwork}); // Unregister the old identifier
   }
 
@@ -476,9 +520,21 @@ export async function canUpsertCompanyIdentifier(scheme: string, identifier: str
   }
   const isPlaygroundTeam = teamInfo.teamExtension?.isPlayground ?? false;
   const useTestNetwork = teamInfo.teamExtension?.useTestNetwork ?? false;
+  const cleanedScheme = scheme.toLowerCase().trim();
+  const cleanedIdentifier = identifier.toLowerCase().trim();
+  // Under a scheme with an optional prefix a stored value may still carry it (it predates
+  // normalisation, or is the other's form), so every stored value ending in the
+  // normalised one is a candidate and the comparison is made without the prefix.
+  const normalizedIdentifier = normalizeIdentifierValue(cleanedScheme, cleanedIdentifier);
+  const identifierCondition = hasOptionalPrefix(cleanedScheme)
+    ? or(
+        eq(companyIdentifiers.identifier, cleanedIdentifier),
+        like(companyIdentifiers.identifier, "%" + normalizedIdentifier.replace(/[\\%_]/g, "\\$&")),
+      )
+    : eq(companyIdentifiers.identifier, cleanedIdentifier);
   // Look for collisions
   return await db
-    .select()
+    .select({ identifier: companyIdentifiers.identifier })
     .from(companyIdentifiers)
     .innerJoin(companies, eq(companies.id, companyIdentifiers.companyId))
     .leftJoin(teamExtensions, eq(companies.teamId, teamExtensions.id))
@@ -504,10 +560,80 @@ export async function canUpsertCompanyIdentifier(scheme: string, identifier: str
         ),
         // The identifier and scheme must be the same for there to be a match
         and(
-          eq(companyIdentifiers.scheme, scheme.toLowerCase().trim()),
-          eq(companyIdentifiers.identifier, identifier.toLowerCase().trim()),
+          eq(companyIdentifiers.scheme, cleanedScheme),
+          identifierCondition,
         )
       )
     )
-    .then((rows) => rows.length === 0);
+    .then((rows) => !rows.some((row) => sameIdentifierValue(cleanedScheme, row.identifier, cleanedIdentifier)));
+}
+
+/**
+ * Refuses a registration before anything is written to the SMP when another
+ * recipient already holds one of the company's identifiers. A registration refused
+ * halfway would be rolled back by unregistering, and that rollback must not touch
+ * the other company's participant.
+ */
+export async function assertIdentifiersFreeForRecipient(companyId: string): Promise<void> {
+  const identifiers = await getCompanyIdentifiers(companyId);
+  for (const identifier of identifiers) {
+    if (!await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, identifier.id, companyId)) {
+      throw new UserFacingError("Company cannot be registered as SMP recipient, it has identifiers that are already registered as recipient with another company.");
+    }
+  }
+}
+
+/**
+ * Whether another company is published on the same SMP and network with this
+ * identifier. An SMP keeps one participant per identifier, whichever company holds
+ * it, so that participant is the other company's registration: unregistering this
+ * company, for instance a send-only one with the same identifiers or one whose own
+ * registration was refused, must leave it alone.
+ */
+export async function isIdentifierPublishedByAnotherCompany({
+  identifier,
+  smpProvider,
+  useTestNetwork,
+}: {
+  identifier: CompanyIdentifier;
+  smpProvider: Company["smpProvider"];
+  useTestNetwork: boolean;
+}): Promise<boolean> {
+  const holders = await db
+    .select({
+      isSmpRecipient: companies.isSmpRecipient,
+      isVerified: companies.isVerified,
+      isPlayground: teamExtensions.isPlayground,
+      useTestNetwork: teamExtensions.useTestNetwork,
+      verificationRequirements: teamExtensions.verificationRequirements,
+      smpProvider: companies.smpProvider,
+    })
+    .from(companyIdentifiers)
+    .innerJoin(companies, eq(companies.id, companyIdentifiers.companyId))
+    .leftJoin(teamExtensions, eq(companies.teamId, teamExtensions.id))
+    .where(
+      and(
+        ne(companies.id, identifier.companyId),
+        eq(companies.smpProvider, smpProvider),
+        eq(companies.isSmpRecipient, true),
+        eq(companyIdentifiers.scheme, identifier.scheme.toLowerCase().trim()),
+        eq(companyIdentifiers.identifier, identifier.identifier.toLowerCase().trim()),
+      )
+    );
+
+  const published = holders.some((holder) =>
+    (holder.useTestNetwork ?? false) === useTestNetwork &&
+    shouldRegisterWithSmp({
+      isPlayground: holder.isPlayground ?? false,
+      useTestNetwork: holder.useTestNetwork ?? false,
+      isSmpRecipient: holder.isSmpRecipient,
+      isVerified: holder.isVerified,
+      verificationRequirements: holder.verificationRequirements ?? undefined,
+      smpProvider: holder.smpProvider,
+    })
+  );
+  if (published) {
+    console.warn(`Left ${identifier.scheme}:${identifier.identifier} on the SMP for company ${identifier.companyId}: another published company holds it`);
+  }
+  return published;
 }

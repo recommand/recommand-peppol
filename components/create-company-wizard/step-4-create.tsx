@@ -15,11 +15,19 @@ type Step4Props = {
     data: CompanyFormData;
     onNext: (company: Company, verificationUrl: string, verificationLogId: string) => void;
     onBack: () => void;
+    onEdit: () => void;
+    onSetUpLater?: () => void;
 };
 
-export function Step4Create({ teamId, data, onNext, onBack }: Step4Props) {
+type CreateError = {
+    message: string;
+    // The server named a field to correct, so sending the same details again fails again.
+    needsEdit: boolean;
+};
+
+export function Step4Create({ teamId, data, onNext, onBack, onEdit, onSetUpLater }: Step4Props) {
     const { t } = useTranslation();
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<CreateError | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const hasStarted = useRef(false);
 
@@ -39,12 +47,15 @@ export function Step4Create({ teamId, data, onNext, onBack }: Step4Props) {
             });
             const json = await response.json();
             if (!json.success) {
-                setError(stringifyActionFailure(json.errors));
+                setError({
+                    message: stringifyActionFailure(json.errors),
+                    needsEdit: Object.keys(json.errors).some((key) => key !== "root"),
+                });
                 return;
             }
             onNext(json.company as Company, json.verificationUrl, json.verificationLogId);
         } catch (err) {
-            setError(err instanceof Error ? err.message : t`An unexpected error occurred`);
+            setError({ message: err instanceof Error ? err.message : t`An unexpected error occurred`, needsEdit: false });
         } finally {
             setIsCreating(false);
         }
@@ -66,16 +77,29 @@ export function Step4Create({ teamId, data, onNext, onBack }: Step4Props) {
                     tone="error"
                     icon={AlertCircle}
                     title={t`Failed to create company`}
-                    description={error}
+                    description={error.message}
                 />
-                <div className="flex justify-between gap-2">
-                    <Button type="button" variant="outline" onClick={onBack}>
-                        {t`Back`}
-                    </Button>
-                    <Button type="button" onClick={createCompany}>
-                        {t`Try again`}
-                    </Button>
-                </div>
+                {error.needsEdit ? (
+                    <div className="flex justify-between gap-2">
+                        {onSetUpLater && (
+                            <Button type="button" variant="outline" onClick={onSetUpLater}>
+                                {t`Set up later`}
+                            </Button>
+                        )}
+                        <Button type="button" className="ml-auto" onClick={onEdit}>
+                            {t`Edit details`}
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="flex justify-between gap-2">
+                        <Button type="button" variant="outline" onClick={onBack}>
+                            {t`Back`}
+                        </Button>
+                        <Button type="button" onClick={createCompany}>
+                            {t`Try again`}
+                        </Button>
+                    </div>
+                )}
             </div>
         );
     }

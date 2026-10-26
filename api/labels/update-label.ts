@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { labelResponse } from "./shared";
 import { UserFacingError } from "@peppol/utils/util";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -22,8 +22,9 @@ const updateLabelRouteDescription = describeRoute({
     summary: "Update Label",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated label", z.object({ label: labelResponse })),
+        ...describeSuccessResponse("Successfully updated label", z.object({ label: labelResponse.openapi({ description: "The label, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Label not found"),
         ...describeErrorResponse(500, "Failed to update label"),
     },
@@ -43,15 +44,15 @@ const hexColorRegex = /^#[A-Fa-f0-9]{6}$/;
 
 const updateLabelJsonBodySchema = z.object({
     name: z.string().min(1).optional().openapi({
-        example: "ERP",
+        examples: ["ERP"],
         description: "The label's new name. Left as it is when omitted.",
     }),
     colorHex: z.string().regex(hexColorRegex, "Color must be a valid hex color (e.g., #3B82F6)").optional().openapi({
-        example: "#3B82F6",
+        examples: ["#3B82F6"],
         description: "The label's new colour, as a hex code. Left as it is when omitted.",
     }),
     externalId: z.string().optional().nullable().openapi({
-        example: "erp-routing-inbox",
+        examples: ["erp-routing-inbox"],
         description: "Your own identifier for the label. It must be unique within the team. Left as it is when omitted; pass `null` to clear it.",
     }),
 });

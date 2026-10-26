@@ -11,7 +11,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { customerResponse, customerIdParamSchema } from "./shared";
@@ -26,10 +26,11 @@ const getCustomerRouteDescription = describeRoute({
   summary: "Get Customer",
   tags: ["Customers"],
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "Successfully retrieved customer",
-      z.object({ customer: customerResponse })
+      z.object({ customer: customerResponse.openapi({ description: "The customer." }) })
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Customer not found"),
     ...describeErrorResponse(500, "Failed to fetch customer"),
   },

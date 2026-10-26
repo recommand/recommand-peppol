@@ -7,7 +7,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -20,7 +20,8 @@ const getIdentifiersRouteDescription = describeRoute({
   summary: "List Company Identifiers",
   tags: ["Company Identifiers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved company identifiers", z.object({ identifiers: z.array(companyIdentifierResponse) })),
+    ...describeSuccessResponse("Successfully retrieved company identifiers", z.object({ identifiers: z.array(companyIdentifierResponse).openapi({ description: "The company's Peppol identifiers." }) })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch company identifiers"),
   },
 });

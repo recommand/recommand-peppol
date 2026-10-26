@@ -1,0 +1,63 @@
+{
+ "_links": {
+  "self": {
+   "href": "https://data.brreg.no/fullmakt/enheter/923609016/prokura"
+  }
+ },
+ "enhet": {
+  "organisasjonsnummer": "923609016",
+  "navn": "NORDLYS HANDEL AS",
+  "organisasjonsform": {
+   "beskrivelse": "Aksjeselskap",
+   "kode": "AS"
+  },
+  "konkurs": "false",
+  "underAvvikling": "false",
+  "underTvangsavviklingEllerTvangsopplosning": "false"
+ },
+ "oppslagsData": {
+  "oppslagsIdent": "1",
+  "oppslagsTidspunkt": "2026-10-09T01:12:17"
+ },
+ "status": {
+  "rutineStatus": {
+   "kode": "OK",
+   "tekstforklaring": "x"
+  },
+  "kombinasjonStatus": {
+   "kode": "OK",
+   "tekstforklaring": "x"
+  },
+  "regelStatus": {
+   "kode": "RF",
+   "tekstforklaring": "x",
+   "regelIdent": null
+  }
+ },
+ "signeringsGrunnlag": {
+  "kode": "SF",
+  "muligeSigneringsRoller": {
+   "personRolleGrunnlag": []
+  },
+  "tekstforklaring": "Signeringsgrunnlag finnes"
+ },
+ "signeringsKombinasjon": {
+  "kombinasjon": [
+   {
+    "kode": "PROK",
+    "kombinasjonsId": "1",
+    "personRolleKombinasjon": [
+     {
+      "fodselsdato": "01.02.1970",
+      "navn": "Per Lie",
+      "rolle": {
+       "kode": "PROK",
+       "tekstforklaring": "Prokura"
+      }
+     }
+    ],
+    "tekstforklaring": "Prokura"
+   }
+  ]
+ }
+}

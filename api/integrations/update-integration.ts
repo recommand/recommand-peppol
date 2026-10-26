@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { integrationResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -21,7 +21,7 @@ const updateIntegrationRouteDescription = describeRoute({
     summary: "Update Integration",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated integration", z.object({ integration: integrationResponse })),
+        ...describeSuccessResponse("Successfully updated integration", z.object({ integration: integrationResponse.openapi({ description: "The integration, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
         ...describeErrorResponse(404, "Integration not found"),
         ...describeErrorResponse(500, "Failed to update integration"),

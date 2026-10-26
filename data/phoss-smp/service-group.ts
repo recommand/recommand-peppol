@@ -79,7 +79,9 @@ export async function deleteServiceGroup({
     console.error("Failed to delete service group in SMP");
     console.error(responseText);
 
-    if(responseText.includes("does not exist")){
+    // The SMP answers 404 for a service group it does not have. That is what the
+    // delete asks for, so it must not stop the company from being unregistered.
+    if(response.status === 404 || responseText.includes("does not exist")){
       return true;
     }
 

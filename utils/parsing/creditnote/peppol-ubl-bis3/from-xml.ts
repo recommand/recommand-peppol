@@ -3,6 +3,10 @@ import { creditNoteSchema, type CreditNote } from "../schemas";
 import { getTextContent, getNumberContent, getPercentage, getNullableTextContent, getNullableNumberContent } from "../../xml-helpers";
 import type { SelfBillingCreditNote } from "../../self-billing-creditnote/schemas";
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
+import { parseUblBillingPeriod } from "../../billing-period";
+import { parseUblPartyIdentifiers } from "../../party-identifiers";
+import { parseUblPaymentMandate } from "../../payment-mandate";
+import { parseUblCommodityClassifications } from "../../commodity-classifications";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -39,6 +43,8 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   const salesOrderReference = getNullableTextContent(creditNote.OrderReference?.SalesOrderID);
   const buyerReference = getNullableTextContent(creditNote.BuyerReference);
   const despatchReference = getNullableTextContent(creditNote.DespatchDocumentReference?.ID);
+  const contractReference = getNullableTextContent(creditNote.ContractDocumentReference?.ID);
+  const billingPeriod = parseUblBillingPeriod(creditNote.InvoicePeriod);
   const invoiceReferences = (creditNote.BillingReference || []).map((reference: any) => ({
     id: getTextContent(reference.InvoiceDocumentReference?.ID),
     issueDate: reference.InvoiceDocumentReference?.IssueDate ? getTextContent(reference.InvoiceDocumentReference?.IssueDate) : null,
@@ -73,6 +79,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
       sellerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
         sellerParty.PartyLegalEntity?.CompanyID
     ),
+    partyIdentifiers: parseUblPartyIdentifiers(sellerParty),
     email: getNullableTextContent(sellerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(sellerParty.Contact?.Telephone),
   };
@@ -96,6 +103,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
       buyerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
         buyerParty.PartyLegalEntity?.CompanyID
     ),
+    partyIdentifiers: parseUblPartyIdentifiers(buyerParty),
     email: getNullableTextContent(buyerParty.Contact?.ElectronicMail),
     phone: getNullableTextContent(buyerParty.Contact?.Telephone),
   };
@@ -121,10 +129,16 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   const paymentMeans = (creditNote.PaymentMeans || []).map((payment: any) => ({
     paymentMethod: getPaymentKeyByCode(getTextContent(payment.PaymentMeansCode)),
     reference: getTextContent(payment.PaymentID),
-    iban: getTextContent(payment.PayeeFinancialAccount?.ID),
+    iban: getNullableTextContent(payment.PayeeFinancialAccount?.ID),
     name: getNullableTextContent(payment.PayeeFinancialAccount?.Name),
     financialInstitutionBranch: getNullableTextContent(payment.PayeeFinancialAccount?.FinancialInstitutionBranch?.ID),
+    mandate: parseUblPaymentMandate(payment.PaymentMandate),
   }));
+
+  // UBL-SR-45 allows one PaymentDueDate, on whichever payment means carries it.
+  const dueDate = getNullableTextContent(
+    (creditNote.PaymentMeans || []).find((payment: any) => payment.PaymentDueDate)?.PaymentDueDate
+  );
 
   // Extract payment terms if present
   const paymentTerms = creditNote.PaymentTerms ? {
@@ -145,11 +159,8 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     } : null,
     documentReference: getNullableTextContent(line.DocumentReference?.ID),
     orderLineReference: getNullableTextContent(line.OrderLineReference?.LineID),
-    commodityClassifications: (line.Item?.CommodityClassification || []).map((classification: any) => ({
-      scheme: getTextContent(classification.ItemClassificationCode["@_listID"]),
-      schemeVersion: getNullableTextContent(classification.ItemClassificationCode["@_listVersionID"]),
-      value: getTextContent(classification.ItemClassificationCode["#text"]),
-    })),
+    billingPeriod: parseUblBillingPeriod(line.InvoicePeriod),
+    commodityClassifications: parseUblCommodityClassifications(line.Item?.CommodityClassification),
     additionalItemProperties: (line.Item?.AdditionalItemProperty || []).map((property: any) => ({
       name: getTextContent(property.Name),
       value: getTextContent(property.Value),
@@ -235,11 +246,14 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
   const parsedCreditNote: CreditNote & SelfBillingCreditNote = {
     creditNoteNumber,
     issueDate,
+    ...(dueDate && { dueDate }),
     note,
     purchaseOrderReference,
     salesOrderReference,
     buyerReference,
     despatchReference,
+    ...(contractReference && { contractReference }),
+    billingPeriod,
     invoiceReferences,
     attachments: attachments.length > 0 ? attachments : [],
     seller,

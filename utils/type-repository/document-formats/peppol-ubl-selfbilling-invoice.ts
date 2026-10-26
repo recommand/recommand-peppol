@@ -12,7 +12,7 @@ export const peppolUblSelfbillingInvoiceFormat: DocumentFormat<
   [typeof selfBillingInvoiceDocumentType]
 > = {
   key: "peppol-ubl-selfbilling-invoice",
-  translatableTitle: "Self Billing Invoice",
+  translatableTitle: "Peppol BIS Self-Billing 3.0 Invoice",
 
   docTypeId: "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0::2.1",
   supportedDocumentTypes: [selfBillingInvoiceDocumentType],

@@ -15,7 +15,7 @@ import type { ReportingDocumentTypeKey } from "@peppol/utils/type-repository/doc
 
 const frenchB2BiReportBaseShape = {
   reference: f10ReferenceSchema.openapi({
-    example: "EREPORT-INV-2026-000431",
+    examples: ["EREPORT-INV-2026-000431"],
   }),
   action: f10ActionSchema,
 };
@@ -50,7 +50,6 @@ const _reportingBillingModesAreInvoiceBillingModes: ReportingBillingModesAreInvo
 export const frenchReportingBillingModeSchema = z
   .enum(frenchReportingBillingModes)
   .openapi({
-    example: "B1",
     description: `The invoicing framework the reported document belongs to, in the same codes as the \`billingMode\` of a French regulated invoice. Use the code that matches the invoice.
 
 | Mode | Description |
@@ -66,9 +65,21 @@ export const frenchReportingBillingModeSchema = z
 | \`M4\` | Final mixed invoice after an advance payment. |
 
 This code is checked against the invoice when the reporting period is assembled, which is after the report is accepted. A framework that does not match the invoice can cause the filing for that period to be rejected, so set it from the invoice rather than from a default.`,
+    examples: ["B1"],
+    ref: "FrenchReportingBillingMode",
   });
 
 export type FrenchReportingBillingMode = z.infer<typeof frenchReportingBillingModeSchema>;
+
+export const frenchB2BiDocumentTypeSchema = z
+  .enum(["invoice", "creditNote"])
+  .default("invoice")
+  .openapi({
+    description:
+      "Whether the reported document is an invoice or a credit note. Defaults to `invoice`.",
+    examples: ["invoice"],
+    ref: "FrenchB2BiDocumentType",
+  });
 
 /**
  * The tax administration identifies a foreign buyer by where it is established: EU
@@ -80,7 +91,7 @@ export type FrenchReportingBillingMode = z.infer<typeof frenchReportingBillingMo
 const frenchB2BiBuyerSchema = z
   .object({
     name: z.string().min(1).openapi({
-      example: "Rossi Forniture S.r.l.",
+      examples: ["Rossi Forniture S.r.l."],
       description: "The buyer's legal name.",
     }),
     country: z
@@ -93,22 +104,22 @@ const frenchB2BiBuyerSchema = z
         // which it is: a stored cross-border report is returned as a
         // document's `parsed` payload.
         effectType: "same",
-        example: "IT",
+        examples: ["IT"],
         description:
           "The country the buyer is established in, in ISO 3166-1:Alpha2 format. Must not be `FR`: invoices to French buyers are exchanged over the e-invoicing network instead of being reported.",
       }),
     vatNumber: z.string().min(1).nullish().openapi({
-      example: "IT00987654321",
+      examples: ["IT00987654321"],
       description:
         "The buyer's intra-community VAT number. Required for buyers established in the European Union; it is how the tax administration identifies them. Leave it off for buyers outside the European Union, who are identified by their country and name instead.",
     }),
     enterpriseNumber: z.string().min(1).nullish().openapi({
-      example: "0123456",
+      examples: ["0123456"],
       description:
         "The buyer's company registration number. Used for buyers in Nouvelle-Calédonie (RIDET) and Polynésie française (TAHITI); optional elsewhere.",
     }),
     enterpriseNumberScheme: zodValidIsoIcdSchemeIdentifiers.nullish().openapi({
-      example: "0223",
+      examples: ["0223"],
       description:
         "The scheme the buyer's company registration number belongs to. Schemes can be found [here](https://docs.peppol.eu/poacc/billing/3.0/codelist/ICD/).",
     }),
@@ -143,29 +154,29 @@ export type FrenchB2BiBuyer = z.infer<typeof frenchB2BiBuyerSchema>;
 const frenchB2BiInvoiceVatSchema = z
   .object({
     percentage: f10PercentSchema.openapi({
-      example: "0.00",
+      examples: ["0.00"],
       description: "VAT rate applied to this part of the invoice.",
     }),
     taxableAmount: f10AmountSchema.openapi({
-      example: "10000.00",
+      examples: ["10000.00"],
       description: "Amount excluding VAT taxed at this rate.",
     }),
     taxAmount: f10AmountSchema.openapi({
-      example: "0.00",
+      examples: ["0.00"],
       description: "VAT amount for this rate.",
     }),
     category: vatCategoryEnum.openapi({
-      example: "K",
+      examples: ["K"],
       description:
         "VAT category code for this rate. Cross-border operations are typically exempt or reverse charged rather than taxed.",
     }),
     exemptionReason: z.string().nullish().openapi({
-      example: "Intra-Community supply",
+      examples: ["Intra-Community supply"],
       description:
         "Why no VAT is charged. Required, together with or instead of `exemptionReasonCode`, whenever the VAT category is an exempt one.",
     }),
     exemptionReasonCode: z.string().nullish().openapi({
-      example: "VATEX-EU-IC",
+      examples: ["VATEX-EU-IC"],
       description:
         "The exemption reason code, from the CEF VATEX code list found [here](https://docs.peppol.eu/poacc/billing/3.0/2024-Q4/codelist/vatex/).",
     }),
@@ -178,11 +189,11 @@ const frenchB2BiInvoiceVatSchema = z
 const frenchB2BiPaymentVatSchema = z
   .object({
     percentage: f10PercentSchema.openapi({
-      example: "20.00",
+      examples: ["20.00"],
       description: "VAT rate that applies to the received amount.",
     }),
     amount: f10AmountSchema.openapi({
-      example: "12000.00",
+      examples: ["12000.00"],
       description: "Amount received including VAT for this VAT rate.",
     }),
   })
@@ -198,39 +209,32 @@ const frenchB2BiInvoiceReportShape = {
         "Choose `invoice` to report a single cross-border invoice or credit note issued to a business.",
     }),
     documentNumber: z.string().min(1).openapi({
-      example: "INV-2026-000431",
+      examples: ["INV-2026-000431"],
       description:
         "The number of the invoice or credit note being reported. A payment report refers back to it, and a correction or cancellation is matched on it.",
     }),
     billingMode: frenchReportingBillingModeSchema,
-    documentType: z
-      .enum(["invoice", "creditNote"])
-      .default("invoice")
-      .openapi({
-        example: "invoice",
-        description:
-          "Whether the reported document is an invoice or a credit note. Defaults to `invoice`.",
-      }),
+    documentType: frenchB2BiDocumentTypeSchema,
     issueDate: z.string().date().openapi({
-      example: "2026-01-15",
+      examples: ["2026-01-15"],
       description: "Date on which the document was issued.",
     }),
     dueDate: z.string().date().nullish().openapi({
-      example: "2026-02-14",
+      examples: ["2026-02-14"],
       description: "Date on which the amount is due, when the document names one.",
     }),
     currency: zCurrencies.default("EUR").openapi({
-      example: "EUR",
+      examples: ["EUR"],
       description:
         "Three-letter currency code of the reported amounts. EUR is used when this field is omitted.",
     }),
     buyer: frenchB2BiBuyerSchema,
     taxExclusiveAmount: f10AmountSchema.openapi({
-      example: "10000.00",
+      examples: ["10000.00"],
       description: "Total amount of the document excluding VAT.",
     }),
     taxAmount: f10AmountSchema.openapi({
-      example: "0.00",
+      examples: ["0.00"],
       description: "Total VAT amount of the document.",
     }),
     vatBreakdown: z.array(frenchB2BiInvoiceVatSchema).min(1).openapi({
@@ -274,21 +278,21 @@ export const frenchB2BiPaymentReportSchema = z
         "Choose `payment` to report a payment received on a cross-border invoice you reported earlier. One payment report per invoice: a second one replaces the first at the reporting service.",
     }),
     invoiceNumber: z.string().min(1).openapi({
-      example: "INV-2026-000431",
+      examples: ["INV-2026-000431"],
       description:
         "The `documentNumber` of the invoice report this payment belongs to. The invoice must have been reported before its payment can be. A payment report is matched on this number: the reporting service keeps one payment report per invoice, and a later one replaces it rather than adding to it.",
     }),
     issueDate: z.string().date().openapi({
-      example: "2026-01-15",
+      examples: ["2026-01-15"],
       description: "Date on which the invoice was issued.",
     }),
     date: z.string().date().openapi({
-      example: "2026-02-10",
+      examples: ["2026-02-10"],
       description:
         "Date on which the payment was received. Not part of how the payment report is matched: the invoice number is.",
     }),
     currency: zCurrencies.default("EUR").openapi({
-      example: "EUR",
+      examples: ["EUR"],
       description:
         "Three-letter currency code of the received amounts. EUR is used when this field is omitted.",
     }),

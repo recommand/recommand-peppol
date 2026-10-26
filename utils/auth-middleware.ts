@@ -7,15 +7,13 @@ import {
   type TeamAccessOptions,
 } from "@core/lib/auth-middleware";
 import { verifySession, type SessionVerificationExtension } from "@core/lib/session";
-import { getBillingProfile } from "@peppol/data/billing-profile";
 import { getCompanyById, type Company } from "@peppol/data/companies";
 import { verifyIntegrationJwt } from "@peppol/data/integrations/auth";
 import { getExtendedTeam, type ExtendedTeam } from "@peppol/data/teams";
-import { getActiveSubscription } from "@peppol/data/subscriptions";
-import { isPlayground } from "@peppol/data/teams";
-import { canUseIntegrations } from "@peppol/utils/plan-validation";
+import { checkPeppolEntitlement, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { actionFailure } from "@recommand/lib/utils";
 import { createMiddleware } from "hono/factory";
+import { requiresCompanyVerification } from "@peppol/utils/playground";
 
 type InternalTokenContext = {
   Variables: {
@@ -103,7 +101,12 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
   });
 }
 
-export function requireValidSubscription() {
+/**
+ * Only a team that holds the document exchange entitlement may send, generate or
+ * report. The entitlement resolver, when the deployment has one, decides who
+ * holds it and what a team without it is told.
+ */
+export function requireTransactionEntitlement() {
   return createMiddleware<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext>(
     async (c, next) => {
       const team = c.var.team;
@@ -111,25 +114,9 @@ export function requireValidSubscription() {
         return c.json(actionFailure("Team not found"), 404);
       }
 
-      // Ensure the team has a valid billing profile if it's not a playground team
-      if (!team.isPlayground) {
-        const billingProfile = await getBillingProfile(team.id);
-        if (!billingProfile) {
-          return c.json(
-            actionFailure(
-              `Team ${team.name} does not have a valid billing profile`
-            ),
-            401
-          );
-        }
-        if(billingProfile.profileStanding === "pending" || billingProfile.profileStanding === "suspended") {
-          return c.json(
-            actionFailure(
-              `Team ${team.name} does not have a valid billing profile. Your subscription is currently in a ${billingProfile.profileStanding} state. Ensure you have a valid payment mandate and your subscription is active. If you need help, please contact support@recommand.eu.`
-            ),
-            401
-          );
-        }
+      const entitlement = await checkPeppolEntitlement(team, PEPPOL_ENTITLEMENTS.TRANSACTIONS);
+      if (!entitlement.allowed) {
+        return c.json(actionFailure(entitlement.message ?? "This team cannot exchange documents"), 401);
       }
 
       await next();
@@ -199,16 +186,10 @@ export function requireIntegrationAccess() {
         return c.json(actionFailure("Team not found"), 404);
       }
 
-      const teamIsPlayground = await isPlayground(team.id);
-      const subscription = await getActiveSubscription(team.id);
-
-      if (!canUseIntegrations(teamIsPlayground, subscription)) {
-        return c.json(
-          actionFailure(
-            "Integrations are only available on Starter, Professional, or Enterprise plans. Please upgrade your subscription to use integrations."
-          ),
-          403
-        );
+      const extendedTeam = await getExtendedTeam(team.id);
+      const entitlement = await checkPeppolEntitlement(extendedTeam ?? team, PEPPOL_ENTITLEMENTS.INTEGRATIONS);
+      if (!entitlement.allowed) {
+        return c.json(actionFailure(entitlement.message ?? "This team cannot use integrations"), 403);
       }
 
       await next();
@@ -216,6 +197,11 @@ export function requireIntegrationAccess() {
   );
 }
 
+/**
+ * Refuses a company that has to be verified and is not: every company of a strict
+ * team, and a company on the French production network whatever its team's level
+ * (see requiresCompanyVerification).
+ */
 export function requireCompanyVerificationForStrictTeams() {
   return createMiddleware<CompanyAccessContext>(
     async (c, next) => {
@@ -226,9 +212,13 @@ export function requireCompanyVerificationForStrictTeams() {
         return c.json(actionFailure("Team or company not found"), 404);
       }
 
-      const verificationRequirements = team.verificationRequirements ?? "lax";
-
-      if (verificationRequirements === "strict") {
+      if (
+        requiresCompanyVerification({
+          verificationRequirements: team.verificationRequirements,
+          smpProvider: company.smpProvider,
+          useTestNetwork: team.useTestNetwork,
+        })
+      ) {
         if (!company.isVerified) {
           return c.json(
             actionFailure(

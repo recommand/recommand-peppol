@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { webhookResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -19,8 +19,9 @@ const createWebhookRouteDescription = describeRoute({
     summary: "Create Webhook",
     tags: ["Webhooks"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created webhook", z.object({ webhook: webhookResponse })),
+        ...describeSuccessResponse("Successfully created webhook", z.object({ webhook: webhookResponse.openapi({ description: "The webhook, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create webhook"),
     },
 });
@@ -28,11 +29,11 @@ const createWebhookRouteDescription = describeRoute({
 const createWebhookJsonBodySchema = z.object({
     url: z.string().url().openapi({
         description: "The HTTPS endpoint to deliver events to. Each delivery is a JSON POST carrying the event, with an `X-Idempotency-Key` header you can use to discard a redelivery. Answer with a 2xx once you have accepted the event; a timeout or a 5xx is retried, anything else is not.",
-        example: "https://example.com/hooks/recommand",
+        examples: ["https://example.com/hooks/recommand"],
     }),
     companyId: z.string().nullish().openapi({
         description: "Limit the webhook to one company's events. Leave it out to receive the events of every company in the team.",
-        example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+        examples: ["c_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
     }),
     secret: z.preprocess(
         (value) => value === "" ? undefined : value,

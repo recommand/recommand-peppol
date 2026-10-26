@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { integrationResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -18,13 +18,13 @@ const getIntegrationsRouteDescription = describeRoute({
     summary: "List Integrations",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved integrations", z.object({ integrations: z.array(integrationResponse) })),
+        ...describeSuccessResponse("Successfully retrieved integrations", z.object({ integrations: z.array(integrationResponse).openapi({ description: "The team's activated integrations." }) })),
         ...describeErrorResponse(500, "Failed to fetch integrations"),
     },
 });
 
 const getIntegrationsQuerySchema = z.object({
-    companyId: z.string().nullish(),
+    companyId: z.string().optional(),
 });
 
 const getIntegrationsParamSchemaWithTeamId = z.object({

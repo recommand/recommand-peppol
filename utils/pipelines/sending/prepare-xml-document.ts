@@ -5,14 +5,28 @@ import {
   resolveFormatProcessId,
 } from "@peppol/utils/type-repository/document-formats";
 import { selfDeclaredDocTypeId } from "@peppol/utils/type-repository/document-formats/xml-detection";
+import { assertDocTypeIdMatchesXml } from "./doctype-consistency";
 import { SendingFailure } from "./errors";
+import { assertProcessIdMatchesDocument } from "./process-id-consistency";
 import type { PreparedDocument, SendingInput } from "./types";
 
 export function prepareXmlDocument(input: SendingInput): PreparedDocument {
   const xml = input.document as string;
+  if (input.doctypeId) {
+    try {
+      assertDocTypeIdMatchesXml(xml, input.doctypeId, input.processId);
+    } catch (error) {
+      // Only a contradiction it established refuses the send; a failure of the check
+      // itself leaves the send as it would have been without it.
+      if (error instanceof SendingFailure) throw error;
+      console.error("Failed to compare the doctypeId with the XML document:", error);
+    }
+  }
   const format = input.doctypeId
     ? getDocumentFormatByDocTypeId(input.doctypeId)
-    : detectDocumentFormat(xml);
+    : detectDocumentFormat(xml, {
+        processId: input.processId ? normalizeProcessId(input.processId) : undefined,
+      });
   
   const docTypeId =
     input.doctypeId ?? format?.docTypeId ?? selfDeclaredDocTypeId(xml);
@@ -22,6 +36,7 @@ export function prepareXmlDocument(input: SendingInput): PreparedDocument {
       400,
     );
   }
+  if (input.processId) assertProcessIdMatchesDocument(xml, input.processId);
 
   let type = "unknown";
   let parsed: any = null;

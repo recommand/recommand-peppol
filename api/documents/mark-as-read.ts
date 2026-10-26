@@ -23,6 +23,7 @@ const markAsReadRouteDescription = describeRoute({
     tags: ["Documents"],
     responses: {
         ...describeSuccessResponse("Successfully updated document read status"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Document not found"),
         ...describeErrorResponse(500, "Failed to update document read status"),
     },
@@ -41,7 +42,7 @@ const markAsReadParamSchemaWithTeamId = markAsReadParamSchema.extend({
 const markAsReadJsonBodySchema = z.object({
     read: z.boolean().optional().default(true).openapi({
         description: "Whether to mark the document as read (true) or unread (false). If not provided, defaults to true.",
-        example: true,
+        examples: [true],
     }),
 }).optional();
 

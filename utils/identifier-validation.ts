@@ -1,282 +1,87 @@
-import { UserFacingError } from "@peppol/utils/util";
+import { COUNTRIES, getCountryName } from "@peppol/utils/countries";
+import { UserFacingError, cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
+import { countryIdentifierRules, getCountryIdentifierRules } from "./identifiers/countries";
+import { validateGln, validateIban } from "./identifiers/international";
+import { PEPPOL_VAT_SCHEMES, REMOVED_SCHEMES } from "./identifiers/peppol-schemes";
+import type { IdentifierValidator } from "./identifiers/validators";
 
-type IdentifierValidator = (identifier: string) => void;
-type CountryIdentifierValidators = {
-  vatNumber?: IdentifierValidator;
-  enterpriseNumber?: IdentifierValidator;
-};
+// The rules themselves live in ./identifiers: the check digit algorithms, the validator
+// building blocks, and one file per country registered in ./identifiers/countries. This
+// module applies them to companies and their Peppol identifiers.
 
-function validateBelgianEnterpriseNumber(identifier: string): void {
-  const digits = identifier.replace(/[\.\-\s]/g, "");
-
-  if (!/^\d{10}$/.test(digits)) {
-    throw new UserFacingError(
-      "Belgian enterprise number must be exactly 10 digits (got " +
-        digits.length +
-        ")"
-    );
-  }
-
-  if (digits[0] !== "0" && digits[0] !== "1") {
-    throw new UserFacingError(
-      "Belgian enterprise number must start with 0 or 1"
-    );
-  }
-
-  const base = parseInt(digits.substring(0, 8), 10);
-  const checkDigits = parseInt(digits.substring(8, 10), 10);
-  const expected = 97 - (base % 97);
-
-  if (checkDigits !== expected) {
-    throw new UserFacingError(
-      "Belgian enterprise number has an invalid check digit"
-    );
-  }
-}
-
-function validateBelgianVatNumber(identifier: string): void {
-  const cleaned = identifier.replace(/[\.\-\s]/g, "").toUpperCase();
-
-  if (!cleaned.startsWith("BE")) {
-    throw new UserFacingError("Belgian VAT number must start with 'BE'");
-  }
-
-  const numericPart = cleaned.substring(2);
-
-  if (!/^\d{10}$/.test(numericPart)) {
-    throw new UserFacingError(
-      "Belgian VAT number must have exactly 10 digits after the BE prefix (got " +
-        numericPart.length +
-        ")"
-    );
-  }
-
-  if (numericPart[0] !== "0" && numericPart[0] !== "1") {
-    throw new UserFacingError(
-      "Belgian VAT number must start with BE0 or BE1"
-    );
-  }
-
-  const base = parseInt(numericPart.substring(0, 8), 10);
-  const checkDigits = parseInt(numericPart.substring(8, 10), 10);
-  const expected = 97 - (base % 97);
-
-  if (checkDigits !== expected) {
-    throw new UserFacingError(
-      "Belgian VAT number has an invalid check digit"
-    );
-  }
-}
-
-function validateDutchEnterpriseNumber(identifier: string): void {
-  const digits = identifier.replace(/[\.\-\s]/g, "");
-
-  if (!/^\d{8}$/.test(digits)) {
-    throw new UserFacingError(
-      "Dutch enterprise number (KVK) must be exactly 8 digits (got " +
-        digits.length +
-        ")"
-    );
-  }
-}
-
-function validateDutchVatNumber(identifier: string): void {
-  const cleaned = identifier.replace(/[\.\-\s]/g, "").toUpperCase();
-
-  if (!cleaned.startsWith("NL")) {
-    throw new UserFacingError("Dutch VAT number must start with 'NL'");
-  }
-
-  const afterPrefix = cleaned.substring(2);
-
-  if (!/^\d{9}B\d{2}$/.test(afterPrefix)) {
-    throw new UserFacingError(
-      "Dutch VAT number must have the format NL + 9 digits + B + 2 digits (e.g. NL123456789B01)"
-    );
-  }
-}
-
-function validateCypriotVatNumber(identifier: string): void {
-  const cleaned = identifier.replace(/[\.\-\s]/g, "").toUpperCase();
-
-  if (!cleaned.startsWith("CY")) {
-    throw new UserFacingError("Cypriot VAT number must start with 'CY'");
-  }
-
-  const afterPrefix = cleaned.substring(2);
-
-  // The Cypriot TIC is eight digits followed by a single check letter.
-  if (!/^\d{8}[A-Z]$/.test(afterPrefix)) {
-    throw new UserFacingError(
-      "Cypriot VAT number must have the format CY + 8 digits + 1 letter (e.g. CY12345678L)"
-    );
-  }
-}
-
-function validateDanishOrganizationNumber(identifier: string): void {
-  if (!/^(DK)?\d{8}$/.test(identifier.toUpperCase())) {
-    throw new UserFacingError(
-      "Danish organization number (CVR) must be 8 digits, optionally prefixed with 'DK'"
-    );
-  }
-}
+export { passesLuhn } from "./identifiers/checksums";
+export { getFrenchSiren, isSiren, isSiret } from "./identifiers/countries/france";
+export { validateLeitwegId } from "./identifiers/countries/germany";
 
 /**
- * The Luhn checksum every SIREN and SIRET carries in its last digit.
+ * Validators per Peppol participant identifier scheme (ISO/IEC 6523 ICD). Every national
+ * VAT scheme takes its country's VAT number validator and every country's default
+ * enterprise number scheme its enterprise number validator; a country's own schemes,
+ * the removed schemes and the international ones come after.
  */
-export function passesLuhn(digits: string): boolean {
-  let sum = 0;
-  let double = false;
-  for (let index = digits.length - 1; index >= 0; index--) {
-    let digit = digits.charCodeAt(index) - 48;
-    if (double) {
-      digit *= 2;
-      if (digit > 9) {
-        digit -= 9;
-      }
-    }
-    sum += digit;
-    double = !double;
-  }
-  return sum % 10 === 0;
-}
-
-export function isSiren(digits: string): boolean {
-  return /^\d{9}$/.test(digits) && passesLuhn(digits);
-}
-
-export function isSiret(digits: string): boolean {
-  return /^\d{14}$/.test(digits) && passesLuhn(digits);
-}
-
-/**
- * A French electronic address (ICD 0225) names the company by its SIREN or one
- * of its establishments by its SIRET, and may carry the routing suffixes of the
- * annuaire behind it: SIREN_SUFFIXE, SIREN_SIRET and SIREN_SIRET_CODEROUTAGE.
- */
-function validateFrenchElectronicAddress(identifier: string): void {
-  const value = identifier.replace(/\s/g, "").toUpperCase();
-
-  if (!/^\d{9}(\d{5})?(_[A-Z0-9-]+)*$/.test(value)) {
-    throw new UserFacingError(
-      "French electronic address must be a 9 digit SIREN or a 14 digit SIRET, optionally followed by routing suffixes separated by underscores (got '" +
-        identifier +
-        "')"
-    );
-  }
-
-  // The company number the address opens with, and the SIRET of the
-  // SIREN_SIRET forms, are the parts that carry a check digit.
-  const parts = value.split("_");
-  for (const number of [parts[0], parts[1]]) {
-    if (number && /^\d{9}$|^\d{14}$/.test(number) && !passesLuhn(number)) {
-      throw new UserFacingError(
-        "French electronic address contains " +
-          number +
-          ", which has an invalid check digit"
-      );
-    }
-  }
-}
-
-function validateFrenchSiren(identifier: string): void {
-  const digits = identifier.replace(/[\.\-\s]/g, "");
-
-  if (!/^\d{9}$/.test(digits)) {
-    throw new UserFacingError(
-      "French SIREN must be exactly 9 digits (got " + digits.length + ")"
-    );
-  }
-
-  if (!passesLuhn(digits)) {
-    throw new UserFacingError("French SIREN has an invalid check digit");
-  }
-}
-
-function validateFrenchSiret(identifier: string): void {
-  const digits = identifier.replace(/[\.\-\s]/g, "");
-
-  if (!/^\d{14}$/.test(digits)) {
-    throw new UserFacingError(
-      "French SIRET must be exactly 14 digits (got " + digits.length + ")"
-    );
-  }
-
-  if (!passesLuhn(digits)) {
-    throw new UserFacingError("French SIRET has an invalid check digit");
-  }
-}
-
-function validateFrenchVatNumber(identifier: string): void {
-  const cleaned = identifier.replace(/[\.\-\s]/g, "").toUpperCase();
-
-  if (!cleaned.startsWith("FR")) {
-    throw new UserFacingError("French VAT number must start with 'FR'");
-  }
-
-  const afterPrefix = cleaned.substring(2);
-
-  // The two character key is alphanumeric, but never uses the letters I and O.
-  if (!/^[0-9A-HJ-NP-Z]{2}\d{9}$/.test(afterPrefix)) {
-    throw new UserFacingError(
-      "French VAT number must have the format FR + a 2 character key + a 9 digit SIREN (e.g. FR40303265045)"
-    );
-  }
-
-  const key = afterPrefix.substring(0, 2);
-  const siren = afterPrefix.substring(2);
-
-  if (!passesLuhn(siren)) {
-    throw new UserFacingError(
-      "French VAT number contains SIREN " + siren + ", which has an invalid check digit"
-    );
-  }
-
-  // Only the numeric key is computed from the SIREN; the alphanumeric ones the
-  // administration assigns cannot be checked.
-  if (/^\d{2}$/.test(key)) {
-    const expected = (12 + 3 * (parseInt(siren, 10) % 97)) % 97;
-    if (parseInt(key, 10) !== expected) {
-      throw new UserFacingError("French VAT number has an invalid key");
-    }
-  }
-}
-
 const schemeValidators: Record<string, IdentifierValidator> = {
-  "0184": validateDanishOrganizationNumber,
-  "0208": validateBelgianEnterpriseNumber,
-  "9925": validateBelgianVatNumber,
-  "9928": validateCypriotVatNumber,
-  "0106": validateDutchEnterpriseNumber,
-  "9944": validateDutchVatNumber,
-  "0002": validateFrenchSiren,
-  "0009": validateFrenchSiret,
-  "0225": validateFrenchElectronicAddress,
-  "9957": validateFrenchVatNumber,
+  ...Object.fromEntries(
+    [
+      ...Object.entries(PEPPOL_VAT_SCHEMES).map(([scheme, country]) => [scheme, getCountryIdentifierRules(country)?.vatNumber] as const),
+      ...COUNTRIES.map((country) => [country.defaultEnterpriseNumberScheme, getCountryIdentifierRules(country.code)?.enterpriseNumber] as const),
+    ].filter(([scheme, validator]) => scheme && validator)
+  ),
+  ...Object.assign({}, ...countryIdentifierRules.map((rules) => rules.schemes ?? {})),
+  ...Object.fromEntries(
+    Object.entries(REMOVED_SCHEMES).map(([scheme, replacement]) => [
+      scheme,
+      () => {
+        throw new UserFacingError(
+          `Scheme ${scheme} was removed from the Peppol participant identifier code list and can no longer be used. ${replacement}`
+        );
+      },
+    ])
+  ),
+  "0088": validateGln,
+  "9918": validateIban,
 };
 
-const countryValidators: Record<string, CountryIdentifierValidators> = {
-  "BE": {
-    vatNumber: validateBelgianVatNumber,
-    enterpriseNumber: validateBelgianEnterpriseNumber,
-  },
-  "CY": {
-    vatNumber: validateCypriotVatNumber,
-  },
-  "NL": {
-    vatNumber: validateDutchVatNumber,
-    enterpriseNumber: validateDutchEnterpriseNumber,
-  },
-  "FR": {
-    vatNumber: validateFrenchVatNumber,
-    enterpriseNumber: validateFrenchSiren,
-  },
-};
+/**
+ * Whether a number is a placeholder: its digits are zeros only, apart from the check
+ * digits a national check computes from zero, as in 000000000, BE0000000097 or
+ * FR12000000000. Several national checks let these through, because zero passes Luhn
+ * and a mod 97 check digit of 97 or a French key of 12 is computed from it. Senders
+ * type them when they do not know their buyer's number, so a company that publishes
+ * one receives documents meant for others.
+ *
+ * Only zeros make a placeholder. Register numbers are handed out in sequence, so a
+ * round one such as HRB 12000, B10000 or the CVR number 21000000 is a real number.
+ */
+export function isPlaceholderNumber(identifier: string): boolean {
+  const digits = identifier.replace(/\D/g, "");
+  if (digits.length < 4) {
+    return false;
+  }
+  if (/^0+$/.test(digits)) {
+    return true;
+  }
+  // Check digits at the end, as the mod 97 pair of a Belgian number. National numbers
+  // with check digits have at least 8 digits, so shorter codes are left alone.
+  if (digits.length >= 8 && /^0+$/.test(digits.slice(0, -2))) {
+    return true;
+  }
+  // The French VAT key, which comes before the SIREN.
+  return /^FR[0-9A-Z]{2}0{9}$/.test(identifier.toUpperCase().replace(/[\s.\-]/g, ""));
+}
+
+function assertNotPlaceholderNumber(identifier: string): void {
+  if (isPlaceholderNumber(identifier)) {
+    throw new UserFacingError(
+      `${identifier} is a placeholder, not a real company number. Use the number the company is registered under.`
+    );
+  }
+}
 
 export function validateIdentifier(
   scheme: string,
   identifier: string,
 ): void {
+  assertNotPlaceholderNumber(identifier);
   const validator = schemeValidators[scheme];
   if (!validator) {
     return;
@@ -291,31 +96,297 @@ export function validateCountryIdentifier(
     enterpriseNumber?: string | null;
   },
 ): void {
-  const validator = countryValidators[country];
-  if (!validator) {
+  for (const number of [identifiers.vatNumber, identifiers.enterpriseNumber]) {
+    if (number) {
+      assertNotPlaceholderNumber(number);
+    }
+  }
+  const rules = getCountryIdentifierRules(country);
+  if (!rules) {
     return;
   }
-  if (identifiers.vatNumber && validator.vatNumber) {
-    validator.vatNumber(identifiers.vatNumber);
+  if (identifiers.vatNumber && rules.vatNumber) {
+    rules.vatNumber(identifiers.vatNumber);
   }
-  if (identifiers.enterpriseNumber && validator.enterpriseNumber) {
-    validator.enterpriseNumber(identifiers.enterpriseNumber);
+  if (identifiers.enterpriseNumber && rules.enterpriseNumber) {
+    rules.enterpriseNumber(identifiers.enterpriseNumber);
+  }
+}
+
+/** The schemes that belong to a country: its default enterprise number scheme and its own. */
+function countrySchemes(country: string): string[] {
+  const rules = getCountryIdentifierRules(country);
+  return [
+    COUNTRIES.find((entry) => entry.code === country.toUpperCase())?.defaultEnterpriseNumberScheme,
+    ...Object.keys(rules?.schemes ?? {}),
+    ...(rules?.companyIdentifiers?.schemes ?? []),
+  ].filter((scheme): scheme is string => !!scheme);
+}
+
+/**
+ * Holds a company's VAT number and enterprise number against its country: the VAT
+ * number has to carry the country's prefix, and both have to pass the country's
+ * national rules.
+ */
+export function validateCompanyNumbers({
+  country,
+  vatNumber,
+  enterpriseNumber,
+  enterpriseNumberScheme,
+}: {
+  country?: string | null;
+  vatNumber?: string | null;
+  enterpriseNumber?: string | null;
+  /** The scheme the company names its enterprise number under; null leaves it to the country. */
+  enterpriseNumberScheme?: string | null;
+}): void {
+  if (vatNumber && !/^[A-Z]{2}/.test(vatNumber)) {
+    throw new UserFacingError("VAT number must start with a country code (e.g. BE, NL, DE)");
+  }
+  if (vatNumber && country && !getVatNumberPrefixes(country).includes(vatNumber.substring(0, 2).toUpperCase())) {
+    throw new UserFacingError(`VAT number country code (${vatNumber.substring(0, 2)}) does not match the selected country (${country})`);
+  }
+  if (!country) {
+    return;
+  }
+  const otherScheme = foreignEnterpriseNumberScheme(country, enterpriseNumberScheme);
+  if (enterpriseNumber && otherScheme) {
+    validateIdentifier(otherScheme, enterpriseNumber);
+  }
+  validateCountryIdentifier(country, {
+    vatNumber,
+    enterpriseNumber: otherScheme ? null : enterpriseNumber,
+  });
+}
+
+/**
+ * The scheme a company names its enterprise number under when that is a scheme of
+ * another country or of no country, such as a GLN or the Dutch OIN, and null otherwise.
+ * Under one of the country's own schemes the number is the country's enterprise number,
+ * as a SIREN is under the French 0002, or the register number German companies once
+ * named 0204.
+ */
+function foreignEnterpriseNumberScheme(country: string, enterpriseNumberScheme: string | null | undefined): string | null {
+  return enterpriseNumberScheme && !countrySchemes(country).includes(enterpriseNumberScheme) ? enterpriseNumberScheme : null;
+}
+
+/**
+ * The scheme a company's enterprise number becomes a Peppol identifier under: the
+ * scheme the company names it under when that is not one of the country's own, so a
+ * GLN is published as 0088, and otherwise the country's default enterprise number
+ * scheme. Null when the country has none, as Germany, whose register number is no
+ * Peppol address.
+ */
+export function enterpriseNumberIdentifierScheme(country: string, enterpriseNumberScheme: string | null | undefined): string | null {
+  return (
+    foreignEnterpriseNumberScheme(country, enterpriseNumberScheme) ??
+    COUNTRIES.find((entry) => entry.code === country.toUpperCase())?.defaultEnterpriseNumberScheme ??
+    null
+  );
+}
+
+/**
+ * The identifiers a company gets by default that its country builds from its numbers,
+ * such as the Finnish OVT code, next to its numbers under the country's default schemes.
+ */
+export function derivedDefaultIdentifiers(
+  country: string,
+  company: { enterpriseNumber: string | null; vatNumber: string | null }
+): { scheme: string; identifier: string }[] {
+  return getCountryIdentifierRules(country)?.derivedIdentifiers?.(company) ?? [];
+}
+
+/** The prefixes a country's VAT numbers carry: its code, unless its rules name others. */
+export function getVatNumberPrefixes(country: string): string[] {
+  return getCountryIdentifierRules(country)?.vatPrefixes ?? [country.toUpperCase()];
+}
+
+type NationalNumberScheme = { country: string; number: "vatNumber" | "enterpriseNumber" };
+
+/**
+ * The schemes whose identifier is a company's own national number: every country's
+ * default enterprise number scheme, and every national VAT scheme of the code list.
+ */
+const nationalNumberSchemes: Record<string, NationalNumberScheme> = {
+  ...Object.fromEntries(
+    COUNTRIES.flatMap((country) =>
+      country.defaultEnterpriseNumberScheme
+        ? [[country.defaultEnterpriseNumberScheme, { country: country.code, number: "enterpriseNumber" }]]
+        : []
+    )
+  ),
+  ...Object.fromEntries(
+    Object.entries(PEPPOL_VAT_SCHEMES).map(([scheme, country]) => [scheme, { country, number: "vatNumber" }])
+  ),
+};
+
+/** Per scheme, the prefix the published identifier goes without, from the countries' rules. */
+const optionalPrefixes: Record<string, RegExp> = Object.assign(
+  {},
+  ...countryIdentifierRules.map((rules) => rules.optionalPrefixes ?? {})
+);
+
+/**
+ * The value an identifier is stored and published under: the cleaned identifier
+ * without a prefix its scheme does not carry.
+ */
+export function normalizeIdentifierValue(scheme: string, identifier: string): string {
+  return identifier.replace(optionalPrefixes[scheme] ?? /^$/, "");
+}
+
+/** Whether a scheme's identifiers can be written with a prefix the stored value goes without. */
+export function hasOptionalPrefix(scheme: string): boolean {
+  return scheme in optionalPrefixes;
+}
+
+/**
+ * Whether two values under a scheme are the same identifier, as stored and published:
+ * compared without case and without a prefix the scheme does not carry, so a stored
+ * el094014201 and an entered EL094014201 under 9933 are one identifier.
+ */
+export function sameIdentifierValue(scheme: string, left: string, right: string): boolean {
+  return (
+    normalizeIdentifierValue(scheme, left.toLowerCase().trim()) === normalizeIdentifierValue(scheme, right.toLowerCase().trim())
+  );
+}
+
+/** A national number as an identifier under the scheme is stored, or null when there is none. */
+function cleanNationalNumber(scheme: string, national: NationalNumberScheme, value: string | null): string | null {
+  const cleaned = national.number === "vatNumber" ? cleanVatNumber(value) : cleanEnterpriseNumber(value);
+  if (!cleaned) {
+    return null;
+  }
+  const normalizeVatNumber =
+    getCountryIdentifierRules(national.country)?.normalizeVatNumber ?? ((vatNumber: string) => vatNumber);
+  return normalizeIdentifierValue(scheme, national.number === "vatNumber" ? normalizeVatNumber(cleaned) : cleaned);
+}
+
+/**
+ * Whether a value is certainly not an identifier under its scheme: the scheme has a
+ * validator of its own and the value fails it, as an email address under the French
+ * SIRENE scheme (0002) does. False for a scheme without a validator, and for a scheme
+ * removed from the code list, whose use is not a question of the value.
+ */
+export function identifierFailsSchemeValidation(scheme: string, identifier: string): boolean {
+  if (!schemeValidators[scheme] || scheme in REMOVED_SCHEMES) {
+    return false;
+  }
+  try {
+    validateIdentifier(scheme, identifier);
+    return false;
+  } catch {
+    return true;
   }
 }
 
 /**
- * The SIREN a French company is identified by for tax purposes. Companies register
- * either their SIREN (9 digits) or the SIRET of an establishment (14 digits, the
- * SIREN followed by a 5-digit NIC); both name the same legal entity. Returns null
- * when the number is neither, or fails its check digit.
+ * Whether an identifier certainly names another company than this one: a valid national
+ * VAT or enterprise number of the company's own country, of a kind the company has a
+ * number for, that is not that number. Anything less certain is false: a scheme that
+ * names no national number, a scheme whose identifiers name a company in a way of their
+ * own (see validateIdentifierBelongsToCompany), a scheme of another country, a company
+ * without such a number, a company whose number is not itself valid under the scheme,
+ * and a value that is not a valid number at all.
+ *
+ * A company's number is only compared once it is valid under the scheme, because stored
+ * numbers do not all have the form the scheme uses: a Belgian VAT number saved without
+ * its "BE", or an enterprise number saved with it. Compared as stored, such a number
+ * differs from the company's own identifier and would make that identifier look like
+ * someone else's.
  */
-export function getFrenchSiren(enterpriseNumber: string | null | undefined): string | null {
-  const digits = enterpriseNumber?.replace(/[\s.-]/g, "") ?? "";
-  if (isSiren(digits)) {
-    return digits;
+export function identifierNamesAnotherCompany({
+  scheme,
+  identifier,
+  company,
+}: {
+  scheme: string;
+  identifier: string;
+  company: { enterpriseNumber: string | null; vatNumber: string | null; country: string };
+}): boolean {
+  if (countryIdentifierRules.some((rules) => rules.companyIdentifiers?.schemes.includes(scheme))) {
+    return false;
   }
-  if (isSiret(digits)) {
-    return digits.slice(0, 9);
+  const national = nationalNumberSchemes[scheme];
+  if (!national || national.country !== company.country.toUpperCase()) {
+    return false;
   }
-  return null;
+  const companyNumber = cleanNationalNumber(scheme, national, company[national.number]);
+  if (!companyNumber) {
+    return false;
+  }
+  try {
+    validateIdentifier(scheme, companyNumber);
+    validateIdentifier(scheme, identifier);
+  } catch {
+    return false;
+  }
+  return cleanNationalNumber(scheme, national, identifier) !== companyNumber;
+}
+
+/** A country's name as it reads in a sentence: "the Netherlands", "Belgium". */
+function countryInProse(code: string): string {
+  const name = getCountryName(code);
+  return ["NL", "GB", "US", "AE"].includes(code) ? `the ${name}` : name;
+}
+
+/**
+ * Holds an identifier against the numbers of the company that registers it. Under a
+ * scheme that names a national VAT number or business register number, the identifier
+ * has to be the company's own: we verify a company by those numbers, so publishing any
+ * other would let it receive documents addressed to someone else.
+ *
+ * That includes the schemes of other countries. A company has one VAT number and one
+ * enterprise number, both of its own country, so a VAT registration it holds abroad
+ * cannot be checked against anything it was verified by. A company registered for VAT
+ * in another country is created as a company of that country.
+ *
+ * Schemes that name no national number (GLN, IBAN, Leitweg-ID, ...) are left to their
+ * format.
+ */
+export function validateIdentifierBelongsToCompany({
+  scheme,
+  identifier,
+  company,
+}: {
+  scheme: string;
+  identifier: string;
+  /** country, when known, makes the message name a scheme of another country as such. */
+  company: { enterpriseNumber: string | null; vatNumber: string | null; country?: string | null };
+}): void {
+  const companyIdentifiers = countryIdentifierRules.find((rules) =>
+    rules.companyIdentifiers?.schemes.includes(scheme)
+  )?.companyIdentifiers;
+  if (companyIdentifiers) {
+    companyIdentifiers.validate(scheme, identifier, company);
+    return;
+  }
+
+  const national = nationalNumberSchemes[scheme];
+  if (!national) {
+    return;
+  }
+
+  const label = national.number === "vatNumber" ? "VAT number" : "enterprise number";
+  const clean = (value: string | null) => cleanNationalNumber(scheme, national, value);
+  const companyNumber = clean(company[national.number]);
+
+  if (!companyNumber) {
+    throw new UserFacingError(`Company identifier with scheme ${scheme} requires a company ${label} to be set.`);
+  }
+
+  const cleanedIdentifier = clean(identifier);
+  if (cleanedIdentifier !== companyNumber) {
+    const foreign = company.country
+      ? company.country.toUpperCase() !== national.country
+      : national.number === "vatNumber" &&
+        // Before normalisation, which takes the prefix off a Greek VAT number under 9933.
+        !getVatNumberPrefixes(national.country).some((prefix) => cleanVatNumber(company.vatNumber)?.startsWith(prefix));
+    const country = countryInProse(national.country);
+    throw new UserFacingError(
+      `Company identifier with scheme ${scheme} must match the company ${label}. Expected: ${companyNumber}, got: ${cleanedIdentifier}` +
+        (foreign
+          ? `. Scheme ${scheme} is for ${label}s from ${country}, and a company can only register its own. Register a ${label} from ${country} on a separate company in that country.`
+          : "")
+    );
+  }
 }

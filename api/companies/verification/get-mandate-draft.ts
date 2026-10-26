@@ -27,7 +27,7 @@ type GetMandateDraftContext = Context<Record<string, never>, string, { in: { par
 
 const _getMandateDraft = server.post(
     "/companies/verification/:companyVerificationLogId/mandate-draft",
-    describeRoute({ hide: true }),
+    describeRoute({ hide: true, security: [] }),
     zodValidator("param", getMandateDraftParamSchema),
     zodValidator("json", getMandateDraftJsonBodySchema),
     _getMandateDraftImplementation,

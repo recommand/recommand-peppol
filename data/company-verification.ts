@@ -2,22 +2,27 @@ import { publishCompanyUpdatedEvent } from "./company-events";
 import { companyVerificationLog } from "@peppol/db/schema";
 import { companies } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { and, eq, inArray } from "drizzle-orm";
-import { getEnterpriseData } from "./cbe-public-search/client";
+import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { requiresArratechKycReview } from "./at/kyc";
 import { UserFacingError } from "@peppol/utils/util";
 import { verifyCompany } from "./companies";
-import { getCompany, type Company } from "@peppol/data/companies";
+import { getCompany, getCompanyById, type Company } from "@peppol/data/companies";
 import { getTeamExtension } from "./teams";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { unregisterCompanyRegistrations, upsertCompanyRegistrations } from "./smp-providers";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { submitVerificationIdentity, restartVerificationIdentity } from '@peppol/data/verification-submission';
-import { assertCompanyIdentifiersAllowed } from "./company-identifiers";
+import { assertCompanyIdentifiersAllowed, assertIdentifiersFreeForRecipient } from "./company-identifiers";
+import { registerReleasingDerivedIdentifiers } from "./derived-identifiers";
 import { lockCompanyRow, sameCompanyIdentity } from "./company-row-lock";
+import { getCurrentVerificationSession } from "./current-verification-session";
+import { sessionMatchesCompany } from "./at/kyc-onboarding-state";
+import { namesMatch } from "@peppol/utils/names-match";
+import { checkRepresentative, findRepresentativeReview, notifySupportOfRepresentativeReview } from "./representative-checks";
 
 export type CompanyVerificationLog = typeof companyVerificationLog.$inferSelect;
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export type CompanyVerificationStatus = CompanyVerificationLog["status"];
 export type CompanyVerificationFinalStatus = Extract<CompanyVerificationStatus, "verified" | "rejected" | "error">;
 export type PlaygroundVerificationOutcome = Extract<CompanyVerificationFinalStatus, "verified" | "rejected">;
@@ -38,12 +43,7 @@ export function isFinalVerificationStatus(
   return (FINAL_VERIFICATION_STATUSES as readonly string[]).includes(status);
 }
 
-export function namesMatch(a: string, b: string): boolean {
-  const partsA = a.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const partsB = b.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().split(/\s+/).filter(Boolean);
-  const [shorter, longer] = partsA.length <= partsB.length ? [partsA, partsB] : [partsB, partsA];
-  return shorter.length > 0 && shorter.every((part) => longer.includes(part));
-}
+export { namesMatch };
 
 export async function getCompanyVerificationLog(
   id: string
@@ -121,11 +121,13 @@ export async function finalizeCompanyVerification({
   company,
   status,
   verificationProofReference,
+  rejectionReason,
 }: {
   companyVerificationLogId: string;
   company: Company;
   status: "verified" | "rejected";
   verificationProofReference: string;
+  rejectionReason?: string | null;
 }): Promise<FinalizeCompanyVerificationResult> {
   const existingLog = await getCompanyVerificationLog(companyVerificationLogId);
   if (!existingLog) {
@@ -139,6 +141,7 @@ export async function finalizeCompanyVerification({
   }
 
   const isVerified = status === "verified";
+  const errorMessage = isVerified ? null : rejectionReason || null;
   const teamExtension = await getTeamExtension(company.teamId);
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
   const verificationRequirements = teamExtension?.verificationRequirements ?? undefined;
@@ -147,6 +150,7 @@ export async function finalizeCompanyVerification({
     useTestNetwork,
     isSmpRecipient: company.isSmpRecipient,
     verificationRequirements,
+    smpProvider: company.smpProvider,
   };
   const wasRegistered =
     shouldRegisterWithSmp({ ...smpStateBase, isVerified: company.isVerified }) ||
@@ -182,10 +186,33 @@ export async function finalizeCompanyVerification({
   };
 
   if (smpTransition === "register") {
-    try {
+    // A refusal before anything was registered must not be rolled back: the
+    // rollback unregisters, which would reach the participant of the company that
+    // holds the identifier.
+    let registrationStarted = false;
+    const register = async () => {
+      await assertIdentifiersFreeForRecipient(company.id);
+      registrationStarted = true;
       await upsertCompanyRegistrations({ companyId: company.id, useTestNetwork });
+    };
+    try {
+      // An identifier the company's country derives for it, such as the Finnish OVT
+      // code, never holds up the verification.
+      await registerReleasingDerivedIdentifiers({
+        company,
+        useTestNetwork,
+        register,
+        undoRegistration: async () => {
+          if (registrationStarted) {
+            await rollbackSmpTransition();
+            registrationStarted = false;
+          }
+        },
+      });
     } catch (error) {
-      await rollbackSmpTransition();
+      if (registrationStarted) {
+        await rollbackSmpTransition();
+      }
       console.error(`Failed to register company ${company.id} with SMP while finalizing verification:`, error);
       const errorMessage = getCompanyVerificationErrorMessage({ error, status });
       await setCompanyVerificationError({
@@ -231,7 +258,7 @@ export async function finalizeCompanyVerification({
     await db.transaction(async (tx) => {
       await tx
         .update(companyVerificationLog)
-        .set({ status, verificationProofReference, errorMessage: null })
+        .set({ status, verificationProofReference, errorMessage })
         .where(eq(companyVerificationLog.id, companyVerificationLogId));
       await tx
         .update(companies)
@@ -260,9 +287,58 @@ export async function finalizeCompanyVerification({
     teamId: company.teamId,
     companyId: company.id,
     status,
+    errorMessage,
   });
 
-  return { status, errorMessage: null };
+  return { status, errorMessage };
+}
+
+/**
+ * Whether asking to verify the company again can continue its current session
+ * instead of starting a new one. A session still open for the company as it reads
+ * now is continued: a new one would hide it, and with it an identity check that
+ * may already be under review. A final session, or one taken for company details
+ * that have since changed, is replaced.
+ */
+export function canContinueVerificationSession(
+  session: CompanyVerificationLog | undefined,
+  company: Pick<Company, "enterpriseNumber" | "name" | "country" | "address" | "postalCode" | "city">
+): session is CompanyVerificationLog {
+  return (
+    !!session &&
+    (OPEN_VERIFICATION_STATUSES as readonly string[]).includes(session.status) &&
+    sessionMatchesCompany(session, company, session.arratechOnboarding)
+  );
+}
+
+/**
+ * Continues the company's current session when it can be continued, or starts a new
+ * one recording the company as it reads now. Customer and support requests share it,
+ * so both treat changed company details the same way. Runs in the caller's
+ * transaction, which holds the company row for update and read `session` under it.
+ */
+export async function continueOrStartVerificationSession(
+  tx: Transaction,
+  company: Company,
+  session: CompanyVerificationLog | undefined
+): Promise<{ log: CompanyVerificationLog; created: boolean }> {
+  if (canContinueVerificationSession(session, company)) {
+    return { log: session, created: false };
+  }
+  const log = await tx
+    .insert(companyVerificationLog)
+    .values({
+      companyId: company.id,
+      companyName: company.name,
+      enterpriseNumber: company.enterpriseNumber,
+      address: company.address,
+      postalCode: company.postalCode,
+      city: company.city,
+      country: company.country,
+    })
+    .returning()
+    .then((rows) => rows[0]);
+  return { log, created: true };
 }
 
 export async function createCompanyVerificationLog({
@@ -271,7 +347,7 @@ export async function createCompanyVerificationLog({
 }: {
   teamId: string;
   companyId: string;
-}): Promise<{ log: CompanyVerificationLog; verificationUrl: string }> {
+}): Promise<{ log: CompanyVerificationLog; verificationUrl: string; created: boolean }> {
   const baseUrl = getBaseUrlOrThrow();
 
   const company = await getCompany(teamId, companyId);
@@ -283,22 +359,124 @@ export async function createCompanyVerificationLog({
   // representative has been through the identity check; it is refused here instead.
   await assertCompanyIdentifiersAllowed(company, await getTeamExtension(teamId));
 
-  const log = await db
-    .insert(companyVerificationLog)
-    .values({
-      companyId,
-      companyName: company.name,
-      enterpriseNumber: company.enterpriseNumber,
-      address: company.address,
-      postalCode: company.postalCode,
-      city: company.city,
-      country: company.country,
-    })
-    .returning()
-    .then((rows) => rows[0]);
+  const { log, created } = await db.transaction(async (tx) => {
+    // Held for update so that two requests for the same company, such as a double
+    // click, take turns: the second continues the session the first created.
+    const current = await lockCompanyRow(tx, companyId, "update");
+    if (!current || current.teamId !== teamId) {
+      throw new UserFacingError("Company not found");
+    }
+    return continueOrStartVerificationSession(tx, current, await getCurrentVerificationSession(companyId, tx));
+  });
 
   const verificationUrl = `${baseUrl}/company-verification/${log.id}/verify`;
-  return { log, verificationUrl };
+  return { log, verificationUrl, created };
+}
+
+export type VerificationFollowUp = "companyVerified" | "continue" | "startNew" | "retry";
+
+/**
+ * What the link of a finished session leads on to. Links stay in inboxes long after
+ * their session ended, rejected or replaced by a newer link, so whoever opens one is
+ * shown where the company's verification stands now rather than only the old
+ * outcome: `companyVerified` when nothing is left to do, `continue` when the company
+ * has an open session to continue, and `startNew` when a new one has to be started.
+ * `retry` is `startNew` for the company's current session itself, whose link is not
+ * old but whose attempt failed. Null when the session is not finished, was withdrawn
+ * by support, or is the company's current session and ended in an activation error,
+ * which a new identity check would not resolve.
+ */
+export async function getVerificationFollowUp(
+  log: CompanyVerificationLog,
+  company: Company
+): Promise<VerificationFollowUp | null> {
+  if (log.withdrawal !== null || !isFinalVerificationStatus(log.status)) {
+    return null;
+  }
+  if (company.isVerified) {
+    return log.status === "verified" ? null : "companyVerified";
+  }
+  const current = await getCurrentVerificationSession(company.id);
+  if (current?.id === log.id) {
+    return log.status === "error" ? null : "retry";
+  }
+  return canContinueVerificationSession(current, company) ? "continue" : "startNew";
+}
+
+/**
+ * Leads on from the link of a finished session to the company's verification as it
+ * stands, by the same rule as asking to verify the company again: its open session
+ * is continued, or a new one is started. Refused when the link leads on to nothing.
+ */
+export async function continueVerificationFromSession(
+  companyVerificationLogId: string
+): Promise<{ log: CompanyVerificationLog; verificationUrl: string; created: boolean }> {
+  const log = await getCompanyVerificationLog(companyVerificationLogId);
+  if (!log) {
+    throw new UserFacingError("Company verification log not found");
+  }
+  const company = await getCompanyById(log.companyId);
+  if (!company) {
+    throw new UserFacingError("Company not found");
+  }
+  const followUp = await getVerificationFollowUp(log, company);
+  if (followUp !== "continue" && followUp !== "startNew" && followUp !== "retry") {
+    throw new UserFacingError("This verification cannot be continued.");
+  }
+  return await createCompanyVerificationLog({ teamId: company.teamId, companyId: company.id });
+}
+
+/**
+ * After a successful identity check, holds the session for support when the
+ * company's register does not confirm that the representative may act for the
+ * company alone. The session goes to inReview with the reason in its error message,
+ * where support finds it and decides it with complete-verification. Support is
+ * told once per reason, however often the identity provider reports the result.
+ * Resolves to whether the session is held.
+ */
+export async function holdVerificationForRepresentativeReview(
+  {
+    log,
+    company,
+    verificationProofReference,
+  }: {
+    log: CompanyVerificationLog;
+    company: Company;
+    verificationProofReference: string;
+  },
+  dependencies: {
+    findReview: typeof findRepresentativeReview;
+    notifySupport: typeof notifySupportOfRepresentativeReview;
+  } = { findReview: findRepresentativeReview, notifySupport: notifySupportOfRepresentativeReview }
+): Promise<boolean> {
+  const representative = { firstName: log.firstName ?? "", lastName: log.lastName ?? "" };
+  const finding = await dependencies.findReview(company, representative);
+  if (!finding) {
+    return false;
+  }
+  const changed = await db
+    .update(companyVerificationLog)
+    .set({ status: "inReview", verificationProofReference, errorMessage: finding })
+    .where(
+      and(
+        eq(companyVerificationLog.id, log.id),
+        or(
+          ne(companyVerificationLog.status, "inReview"),
+          isNull(companyVerificationLog.errorMessage),
+          ne(companyVerificationLog.errorMessage, finding)
+        )
+      )
+    )
+    .returning({ id: companyVerificationLog.id });
+  if (changed.length > 0) {
+    await dependencies.notifySupport({
+      company,
+      sessionId: log.id,
+      representativeName: `${representative.firstName} ${representative.lastName}`,
+      finding,
+    });
+  }
+  return true;
 }
 
 export async function submitIdentityForm(
@@ -325,35 +503,8 @@ export async function submitIdentityForm(
     throw new UserFacingError("The mandate has to be signed before the identity check can start.");
   }
 
-  let effectiveFirstName = firstName;
-  let effectiveLastName = lastName;
-
-  if (company.country === "BE") {
-    if (!company.enterpriseNumber) {
-      throw new UserFacingError("Company does not have an enterprise number. Please complete the company details first.");
-    }
-    const lookupNumber = company.country === "BE" && company.enterpriseNumber.toUpperCase().startsWith("BE") ? company.enterpriseNumber.slice(2) : company.enterpriseNumber;
-    const enterpriseData = await getEnterpriseData(lookupNumber, company.country);
-    const validRepresentatives = enterpriseData.representatives.filter(
-      (rep): rep is typeof rep & { firstName: string; lastName: string } => Boolean(rep.firstName && rep.lastName)
-    );
-
-    if (validRepresentatives.length === 0) {
-      effectiveFirstName = "UNKNOWN";
-      effectiveLastName = "UNKNOWN";
-    } else {
-      const isRepresentative = validRepresentatives.some(
-        (rep) =>
-          namesMatch(rep.firstName, firstName) &&
-          namesMatch(rep.lastName, lastName)
-      );
-      if (!isRepresentative) {
-        throw new UserFacingError(
-          "The provided name does not match any representative of this company in the CBE registry. Please contact support@recommand.eu to proceed with the verification."
-        );
-      }
-    }
-  }
+  // Who may act for the company, where its country's register says so.
+  const { firstName: effectiveFirstName, lastName: effectiveLastName } = await checkRepresentative(company, { firstName, lastName });
 
   return submitVerificationIdentity({
     company,

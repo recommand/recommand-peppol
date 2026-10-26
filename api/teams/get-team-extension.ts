@@ -29,6 +29,7 @@ const _getTeamExtension = server.get(
             }
             return c.json(actionSuccess({
                 verificationRequirements: extendedTeam.verificationRequirements ?? "lax",
+                useTestNetwork: extendedTeam.useTestNetwork ?? false,
             }));
         } catch (error) {
             return c.json(actionFailure("Could not fetch team extension"), 500);

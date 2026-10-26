@@ -50,11 +50,63 @@ describe("the address a company sends under", () => {
     expect(chooseSendingCompanyIdentifier(otherCompany, sorted(belgian))).toBe(belgian);
   });
 
+  it("keeps a Belgian company sending from its enterprise number beside its VAT number", () => {
+    const enterpriseNumber = { scheme: "0208", identifier: "0123456749" };
+    const vat = { scheme: "9925", identifier: "be0123456749" };
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, enterpriseNumber))).toBe(enterpriseNumber);
+  });
+
+  it("keeps a German company sending from its VAT number when it adds a GEBA", () => {
+    const vat = { scheme: "9930", identifier: "de136695976" };
+    const geba = { scheme: "0246", identifier: "de136695976-00001" };
+    const gln = { scheme: "0088", identifier: "4000001000005" };
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, geba))).toBe(vat);
+    // Without a VAT number the GEBA is the address, and a lower scheme still comes first.
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(geba))).toBe(geba);
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, geba, gln))).toBe(gln);
+  });
+
+  it("keeps a Luxembourg company sending from its VAT number when it adds its matricule", () => {
+    const vat = { scheme: "9938", identifier: "lu15027442" };
+    const matricule = { scheme: "9938", identifier: "20042228800" };
+    const gln = { scheme: "0088", identifier: "4000001000005" };
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, matricule))).toBe(vat);
+    // Without a VAT number the matricule is the address, and a lower scheme still comes first.
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(matricule))).toBe(matricule);
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, matricule, gln))).toBe(gln);
+  });
+
   it("refuses a company without identifiers the same way for every access point", () => {
     for (const company of [frenchCompany, otherCompany]) {
       expect(() => chooseSendingCompanyIdentifier(company, [])).toThrow(
         /No sending company identifier found/
       );
     }
+  });
+
+  it("passes over a Leitweg-ID, which only names an authority's invoice reception", () => {
+    const leitwegId = { scheme: "0204", identifier: "991-33333test-33" };
+    const vat = { scheme: "9930", identifier: "de136695976" };
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, leitwegId))).toBe(vat);
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(leitwegId))).toBe(leitwegId);
+  });
+
+  it("goes out under the VAT number, else the GLN, to a Leitweg-ID", () => {
+    const vat = { scheme: "9930", identifier: "de136695976" };
+    const gln = { scheme: "0088", identifier: "4000001000005" };
+    const iban = { scheme: "9918", identifier: "de89370400440532013000" };
+    const toAuthority = "0204:991-33333test-33";
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(iban, gln, vat), toAuthority)).toBe(vat);
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(iban, gln), toAuthority)).toBe(gln);
+    // Other recipients keep the lowest scheme.
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(iban, gln, vat), "9930:de811569869")).toBe(gln);
+  });
+
+  it("sends a foreign supplier's document to a Leitweg-ID as it would any other", () => {
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(belgian), "0204:991-33333test-33")).toBe(belgian);
+  });
+
+  it("keeps the SIREN through the French access point, whatever the recipient", () => {
+    expect(chooseSendingCompanyIdentifier(frenchCompany, sorted(sirenScheme, siren), "0204:991-33333test-33")).toBe(siren);
   });
 });

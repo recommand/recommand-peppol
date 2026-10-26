@@ -9,16 +9,28 @@ import {
   getTransmittedDocuments,
 } from "@peppol/data/transmitted-documents";
 import {
+  booleanQuerySchema,
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
+  paginationQuery,
+  paginationResponse,
 } from "@core/lib/api-docs";
-import { deliveryStatuses, supportedDocumentTypeEnum } from "@peppol/db/schema";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
-import { transmittedDocumentResponse } from "./shared";
+import {
+  deliveryStatusSchema,
+  documentDirectionSchema,
+  transmittedDocumentResponse,
+  transmittedDocumentTypeSchema,
+} from "./shared";
 import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions";
 import { withDocumentDeliveries } from "@peppol/data/deliveries";
 
 const server = new Server();
+
+/** A document as the list returns it, without the XML it was built from. */
+const transmittedDocumentSummaryResponse = transmittedDocumentResponse
+  .omit({ xml: true })
+  .openapi({ ref: "TransmittedDocumentSummary" });
 
 const getTransmittedDocumentsRouteDescription = describeRoute({
   operationId: "getDocuments",
@@ -26,28 +38,16 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
   summary: "List Documents",
   tags: ["Documents"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved transmitted documents", z.object({
-      documents: z.array(transmittedDocumentResponse.omit({ xml: true })),
-      pagination: z.object({
-        total: z.number(),
-        page: z.number(),
-        limit: z.number(),
-        totalPages: z.number(),
-      }),
+    ...describeSuccessResponse("Successfully retrieved transmitted documents", z.object({
+      documents: z.array(transmittedDocumentSummaryResponse).openapi({ description: "The documents on this page." }),
+      pagination: paginationResponse,
     })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch transmitted documents"),
   },
 });
 
-const getTransmittedDocumentsQuerySchema = z.object({
-  page: z.coerce.number().min(1).default(1).openapi({
-    description: "The page number to retrieve",
-    example: 1,
-  }),
-  limit: z.coerce.number().min(1).max(200).default(10).openapi({
-    description: "The number of items per page",
-    example: 10,
-  }),
+const getTransmittedDocumentsQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 200 }).extend({
   companyId: z
     .union([z.string(), z.array(z.string())])
     .optional()
@@ -60,40 +60,37 @@ const getTransmittedDocumentsQuerySchema = z.object({
     .openapi({
       description: "Filter documents by label ID",
     }),
-  direction: z.enum(["incoming", "outgoing"]).optional().openapi({
+  direction: documentDirectionSchema.optional().openapi({
     description: "Filter documents by direction (incoming or outgoing)",
-    example: "incoming",
   }),
   search: z.string().optional().openapi({
     description: "Search term to filter documents",
-    example: "invoice",
+    examples: ["invoice"],
   }),
-  type: z.enum(supportedDocumentTypeEnum.enumValues).optional().openapi({
+  type: transmittedDocumentTypeSchema.optional().openapi({
     description: "Filter documents by type",
-    example: "invoice",
+    examples: ["invoice"],
   }),
   from: z.coerce.date().optional().openapi({
     description: "Filter documents created from this timestamp (inclusive). ISO 8601 format.",
-    example: "2024-01-01T00:00:00Z",
+    examples: ["2024-01-01T00:00:00Z"],
   }),
   to: z.coerce.date().optional().openapi({
     description: "Filter documents created until this timestamp (exclusive). ISO 8601 format.",
-    example: "2024-12-31T23:59:59Z",
+    examples: ["2024-12-31T23:59:59Z"],
   }),
-  isUnread: z.enum(["true", "false"]).optional().openapi({
+  isUnread: booleanQuerySchema.optional().openapi({
     description: "Filter documents by read status: true for unread documents (readAt is null), false for read documents.",
-    example: "true",
   }),
   envelopeId: z.string().optional().openapi({
     description: "Filter documents by envelope ID (Standard Business Document Header Instance Identifier)",
   }),
-  deliveryStatus: z.enum(deliveryStatuses).optional().openapi({
+  deliveryStatus: deliveryStatusSchema.optional().openapi({
     description: "Filter outgoing documents by their summarised delivery status: `delivered` (confirmed on at least one channel), `failed` (every delivery failed) or `pending` (still awaiting confirmation). Documents without deliveries never match.",
-    example: "failed",
+    examples: ["failed"],
   }),
-  deliveryFailed: z.enum(["true", "false"]).optional().openapi({
+  deliveryFailed: booleanQuerySchema.optional().openapi({
     description: "When true, only documents with at least one failed delivery, whatever their other deliveries did. Use it to find the sends that need attention.",
-    example: "true",
   }),
   excludeAttachments: z
     .preprocess(
@@ -109,7 +106,7 @@ const getTransmittedDocumentsQuerySchema = z.object({
     .default(false)
     .openapi({
     description: "When true, excludes attachments from the parsed object to reduce payload size. Can be passed as a flag without a value (e.g. ?excludeAttachments).",
-    example: false,
+    examples: [false],
   }),
 });
 
@@ -154,10 +151,10 @@ async function _getTransmittedDocumentsImplementation(c: GetTransmittedDocuments
         type,
         from,
         to,
-        isUnread: isUnread === "true" ? true : isUnread === "false" ? false : undefined,
+        isUnread,
         envelopeId,
         deliveryStatus,
-        deliveryFailed: deliveryFailed === "true" ? true : deliveryFailed === "false" ? false : undefined,
+        deliveryFailed,
         excludeAttachments,
       }
     );

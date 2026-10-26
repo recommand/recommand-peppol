@@ -7,10 +7,12 @@ import { creditNoteDocumentType } from "../document-types/creditNote";
 import { ciiDocumentType } from "./cii-document-type";
 import { ciiGuidelineId } from "./xml-detection";
 import type { DocumentFormat } from "./types";
-import { assertFranceBillingProcessId } from "./france-process";
+import {
+  assertFranceBillingProcessId,
+  FRANCE_CIUS_CUSTOMIZATION_ID,
+  isFranceCiusCustomizationId,
+} from "./france-process";
 
-const guidelineId =
-  "urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0";
 const regulatedProcessId = "urn:peppol:france:billing:regulated";
 const nonRegulatedProcessId = "urn:peppol:france:billing:non-regulated";
 
@@ -22,6 +24,8 @@ export const ciiD22bFranceCiusFormat: DocumentFormat<
 
   docTypeId: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0::D22B",
   supportedDocumentTypes: [invoiceDocumentType, creditNoteDocumentType],
+  // A French CIUS document may declare plain EN 16931 in BT-24, so only the doc type says the French rules apply.
+  validationProfile: "fr-cius",
   supportedProcessIds: [
     regulatedProcessId,
     nonRegulatedProcessId,
@@ -49,14 +53,14 @@ export const ciiD22bFranceCiusFormat: DocumentFormat<
           senderAddress: context.senderAddress,
           recipientAddress: context.recipientAddress,
           isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-          profile: { customizationId: guidelineId, processId },
+          profile: { customizationId: FRANCE_CIUS_CUSTOMIZATION_ID, processId },
         })
       : frenchRegulatedInvoiceToCII({
           invoice: document,
           senderAddress: context.senderAddress,
           recipientAddress: context.recipientAddress,
           isDocumentValidationEnforced: context.isDocumentValidationEnforced,
-          profile: { customizationId: guidelineId, processId },
+          profile: { customizationId: FRANCE_CIUS_CUSTOMIZATION_ID, processId },
         });
   },
 
@@ -70,8 +74,8 @@ export const ciiD22bFranceCiusFormat: DocumentFormat<
   detectDocumentType: (raw) =>
     ciiDocumentType(typeof raw === "string" ? raw : raw.toString("utf8")),
 
-  isFormat: (document) =>
-    ciiGuidelineId(document.CrossIndustryInvoice) === guidelineId,
+  isFormat: (document, context) =>
+    isFranceCiusCustomizationId(ciiGuidelineId(document.CrossIndustryInvoice), context),
 };
 
 export default ciiD22bFranceCiusFormat;

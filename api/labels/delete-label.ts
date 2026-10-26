@@ -22,6 +22,7 @@ const deleteLabelRouteDescription = describeRoute({
     tags: ["Labels"],
     responses: {
         ...describeSuccessResponse("Successfully deleted label"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Label not found"),
         ...describeErrorResponse(500, "Failed to delete label"),
     },

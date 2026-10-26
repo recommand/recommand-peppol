@@ -1,6 +1,6 @@
 import z from "zod";
 import "zod-openapi/extend";
-import { CURRENCIES, zCurrencies } from "@peppol/utils/currencies";
+import { zCurrencies } from "@peppol/utils/currencies";
 
 const franceCdarStatusCodeDescription = `French invoice lifecycle status.
 
@@ -117,7 +117,26 @@ const franceCdarReasonCodeDescription = `Coded reason for the invoice lifecycle 
 | \`REJ_CONT_B2G\` | Rejected by B2G business controls |
 | \`REJ_REF_PJ\` | Rejected because of an attachment-reference error |
 | \`REJ_ASS_PJ\` | Rejected because of an attachment-association error |
-| \`NON_TRANSMISE\` | Submitted but not transmitted because the recipient has no receiving platform |`;
+| \`NON_TRANSMISE\` | Submitted but not transmitted because the recipient has no receiving platform |
+| \`IRR_VIDE_F\` | Inadmissible: a file in the submitted flow is empty |
+| \`IRR_TYPE_F\` | Inadmissible: a file in the flow has a wrong type or extension |
+| \`IRR_SYNTAX\` | Inadmissible: a file in the flow fails the syntax check |
+| \`IRR_TAILLE_PJ\` | Inadmissible: an attachment exceeds the size limit |
+| \`IRR_NOM_PJ\` | Inadmissible: an attachment name contains forbidden characters |
+| \`IRR_VID_PJ\` | Inadmissible: an attachment is empty |
+| \`IRR_EXT_DOC\` | Inadmissible: an attachment has a wrong extension |
+| \`IRR_TAILLE_F\` | Inadmissible: a file in the flow exceeds the maximum size |
+| \`IRR_ANTIVIRUS\` | Inadmissible: the flow fails the anti-virus check |
+| \`IRR_NOM_F\` | Inadmissible: a file name in the flow is invalid |
+| \`SUPPR_COMP_AVOIR\` | Public-sector refusal: withdrawn for offsetting against credit notes |
+| \`TRANSF_PMNT_REGIE\` | Public-sector refusal: transferred for payment through a régie |
+| \`CONTACT_ACHTR\` | Public-sector refusal: other reason, contact your buyer |
+| \`RETRAIT_MAN_SERV\` | Public-sector refusal reason, see the AFNOR XP Z12-012 reason code table |
+| \`ST_CT_NON_DECLAR\` | Public-sector refusal reason, see the AFNOR XP Z12-012 reason code table |
+
+The \`IRR_*\` codes are the reasons for an inadmissible file (\`501\`). The public-sector refusal codes are set by the public invoicing portal and only appear in CDARs you receive.
+
+When sending, statuses \`200\`, \`206\`, \`207\`, \`208\`, \`210\`, \`213\` and \`501\` accept only the codes the French rules list for them (BR-FR-CDV-CL-09). A refusal (\`210\`) accepts \`TX_TVA_ERR\`, \`MONTANTTOTAL_ERR\`, \`CALCUL_ERR\`, \`NON_CONFORME\`, \`DOUBLON\`, \`DEST_ERR\`, \`TRANSAC_INC\`, \`EMMET_INC\`, \`CONTRAT_TERM\`, \`DOUBLE_FACT\`, \`CMD_ERR\`, \`ADR_ERR\` and \`REF_CT_ABSENT\`, so not \`AUTRE\`.`;
 
 export const franceCdarStatusCodeSchema = z.enum([
   "200", // Submitted
@@ -136,12 +155,12 @@ export const franceCdarStatusCodeSchema = z.enum([
   "213", // Rejected
   "214", // Validated or pre-validated ("Visée")
   "501", // Inadmissible file
-]).openapi({ description: franceCdarStatusCodeDescription });
+]).openapi({ description: franceCdarStatusCodeDescription, ref: "FranceCdarStatusCode" });
 
 export const franceCdarPhaseSchema = z.enum([
   "23", // Processing phase
   "305", // Transmission phase
-]).openapi({ description: franceCdarPhaseDescription });
+]).openapi({ description: franceCdarPhaseDescription, ref: "FranceCdarPhase" });
 
 export const franceCdarBusinessProcessSchema = z.enum([
   "REGULATED", // Regulated French domestic e-invoicing
@@ -150,7 +169,7 @@ export const franceCdarBusinessProcessSchema = z.enum([
   "B2CINT", // International B2C sales e-reporting
   "B2BINT", // International B2B sales e-reporting
   "OUTOFSCOPE", // Outside the French e-invoicing and e-reporting reform
-]).openapi({ description: franceCdarBusinessProcessDescription });
+]).openapi({ description: franceCdarBusinessProcessDescription, ref: "FranceCdarBusinessProcess" });
 
 export const franceCdarRoleCodeSchema = z.enum([
   "BY", // Buyer
@@ -164,7 +183,7 @@ export const franceCdarRoleCodeSchema = z.enum([
   "PR", // Payer
   "II", // Invoicer (invoice issuer)
   "IV", // Invoicee (party invoiced)
-]).openapi({ description: franceCdarRoleCodeDescription });
+]).openapi({ description: franceCdarRoleCodeDescription, ref: "FranceCdarRoleCode" });
 
 export const franceCdarInvoiceTypeCodeSchema = z.enum([
   "380", // Commercial invoice
@@ -183,7 +202,7 @@ export const franceCdarInvoiceTypeCodeSchema = z.enum([
   "396", // Factored credit note
   "502", // Self-billed factored credit note
   "503", // Credit note for an advance payment invoice
-]).openapi({ description: franceCdarInvoiceTypeCodeDescription });
+]).openapi({ description: franceCdarInvoiceTypeCodeDescription, ref: "FranceCdarInvoiceTypeCode" });
 
 export const franceCdarReasonCodeSchema = z.enum([
   "JUSTIF_ABS", // Supporting document missing or insufficient
@@ -222,7 +241,22 @@ export const franceCdarReasonCodeSchema = z.enum([
   "REJ_REF_PJ", // Attachment-reference rejection
   "REJ_ASS_PJ", // Attachment-association rejection
   "NON_TRANSMISE", // Recipient has no receiving platform
-]).openapi({ description: franceCdarReasonCodeDescription });
+  "IRR_VIDE_F", // Inadmissible: empty file in the flow
+  "IRR_TYPE_F", // Inadmissible: wrong file type or extension
+  "IRR_SYNTAX", // Inadmissible: file fails the syntax check
+  "IRR_TAILLE_PJ", // Inadmissible: attachment too large
+  "IRR_NOM_PJ", // Inadmissible: forbidden characters in an attachment name
+  "IRR_VID_PJ", // Inadmissible: empty attachment
+  "IRR_EXT_DOC", // Inadmissible: wrong attachment extension
+  "IRR_TAILLE_F", // Inadmissible: file too large
+  "IRR_ANTIVIRUS", // Inadmissible: anti-virus check failed
+  "IRR_NOM_F", // Inadmissible: invalid file name
+  "SUPPR_COMP_AVOIR", // Public-sector refusal: offset against credit notes
+  "TRANSF_PMNT_REGIE", // Public-sector refusal: payment through a régie
+  "CONTACT_ACHTR", // Public-sector refusal: contact your buyer
+  "RETRAIT_MAN_SERV", // Public-sector refusal
+  "ST_CT_NON_DECLAR", // Public-sector refusal
+]).openapi({ description: franceCdarReasonCodeDescription, ref: "FranceCdarReasonCode" });
 
 const franceCdarAmountSchema = z
   .string()
@@ -272,18 +306,17 @@ export const franceCdarCollectedAmountSchema = z.object({
   amount: franceCdarAmountSchema.openapi({
     description:
       "Net collected amount (positive) or disbursed amount (negative), for status 212.",
-    example: "12000.00",
+    examples: ["12000.00"],
   }),
   currency: zCurrencies.openapi({
     description: "ISO 4217 currency code of the collected amount.",
-    example: "EUR",
-    enum: CURRENCIES.map((currency) => currency.code),
+    examples: ["EUR"],
   }),
   vatPercent: franceCdarVatPercentSchema.openapi({
     description: "VAT rate applicable to the collected amount.",
-    example: "20.00",
+    examples: ["20.00"],
   }),
-});
+}).openapi({ ref: "FranceCdarCollectedAmount" });
 
 // BR-FR-CDV-15: a reason code (MDT-113) is mandatory for these statuses.
 const statusesRequiringReason = new Set([
@@ -294,6 +327,82 @@ const statusesRequiringReason = new Set([
   "213",
   "501",
 ]);
+
+// BR-FR-CDV-CL-09: the reason codes each status accepts. A status not listed here
+// accepts any reason code. Status 210 lists the codes for a refusal sent by a platform;
+// the wider list for refusals sent by the PPF on behalf of a public buyer, with the
+// public-sector codes, does not apply to the CDARs sent through this API.
+const reasonCodesByStatus: Partial<
+  Record<
+    z.infer<typeof franceCdarStatusCodeSchema>,
+    readonly z.infer<typeof franceCdarReasonCodeSchema>[]
+  >
+> = {
+  "200": ["NON_TRANSMISE"],
+  "206": ["AUTRE", "CMD_ERR", "SIRET_ERR", "CODE_ROUTAGE_ERR", "REF_CT_ABSENT", "REF_ERR", "PU_ERR", "REM_ERR", "QTE_ERR", "ART_ERR", "MODPAI_ERR", "QUALITE_ERR", "LIVR_INCOMP"],
+  "207": ["AUTRE", "COORD_BANC_ERR", "TX_TVA_ERR", "MONTANTTOTAL_ERR", "CALCUL_ERR", "NON_CONFORME", "DOUBLON", "DEST_INC", "DEST_ERR", "TRANSAC_INC", "EMMET_INC", "CONTRAT_TERM", "DOUBLE_FACT", "CMD_ERR", "ADR_ERR", "SIRET_ERR", "CODE_ROUTAGE_ERR", "REF_CT_ABSENT", "REF_ERR", "PU_ERR", "REM_ERR", "QTE_ERR", "ART_ERR", "MODPAI_ERR", "QUALITE_ERR", "LIVR_INCOMP"],
+  "208": ["JUSTIF_ABS", "COORD_BANC_ERR", "CMD_ERR", "SIRET_ERR", "CODE_ROUTAGE_ERR", "REF_CT_ABSENT", "REF_ERR"],
+  "210": ["TX_TVA_ERR", "MONTANTTOTAL_ERR", "CALCUL_ERR", "NON_CONFORME", "DOUBLON", "DEST_ERR", "TRANSAC_INC", "EMMET_INC", "CONTRAT_TERM", "DOUBLE_FACT", "CMD_ERR", "ADR_ERR", "REF_CT_ABSENT"],
+  "501": ["IRR_VIDE_F", "IRR_TYPE_F", "IRR_SYNTAX", "IRR_TAILLE_PJ", "IRR_NOM_PJ", "IRR_VID_PJ", "IRR_EXT_DOC", "IRR_TAILLE_F", "IRR_ANTIVIRUS", "IRR_NOM_F"],
+  "213": ["MONTANTTOTAL_ERR", "CALCUL_ERR", "DOUBLON", "DEST_INC", "ADR_ERR", "REJ_SEMAN", "REJ_UNI", "REJ_COH", "REJ_ADR", "REJ_CONT_B2G", "REJ_REF_PJ", "REJ_ASS_PJ"],
+};
+
+// The public invoicing portal sets these when it refuses an invoice on behalf of a
+// public buyer. A platform or company never sends them.
+const publicSectorRefusalReasonCodes: readonly z.infer<typeof franceCdarReasonCodeSchema>[] = [
+  "RETRAIT_MAN_SERV",
+  "ST_CT_NON_DECLAR",
+  "SUPPR_COMP_AVOIR",
+  "TRANSF_PMNT_REGIE",
+  "CONTACT_ACHTR",
+];
+
+function refineSendFranceCdarReasonCode(
+  data: Pick<z.infer<typeof franceCdarObjectSchema>, "statusCode" | "reasonCode">,
+  ctx: z.RefinementCtx
+) {
+  if (data.reasonCode && publicSectorRefusalReasonCodes.includes(data.reasonCode)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["reasonCode"],
+      message: `reasonCode ${data.reasonCode} is set by the public invoicing portal and cannot be sent`,
+    });
+    return;
+  }
+  const allowed = reasonCodesByStatus[data.statusCode];
+  if (data.reasonCode && allowed && !allowed.includes(data.reasonCode)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["reasonCode"],
+      message: `reasonCode ${data.reasonCode} is not allowed for status ${data.statusCode}. Allowed: ${allowed.join(", ")}`,
+    });
+  }
+}
+
+// BR-FR-CDV-07: at phase 305 the issuer legal ID is omitted unless the CDAR is
+// addressed to the PPF (recipient role DFH). Only on sending: the official
+// schematron does not enforce this, and platforms put their PA matricule (0238) or
+// their own SIREN there in the CDARs they send.
+function refineSendFranceCdarIssuerLegalId(
+  data: Pick<
+    z.infer<typeof franceCdarObjectSchema>,
+    "phase" | "recipientRole" | "issuerLegalId"
+  >,
+  ctx: z.RefinementCtx
+) {
+  if (
+    data.phase === "305" &&
+    data.recipientRole !== "DFH" &&
+    data.issuerLegalId
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["issuerLegalId"],
+      message:
+        "issuerLegalId must be omitted when phase is 305 unless recipientRole is DFH",
+    });
+  }
+}
 
 const franceCdarTransmissionStatusCodes = new Set([
   "200",
@@ -328,75 +437,75 @@ const franceCdarObjectSchema = z.object({
   issueDate: franceCdarIncomingIssueDateSchema.openapi({
     description:
       "Creation date and time of the CDAR, without a timezone and with second precision. Date-only values are accepted for incoming format-102 documents.",
-    example: "2024-03-20T14:05:09",
+    examples: ["2024-03-20T14:05:09"],
   }),
   businessProcess: franceCdarBusinessProcessSchema.openapi({
     description: franceCdarBusinessProcessDescription,
-    example: "REGULATED",
+    examples: ["REGULATED"],
   }),
   phase: franceCdarPhaseSchema.openapi({
     description: franceCdarPhaseDescription,
-    example: "23",
+    examples: ["23"],
   }),
   senderRole: franceCdarRoleCodeSchema.openapi({
     description: `Role of the CDAR sender.
 
 ${franceCdarRoleCodeDescription}`,
-    example: "WK",
+    examples: ["WK"],
   }),
   issuerRole: franceCdarRoleCodeSchema.openapi({
     description: `Role of the party that creates and issues the invoice lifecycle status. This is independent from the CDAR sender role.
 
 ${franceCdarRoleCodeDescription}`,
-    example: "BY",
+    examples: ["BY"],
   }),
   issuerLegalId: franceCdarLegalIdSchema.optional().openapi({
     description:
-      "Legal identifier of the party setting the status. Required when phase is 23; must be omitted when phase is 305 unless recipientRole is DFH.",
-    example: "200000008",
+      "Legal identifier of the party setting the status. Required when phase is 23. When sending, it must be omitted when phase is 305 unless recipientRole is DFH; a received CDAR may carry the identifier of the platform that set a phase-305 status.",
+    examples: ["200000008"],
   }),
   issuerLegalIdScheme: franceCdarIdentifierSchemeSchema.optional().openapi({
     description:
       "ISO 6523 ICD scheme of the party-setting-status legal identifier. Required together with issuerLegalId.",
-    example: "0002",
+    examples: ["0002"],
   }),
   recipientRole: franceCdarRoleCodeSchema.openapi({
     description: `Role of the CDAR recipient.
 
 ${franceCdarRoleCodeDescription}`,
-    example: "SE",
+    examples: ["SE"],
   }),
   recipientLegalId: franceCdarLegalIdSchema.optional().openapi({
     description: "Legal identifier of the CDAR recipient.",
-    example: "200000008",
+    examples: ["200000008"],
   }),
   recipientLegalIdScheme: franceCdarIdentifierSchemeSchema.optional().openapi({
     description:
       "ISO 6523 ICD scheme of the CDAR recipient legal identifier. Required together with recipientLegalId.",
-    example: "0002",
+    examples: ["0002"],
   }),
   recipientElectronicAddress: franceCdarElectronicAddressSchema
     .optional()
     .openapi({
       description:
         "Electronic address of the CDAR recipient. Required when recipientRole is not WK or DFH.",
-      example: "100000009",
+      examples: ["100000009"],
     }),
   recipientElectronicAddressScheme: franceCdarIdentifierSchemeSchema
     .optional()
     .openapi({
       description:
         "Electronic Address Scheme (EAS) code of the CDAR recipient electronic address. Required together with recipientElectronicAddress.",
-      example: "0225",
+      examples: ["0225"],
     }),
   statusCode: franceCdarStatusCodeSchema.openapi({
     description: franceCdarStatusCodeDescription,
-    example: "200",
+    examples: ["200"],
   }),
   statusDate: franceCdarIncomingIssueDateSchema.openapi({
     description:
       "Date and time at which the status itself was set, without a timezone and with second precision. This is distinct from issueDate, which is the creation date and time of the CDAR message. Date-only values are accepted for incoming format-102 documents.",
-    example: "2024-03-20T14:05:09",
+    examples: ["2024-03-20T14:05:09"],
   }),
   invoiceId: franceCdarInvoiceIdSchema.openapi({
     description:
@@ -406,22 +515,22 @@ ${franceCdarRoleCodeDescription}`,
     description: `Type of the referenced invoice.
 
 ${franceCdarInvoiceTypeCodeDescription}`,
-    example: "380",
+    examples: ["380"],
   }),
   invoiceIssueDate: z.string().date().optional().openapi({
     description:
       "Issue date of the referenced invoice. Required unless statusCode is 501.",
-    example: "2024-03-15",
+    examples: ["2024-03-15"],
   }),
   sellerLegalId: franceCdarLegalIdSchema.optional().openapi({
     description:
       "Legal identifier (e.g. SIREN) of the invoice seller. Required unless statusCode is 501.",
-    example: "123456789",
+    examples: ["123456789"],
   }),
   sellerLegalIdScheme: franceCdarIdentifierSchemeSchema.optional().openapi({
     description:
       "ISO 6523 ICD scheme of the referenced invoice seller legal identifier. Required together with sellerLegalId.",
-    example: "0002",
+    examples: ["0002"],
   }),
   reasonCode: franceCdarReasonCodeSchema.optional().openapi({
     description: franceCdarReasonCodeDescription,
@@ -433,7 +542,7 @@ ${franceCdarInvoiceTypeCodeDescription}`,
   reasonNote: franceCdarReasonNoteSchema.optional().openapi({
     description:
       "Free-text comment in the status detail IncludedNote. Required when reasonCode is AUTRE.",
-    example: "The invoice needs manual review.",
+    examples: ["The invoice needs manual review."],
   }),
   collectedAmounts: z.array(franceCdarCollectedAmountSchema).optional().openapi({
     description:
@@ -523,21 +632,6 @@ function refineFranceCdar(
     });
   }
 
-  // BR-FR-CDV-07: at phase 305 the issuer legal ID is omitted unless the CDAR is
-  // addressed to the PPF (recipient role DFH).
-  if (
-    data.phase === "305" &&
-    data.recipientRole !== "DFH" &&
-    data.issuerLegalId
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["issuerLegalId"],
-      message:
-        "issuerLegalId must be omitted when phase is 305 unless recipientRole is DFH",
-    });
-  }
-
   // BR-FR-CDV-08: the recipient electronic address is required unless the
   // recipient is a platform (WK) or the PPF (DFH).
   if (
@@ -574,12 +668,12 @@ export const sendFranceCdarSchema = franceCdarObjectSchema
       description: "The ID of the CDAR. If not provided, the ID will be autogenerated.",
     }),
     issueDate: franceCdarDateTimeSchema.optional().openapi({
-      example: "2024-03-20T14:05:09",
+      examples: ["2024-03-20T14:05:09"],
       description:
         "If not provided, the issue date and time will be the current local date and time.",
     }),
     statusDate: franceCdarDateTimeSchema.optional().openapi({
-      example: "2024-03-20T14:05:09",
+      examples: ["2024-03-20T14:05:09"],
       description:
         "Date and time at which the status was set. If not provided, the issue date and time of the CDAR is used.",
     }),
@@ -587,14 +681,20 @@ export const sendFranceCdarSchema = franceCdarObjectSchema
       description: `${franceCdarPhaseDescription}
 
 Defaults to \`305\` for statuses \`200\`, \`201\`, \`202\`, \`203\`, \`213\`, and \`501\`; otherwise defaults to \`23\`.`,
-      example: "23",
+      examples: ["23"],
     }),
   })
   .transform((data) => ({
     ...data,
     phase: data.phase ?? getFranceCdarPhaseForStatus(data.statusCode),
   }))
-  .superRefine((data, ctx) => refineFranceCdar(data, ctx, false))
+  .superRefine((data, ctx) => {
+    refineFranceCdar(data, ctx, false);
+    // Only on sending: a received CDAR is stored as it arrived, even when its
+    // sender used a reason code the current rules no longer accept for its status.
+    refineSendFranceCdarReasonCode(data, ctx);
+    refineSendFranceCdarIssuerLegalId(data, ctx);
+  })
   .openapi({
     ref: "SendFranceCdar",
     title: "French Invoicing CDAR to send",

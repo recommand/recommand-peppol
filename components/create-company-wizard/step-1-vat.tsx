@@ -5,6 +5,7 @@ import { rc } from "@recommand/lib/client";
 import type { Companies } from "@peppol/api/companies";
 import type { CompanyFormData } from "@peppol/types/company";
 import { CompanyIdentityFields, getCompanyCountryDefaults, type CompanyIdentityFieldsValue } from "@peppol/components/company-form-fields";
+import { getCountrySupportLevel } from "@peppol/utils/countries";
 import { useTranslation } from "@core/hooks/use-translation";
 
 const client = rc<Companies>("peppol");
@@ -14,13 +15,14 @@ type Step1Props = {
     data: Partial<CompanyFormData>;
     onNext: (data: Partial<CompanyFormData>) => void;
     onCancel: () => void;
+    offerSetUpLater: boolean;
 };
 
-export function Step1Vat({ teamId, data, onNext, onCancel }: Step1Props) {
+export function Step1Vat({ teamId, data, onNext, onCancel, offerSetUpLater }: Step1Props) {
     const { t } = useTranslation();
     const [identityData, setIdentityData] = useState<Partial<CompanyIdentityFieldsValue>>({
-        ...getCompanyCountryDefaults(data.country ?? "BE"),
-        country: data.country ?? "BE",
+        ...(data.country ? getCompanyCountryDefaults(data.country) : {}),
+        country: data.country,
         vatNumber: data.vatNumber ?? null,
         enterpriseNumber: data.enterpriseNumber ?? null,
         enterpriseNumberScheme: data.enterpriseNumberScheme ?? null,
@@ -30,8 +32,13 @@ export function Step1Vat({ teamId, data, onNext, onCancel }: Step1Props) {
         setIdentityData((prev) => ({ ...prev, ...partial }));
     };
 
+    // Companies can only be created in a supported country, so there is no going on
+    // without one: not by the button, nor by submitting the form another way.
+    const canContinue = Boolean(identityData.country) && getCountrySupportLevel(identityData.country) !== "unsupported";
+
     const handleNext = async () => {
-        const country = identityData.country ?? "BE";
+        const country = identityData.country;
+        if (!country || !canContinue) return;
         const vatNumber = identityData.vatNumber ?? "";
         const enterpriseNumber = identityData.enterpriseNumber ?? "";
         const enterpriseNumberScheme = identityData.enterpriseNumberScheme ?? "";
@@ -76,12 +83,17 @@ export function Step1Vat({ teamId, data, onNext, onCancel }: Step1Props) {
             />
             <div className="flex justify-between gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={onCancel}>
-                    {t`Cancel`}
+                    {offerSetUpLater ? t`Set up later` : t`Cancel`}
                 </Button>
-                <AsyncButton type="submit" onClick={handleNext}>
+                <AsyncButton type="submit" onClick={handleNext} disabled={!canContinue}>
                     {t`Next`}
                 </AsyncButton>
             </div>
+            {offerSetUpLater && (
+                <p className="text-xs text-pretty text-muted-foreground">
+                    {t`Working through the API for clients? Choose ‘Set up later’ and add their companies later.`}
+                </p>
+            )}
         </form>
     );
 }

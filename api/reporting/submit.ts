@@ -4,7 +4,7 @@ import type {
 } from "@core/lib/auth-middleware";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   describeValidationErrorResponse,
 } from "@core/lib/api-docs";
 import { audit } from "@core/lib/audit";
@@ -35,7 +35,7 @@ import { findOutgoingDocumentByExternalReference } from "@peppol/data/transmitte
 import {
   requireCompanyVerificationForStrictTeams,
   requireIntegrationSupportedCompanyAccess,
-  requireValidSubscription,
+  requireTransactionEntitlement,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import {
@@ -75,6 +75,8 @@ const frenchReportResponseSchema = z.object({
     description:
       "Present only on a duplicate that is not a plain retry: the reference was already used for a report that differs from this request, so nothing was filed for this request. The text says what was found. A correction or a cancellation sent under the reference of the report it means to act on is the usual cause.",
   }),
+}).openapi({
+  description: "The report as accepted: the ID it is recorded under, and whether it had already been filed.",
 });
 
 const referenceGuidance = `Choose a new, unique \`reference\` for every report, including corrections and cancellations. Retrying the exact same request with the same reference is safe: it returns the report filed the first time instead of filing a second one. A correction or cancellation acts on the report identified by the data in the request, and carries the optional \`action\` field.
@@ -105,13 +107,14 @@ ${referenceGuidance}
 
 A submitted report is recorded alongside your sent documents and counts towards your document quota.`,
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "The report was accepted for processing",
       frenchReportResponseSchema
     ),
     ...describeValidationErrorResponse(
       "Invalid reporting data; the company is not registered for e-reporting, its registration is not yet registered, or it is suspended; the company is not registered in France or lacks the identifiers a report needs; a payment report was sent for a company whose VAT is due on invoicing; or the reporting service refused the report.",
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(
       409,
       "The report conflicts with what was filed before, or the filing for the period has already been assembled and the report on file can no longer be corrected or cancelled through the API",
@@ -141,13 +144,14 @@ ${referenceGuidance}
 
 A submitted report is recorded alongside your sent documents and counts towards your document quota.`,
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "The report was accepted for processing",
       frenchReportResponseSchema
     ),
     ...describeValidationErrorResponse(
       "Invalid reporting data; the company is not registered for e-reporting, its registration is not yet registered, or it is suspended; the company is not registered in France or lacks the identifiers a report needs; a payment report was sent for a company whose VAT is due on invoicing; or the reporting service refused the report.",
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(
       409,
       "The report conflicts with what was filed before: a payment report is already on file for the invoice and this request is not a correction or cancellation, or the filing for the period has already been assembled and the report on file can no longer be corrected or cancelled through the API",
@@ -446,10 +450,15 @@ type FrenchB2CReportingContext = Context<
   }
 >;
 
+const submitFrenchB2CReportParamSchema = z.object({
+  companyId: z.string(),
+});
+
 const _submitFrenchB2CReport = server.post(
   "/:companyId/reporting/fr/b2c",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  zodValidator("param", submitFrenchB2CReportParamSchema),
+  requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   b2cRouteDescription,
   zodValidator("json", frenchB2CReportSchema),
@@ -497,10 +506,15 @@ type FrenchB2BiReportingContext = Context<
   }
 >;
 
+const submitFrenchB2BiReportParamSchema = z.object({
+  companyId: z.string(),
+});
+
 const _submitFrenchB2BiReport = server.post(
   "/:companyId/reporting/fr/b2bi",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  zodValidator("param", submitFrenchB2BiReportParamSchema),
+  requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   b2biRouteDescription,
   zodValidator("json", frenchB2BiReportSchema),

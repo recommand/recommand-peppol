@@ -13,6 +13,8 @@ export type SentDocumentEmail = {
   address: string;
   /** The mail service's id for the message; null when it did not return one. */
   providerMessageId: string | null;
+  /** Set when a playground stood in for the mail service and nothing was mailed. */
+  simulated?: true;
 };
 
 export type FailedDocumentEmail = {
@@ -21,11 +23,14 @@ export type FailedDocumentEmail = {
   message: string;
 };
 
-/** Sends one message and returns what the mail service said about it. */
+/**
+ * Sends one message and returns what the mail service said about it, or that the
+ * message was simulated and never handed to the mail service.
+ */
 export type DocumentEmailSender = (message: {
   to: string;
   metadata: Record<string, string>;
-}) => Promise<{ messageId: string | null }>;
+}) => Promise<{ messageId: string | null; simulated?: true }>;
 
 export function newDeliveryId(): string {
   return "dlv_" + ulid();
@@ -47,11 +52,16 @@ export async function sendDocumentEmails(options: {
   for (const address of options.recipients) {
     const deliveryId = (options.deliveryId ?? newDeliveryId)();
     try {
-      const { messageId } = await options.send({
+      const { messageId, simulated } = await options.send({
         to: address,
         metadata: documentEmailMetadata({ deliveryId, documentId: options.documentId }),
       });
-      sent.push({ deliveryId, address, providerMessageId: messageId });
+      sent.push({
+        deliveryId,
+        address,
+        providerMessageId: messageId,
+        ...(simulated ? { simulated } : {}),
+      });
     } catch (error) {
       console.error("Failed to send email:", error);
       failed.push({

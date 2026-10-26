@@ -99,7 +99,11 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
     pool = await connectTestDatabase();
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
-    mock.module("@peppol/utils/naptr", () => ({ resolveNaptr: async () => smlTarget }));
+    mock.module("@peppol/utils/naptr", () => ({
+      resolveNaptr: async () => (smlTarget ? { status: "found", smpUrl: smlTarget } : { status: "absent" }),
+      lookUpCname: async () => ({ status: "absent" }),
+      smlResolver: {},
+    }));
     ({ requestInboundMigration, startOutboundMigration, cancelOutboundMigration, finalizeOutboundMigration, getParticipantMigrations } =
       await import("../../data/participant-migrations"));
     ({ createCompanyIdentifier } = await import("../../data/company-identifiers"));
@@ -207,8 +211,8 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
       });
 
       expect(await identifierRows("c_new")).toEqual(["9925:be0123456749"]);
-      // The SMP is addressed with the identifier as it was entered, as every registration is.
-      expect(smpUrls("/migration/inbound/iso6523-actorid-upis::9925:BE0123456749/")).toHaveLength(1);
+      // The SMP is addressed with the cleaned identifier, the same value that is validated and stored.
+      expect(smpUrls("/migration/inbound/iso6523-actorid-upis::9925:be0123456749/")).toHaveLength(1);
       expect(await migrationRows("c_new")).toEqual([
         { address: "9925:be0123456749", direction: "inbound", status: "completed", key: KEY, error: null },
       ]);

@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse, paginationQuery, paginationResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
 import { integrationTaskLogResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -18,30 +18,16 @@ const getIntegrationTaskLogsRouteDescription = describeRoute({
     summary: "Get Integration Task Logs",
     tags: ["Integrations"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved integration task logs", z.object({
-            logs: z.array(integrationTaskLogResponse),
-            pagination: z.object({
-                total: z.number(),
-                page: z.number(),
-                limit: z.number(),
-                totalPages: z.number(),
-            }),
+        ...describeSuccessResponse("Successfully retrieved integration task logs", z.object({
+            logs: z.array(integrationTaskLogResponse).openapi({ description: "The task logs on this page." }),
+            pagination: paginationResponse,
         })),
         ...describeErrorResponse(404, "Integration not found"),
         ...describeErrorResponse(500, "Failed to fetch integration task logs"),
     },
 });
 
-const getIntegrationTaskLogsQuerySchema = z.object({
-    page: z.coerce.number().min(1).default(1).openapi({
-        description: "The page number to retrieve",
-        example: 1,
-    }),
-    limit: z.coerce.number().min(1).max(100).default(10).openapi({
-        description: "The number of items per page",
-        example: 10,
-    }),
-});
+const getIntegrationTaskLogsQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 100 });
 
 const getIntegrationTaskLogsParamSchema = z.object({
     integrationId: z.string().openapi({

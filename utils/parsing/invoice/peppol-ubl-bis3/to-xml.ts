@@ -2,7 +2,10 @@ import { XMLBuilder } from "fast-xml-parser";
 import type { Invoice } from "../schemas";
 import { calculateDocumentTotals } from "../calculations";
 import { parsePeppolAddress } from "../../peppol-address";
-import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
+import { resolveBuyerReference } from "../../buyer-reference";
+import { billingPeriodToUBL } from "../../billing-period";
+import { partyIdentifiersToUBL } from "../../party-identifiers";
+import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 const builder = new XMLBuilder({
@@ -54,6 +57,14 @@ export function prebuildInvoiceUBL({
 
   const supplier = parsePeppolAddress(supplierAddress);
   const customer = parsePeppolAddress(customerAddress);
+  const buyerReference = resolveBuyerReference({
+    buyerReference: invoice.buyerReference,
+    purchaseOrderReference: invoice.purchaseOrderReference,
+    documentNumber: invoice.invoiceNumber,
+    customerAddress,
+    sellerCountry: invoice.seller.country,
+    buyerCountry: invoice.buyer.country,
+  });
   return {
     Invoice: {
       "@_xmlns": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
@@ -72,22 +83,24 @@ export function prebuildInvoiceUBL({
       "cbc:InvoiceTypeCode": "380",
       ...(invoice.note && { "cbc:Note": invoice.note }),
       "cbc:DocumentCurrencyCode": invoice.currency,
-      ...(invoice.buyerReference && {
-        "cbc:BuyerReference": invoice.buyerReference,
+      ...(buyerReference && {
+        "cbc:BuyerReference": buyerReference,
       }),
+      ...billingPeriodToUBL(invoice.billingPeriod),
       ...((invoice.purchaseOrderReference || invoice.salesOrderReference) && {
         "cac:OrderReference": {
           "cbc:ID": invoice.purchaseOrderReference || "NA",
           ...(invoice.salesOrderReference && { "cbc:SalesOrderID": invoice.salesOrderReference }),
         },
       }),
-      ...(!invoice.buyerReference &&
-        !invoice.purchaseOrderReference && {
-        "cbc:BuyerReference": invoice.invoiceNumber,
-      }),
       ...(invoice.despatchReference && {
         "cac:DespatchDocumentReference": {
           "cbc:ID": invoice.despatchReference,
+        },
+      }),
+      ...(invoice.contractReference && {
+        "cac:ContractDocumentReference": {
+          "cbc:ID": invoice.contractReference,
         },
       }),
       ...(invoice.attachments && {
@@ -120,6 +133,7 @@ export function prebuildInvoiceUBL({
             "@_schemeID": supplier.schemeId,
             "#text": supplier.identifier,
           },
+          ...partyIdentifiersToUBL(invoice.seller),
           "cac:PartyName": {
             "cbc:Name": invoice.seller.name,
           },
@@ -162,6 +176,7 @@ export function prebuildInvoiceUBL({
             "@_schemeID": customer.schemeId,
             "#text": customer.identifier,
           },
+          ...partyIdentifiersToUBL(invoice.buyer),
           "cac:PartyName": {
             "cbc:Name": invoice.buyer.name,
           },
@@ -241,19 +256,31 @@ export function prebuildInvoiceUBL({
               "#text": payment.reference,
             },
           }),
-          "cac:PayeeFinancialAccount": {
-            "cbc:ID": {
-              "#text": payment.iban,
-            },
-            ...(payment.name && {
-              "cbc:Name": payment.name,
-            }),
-            ...(payment.financialInstitutionBranch && {
-              "cac:FinancialInstitutionBranch": {
-                "cbc:ID": payment.financialInstitutionBranch,
+          ...(hasPayeeAccount(payment) && {
+            "cac:PayeeFinancialAccount": {
+              "cbc:ID": {
+                "#text": payment.iban,
               },
-            }),
-          },
+              ...(payment.name && {
+                "cbc:Name": payment.name,
+              }),
+              ...(payment.financialInstitutionBranch && {
+                "cac:FinancialInstitutionBranch": {
+                  "cbc:ID": payment.financialInstitutionBranch,
+                },
+              }),
+            },
+          }),
+          ...(payment.mandate && {
+            "cac:PaymentMandate": {
+              "cbc:ID": payment.mandate.reference,
+              ...(payment.mandate.debitedAccount && {
+                "cac:PayerFinancialAccount": {
+                  "cbc:ID": payment.mandate.debitedAccount,
+                },
+              }),
+            },
+          }),
         })),
       }),
       ...(invoice.paymentTerms && {
@@ -377,6 +404,7 @@ export function prebuildInvoiceUBL({
           "@_currencyID": invoice.currency,
           "#text": item.netAmount,
         },
+        ...billingPeriodToUBL(item.billingPeriod),
         ...(item.orderLineReference && {
           "cac:OrderLineReference": {
             "cbc:LineID": item.orderLineReference,

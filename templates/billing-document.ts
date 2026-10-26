@@ -29,6 +29,10 @@ export const BILLING_DOCUMENT_TEMPLATE = `<!DOCTYPE html>
                 <span>&bull;</span>
                 <span>Buyer reference: {{buyerReference}}</span>
               {{/buyerReference}}
+              {{#billingPeriod}}
+                <span>&bull;</span>
+                <span>Period: {{billingPeriod}}</span>
+              {{/billingPeriod}}
             </p>
           </div>
         </div>
@@ -99,6 +103,9 @@ export const BILLING_DOCUMENT_TEMPLATE = `<!DOCTYPE html>
                   {{#note}}
                     <p class="mt-0.5 text-[11px] text-slate-500 italic whitespace-pre-wrap">{{note}}</p>
                   {{/note}}
+                  {{#billingPeriod}}
+                    <p class="mt-0.5 text-[11px] text-slate-500">Period: {{billingPeriod}}</p>
+                  {{/billingPeriod}}
                   {{#discounts}}
                     <p class="mt-0.5 text-[11px] text-slate-500">
                       <span class="text-red-600">Discount:</span>
@@ -212,13 +219,16 @@ export const BILLING_DOCUMENT_TEMPLATE = `<!DOCTYPE html>
             {{#paymentMeans}}
               <div class="space-y-1">
                 <p class="font-medium text-slate-900">{{paymentMethodName}}</p>
-                <p class="text-slate-600 font-mono">{{iban}}</p>
+                {{#iban}}<p class="text-slate-600 font-mono">{{iban}}</p>{{/iban}}
                 {{#reference}}
                   <p class="text-xs text-slate-500">Reference: {{reference}}</p>
                 {{/reference}}
                 {{#financialInstitutionBranch}}
                   <p class="text-xs text-slate-500">BIC/Branch: {{financialInstitutionBranch}}</p>
                 {{/financialInstitutionBranch}}
+                {{#mandateReference}}
+                  <p class="text-xs text-slate-500">Mandate reference: {{mandateReference}}</p>
+                {{/mandateReference}}
               </div>
             {{/paymentMeans}}
           </div>

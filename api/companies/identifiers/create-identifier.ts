@@ -7,7 +7,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -23,8 +23,9 @@ const createIdentifierRouteDescription = describeRoute({
     summary: "Create Company Identifier",
     tags: ["Company Identifiers"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created company identifier", z.object({ identifier: companyIdentifierResponse })),
+        ...describeSuccessResponse("Successfully created company identifier", z.object({ identifier: companyIdentifierResponse.openapi({ description: "The identifier, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create company identifier"),
     },
 });
@@ -44,7 +45,7 @@ const createIdentifierJsonBodySchema = z.object({
     }),
     migrationKey: z.string().trim().min(8).max(24).optional().openapi({
         description: "A Peppol migration key issued by the provider that currently publishes this identifier for receiving. With it, the identifier is taken over from that provider without a gap instead of failing because it is registered elsewhere. Ask the previous provider for the key. When the company is not yet publishable, for example because its identity check is still open, the key is kept and used the moment the company is registered.",
-        example: "Ab12$#xyZ9!kLm",
+        examples: ["Ab12$#xyZ9!kLm"],
     }),
 });
 
@@ -72,7 +73,7 @@ const _createIdentifier = server.post(
 
 async function _createIdentifierImplementation(c: CreateIdentifierContext) {
     try {
-        const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground: c.var.team.isPlayground, useTestNetwork: c.var.team.useTestNetwork, isSmpRecipient: c.var.company.isSmpRecipient, isVerified: c.var.company.isVerified, verificationRequirements: c.var.team.verificationRequirements ?? undefined });
+        const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground: c.var.team.isPlayground, useTestNetwork: c.var.team.useTestNetwork, isSmpRecipient: c.var.company.isSmpRecipient, isVerified: c.var.company.isVerified, verificationRequirements: c.var.team.verificationRequirements ?? undefined, smpProvider: c.var.company.smpProvider });
         const { migrationKey, ...companyIdentifier } = c.req.valid("json");
         const identifier = await createCompanyIdentifier({
             companyIdentifier: {

@@ -2,7 +2,10 @@ import { XMLBuilder } from "fast-xml-parser";
 import type { CreditNote } from "../schemas";
 import { calculateDocumentTotals } from "../../invoice/calculations";
 import { parsePeppolAddress } from "../../peppol-address";
-import { getPaymentCodeByKey } from "@peppol/utils/payment-means";
+import { resolveBuyerReference } from "../../buyer-reference";
+import { billingPeriodToUBL } from "../../billing-period";
+import { partyIdentifiersToUBL } from "../../party-identifiers";
+import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
 const builder = new XMLBuilder({
@@ -55,6 +58,14 @@ export function prebuildCreditNoteUBL({
 
   const supplier = parsePeppolAddress(supplierAddress);
   const buyer = parsePeppolAddress(customerAddress);
+  const buyerReference = resolveBuyerReference({
+    buyerReference: creditNote.buyerReference,
+    purchaseOrderReference: creditNote.purchaseOrderReference,
+    documentNumber: creditNote.creditNoteNumber,
+    customerAddress,
+    sellerCountry: creditNote.seller.country,
+    buyerCountry: creditNote.buyer.country,
+  });
   return {
     CreditNote: {
       "@_xmlns": "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2",
@@ -72,18 +83,15 @@ export function prebuildCreditNoteUBL({
       "cbc:CreditNoteTypeCode": "381",
       ...(creditNote.note && { "cbc:Note": creditNote.note }),
       "cbc:DocumentCurrencyCode": creditNote.currency,
-      ...(creditNote.buyerReference && {
-        "cbc:BuyerReference": creditNote.buyerReference,
+      ...(buyerReference && {
+        "cbc:BuyerReference": buyerReference,
       }),
+      ...billingPeriodToUBL(creditNote.billingPeriod),
       ...((creditNote.purchaseOrderReference || creditNote.salesOrderReference) && {
         "cac:OrderReference": {
           "cbc:ID": creditNote.purchaseOrderReference || "NA",
           ...(creditNote.salesOrderReference && { "cbc:SalesOrderID": creditNote.salesOrderReference }),
         },
-      }),
-      ...(!creditNote.buyerReference &&
-        !creditNote.purchaseOrderReference && {
-        "cbc:BuyerReference": creditNote.creditNoteNumber,
       }),
       ...(creditNote.despatchReference && {
         "cac:DespatchDocumentReference": {
@@ -97,6 +105,11 @@ export function prebuildCreditNoteUBL({
             ...(reference.issueDate && { "cbc:IssueDate": reference.issueDate }),
           }
         })),
+      }),
+      ...(creditNote.contractReference && {
+        "cac:ContractDocumentReference": {
+          "cbc:ID": creditNote.contractReference,
+        },
       }),
       ...(creditNote.attachments && {
         "cac:AdditionalDocumentReference": creditNote.attachments.map(
@@ -128,6 +141,7 @@ export function prebuildCreditNoteUBL({
             "@_schemeID": supplier.schemeId,
             "#text": supplier.identifier,
           },
+          ...partyIdentifiersToUBL(creditNote.seller),
           "cac:PartyName": {
             "cbc:Name": creditNote.seller.name,
           },
@@ -170,6 +184,7 @@ export function prebuildCreditNoteUBL({
             "@_schemeID": buyer.schemeId,
             "#text": buyer.identifier,
           },
+          ...partyIdentifiersToUBL(creditNote.buyer),
           "cac:PartyName": {
             "cbc:Name": creditNote.buyer.name,
           },
@@ -236,28 +251,45 @@ export function prebuildCreditNoteUBL({
         },
       }),
       ...(creditNote.paymentMeans && {
-        "cac:PaymentMeans": creditNote.paymentMeans.map((payment) => ({
+        "cac:PaymentMeans": creditNote.paymentMeans.map((payment, index) => ({
           "cbc:PaymentMeansCode": {
             "#text": getPaymentCodeByKey(payment.paymentMethod),
           },
+          // A UBL credit note has no document-level due date, so BT-9 goes into the
+          // payment means, and only once: UBL-SR-45 allows a single PaymentDueDate.
+          ...(index === 0 && creditNote.dueDate && {
+            "cbc:PaymentDueDate": creditNote.dueDate,
+          }),
           ...(payment.reference && {
             "cbc:PaymentID": {
               "#text": payment.reference,
             },
           }),
-          "cac:PayeeFinancialAccount": {
-            "cbc:ID": {
-              "#text": payment.iban,
-            },
-            ...(payment.name && {
-              "cbc:Name": payment.name,
-            }),
-            ...(payment.financialInstitutionBranch && {
-              "cac:FinancialInstitutionBranch": {
-                "cbc:ID": payment.financialInstitutionBranch,
+          ...(hasPayeeAccount(payment) && {
+            "cac:PayeeFinancialAccount": {
+              "cbc:ID": {
+                "#text": payment.iban,
               },
-            }),
-          },
+              ...(payment.name && {
+                "cbc:Name": payment.name,
+              }),
+              ...(payment.financialInstitutionBranch && {
+                "cac:FinancialInstitutionBranch": {
+                  "cbc:ID": payment.financialInstitutionBranch,
+                },
+              }),
+            },
+          }),
+          ...(payment.mandate && {
+            "cac:PaymentMandate": {
+              "cbc:ID": payment.mandate.reference,
+              ...(payment.mandate.debitedAccount && {
+                "cac:PayerFinancialAccount": {
+                  "cbc:ID": payment.mandate.debitedAccount,
+                },
+              }),
+            },
+          }),
         })),
       }),
       ...(creditNote.paymentTerms && {
@@ -381,6 +413,7 @@ export function prebuildCreditNoteUBL({
           "@_currencyID": creditNote.currency,
           "#text": item.netAmount,
         },
+        ...billingPeriodToUBL(item.billingPeriod),
         ...(item.orderLineReference && {
           "cac:OrderLineReference": {
             "cbc:LineID": item.orderLineReference,

@@ -66,7 +66,7 @@ export default function IntegrationDetailPage() {
   const [taskLogs, setTaskLogs] = useState<IntegrationTaskLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -148,7 +148,7 @@ export default function IntegrationDetailPage() {
       }
 
       setTaskLogs(json.logs || []);
-      setTotal(json.pagination?.total || 0);
+      setTotalPages(json.pagination?.totalPages || 0);
     } catch (error) {
       console.error("Error fetching task logs:", error);
       toast.error(t`Failed to load task logs`);
@@ -375,7 +375,7 @@ export default function IntegrationDetailPage() {
       pagination: paginationState,
     },
     onPaginationChange,
-    pageCount: Math.ceil(total / limit),
+    pageCount: totalPages,
     manualPagination: true,
     manualFiltering: true,
   });

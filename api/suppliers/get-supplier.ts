@@ -6,7 +6,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierResponse, supplierIdParamSchema } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -19,7 +19,8 @@ const getSupplierRouteDescription = describeRoute({
   summary: "Get Supplier",
   tags: ["Suppliers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved supplier", z.object({ supplier: supplierResponse })),
+    ...describeSuccessResponse("Successfully retrieved supplier", z.object({ supplier: supplierResponse.openapi({ description: "The supplier." }) })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Supplier not found"),
     ...describeErrorResponse(500, "Failed to fetch supplier"),
   },

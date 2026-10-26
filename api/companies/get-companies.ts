@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { companyResponse, toCompanyResponse } from "./shared";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 
@@ -20,7 +20,8 @@ const getCompaniesRouteDescription = describeRoute({
     summary: "List Companies",
     tags: ["Companies"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully retrieved companies", z.object({ companies: z.array(companyResponse) })),
+        ...describeSuccessResponse("Successfully retrieved companies", z.object({ companies: z.array(companyResponse).openapi({ description: "Every company registered under the team." }) })),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to fetch companies"),
     },
 });
@@ -28,11 +29,11 @@ const getCompaniesRouteDescription = describeRoute({
 const getCompaniesQuerySchema = z.object({
     enterpriseNumber: z.string().optional().openapi({
         description: "Filter companies by enterprise number",
-        example: "1234567894",
+        examples: ["1234567894"],
     }),
     vatNumber: z.string().optional().openapi({
         description: "Filter companies by VAT number",
-        example: "BE1234567894",
+        examples: ["BE1234567894"],
     }),
 });
 

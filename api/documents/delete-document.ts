@@ -24,6 +24,7 @@ const deleteTransmittedDocumentRouteDescription = describeRoute({
     tags: ["Documents"],
     responses: {
         ...describeSuccessResponse("Successfully deleted the document"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to delete document"),
     },
 });

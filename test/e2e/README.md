@@ -66,7 +66,7 @@ op run --environment <id> --account <account> -- bun run test:e2e
 | `ETE_UNIT_TEST_HOST` | no | `http://localhost:3000` | Server under test |
 | `ETE_UNIT_TEST_COMPANY_ID` | yes | | Company that sends the documents |
 | `ETE_UNIT_TEST_JWT` | yes | | API key or integration JWT for that company's team |
-| `ETE_UNIT_TEST_RECIPIENT` | no | `0208:0598726857` | A reachable Peppol address |
+| `ETE_UNIT_TEST_RECIPIENT` | no | `0208:0598726857` | A production Peppol participant that receives invoices, credit notes and their self-billing counterparts, and nothing else |
 | `ETE_UNIT_TEST_EMAIL_TO` | no | `test@blackhole.postmarkapp.com` | First email recipient |
 | `ETE_UNIT_TEST_EMAIL_TO_2` | no | `test+2@blackhole.postmarkapp.com` | Second email recipient |
 
@@ -81,12 +81,18 @@ sends nothing.
 playground team. The simulator delivers to such companies for real, which
 creates incoming documents on every successful send.
 
+The playground looks a recipient outside the team up on the production network,
+as production would, and refuses Peppol delivery of a document type it is not
+registered for. The suite expects the recipient to receive exactly the document
+types listed above: message level responses and the custom process are refused.
+
 ## What it costs
 
 A full run is 615 tests in roughly two minutes against a local server. It sends
-about 220 emails through Postmark and stores about 355 documents in the
-playground. Emails go to Postmark's blackhole address by default, which accepts
-and discards them, but they still count towards your Postmark volume. The suite
+about 220 emails and stores about 355 documents in the playground. A playground
+only mails its own members, so the emails to Postmark's blackhole addresses (the
+default) are simulated and never reach Postmark. Point the email recipients at
+your own member address to receive them for real. The suite
 also calls the external validation service once per document and the PDF
 renderer once per PDF case.
 

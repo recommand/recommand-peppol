@@ -4,7 +4,7 @@ import type {
 } from "@core/lib/auth-middleware";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
   describeValidationErrorResponse,
 } from "@core/lib/api-docs";
 import { audit } from "@core/lib/audit";
@@ -23,7 +23,7 @@ import {
 import {
   requireCompanyVerificationForStrictTeams,
   requireIntegrationSupportedCompanyAccess,
-  requireValidSubscription,
+  requireTransactionEntitlement,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
@@ -36,6 +36,18 @@ import "zod-openapi/extend";
 
 const server = new Server();
 
+const vatRegimeSchema = zodFrVatRegimes.openapi({
+  description:
+    "A French VAT regime: `REEL_NORMAL_MENSUEL` (régime réel normal), `REEL_SIMPLIFIE` (régime réel simplifié) or `FRANCHISE_EN_BASE` (franchise en base de TVA).",
+  ref: "FrenchVatRegime",
+});
+
+const vatExigibilitySchema = zodFrVatExigibilities.openapi({
+  description:
+    "When VAT becomes due: `ENCAISSEMENTS` (on payment, typical for services) or `DEBITS` (on invoicing, typical for goods).",
+  ref: "FrenchVatExigibility",
+});
+
 export const frenchReportingDeclarantResponse = z
   .object({
     environment: zodFrReportingEnvironments.openapi({
@@ -43,17 +55,17 @@ export const frenchReportingDeclarantResponse = z
         "The reporting environment this registration belongs to. Teams on the test network are registered in `TEST`, all other teams in `PROD`.",
     }),
     siren: z.string().openapi({
-      example: "123456789",
+      examples: ["123456789"],
       description: "The SIREN the company reports under, derived from its enterprise number.",
     }),
     issuerName: z.string().openapi({
       description: "The legal name carried as the issuer on every report filed for the company.",
     }),
-    vatRegime: zodFrVatRegimes.openapi({
+    vatRegime: vatRegimeSchema.openapi({
       description:
         "The company's French VAT regime. It determines how often its reports are filed with the tax administration.",
     }),
-    vatExigibility: zodFrVatExigibilities.openapi({
+    vatExigibility: vatExigibilitySchema.openapi({
       description:
         "When VAT becomes due for the company. Payment reports are only accepted under `ENCAISSEMENTS`; under `DEBITS` they are out of scope.",
     }),
@@ -72,14 +84,14 @@ export const frenchReportingDeclarantResponse = z
     lastError: z.string().nullable().openapi({
       description: "The reason the last registration attempt failed, if any.",
     }),
-    registeredAt: z.string().nullable().openapi({
+    registeredAt: z.string().datetime().nullable().openapi({
       description:
         "When the registration was accepted. The company's reporting periods run from this moment. Null while the state is still `pending`.",
     }),
-    createdAt: z.string().openapi({
+    createdAt: z.string().datetime().openapi({
       description: "When the registration was first requested.",
     }),
-    updatedAt: z.string().openapi({
+    updatedAt: z.string().datetime().openapi({
       description:
         "When the registration last changed, including a background retry of a `pending` registration.",
     }),
@@ -105,13 +117,13 @@ export function toFrenchReportingDeclarantResponse(declarant: FrenchReportingDec
 
 const registerFrenchReportingDeclarantBodySchema = z
   .object({
-    vatRegime: zodFrVatRegimes.openapi({
-      example: "REEL_NORMAL_MENSUEL",
+    vatRegime: vatRegimeSchema.openapi({
+      examples: ["REEL_NORMAL_MENSUEL"],
       description:
         "The company's French VAT regime: `REEL_NORMAL_MENSUEL` (régime réel normal), `REEL_SIMPLIFIE` (régime réel simplifié) or `FRANCHISE_EN_BASE` (franchise en base de TVA). Changing it after registration can leave the current reporting period unfiled; contact support before changing it.",
     }),
-    vatExigibility: zodFrVatExigibilities.openapi({
-      example: "DEBITS",
+    vatExigibility: vatExigibilitySchema.openapi({
+      examples: ["DEBITS"],
       description:
         "When VAT becomes due: `ENCAISSEMENTS` (on payment, typical for services) or `DEBITS` (on invoicing, typical for goods). Payment reports can only be submitted under `ENCAISSEMENTS`.",
     }),
@@ -129,10 +141,11 @@ const getRouteDescription = describeRoute({
   description:
     "Returns the company's French e-reporting registration, or `null` when the company has not been registered yet. Reports can be submitted once the state is `registered`.",
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "The registration, or null when there is none",
-      z.object({ declarant: frenchReportingDeclarantResponse.nullable() }),
+      z.object({ declarant: frenchReportingDeclarantResponse.nullable().openapi({ description: "The company's French e-reporting registration, or `null` when it has not been registered yet." }) }),
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Company not found"),
   },
 });
@@ -147,21 +160,27 @@ The company must be registered in France with a valid SIREN or SIRET, and must b
 
 Calling this endpoint again updates the VAT regime and exigibility. Changing the regime mid-period can leave that period unfiled, so coordinate such a change with support.`,
   responses: {
-    ...describeSuccessResponseWithZod(
+    ...describeSuccessResponse(
       "The registration as it stands after this request",
-      z.object({ declarant: frenchReportingDeclarantResponse }),
+      z.object({ declarant: frenchReportingDeclarantResponse.openapi({ description: "The registration, as it stands after this request." }) }),
     ),
     ...describeValidationErrorResponse(
       "The company is not registered in France, has no valid SIREN or SIRET as enterprise number, is not verified, or was verified without a signed French mandate.",
     ),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(404, "Company not found"),
     ...describeErrorResponse(500, "The registration could not be requested"),
   },
 });
 
+const getFrenchReportingDeclarantParamSchema = z.object({
+  companyId: z.string(),
+});
+
 const _getFrenchReportingDeclarant = server.get(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
+  zodValidator("param", getFrenchReportingDeclarantParamSchema),
   getRouteDescription,
   async (c: FrenchReportingDeclarantContext) => {
     const declarant = await getFrenchReportingDeclarant(
@@ -187,10 +206,15 @@ type RegisterFrenchReportingDeclarantContext = Context<
   }
 >;
 
+const registerFrenchReportingDeclarantParamSchema = z.object({
+  companyId: z.string(),
+});
+
 const _registerFrenchReportingDeclarant = server.put(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
-  requireValidSubscription(),
+  zodValidator("param", registerFrenchReportingDeclarantParamSchema),
+  requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   registerRouteDescription,
   zodValidator("json", registerFrenchReportingDeclarantBodySchema),

@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { PARTICIPANT_SCHEME, DOCUMENT_SCHEME, PROCESS_SCHEME } from "./phoss-smp/service-metadata";
 import { XMLParser } from "fast-xml-parser";
 import { base32Encode } from "@peppol/utils/base32";
-import { resolveNaptr } from "@peppol/utils/naptr";
+import { lookUpCname, resolveNaptr, smlResolver } from "@peppol/utils/naptr";
 import { resolveDocTypeId } from "@peppol/utils/type-repository/receiving-capabilities";
 import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
 import { parseCertificateExpiry } from "@peppol/utils/certificate";
@@ -14,18 +14,23 @@ function stripTrailingEquals(str: string): string {
   return str.replace(/=+$/, "");
 }
 
-async function getSmpUrlNaptr({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string | null> {
+/** The name the SML publishes a participant's NAPTR record under. */
+function getNaptrDomain({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): string {
   const dnsZone = useTestNetwork ? SML_TEST_ZONE : SML_ZONE;
-  
+
   const sha256Hash = createHash("sha256")
     .update(recipientAddress.toLowerCase())
     .digest();
-  
+
   const base32Hash = stripTrailingEquals(base32Encode(sha256Hash));
-  const naptrDomain = `${base32Hash}.${PARTICIPANT_SCHEME}.${dnsZone}`.toLowerCase();
-  
-  const smpUrl = await resolveNaptr(naptrDomain);
-  if (smpUrl) {
+  return `${base32Hash}.${PARTICIPANT_SCHEME}.${dnsZone}`.toLowerCase();
+}
+
+/** The URL of the SMP the SML points a participant to, or null when the SML has no entry for it. */
+export async function getSmpUrlNaptr({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string | null> {
+  const naptr = await resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}));
+  if (naptr.status === "found") {
+    const smpUrl = naptr.smpUrl;
     const encodedAddress = encodeURIComponent(recipientAddress);
     const baseUrl = smpUrl.endsWith("/") ? smpUrl.slice(0, -1) : smpUrl;
     return `${baseUrl}/${PARTICIPANT_SCHEME}::${encodedAddress}`;
@@ -33,16 +38,43 @@ async function getSmpUrlNaptr({recipientAddress, useTestNetwork}: {recipientAddr
   return null;
 }
 
-function getSmpUrlCname({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): string {
+/** The host name the SML published a participant under before it moved to NAPTR records. */
+function getCnameHost({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): string {
   const dnsZone = useTestNetwork ? SML_TEST_ZONE : SML_ZONE;
-  
+
   const md5Hash = createHash("md5")
     .update(recipientAddress.toLowerCase())
     .digest("hex");
-  
+
+  return `B-${md5Hash}.${PARTICIPANT_SCHEME}.${dnsZone}`;
+}
+
+function getSmpUrlCname({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): string {
   const encodedAddress = encodeURIComponent(recipientAddress);
-  
-  return `http://B-${md5Hash}.${PARTICIPANT_SCHEME}.${dnsZone}/${PARTICIPANT_SCHEME}::${encodedAddress}`;
+
+  return `http://${getCnameHost({recipientAddress, useTestNetwork})}/${PARTICIPANT_SCHEME}::${encodedAddress}`;
+}
+
+/**
+ * Whether the SML answers that it holds no entry for a participant: DNS says there is no
+ * NAPTR record for it, and no CNAME record either, which is how the SML published
+ * participants before NAPTR. The CNAME is only asked about when the NAPTR record is
+ * absent. The access point resolves a recipient through the same records, so a
+ * transmission to such a participant cannot be delivered.
+ *
+ * Only that answer counts. A lookup that fails in any other way (a timeout, a failing
+ * DNS server) returns false, so a caller treats the participant as possibly registered.
+ */
+export async function isParticipantUnregistered(
+  {recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean},
+  resolver: Parameters<typeof resolveNaptr>[1] = smlResolver,
+): Promise<boolean> {
+  const naptr = await resolveNaptr(getNaptrDomain({recipientAddress, useTestNetwork}), resolver);
+  if (naptr.status !== "absent") {
+    return false;
+  }
+  const cname = await lookUpCname(getCnameHost({recipientAddress, useTestNetwork}), resolver);
+  return cname.status === "absent";
 }
 
 export async function getSmpUrl({recipientAddress, useTestNetwork}: {recipientAddress: string, useTestNetwork: boolean}): Promise<string> {  

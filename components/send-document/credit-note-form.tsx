@@ -23,13 +23,19 @@ import { AttachmentsEditor } from "./attachments-editor";
 import { isTaxExemptionReasonRequired } from "@peppol/utils/parsing/invoice/calculations";
 import type { DocumentDefaults } from "@peppol/api/document-defaults";
 import { DocumentType } from "@peppol/utils/parsing/send-document";
+import {
+  applyCustomerParty,
+  type DocumentDraft,
+  type Updater,
+} from "./document-updates";
 
 const companiesClient = rc<Companies>("peppol");
 const sendDocumentClient = rc<DocumentDefaults>("peppol");
 
 interface CreditNoteFormProps {
-  document: any;
-  onChange: (document: any) => void;
+  document: DocumentDraft;
+  /** Receives an updater, applied to the latest document. */
+  onChange: (update: Updater<DocumentDraft>) => void;
   companyId: string;
   isSelfBilling?: boolean;
   customerParty?: Party;
@@ -48,14 +54,9 @@ export function CreditNoteForm({
 }: CreditNoteFormProps) {
   const { t } = useTranslation();
   const activeTeam = useActiveTeam();
-  const [creditNote, setCreditNote] = useState<Partial<CreditNote>>({
-    creditNoteNumber: "",
-    issueDate: format(new Date(), "yyyy-MM-dd"),
-    lines: [],
-    invoiceReferences: [],
-    attachments: [],
-    ...document,
-  });
+  // The page owns the document; this form only renders it and sends updates.
+  const creditNote = document as Partial<CreditNote>;
+  const setCreditNote = onChange;
   const [openSections, setOpenSections] = useState(() => ({
     buyer: false,
     seller: false,
@@ -67,37 +68,25 @@ export function CreditNoteForm({
   }));
   const lastAutoCreditNoteNumberRef = useRef<string | null>(null);
   const lastAutoIbanRef = useRef<string | null>(null);
+  // A new document for each team, company and document type. The page starts
+  // an empty one when the type changes; this fills in the defaults.
   useEffect(() => {
-    setCreditNote({
+    setCreditNote(() => ({
       creditNoteNumber: "",
       issueDate: format(new Date(), "yyyy-MM-dd"),
       lines: [],
       invoiceReferences: [],
       attachments: [],
-    });
+    }));
     lastAutoCreditNoteNumberRef.current = null;
     lastAutoIbanRef.current = null;
-  }, [activeTeam?.id, companyId]);
-
-  const isSameParty = (a: any, b: any) => {
-    if (!a && !b) return true;
-    if (!a || !b) return false;
-    return (
-      a.name === b.name &&
-      a.street === b.street &&
-      a.street2 === b.street2 &&
-      a.city === b.city &&
-      a.postalZone === b.postalZone &&
-      a.country === b.country &&
-      a.vatNumber === b.vatNumber &&
-      a.enterpriseNumber === b.enterpriseNumber &&
-      a.email === b.email &&
-      a.phone === b.phone
-    );
-  };
+  }, [activeTeam?.id, companyId, isSelfBilling]);
 
   // Auto-populate company info when company changes
   useEffect(() => {
+    // A late answer must not land in the next document: this form may be gone,
+    // or showing another company, by the time it arrives.
+    let cancelled = false;
     const loadCompanyInfo = async () => {
       if (!companyId || !activeTeam?.id) return;
 
@@ -109,6 +98,7 @@ export function CreditNoteForm({
         });
         const json = await response.json();
 
+        if (cancelled) return;
         if (json.success && json.company) {
           const company = json.company;
           const companyInfo = {
@@ -137,9 +127,13 @@ export function CreditNoteForm({
     };
 
     loadCompanyInfo();
+    return () => {
+      cancelled = true;
+    };
   }, [companyId, activeTeam?.id, isSelfBilling]);
 
   useEffect(() => {
+    let cancelled = false;
     const run = async () => {
       if (!companyId) return;
 
@@ -155,7 +149,7 @@ export function CreditNoteForm({
           query: { documentType },
         });
         const json: any = await response.json();
-        if (!json?.success) return;
+        if (cancelled || !json?.success) return;
 
         const suggestedNumberRaw = json?.documentNumber;
         const suggestedNumber =
@@ -239,49 +233,16 @@ export function CreditNoteForm({
     };
 
     run();
+    return () => {
+      cancelled = true;
+    };
   }, [companyId, isSelfBilling, mode]);
 
   useEffect(() => {
-    onChange(creditNote);
-  }, [creditNote]);
-
-  useEffect(() => {
-    if (!document || typeof document !== "object") {
-      return;
-    }
-    const doc: any = document;
-    setCreditNote((prev) => {
-      const nextBuyer = doc.buyer;
-      const nextSeller = doc.seller;
-      let next = prev;
-      if (nextBuyer && !isSameParty(prev.buyer, nextBuyer)) {
-        next = { ...next, buyer: nextBuyer };
-      }
-      if (nextSeller && !isSameParty(prev.seller, nextSeller)) {
-        next = { ...next, seller: nextSeller };
-      }
-      return next;
-    });
-  }, [document]);
-
-  useEffect(() => {
     if (!customerParty) return;
-    setCreditNote((prev) => ({
-      ...prev,
-      ...(isSelfBilling
-        ? prev.seller?.name === customerParty.name &&
-          prev.seller?.street === customerParty.street &&
-          prev.seller?.postalZone === customerParty.postalZone &&
-          prev.seller?.country === customerParty.country
-          ? {}
-          : { seller: customerParty }
-        : prev.buyer?.name === customerParty.name &&
-            prev.buyer?.street === customerParty.street &&
-            prev.buyer?.postalZone === customerParty.postalZone &&
-            prev.buyer?.country === customerParty.country
-          ? {}
-          : { buyer: customerParty }),
-    }));
+    setCreditNote(
+      applyCustomerParty(isSelfBilling ? "seller" : "buyer", customerParty)
+    );
   }, [customerParty, isSelfBilling]);
 
   useEffect(() => {
@@ -382,6 +343,21 @@ export function CreditNoteForm({
               handleFieldChange("buyerReference", e.target.value)
             }
             placeholder={t`An identifier assigned by the buyer for internal routing purposes.`}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="purchaseOrderReference">{t`Purchase Order Reference`}</Label>
+          <Input
+            id="purchaseOrderReference"
+            value={creditNote.purchaseOrderReference || ""}
+            onChange={(e) =>
+              handleFieldChange(
+                "purchaseOrderReference",
+                e.target.value.trim() ? e.target.value : null
+              )
+            }
+            placeholder="4500012345"
           />
         </div>
       </div>

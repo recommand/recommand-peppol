@@ -1,6 +1,7 @@
 import { writeAuditEvent } from "@core/lib/audit";
 import { publishEvent } from "@core/data/rules/events";
 import { sendDocumentEmail } from "@peppol/data/email/send-email";
+import { getPlaygroundMemberAddresses } from "@peppol/data/playground/email-db";
 import {
   resolveDocumentParsedWithAttachments,
   resolveDocumentXml,
@@ -8,9 +9,9 @@ import {
 import {
   documentDeliveries,
   teamExtensions,
-  transferEvents,
   transmittedDocuments,
 } from "@peppol/db/schema";
+import { recordUsageEvents } from "@peppol/data/usage";
 import { db } from "@recommand/db";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import {
@@ -101,6 +102,10 @@ const databaseDependencies: EmailFallbackDependencies = {
     return await sendDocumentEmail(options);
   },
 
+  async playgroundMemberAddresses(teamId) {
+    return await getPlaygroundMemberAddresses(teamId);
+  },
+
   async recordDelivery(row) {
     // A row with this id was written by a run that stopped right after; it stands.
     await db.insert(documentDeliveries).values(row).onConflictDoNothing({ target: documentDeliveries.id });
@@ -138,9 +143,7 @@ const databaseDependencies: EmailFallbackDependencies = {
       if (!closed) {
         return false;
       }
-      if (billing.length) {
-        await tx.insert(transferEvents).values(billing);
-      }
+      await recordUsageEvents(billing, tx);
       for (const delivery of deliveries) {
         await publishDeliveryEvent(tx, document, delivery);
       }

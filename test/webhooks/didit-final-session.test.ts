@@ -8,6 +8,8 @@ let lockFails = false;
 let requiresKyc = true;
 class BusyError extends Error {}
 const events: string[] = [];
+const declinedEmails: unknown[] = [];
+let retrySessionFails = false;
 const secret = crypto.randomUUID();
 mock.module('@recommand/lib/api', () => ({ Server: Hono }));
 mock.module('@recommand/lib/utils', () => ({ actionSuccess: (value: unknown) => value, actionFailure: (value: unknown) => ({error: String(value)}) }));
@@ -17,7 +19,16 @@ mock.module('@recommand/db', () => ({db: {update: () => { events.push('update');
 mock.module('@peppol/data/company-verification', () => ({
   getCompanyVerificationLog: async () => { expect(locked).toBe(true); return {id:'session', status, companyId:'company', firstName:'Example', lastName:'Signer'}; },
   isFinalVerificationStatus: (value: string) => ['verified','rejected','error'].includes(value),
-  finalizeCompanyVerification: async (input: {status: string}) => {events.push(`finalize:${input.status}`); return {status:input.status};},
+  holdVerificationForRepresentativeReview: async () => false,
+  finalizeCompanyVerification: async (input: {status: string; rejectionReason?: string}) => {
+    events.push(`finalize:${input.status}`);
+    return {status:input.status, errorMessage: input.status === 'rejected' ? input.rejectionReason || null : null};
+  },
+  createCompanyVerificationLog: async () => {
+    events.push('retry-session');
+    if (retrySessionFails) throw new Error('identifiers not allowed');
+    return {verificationUrl: 'https://app.example/company-verification/retry/verify'};
+  },
 }));
 mock.module('@peppol/data/verification-lock', () => ({ VerificationBusyError: BusyError, withVerificationLock: async (_id: string, action: () => Promise<unknown>) => {
   if (lockFails) throw new BusyError('busy');
@@ -28,13 +39,13 @@ mock.module('@peppol/data/at/kyc-review', () => ({startArratechKycReview: async 
 mock.module('@peppol/data/companies', () => ({getCompanyById: async () => { events.push('company'); return {id:'company',teamId:'team',name:'Example'}; }}));
 mock.module('@peppol/data/send-manual-verification-email', () => ({
   sendManualVerificationEmail: async () => {events.push('email');},
-  sendManualVerificationDeclinedEmail: async () => {events.push('email');},
+  sendManualVerificationDeclinedEmail: async (input: unknown) => {events.push('email'); declinedEmails.push(input);},
 }));
 const {default: server} = await import('../../api/internal/didit-webhook');
-beforeEach(() => {status = 'rejected'; locked = false; lockFails = false; requiresKyc = true; events.length = 0;});
-async function send(providerStatus: string, manual = false) {
+beforeEach(() => {status = 'rejected'; locked = false; lockFails = false; requiresKyc = true; retrySessionFails = false; events.length = 0; declinedEmails.length = 0;});
+async function send(providerStatus: string, manual = false, comment?: string | null) {
   const body = JSON.stringify({session_id:'identity-session',vendor_data:'session',webhook_type:'status.updated',status:providerStatus,
-    decision: {id_verification:{first_name:'Example',last_name:'Signer'}, ...(manual ? {reviews:[{new_status:providerStatus}]} : {})}});
+    decision: {id_verification:{first_name:'Example',last_name:'Signer'}, ...(manual ? {reviews:[{new_status:providerStatus, comment}]} : {})}});
   const previous = process.env.DIDIT_WEBHOOK_SECRET_KEY;
   process.env.DIDIT_WEBHOOK_SECRET_KEY = secret;
   try {
@@ -85,5 +96,32 @@ describe('late identity callbacks', () => {
       expect((await send(decision!,true)).status).toBe(200);
       expect(events).toEqual(['company',`finalize:${result}`,'email']);
     }
+  });
+  it('tells the team why a manual review declined and lets them verify again', async () => {
+    requiresKyc = false;
+    status = 'inReview';
+    expect((await send('Declined',true,'  The identity document has expired.  ')).status).toBe(200);
+    expect(declinedEmails).toEqual([{
+      teamId:'team', companyName:'Example',
+      reason:'The identity document has expired.',
+      verificationUrl:'https://app.example/company-verification/retry/verify',
+    }]);
+  });
+  it('offers no new session when the review left no note', async () => {
+    requiresKyc = false;
+    status = 'inReview';
+    for (const comment of [null, '   ']) {
+      events.length = 0; declinedEmails.length = 0;
+      expect((await send('Declined',true,comment)).status).toBe(200);
+      expect(events).toEqual(['company','finalize:rejected','email']);
+      expect(declinedEmails).toEqual([{teamId:'team', companyName:'Example', reason:null, verificationUrl:null}]);
+    }
+  });
+  it('still sends the note when no new session can be created', async () => {
+    requiresKyc = false;
+    status = 'inReview';
+    retrySessionFails = true;
+    expect((await send('Declined',true,'Expired document')).status).toBe(200);
+    expect(declinedEmails).toEqual([{teamId:'team', companyName:'Example', reason:'Expired document', verificationUrl:null}]);
   });
 });

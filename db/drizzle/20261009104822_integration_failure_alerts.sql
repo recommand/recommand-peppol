@@ -1,0 +1,2 @@
+ALTER TABLE "activated_integrations" ADD COLUMN "consecutive_failed_runs" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "activated_integrations" ADD COLUMN "failure_notified_at" timestamp with time zone;

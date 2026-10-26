@@ -16,6 +16,7 @@ export const siUblInvoiceFormat: DocumentFormat<
   docTypeId: `urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##${customizationId}::2.1`,
   supportedDocumentTypes: [invoiceDocumentType],
   supportedProcessIds: [processId],
+  acceptsEmailEndpoint: true,
   smpRegistration: [
     { processId, translatableTitle: "SI-UBL 2.0 Invoice" },
   ],

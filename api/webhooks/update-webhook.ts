@@ -3,7 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { webhookResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -19,8 +19,9 @@ const updateWebhookRouteDescription = describeRoute({
     summary: "Update Webhook",
     tags: ["Webhooks"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated webhook", z.object({ webhook: webhookResponse })),
+        ...describeSuccessResponse("Successfully updated webhook", z.object({ webhook: webhookResponse.openapi({ description: "The webhook, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Webhook not found"),
         ...describeErrorResponse(500, "Failed to update webhook"),
     },
@@ -35,11 +36,11 @@ const updateWebhookParamSchema = z.object({
 const updateWebhookJsonBodySchema = z.object({
     url: z.string().url().openapi({
         description: "The HTTPS endpoint to deliver events to.",
-        example: "https://example.com/hooks/recommand",
+        examples: ["https://example.com/hooks/recommand"],
     }),
     companyId: z.string().nullish().openapi({
         description: "Limit the webhook to one company's events. Leave it out to receive the events of every company in the team.",
-        example: "c_01JQZ8X0M4T7RB6K9V2NDHW3PA",
+        examples: ["c_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
     }),
     secret: z.preprocess(
         (value) => value === "" ? undefined : value,

@@ -6,7 +6,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
@@ -18,8 +18,9 @@ const assignLabelRouteDescription = describeRoute({
     summary: "Assign Label to Document",
     tags: ["Documents"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully assigned label to document", z.object({})),
+        ...describeSuccessResponse("Successfully assigned label to document"),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Document or label not found"),
         ...describeErrorResponse(500, "Failed to assign label"),
     },

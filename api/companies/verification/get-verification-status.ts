@@ -1,5 +1,5 @@
 import { getCompanyById } from "@peppol/data/companies";
-import { getCompanyVerificationLog } from "@peppol/data/company-verification";
+import { getCompanyVerificationLog, getVerificationFollowUp } from "@peppol/data/company-verification";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { z } from "zod";
@@ -19,7 +19,7 @@ type GetVerificationStatusContext = Context<Record<string, never>, string, { in:
 
 const _getVerificationStatus = server.get(
     "/companies/verification/:companyVerificationLogId/status",
-    describeRoute({ hide: true }),
+    describeRoute({ hide: true, security: [] }),
     zodValidator("param", getVerificationStatusParamSchema),
     _getVerificationStatusImplementation,
 );
@@ -38,12 +38,20 @@ async function _getVerificationStatusImplementation(c: GetVerificationStatusCont
             return c.json(actionFailure("Company not found"), 404);
         }
 
+        // A withdrawn session is stored as rejected so that its link can no longer be
+        // used, but nobody was refused: support withdrew it because an earlier session
+        // already held the identity check. The page says so instead of showing a refusal.
+        const withdrawn = verificationLog.withdrawal !== null;
         return c.json(actionSuccess({
             status: verificationLog.status,
-            errorMessage: verificationLog.arratechOnboarding ? null : verificationLog.errorMessage,
+            withdrawn,
+            errorMessage: verificationLog.arratechOnboarding || withdrawn ? null : verificationLog.errorMessage,
             companyName: company.name,
             companyId: company.id,
-            ...getArratechVerificationProgress(verificationLog.arratechOnboarding, company.isSmpRecipient, verificationLog.status),
+            // Where an old link leads on to, so the page shows the company's
+            // verification as it stands instead of stopping at the old outcome.
+            followUp: await getVerificationFollowUp(verificationLog, company),
+            ...getArratechVerificationProgress(verificationLog.arratechOnboarding, verificationLog.status),
         }));
     } catch (error) {
         console.error(error);

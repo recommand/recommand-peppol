@@ -1,9 +1,8 @@
 import { UserFacingError } from "@peppol/utils/util";
 import { type Company, getCompanyById, type InsertCompany } from "@peppol/data/companies";
 import { type CompanyDocumentType, getCompanyDocumentTypes } from "@peppol/data/company-document-types";
-import { type CompanyIdentifier, canUpsertCompanyIdentifier, getCompanyIdentifiers } from "@peppol/data/company-identifiers";
+import { type CompanyIdentifier, canUpsertCompanyIdentifier, getCompanyIdentifiers, isIdentifierPublishedByAnotherCompany } from "@peppol/data/company-identifiers";
 import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
-import { getTeamExtension } from "@peppol/data/teams";
 import { fetchArratechJson, getArratechConfig } from "./client";
 import {
   type ArratechSupportedDocumentType,
@@ -262,28 +261,6 @@ async function publishParticipant({
   );
 }
 
-/**
- * Arratech does not allow skipping participant KYC on the production network,
- * and KYC is only completed as part of company verification. Teams without
- * strict verification register companies before (or without) verification, so
- * their participants can never satisfy Arratech's KYC requirement.
- */
-async function assertArratechRegistrationAllowed(
-  company: Company | InsertCompany,
-  useTestNetwork: boolean
-): Promise<void> {
-  if (useTestNetwork) {
-    return;
-  }
-
-  const teamExtension = await getTeamExtension(company.teamId);
-  if (teamExtension?.verificationRequirements !== "strict") {
-    throw new UserFacingError(
-      "This company cannot be registered: our French Plateforme Agreée requires KYC for every participant on the production network, which is only completed for teams with strict company verification. Contact support@recommand.eu to enable strict company verification for this team."
-    );
-  }
-}
-
 async function registerCompanyIdentifier({
   company,
   identifier,
@@ -302,8 +279,6 @@ async function registerCompanyIdentifier({
   if (!company.isSmpRecipient || !company.id) {
     return;
   }
-
-  await assertArratechRegistrationAllowed(company, useTestNetwork);
 
   if (!await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, undefined, company.id, company.id)) {
     throw new UserFacingError("Company cannot be registered as SMP recipient, it has identifiers that are already registered as recipient with another company.");
@@ -450,6 +425,9 @@ export async function unregisterCompanyDocumentType({
   const documentTypeToRemove = await resolveArratechDocumentType(documentType, useTestNetwork);
 
   for (const identifier of identifiers) {
+    if (await isIdentifierPublishedByAnotherCompany({ identifier, smpProvider: "at-shared-smp-fr", useTestNetwork })) {
+      continue;
+    }
     const participant = await getParticipantByIdentifier({ identifier, useTestNetwork });
     if (!participant) {
       continue;
@@ -479,6 +457,11 @@ export async function unregisterCompanyIdentifier({
   identifier: CompanyIdentifier;
   useTestNetwork: boolean;
 }) {
+  // Arratech's organisation has one participant per identifier, shared by every
+  // company that holds it; another published company's participant stays.
+  if (await isIdentifierPublishedByAnotherCompany({ identifier, smpProvider: "at-shared-smp-fr", useTestNetwork })) {
+    return;
+  }
   const participant = await getParticipantByIdentifier({ identifier, useTestNetwork });
   if (!participant) {
     return;

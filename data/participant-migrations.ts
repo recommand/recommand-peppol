@@ -16,6 +16,7 @@ import { getTeamExtensionAndCompanyByCompanyId } from "./teams";
 import type { Company } from "./companies";
 import type { TeamExtension } from "./teams";
 import { upsertCompanyRegistration } from "./smp-providers";
+import { getSmpProviderDescriptor } from "./smp-providers/descriptors";
 import {
   cancelOutboundMigration as smpCancelOutboundMigration,
   finalizeOutboundMigration as smpFinalizeOutboundMigration,
@@ -157,9 +158,9 @@ async function loadCompanyContext(companyId: string): Promise<{ company: Company
   return context;
 }
 
-/** Only participants on our own SMP can be moved with a key; partner SMPs have no such API. */
+/** Only participants on an SMP that supports SML migration keys can be moved with one. */
 function assertMigrationSupported(company: Company, teamExtension: TeamExtension | null): void {
-  if (company.smpProvider !== "recommand-smp1") {
+  if (!getSmpProviderDescriptor(company.smpProvider).migrationKeys) {
     throw new UserFacingError(
       `Migration keys are only supported for companies published through Recommand's own SMP. This company is published through a partner SMP (${company.smpProvider}).`
     );
@@ -251,6 +252,7 @@ export async function requestInboundMigration({
     isSmpRecipient: company.isSmpRecipient,
     isVerified: company.isVerified,
     verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+    smpProvider: company.smpProvider,
   });
   if (!registerNow) {
     return migration;
@@ -294,6 +296,7 @@ export async function startOutboundMigration({
     isSmpRecipient: company.isSmpRecipient,
     isVerified: company.isVerified,
     verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+    smpProvider: company.smpProvider,
   });
   if (!registered) {
     throw new UserFacingError(

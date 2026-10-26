@@ -1,5 +1,5 @@
 import { readdir, readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
 
@@ -26,8 +26,9 @@ const packagesDirectory = join(packageDirectory, "..");
 
 // The packages this one's tables need: the framework's migration bookkeeping, the
 // core tables peppol's foreign keys point at, and peppol's own. The other packages
-// are left out because they are not needed here.
-const MIGRATED_PACKAGES = ["framework", "core", "peppol"] as const;
+// are left out because they are not needed here; a package that builds on peppol
+// passes its own list.
+const MIGRATED_PACKAGES = ["framework", "core", "peppol"];
 
 /**
  * The migrations in the order the server applies them: the framework's first, then
@@ -35,7 +36,7 @@ const MIGRATED_PACKAGES = ["framework", "core", "peppol"] as const;
  * Reading them from the packages themselves keeps the test schema the one production
  * has rather than a hand-kept copy.
  */
-async function migrationFiles(): Promise<string[]> {
+async function migrationFiles(packages: string[]): Promise<string[]> {
   const collect = async (name: string) => {
     const directory = join(packagesDirectory, name, "db", "drizzle");
     const files = await readdir(directory);
@@ -43,10 +44,12 @@ async function migrationFiles(): Promise<string[]> {
   };
   const framework = await collect("framework");
   const others = (
-    await Promise.all(MIGRATED_PACKAGES.filter((name) => name !== "framework").map(collect))
+    await Promise.all(packages.filter((name) => name !== "framework").map(collect))
   )
     .flat()
-    .sort((left, right) => left.localeCompare(right));
+    // By filename, as the server orders them, not by path: the path would run one
+    // package's migrations before another's regardless of when they were written.
+    .sort((left, right) => basename(left).localeCompare(basename(right)));
   return [...framework, ...others];
 }
 
@@ -55,14 +58,16 @@ async function migrationFiles(): Promise<string[]> {
  * names a local database whose name ends in `_test`: everything here drops and
  * truncates, and it must never be able to do that to a database someone uses.
  */
-export async function connectTestDatabase(): Promise<Pool> {
+export async function connectTestDatabase(
+  options: { packages?: string[] } = {}
+): Promise<Pool> {
   const url = new URL(testDatabaseUrl!);
   if (!["localhost", "127.0.0.1"].includes(url.hostname) || !url.pathname.endsWith("_test")) {
     throw new Error("Use a disposable database on localhost whose name ends in _test");
   }
   const pool = new Pool({ connectionString: testDatabaseUrl });
   await pool.query("DROP SCHEMA public CASCADE; CREATE SCHEMA public");
-  for (const file of await migrationFiles()) {
+  for (const file of await migrationFiles(options.packages ?? MIGRATED_PACKAGES)) {
     await pool.query(await readFile(file, "utf-8"));
   }
   return pool;

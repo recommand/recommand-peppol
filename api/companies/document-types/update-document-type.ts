@@ -4,7 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyDocumentTypeResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -20,8 +20,9 @@ const updateDocumentTypeRouteDescription = describeRoute({
     summary: "Update Company Document Type",
     tags: ["Company Document Types"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully updated company document type", z.object({ documentType: companyDocumentTypeResponse })),
+        ...describeSuccessResponse("Successfully updated company document type", z.object({ documentType: companyDocumentTypeResponse.openapi({ description: "The document type, as updated." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company document type not found"),
         ...describeErrorResponse(500, "Failed to update company document type"),
     },
@@ -69,7 +70,7 @@ const _updateDocumentType = server.put(
 
 async function _updateDocumentTypeImplementation(c: UpdateDocumentTypeContext) {
     try {
-        const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground: c.var.team.isPlayground, useTestNetwork: c.var.team.useTestNetwork, isSmpRecipient: c.var.company.isSmpRecipient, isVerified: c.var.company.isVerified, verificationRequirements: c.var.team.verificationRequirements ?? undefined });
+        const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground: c.var.team.isPlayground, useTestNetwork: c.var.team.useTestNetwork, isSmpRecipient: c.var.company.isSmpRecipient, isVerified: c.var.company.isVerified, verificationRequirements: c.var.team.verificationRequirements ?? undefined, smpProvider: c.var.company.smpProvider });
         const documentType = await updateCompanyDocumentType({
             companyDocumentType: {
                 ...c.req.valid("json"),

@@ -50,9 +50,10 @@ export const ArratechKycReviewNotification = ({
       </Text>
     )}
     {sendOnly ? <Text className="mb-4">
-      This send-only request needs manual follow-up with Arratech. Keep the session
-      under review and inform the customer when there is an update. Do not enable
-      receiving or approve KYC as a workaround.
+      This send-only onboarding stopped. Keep the session under review and resolve
+      the error below, for example with the customer's receiving platform or with
+      Arratech, then resume it with the support CLI (resume-onboarding). Do not
+      enable receiving as a workaround.
     </Text> : <Text className="mb-4">
       Check the KYC metadata and signed mandate. An organisation admin can approve
       pending KYC via POST /kyc/approve. Arratech then completes Annuaire registration.

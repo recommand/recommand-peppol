@@ -20,6 +20,37 @@ const ciiProfile = {
   processId: peppolBillingProfile.processId,
 };
 
+// BR-FR-16: a French document only carries French VAT rates. The shared test documents use
+// Belgian rates, so their French variants use the nearest French rate, and their VAT and
+// document totals are left for the encoder to calculate at those rates.
+const frenchVatRates: Record<string, string> = { "21.00": "20.00", "6.00": "5.50" };
+
+type VatTotalsInput = {
+  subtotals?: { exemptionReasonCode?: string | null; exemptionReason?: string | null }[];
+  exemptionReasonCode?: string | null;
+  exemptionReason?: string | null;
+} | null | undefined;
+
+// Precalculated VAT subtotals no longer match the French rates, so the French variant asks
+// for automatic calculation and keeps the exemption reason the subtotals carried.
+function autoCalculatedVat(vat: VatTotalsInput) {
+  if (!vat?.subtotals) {
+    return vat;
+  }
+  const exempt = vat.subtotals.find((subtotal) => subtotal.exemptionReasonCode || subtotal.exemptionReason);
+  return exempt
+    ? { exemptionReasonCode: exempt.exemptionReasonCode ?? undefined, exemptionReason: exempt.exemptionReason ?? undefined }
+    : null;
+}
+
+function withFrenchVatRates<T extends { vat?: { percentage?: string | null } | null }>(items: T[] | null | undefined): T[] | null | undefined {
+  return items?.map((item) =>
+    item.vat?.percentage && frenchVatRates[item.vat.percentage]
+      ? { ...item, vat: { ...item.vat, percentage: frenchVatRates[item.vat.percentage] } }
+      : item
+  );
+}
+
 function asFrenchRegulatedInvoice(invoice: Invoice): Invoice {
   // EN16931 category O requires seller and buyer VAT identifiers to be omitted.
   const hasOutsideScopeVat = [
@@ -30,6 +61,11 @@ function asFrenchRegulatedInvoice(invoice: Invoice): Invoice {
 
   return {
     ...invoice,
+    lines: withFrenchVatRates(invoice.lines) as typeof invoice.lines,
+    discounts: withFrenchVatRates(invoice.discounts) as typeof invoice.discounts,
+    surcharges: withFrenchVatRates(invoice.surcharges) as typeof invoice.surcharges,
+    vat: autoCalculatedVat(invoice.vat as VatTotalsInput) as typeof invoice.vat,
+    totals: null,
     currency: "EUR",
     seller: {
       ...invoice.seller,

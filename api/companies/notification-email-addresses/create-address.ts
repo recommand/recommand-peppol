@@ -4,7 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { companyNotificationEmailAddressResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -19,8 +19,9 @@ const createAddressRouteDescription = describeRoute({
     summary: "Create Company Notification Email Address",
     tags: ["Company Notification Email Addresses"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created company notification email address", z.object({ notificationEmailAddress: companyNotificationEmailAddressResponse })),
+        ...describeSuccessResponse("Successfully created company notification email address", z.object({ notificationEmailAddress: companyNotificationEmailAddressResponse.openapi({ description: "The notification email address, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(404, "Company not found"),
         ...describeErrorResponse(500, "Failed to create company notification email address"),
     },

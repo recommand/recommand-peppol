@@ -15,8 +15,9 @@ import { sendDocumentSchema } from "../utils/parsing/send-document";
 const BILLING_PROCESS_ID = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 const MLR_CUSTOMIZATION_ID = "urn:fdc:peppol.eu:poacc:trns:mlr:3";
 const MLR_PROCESS_ID = "urn:fdc:peppol.eu:poacc:bis:mlr:3";
+// XRechnung 2.3, which no registered format reads: XRechnung 3.0 has formats of its own.
 const XRECHNUNG_CUSTOMIZATION_ID =
-  "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0";
+  "urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.3";
 
 function ublInvoice(customizationId: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -158,6 +159,63 @@ describe("sending raw XML", () => {
     // is the one thing such a send has to be told.
     expect(() => prepare(ublInvoice(XRECHNUNG_CUSTOMIZATION_ID))).toThrow(
       "Failed to detect process id. Please provide the processId manually."
+    );
+  });
+});
+
+describe("sending raw French XML", () => {
+  const FRANCE_REGULATED_PROCESS_ID = "urn:peppol:france:billing:regulated";
+  const PLAIN_EN16931 = "urn:cen.eu:en16931:2017";
+  const OFFICIAL_EXTENDED = "urn:cen.eu:en16931:2017#conformant#urn.cpro.gouv.fr:1p0:extended-ctc-fr";
+  const PEPPOL_CIUS = "urn:cen.eu:en16931:2017#compliant#urn:peppol:france:billing:cius:1.0";
+  const PEPPOL_EXTENDED = "urn:cen.eu:en16931:2017#conformant#urn:peppol:france:billing:extended:1.0";
+
+  const ublInvoiceDocType = (customizationId: string) =>
+    `urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##${customizationId}::2.1`;
+  const ublCreditNoteDocType = (customizationId: string) =>
+    `urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##${customizationId}::2.1`;
+  const ciiDocType = (customizationId: string) =>
+    `urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##${customizationId}::D22B`;
+
+  it("recognises the official Extended BT-24 by content, in every syntax", () => {
+    expect(prepare(ublInvoice(OFFICIAL_EXTENDED)).docTypeId).toBe(ublInvoiceDocType(PEPPOL_EXTENDED));
+    expect(prepare(ublCreditNote(OFFICIAL_EXTENDED)).docTypeId).toBe(ublCreditNoteDocType(PEPPOL_EXTENDED));
+    expect(prepare(ciiInvoice(OFFICIAL_EXTENDED)).docTypeId).toBe(ciiDocType(PEPPOL_EXTENDED));
+    expect(prepare(ublInvoice(OFFICIAL_EXTENDED)).processId).toBe(FRANCE_REGULATED_PROCESS_ID);
+  });
+
+  it("reads plain EN 16931 as the French CIUS when it is sent over a French process", () => {
+    const french = { processId: FRANCE_REGULATED_PROCESS_ID };
+    expect(prepare(ublInvoice(PLAIN_EN16931), french).docTypeId).toBe(ublInvoiceDocType(PEPPOL_CIUS));
+    expect(prepare(ublCreditNote(PLAIN_EN16931), french).docTypeId).toBe(ublCreditNoteDocType(PEPPOL_CIUS));
+    expect(prepare(ciiInvoice(PLAIN_EN16931), french).docTypeId).toBe(ciiDocType(PEPPOL_CIUS));
+    // The process may come with the SMP scheme in front of it
+    expect(
+      prepare(ciiInvoice(PLAIN_EN16931), { processId: `cenbii-procid-ubl::${FRANCE_REGULATED_PROCESS_ID}` }).docTypeId
+    ).toBe(ciiDocType(PEPPOL_CIUS));
+  });
+
+  it("keeps plain EN 16931 generic over any other process", () => {
+    expect(prepare(ciiInvoice(PLAIN_EN16931)).docTypeId).toBe(ciiDocType(PLAIN_EN16931));
+    expect(prepare(ciiInvoice(PLAIN_EN16931), { processId: BILLING_PROCESS_ID }).docTypeId).toBe(
+      ciiDocType(PLAIN_EN16931)
+    );
+    expect(prepare(ublInvoice(PLAIN_EN16931), { processId: BILLING_PROCESS_ID }).docTypeId).toBe(
+      ublInvoiceDocType(PLAIN_EN16931)
+    );
+  });
+
+  it("still recognises the Peppol customization ids in BT-24", () => {
+    expect(prepare(ublInvoice(PEPPOL_CIUS)).docTypeId).toBe(ublInvoiceDocType(PEPPOL_CIUS));
+    expect(prepare(ublInvoice(PEPPOL_EXTENDED)).docTypeId).toBe(ublInvoiceDocType(PEPPOL_EXTENDED));
+    expect(prepare(ciiInvoice(PEPPOL_CIUS)).docTypeId).toBe(ciiDocType(PEPPOL_CIUS));
+    expect(prepare(ciiInvoice(PEPPOL_EXTENDED)).docTypeId).toBe(ciiDocType(PEPPOL_EXTENDED));
+  });
+
+  it("lets the requested doc type decide", () => {
+    const doctypeId = ublInvoiceDocType(PEPPOL_CIUS);
+    expect(prepare(ublInvoice(PLAIN_EN16931), { doctypeId, processId: FRANCE_REGULATED_PROCESS_ID }).docTypeId).toBe(
+      doctypeId
     );
   });
 });

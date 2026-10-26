@@ -121,7 +121,9 @@ async function sendTelegramMessage(
 }
 
 /**
- * Send a message to all configured Telegram recipients
+ * Send a message to all configured Telegram recipients. Never rejects, so it
+ * is safe to call without awaiting: failures are logged and reported in the
+ * result, including missing configuration.
  */
 export async function sendTelegramNotification(
   message: string,
@@ -135,12 +137,20 @@ export async function sendTelegramNotification(
   };
 
   const finalOptions = { ...defaultOptions, ...options };
-  const chatIds = getTelegramChatIds();
   const results = {
     success: true,
     sentTo: [] as string[],
     errors: [] as string[],
   };
+
+  let chatIds: string[];
+  try {
+    chatIds = getTelegramChatIds();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Failed to send Telegram notification:", errorMessage);
+    return { success: false, sentTo: [], errors: [errorMessage] };
+  }
 
   console.log(`Sending Telegram notification to ${chatIds.length} recipients`);
 

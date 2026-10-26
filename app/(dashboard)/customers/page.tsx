@@ -122,7 +122,7 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [formData, setFormData] = useState<CustomerFormData>(
@@ -152,7 +152,7 @@ export default function Page() {
       if (!json.success) {
         toast.error(t`Failed to load customers`);
         setCustomers([]);
-        setTotal(0);
+        setTotalPages(0);
       } else {
         setCustomers(
           (Array.isArray(json.customers) ? json.customers : []).map(
@@ -164,13 +164,13 @@ export default function Page() {
             })
           )
         );
-        setTotal(json.pagination?.total || 0);
+        setTotalPages(json.pagination?.totalPages || 0);
       }
     } catch (error) {
       console.error("Error fetching customers:", error);
       toast.error(t`Failed to load customers`);
       setCustomers([]);
-      setTotal(0);
+      setTotalPages(0);
     } finally {
       setIsLoading(false);
     }
@@ -433,7 +433,7 @@ export default function Page() {
     onPaginationChange,
     manualPagination: true,
     manualFiltering: true,
-    pageCount: Math.ceil(total / limit),
+    pageCount: totalPages,
   });
 
   const filterConfigs: FilterConfig<Customer>[] = [];

@@ -1,4 +1,3 @@
-import type { BillingConfig } from "../data/plans";
 import type { ArratechOnboarding } from "@peppol/data/at/kyc-onboarding-state";
 import type { VerificationCountrySpecific } from '@peppol/types/verification-country-specific';
 import { teams } from "@core/db/schema";
@@ -8,12 +7,10 @@ import {
   text,
   jsonb,
   pgEnum,
-  decimal,
   boolean,
   type AnyPgColumn,
   index,
   primaryKey,
-  serial,
   date,
   integer,
 } from "drizzle-orm/pg-core";
@@ -34,24 +31,6 @@ import type { ParsedDocument } from "@peppol/utils/type-repository/document-type
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
 import type { EmailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
-
-export const paymentStatusEnum = pgEnum("peppol_payment_status", [
-  "none",
-  "open",
-  "pending",
-  "authorized",
-  "paid",
-  "canceled",
-  "expired",
-  "failed",
-]);
-
-export const profileStandingEnum = pgEnum("peppol_profile_standing", [
-  "pending",
-  "active",
-  "grace",
-  "suspended",
-]);
 
 export const zodValidCountryCodes = z.enum(
   COUNTRIES.map((c) => c.code) as [string, ...string[]]
@@ -102,7 +81,7 @@ export const accessPointProviderEnum = pgEnum(
   accessPointProviderIds
 );
 
-export const smpProviderIds = ["recommand-smp1", "at-shared-smp-fr"] as const;
+export const smpProviderIds = ["recommand-smp1", "at-shared-smp-fr", "elma-smp-no"] as const;
 export const zodSmpProviderIds = z.enum(smpProviderIds);
 export const smpProviderEnum = pgEnum("peppol_smp_provider", smpProviderIds);
 
@@ -123,145 +102,6 @@ export const originalPayloadContainerFormatEnum = pgEnum(
 export function lower(email: AnyPgColumn): SQL {
   return sql`lower(${email})`;
 }
-
-export const billingProfiles = pgTable("peppol_billing_profiles", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => "bp_" + ulid()),
-  teamId: text("team_id") // Not linked to teams table, as we don't want to delete the billing profile when the team is deleted
-    .notNull()
-    .unique(),
-  mollieCustomerId: text("mollie_customer_id"),
-  firstPaymentId: text("first_payment_id"),
-  firstPaymentStatus: paymentStatusEnum("first_payment_status")
-    .notNull()
-    .default("none"),
-  isMandateValidated: boolean("is_mandate_validated").notNull().default(false),
-  profileStanding: profileStandingEnum("profile_standing")
-    .notNull()
-    .default("pending"),
-  graceStartedAt: timestamp("grace_started_at", { withTimezone: true }),
-  graceReason: text("grace_reason"),
-  suspendedAt: timestamp("suspended_at", { withTimezone: true }),
-
-  companyName: text("company_name").notNull(),
-  address: text("address").notNull(),
-  postalCode: text("postal_code").notNull(),
-  city: text("city").notNull(),
-  country: validCountryCodes("country").notNull(),
-  vatNumber: text("vat_number"),
-  billingEmail: text("billing_email"),
-  billingPeppolAddress: text("billing_peppol_address"),
-
-  isManuallyBilled: boolean("is_manually_billed").notNull().default(false), // Set to true if the billing profile has to be billed manually, e.g. by an admin
-
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: autoUpdateTimestamp(),
-});
-
-export const subscriptions = pgTable("peppol_subscriptions", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => "sub_" + ulid()),
-  teamId: text("team_id") // Not linked to teams table, as we don't want to delete the subscription when the team is deleted
-    .notNull(),
-  planId: text("plan_id"),
-  planName: text("plan_name").notNull(),
-  billingConfig: jsonb("billing_config").$type<BillingConfig>().notNull(),
-  startDate: timestamp("start_date", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  endDate: timestamp("end_date", { withTimezone: true }),
-  lastBilledAt: timestamp("last_billed_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: autoUpdateTimestamp(),
-});
-
-export const subscriptionBillingEvents = pgTable(
-  "peppol_subscription_billing_events",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => "sbe_" + ulid()),
-    teamId: text("team_id") // Not linked to teams table, as we don't want to delete the subscription billing events when the team is deleted
-      .notNull(),
-    billingProfileId: text("billing_profile_id")
-      .references(() => billingProfiles.id)
-      .notNull(),
-    billingDate: timestamp("billing_date", { withTimezone: true }).notNull(),
-    billingPeriodStart: timestamp("billing_period_start", {
-      withTimezone: true,
-    }).notNull(),
-    billingPeriodEnd: timestamp("billing_period_end", {
-      withTimezone: true,
-    }).notNull(),
-    totalAmountExcl: decimal("total_amount_excl").notNull(),
-    vatAmount: decimal("vat_amount").notNull(),
-    vatCategory: text("vat_category").notNull(),
-    vatPercentage: decimal("vat_percentage").notNull(),
-    totalAmountIncl: decimal("total_amount_incl").notNull(),
-    usedQty: decimal("used_qty").notNull(),
-    usedQtyIncoming: decimal("used_qty_incoming").notNull(),
-    usedQtyOutgoing: decimal("used_qty_outgoing").notNull(),
-    overageQtyIncoming: decimal("overage_qty_incoming").notNull(),
-    overageQtyOutgoing: decimal("overage_qty_outgoing").notNull(),
-
-    // Payment
-    amountDue: decimal("amount_due").notNull(),
-    paymentStatus: paymentStatusEnum("payment_status")
-      .notNull()
-      .default("none"),
-    paymentId: text("payment_id"),
-    paidAmount: decimal("paid_amount"),
-    paymentMethod: text("payment_method"),
-    paymentDate: timestamp("payment_date"),
-
-    // Invoice
-    invoiceId: text("invoice_id").unique(),
-    invoiceReference: serial("invoice_reference").unique(),
-
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    updatedAt: autoUpdateTimestamp(),
-  }
-);
-
-export const subscriptionBillingEventLines = pgTable(
-  "peppol_subscription_billing_event_lines",
-  {
-    id: text("id")
-      .primaryKey()
-      .$defaultFn(() => "sbel_" + ulid()),
-    subscriptionBillingEventId: text("subscription_billing_event_id")
-      .references(() => subscriptionBillingEvents.id)
-      .notNull(),
-    subscriptionId: text("subscription_id").notNull(),
-    subscriptionStartDate: timestamp("subscription_start_date", { withTimezone: true }).notNull(),
-    subscriptionEndDate: timestamp("subscription_end_date", { withTimezone: true }).notNull(),
-    subscriptionLastBilledAt: timestamp("subscription_last_billed_at", { withTimezone: true }).notNull(),
-    billingConfig: jsonb("billing_config").$type<BillingConfig>().notNull(),
-    planId: text("plan_id"),
-    includedMonthlyDocuments: decimal("included_monthly_documents").notNull(),
-    basePrice: decimal("base_price").notNull(),
-    incomingDocumentOveragePrice: decimal("incoming_document_overage_price").notNull(),
-    outgoingDocumentOveragePrice: decimal("outgoing_document_overage_price").notNull(),
-    usedQty: decimal("used_qty").notNull(),
-    usedQtyIncoming: decimal("used_qty_incoming").notNull(),
-    usedQtyOutgoing: decimal("used_qty_outgoing").notNull(),
-    overageQtyIncoming: decimal("overage_qty_incoming").notNull(),
-    overageQtyOutgoing: decimal("overage_qty_outgoing").notNull(),
-
-    // Invoice line details
-    name: text("name").notNull(),
-    description: text("description").notNull(),
-    totalAmountExcl: decimal("total_amount_excl").notNull(),
-  }
-);
 
 export const companies = pgTable("peppol_companies", {
   id: text("id")
@@ -295,6 +135,14 @@ export const companies = pgTable("peppol_companies", {
   updatedAt: autoUpdateTimestamp(),
 });
 
+/** Who withdrew a verification session, when, why and for which earlier session. */
+export type VerificationWithdrawal = {
+  withdrawnAt: string;
+  inFavorOf: string;
+  byUserId: string;
+  reason: string;
+};
+
 export const verificationStatusEnum = pgEnum("verification_status", ["opened", "idVerificationRequested", "inReview", "verified", "rejected", "error"]);
 
 export const companyVerificationLog = pgTable(
@@ -321,6 +169,9 @@ export const companyVerificationLog = pgTable(
     mandateAcceptedAt: timestamp("mandate_accepted_at", { withTimezone: true }),
     errorMessage: text("error_message"),
     arratechOnboarding: jsonb("arratech_onboarding").$type<ArratechOnboarding>(),
+    // Set when support withdrew this session so that an earlier one, which already
+    // holds the representative's identity check, stays the company's current session.
+    withdrawal: jsonb("withdrawal").$type<VerificationWithdrawal>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -1014,6 +865,7 @@ export const teamExtensions = pgTable("peppol_team_extensions", {
   useTestNetwork: boolean("use_test_network").notNull().default(false),
   verificationRequirements: verificationRequirementsEnum("verification_requirements").notNull().default("lax"),
   companyVerificationExtensionUntil: timestamp("company_verification_extension_until", { withTimezone: true }),
+  canVerifyCompaniesByContract: boolean("can_verify_companies_by_contract").notNull().default(false),
   supportEmailAddress: text("support_email_address"),
 });
 
@@ -1133,6 +985,10 @@ export const activatedIntegrations = pgTable(
     manifest: jsonb("manifest").$type<IntegrationManifest>().notNull(),
     configuration: jsonb("configuration").$type<IntegrationConfiguration>(),
     state: jsonb("state").$type<IntegrationState>().notNull(),
+    // Scheduled runs that failed as a whole in a row, and when the team was told: a
+    // failure is only reported once it outlasts a few runs, and once per incident.
+    consecutiveFailedRuns: integer("consecutive_failed_runs").notNull().default(0),
+    failureNotifiedAt: timestamp("failure_notified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -1157,17 +1013,4 @@ export const integrationTaskLogs = pgTable("integration_task_logs", {
     .defaultNow()
     .notNull(),
   updatedAt: autoUpdateTimestamp(),
-});
-
-export const paymentFailureReminders = pgTable("peppol_payment_failure_reminders", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => "pfr_" + ulid()),
-  billingEventId: text("billing_event_id")
-    .references(() => subscriptionBillingEvents.id, { onDelete: "cascade" })
-    .notNull(),
-  emailAddresses: text("email_addresses").notNull().array().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
 });

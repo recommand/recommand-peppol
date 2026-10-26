@@ -10,7 +10,9 @@ import {
 } from "@peppol/data/suppliers";
 import {
   describeErrorResponse,
-  describeSuccessResponseWithZod,
+  describeSuccessResponse,
+  paginationQuery,
+  paginationResponse,
 } from "@core/lib/api-docs";
 import { supplierResponse } from "./shared";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -23,31 +25,19 @@ const getSuppliersRouteDescription = describeRoute({
   summary: "List Suppliers",
   tags: ["Suppliers"],
   responses: {
-    ...describeSuccessResponseWithZod("Successfully retrieved suppliers", z.object({
-      suppliers: z.array(supplierResponse),
-      pagination: z.object({
-        total: z.number(),
-        page: z.number(),
-        limit: z.number(),
-        totalPages: z.number(),
-      }),
+    ...describeSuccessResponse("Successfully retrieved suppliers", z.object({
+      suppliers: z.array(supplierResponse).openapi({ description: "The suppliers on this page." }),
+      pagination: paginationResponse,
     })),
+    ...describeErrorResponse(401, "Unauthorized"),
     ...describeErrorResponse(500, "Failed to fetch suppliers"),
   },
 });
 
-const getSuppliersQuerySchema = z.object({
-  page: z.coerce.number().min(1).default(1).openapi({
-    description: "The page number to retrieve",
-    example: 1,
-  }),
-  limit: z.coerce.number().min(1).max(100).default(10).openapi({
-    description: "The number of items per page",
-    example: 10,
-  }),
+const getSuppliersQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 100 }).extend({
   search: z.string().optional().openapi({
     description: "Search term to filter suppliers",
-    example: "supplier name",
+    examples: ["supplier name"],
   }),
 });
 

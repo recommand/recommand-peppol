@@ -1,5 +1,7 @@
-import { getCompanyByPeppolId } from "@peppol/data/companies";
-import { getCompanyDocumentTypes } from "@peppol/data/company-document-types";
+import {
+  resolvePlaygroundAddress,
+  type PlaygroundRecipient,
+} from "@peppol/data/playground/recipients";
 import {
   docTypeIdFromServiceMetadataRef,
   fetchServiceProcessIds,
@@ -10,10 +12,10 @@ import {
  * What a recipient can receive, as far as the network we are sending over knows it.
  *
  * The document types are known up front: production and the test network list them in
- * the participant's service group, a playground in the registrations of the company the
- * address belongs to. The processes behind one document type cost an extra request on
- * the real networks, so they are fetched only for the document types actually
- * considered, and remembered for the rest of the lookup's life.
+ * the participant's service group, a playground company in its registrations. The
+ * processes behind one document type cost an extra request on the real networks, so
+ * they are fetched only for the document types actually considered, and remembered for
+ * the rest of the lookup's life.
  */
 export type RecipientCapabilities = {
   supportsDocType(docTypeId: string): boolean;
@@ -26,17 +28,8 @@ const CACHE_MAX_ENTRIES = 1000;
 
 const cache = new Map<string, { expiresAt: number; capabilities: RecipientCapabilities }>();
 
-function cacheKey(options: {
-  recipientAddress: string;
-  isPlayground: boolean;
-  useTestNetwork: boolean;
-  teamId: string;
-}): string {
-  const network = options.isPlayground && !options.useTestNetwork
-    ? `playground:${options.teamId}`
-    : options.useTestNetwork
-      ? "test"
-      : "production";
+function cacheKey(options: { recipientAddress: string; useTestNetwork: boolean }): string {
+  const network = options.useTestNetwork ? "test" : "production";
   return `${network}:${options.recipientAddress.toLowerCase()}`;
 }
 
@@ -63,21 +56,11 @@ function writeCache(key: string, capabilities: RecipientCapabilities): void {
 
 /**
  * The registrations a playground company holds, which is what a playground has in place
- * of an SMP: documents are handed straight to the receiving pipeline, and only a company
- * registered in this playground team ever receives one.
+ * of an SMP entry for its own companies.
  */
-async function getPlaygroundCapabilities(options: {
-  recipientAddress: string;
-  playgroundTeamId: string;
-}): Promise<RecipientCapabilities> {
-  const company = await getCompanyByPeppolId({
-    peppolId: options.recipientAddress,
-    playgroundTeamId: options.playgroundTeamId,
-  });
-  const registrations = await getCompanyDocumentTypes(company.id);
-
+function getPlaygroundCapabilities(recipient: PlaygroundRecipient): RecipientCapabilities {
   const processIdsByDocType = new Map<string, string[]>();
-  for (const registration of registrations) {
+  for (const registration of recipient.registrations) {
     const processIds = processIdsByDocType.get(registration.docTypeId) ?? [];
     processIds.push(registration.processId);
     processIdsByDocType.set(registration.docTypeId, processIds);
@@ -138,9 +121,15 @@ async function getSmpCapabilities(options: {
  * Look up what a recipient is able to receive, so a send that names no document type
  * identifier can be routed over a combination the recipient is registered for.
  *
+ * A playground that is not on the test network answers an address that belongs to one
+ * of its companies from that company's registrations, and any other address from the
+ * production SMP, as production would; see isSimulatedPlayground. The playground's
+ * registrations are read fresh each time, the network's are cached.
+ *
  * Returns null when the recipient could not be looked up at all — an unreachable SMP, an
- * unregistered participant, an address that is not a company in this playground. Nothing
- * is known then, so the caller keeps to its own default rather than refusing to send.
+ * unregistered participant, one of the addresses a playground reserves for that case.
+ * Nothing is known then, so the caller keeps to its own default rather than refusing to
+ * send.
  */
 export async function getRecipientCapabilities(options: {
   recipientAddress: string;
@@ -148,30 +137,34 @@ export async function getRecipientCapabilities(options: {
   useTestNetwork: boolean;
   teamId: string;
 }): Promise<RecipientCapabilities | null> {
-  const key = cacheKey(options);
-  const cached = readCache(key);
-  if (cached) return cached;
-
   try {
-    const capabilities =
-      options.isPlayground && !options.useTestNetwork
-        ? await getPlaygroundCapabilities({
-            recipientAddress: options.recipientAddress,
-            playgroundTeamId: options.teamId,
-          })
-        : await getSmpCapabilities({
-            recipientAddress: options.recipientAddress,
-            useTestNetwork: options.useTestNetwork,
-          });
+    if (options.isPlayground && !options.useTestNetwork) {
+      const playgroundAddress = await resolvePlaygroundAddress({
+        recipientAddress: options.recipientAddress,
+        playgroundTeamId: options.teamId,
+      });
+      if (playgroundAddress?.kind === "unknown") return null;
+      if (playgroundAddress?.kind === "company") {
+        return getPlaygroundCapabilities(playgroundAddress.recipient);
+      }
+    }
+
+    const key = cacheKey(options);
+    const cached = readCache(key);
+    if (cached) return cached;
+
+    const capabilities = await getSmpCapabilities({
+      recipientAddress: options.recipientAddress,
+      useTestNetwork: options.useTestNetwork,
+    });
     writeCache(key, capabilities);
     return capabilities;
   } catch (error) {
     // Not an error in itself: an address that is not registered on this network is one
-    // the send fails on anyway, and one that is not a company in this playground never
-    // receives anything. Logged rather than raised, because the send carries on with the
-    // format it would have been written as before.
+    // the send fails on anyway. Logged rather than raised, because the send carries on
+    // with the format it would have been written as before.
     console.log(
-      `Could not look up receiving capabilities for ${options.recipientAddress}, sending as the default document type:`,
+      `Could not look up receiving capabilities for ${options.recipientAddress}:`,
       error instanceof Error ? error.message : error,
     );
     return null;

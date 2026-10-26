@@ -7,6 +7,8 @@ import {
   getPercentage,
   getTextContent,
 } from "../xml-helpers";
+import { parseCiiPartyIdentifiers } from "../party-identifiers";
+import { parseCiiCommodityClassifications } from "../commodity-classifications";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -38,6 +40,13 @@ function date(value: any): string {
 function nullableDate(value: any): string | null {
   const parsedDate = date(value);
   return parsedDate || null;
+}
+
+function billingPeriod(period: any) {
+  const startDate = nullableDate(period?.StartDateTime);
+  const endDate = nullableDate(period?.EndDateTime);
+  if (!startDate && !endDate) return undefined;
+  return { startDate, endDate };
 }
 
 function allowanceCharge(charge: any) {
@@ -84,6 +93,7 @@ function party(tradeParty: any) {
       tradeParty.SpecifiedLegalOrganization?.ID?.["#text"] ??
         tradeParty.SpecifiedLegalOrganization?.ID
     ),
+    partyIdentifiers: parseCiiPartyIdentifiers(tradeParty),
     email: getNullableTextContent(
       tradeParty.DefinedTradeContact?.EmailURIUniversalCommunication?.URIID
     ),
@@ -102,6 +112,19 @@ function attachment(ref: any) {
     embeddedDocument: getTextContent(ref.AttachmentBinaryObject?.["#text"]),
     url: getTextContent(ref.URIID),
   };
+}
+
+/**
+ * The mandate of a direct debit payment means. CII states the mandate reference
+ * (BT-89) once, in the payment terms, so it belongs to the payment means that
+ * debit an account: a direct debit, or one that names the debited account.
+ */
+function paymentMandate(payment: any, mandateId: any) {
+  const reference = getNullableTextContent(mandateId);
+  const debitedAccount = getNullableTextContent(payment.PayerPartyDebtorFinancialAccount?.IBANID);
+  const isDirectDebit = getPaymentKeyByCode(getTextContent(payment.TypeCode)) === "sepa_direct_debit";
+  if (!reference || (!isDirectDebit && !debitedAccount)) return null;
+  return { reference, debitedAccount };
 }
 
 export function parseBillingDocumentFromCII(xml: string) {
@@ -147,6 +170,9 @@ export function parseBillingDocumentFromCII(xml: string) {
   const generalNote = invoiceNotes.find(
     (note: any) => !getTextContent(note.SubjectCode)
   );
+  const contractReference = getNullableTextContent(
+    agreement.ContractReferencedDocument?.IssuerAssignedID
+  );
 
   return {
     documentNumber: getTextContent(invoice.ExchangedDocument?.ID),
@@ -164,6 +190,8 @@ export function parseBillingDocumentFromCII(xml: string) {
     despatchReference: getNullableTextContent(
       delivery?.DespatchAdviceReferencedDocument?.IssuerAssignedID
     ),
+    ...(contractReference && { contractReference }),
+    billingPeriod: billingPeriod(settlement.BillingSpecifiedPeriod),
     invoiceReferences: (settlement.InvoiceReferencedDocument || []).map((reference: any) => ({
       id: getTextContent(reference.IssuerAssignedID),
       issueDate: nullableDate(reference.FormattedIssueDateTime),
@@ -208,12 +236,16 @@ export function parseBillingDocumentFromCII(xml: string) {
       (payment: any, index: number) => ({
         paymentMethod: getPaymentKeyByCode(getTextContent(payment.TypeCode)),
         reference: getTextContent(paymentReferences[index]),
-        iban: getTextContent(payment.PayeePartyCreditorFinancialAccount?.IBANID),
+        iban: getNullableTextContent(payment.PayeePartyCreditorFinancialAccount?.IBANID),
         name: getNullableTextContent(
           payment.PayeePartyCreditorFinancialAccount?.AccountName
         ),
         financialInstitutionBranch: getNullableTextContent(
           payment.PayeeSpecifiedCreditorFinancialInstitution?.BICID
+        ),
+        mandate: paymentMandate(
+          payment,
+          settlement.SpecifiedTradePaymentTerms?.DirectDebitMandateID
         ),
       })
     ),
@@ -250,14 +282,9 @@ export function parseBillingDocumentFromCII(xml: string) {
         orderLineReference: getNullableTextContent(
           lineAgreement?.BuyerOrderReferencedDocument?.LineID
         ),
-        commodityClassifications: (product?.DesignatedProductClassification || []).map(
-          (classification: any) => ({
-            scheme: getTextContent(classification.ClassCode?.["@_listID"]),
-            schemeVersion: getNullableTextContent(
-              classification.ClassCode?.["@_listVersionID"]
-            ),
-            value: getTextContent(classification.ClassCode?.["#text"]),
-          })
+        billingPeriod: billingPeriod(lineSettlement?.BillingSpecifiedPeriod),
+        commodityClassifications: parseCiiCommodityClassifications(
+          product?.DesignatedProductClassification
         ),
         additionalItemProperties: (product?.ApplicableProductCharacteristic || []).map(
           (property: any) => ({

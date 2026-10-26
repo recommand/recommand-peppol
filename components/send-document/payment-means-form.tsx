@@ -45,7 +45,7 @@ export function PaymentMeansForm({ paymentMeans, onChange }: PaymentMeansFormPro
                   <Label htmlFor={`iban-${index}`}>{t`IBAN *`}</Label>
                   <Input
                     id={`iban-${index}`}
-                    value={payment.iban}
+                    value={payment.iban ?? ""}
                     onChange={(e) => updatePaymentMeans(index, "iban", e.target.value)}
                     placeholder="BE71 0961 2345 6769"
                     required

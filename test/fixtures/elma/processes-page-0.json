@@ -1,0 +1,188 @@
+{
+ "empty": false,
+ "first": true,
+ "last": false,
+ "number": 0,
+ "numberOfElements": 6,
+ "pageable": {
+  "offset": 0,
+  "pageNumber": 0,
+  "pageSize": 200,
+  "paged": true,
+  "sort": {
+   "empty": true,
+   "sorted": false,
+   "unsorted": true
+  },
+  "unpaged": false
+ },
+ "size": 6,
+ "sort": {
+  "empty": true,
+  "sorted": false,
+  "unsorted": true
+ },
+ "totalElements": 10,
+ "totalPages": 2,
+ "content": [
+  {
+   "identifier": "8c6b15f6-6845-46b1-9ff1-92e226d7670a",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+   "domain": "Post-Award",
+   "title": "PEPPOLBIS_3_0_BILLING_01_UBL",
+   "alias": "PEPPOL BIS Billing 3.0 (01, UBL)",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "26d183b5-689a-4d9e-8edc-3ed65e77ddf0",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+     "title": "Peppol BIS Billing UBL Credit Note V3"
+    },
+    {
+     "identifier": "dfc096eb-950f-439c-87d1-d37cd14ae594",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+     "title": "Peppol BIS Billing UBL Invoice V3"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  },
+  {
+   "identifier": "c288a6d6-7c4c-4617-93ee-4167d2fdf051",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+   "domain": "Post-Award",
+   "title": "PEPPOLBIS_3_0_BILLING_01_CII",
+   "alias": "PEPPOL BIS Billing 3.0 (01, CII)",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "cf153e28-92a3-4da3-9795-919b9d23d616",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100::CrossIndustryInvoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::D16B",
+     "title": "Peppol BIS Billing CII Invoice V3"
+    }
+   ],
+   "dependencies": [
+    {
+     "identifier": "8c6b15f6-6845-46b1-9ff1-92e226d7670a",
+     "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+     "title": "PEPPOLBIS_3_0_BILLING_01_UBL",
+     "restricted": false
+    }
+   ],
+   "requiredICDs": [
+    "0192",
+    "0007"
+   ]
+  },
+  {
+   "identifier": "0f2c056c-bbd4-4d01-8835-4e67b443a7e3",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:difi.no:2017:ehf:adv-ordering:3.0-pilot",
+   "domain": "Post-Award",
+   "title": "EHF_ADVORDER_3_0_PILOT_REQUEST",
+   "alias": "EHF Advanced Ordering 3.0 (Pilot) Request",
+   "restricted": true,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "e5744d09-4d61-44da-bd92-c5c1221b8084",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:OrderCancellation-2::OrderCancellation##urn:fdc:difi.no:2017:ehf:order-cancellation:3.0-pilot::2.2",
+     "title": "Order Cancellation"
+    },
+    {
+     "identifier": "c346f7c9-8342-4ccd-9a68-5b176f65839f",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Order-2::Order##urn:fdc:difi.no:2017:ehf:order:3.0-pilot::2.2",
+     "title": "Order"
+    },
+    {
+     "identifier": "f3130b48-b030-4229-9c4b-17af39aff6b2",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Order-2::Order##urn:fdc:difi.no:2017:ehf:order:3.0-pilot::2.1",
+     "title": "Order (dep)"
+    },
+    {
+     "identifier": "e16b9047-0e0c-4be3-8a90-2fcfbfdae104",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:OrderChange-2::OrderChange##urn:fdc:difi.no:2017:ehf:order-change:3.0-pilot::2.2",
+     "title": "Order Change"
+    },
+    {
+     "identifier": "6ef107e8-645b-4303-8c75-7b28b10ee5da",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:OrderChange-2::OrderChange##urn:fdc:difi.no:2017:ehf:order-change:3.0-pilot::2.1",
+     "title": "Order Change (dep)"
+    },
+    {
+     "identifier": "64328dd4-ca0e-4bcb-94f1-f4b892a47700",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:OrderCancellation-2::OrderCancellation##urn:fdc:difi.no:2017:ehf:order-cancellation:3.0-pilot::2.1",
+     "title": "Order Cancellation (dep)"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  },
+  {
+   "identifier": "f9eed7f0-c342-411d-a704-e52285b2ed25",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:poacc:bis:invoice_response:3",
+   "domain": "Post-Award",
+   "title": "PEPPOLBIS_3.0_INVOICE_RESPONSE_EO",
+   "alias": "PEPPOL BIS Invoice Response 3.0 (EO)",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "51f8740f-9dbc-42fe-8bbe-09a261676c8c",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:ApplicationResponse-2::ApplicationResponse##urn:fdc:peppol.eu:poacc:trns:invoice_response:3::2.1",
+     "title": "Peppol Invoice Response transaction 3.0"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192",
+    "0007"
+   ]
+  },
+  {
+   "identifier": "73acec17-9e41-42dc-b5ee-f29179188d7e",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:poacc:bis:ordering:3",
+   "domain": "Post-Award",
+   "title": "PEPPOLBIS_3.0_ORDERING_CA",
+   "alias": "PEPPOL BIS Ordering 3.0 (CA)",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "883920b4-be4a-4166-b9ff-1fa2f8da9599",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:OrderResponse-2::OrderResponse##urn:fdc:peppol.eu:poacc:trns:order_response:3::2.1",
+     "title": "Peppol Order Response transaction 3.0"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  },
+  {
+   "identifier": "78c25c22-73a4-4f70-ba20-081964f74aef",
+   "qualifiedIdentifier": "cenbii-procid-ubl::urn:fdc:peppol.eu:poacc:bis:ordering:3",
+   "domain": "Post-Award",
+   "title": "PEPPOLBIS_3.0_ORDERING_EO",
+   "alias": "PEPPOL BIS Ordering 3.0 (EO)",
+   "restricted": false,
+   "capabilities": [],
+   "documentTypes": [
+    {
+     "identifier": "e710c10b-4149-473e-a3bc-c0df4bf46e62",
+     "qualifiedIdentifier": "busdox-docid-qns::urn:oasis:names:specification:ubl:schema:xsd:Order-2::Order##urn:fdc:peppol.eu:poacc:trns:order:3::2.1",
+     "title": "Peppol Order transaction 3.0"
+    }
+   ],
+   "dependencies": [],
+   "requiredICDs": [
+    "0192"
+   ]
+  }
+ ]
+}

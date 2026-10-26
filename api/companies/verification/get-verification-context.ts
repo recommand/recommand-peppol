@@ -1,6 +1,6 @@
 import { getCompanyById } from "@peppol/data/companies";
 import { getCompanyVerificationLog } from "@peppol/data/company-verification";
-import { getEnterpriseData } from "@peppol/data/cbe-public-search/client";
+import { listRepresentatives } from "@peppol/data/representative-checks";
 import { requiresArratechKycReview } from "@peppol/data/at/kyc";
 import { getMandateDocument } from "@peppol/data/at/mandate";
 import { isPlayground } from "@peppol/data/teams";
@@ -23,7 +23,7 @@ type GetVerificationContextContext = Context<Record<string, never>, string, { in
 
 const _getVerificationContext = server.get(
     "/companies/verification/:companyVerificationLogId/context",
-    describeRoute({ hide: true }),
+    describeRoute({ hide: true, security: [] }),
     zodValidator("param", getVerificationContextParamSchema),
     _getVerificationContextImplementation,
 );
@@ -43,35 +43,28 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
         }
 
         const teamIsPlayground = await isPlayground(company.teamId);
-        const isRepresentativeSelectionRequired = !teamIsPlayground && company.country === "BE";
         const isMandateRequired = await requiresArratechKycReview(company);
 
-        let representatives: { firstName: string; lastName: string; function: string }[] = [];
-        if (isRepresentativeSelectionRequired) {
-            if (!company.enterpriseNumber) {
-                return c.json(actionFailure("Company does not have an enterprise number. Please complete the company details first."), 400);
-            }
-            try {
-                const lookupNumber = company.country === "BE" && company.enterpriseNumber.toUpperCase().startsWith("BE") ? company.enterpriseNumber.slice(2) : company.enterpriseNumber;
-                const enterpriseData = await getEnterpriseData(lookupNumber, company.country);
-                representatives = enterpriseData.representatives
-                    .filter((rep) => rep.firstName && rep.lastName)
-                    .map((rep) => ({
-                        firstName: rep.firstName!,
-                        lastName: rep.lastName!,
-                        function: rep.function ?? "",
-                    }));
-            } catch (error) {
-                console.error("Failed to fetch enterprise data:", error);
-            }
+        // Where the company's register lists who may act for it, the representative
+        // picks their name from that list; playground teams type any name.
+        const listed = teamIsPlayground ? null : await listRepresentatives(company);
+        if (listed && !company.enterpriseNumber) {
+            return c.json(actionFailure("Company does not have an enterprise number. Please complete the company details first."), 400);
         }
+        const isRepresentativeSelectionRequired = listed !== null;
+        const representatives = listed?.representatives ?? [];
 
         return c.json(actionSuccess({
             verificationLog: {
                 id: verificationLog.id,
                 status: verificationLog.status,
+                // Withdrawn by support in favour of an earlier session; see the status route.
+                withdrawn: verificationLog.withdrawal !== null,
                 companyName: verificationLog.companyName,
-                errorMessage: verificationLog.errorMessage,
+                errorMessage: verificationLog.withdrawal !== null ? null : verificationLog.errorMessage,
+                // Whose identity check a started session waits for, so whoever opens
+                // the link can tell whether it is theirs to complete.
+                representativeName: verificationLog.status === "idVerificationRequested" ? getRepresentativeName(verificationLog) : null,
             },
             company: {
                 id: company.id,
@@ -81,6 +74,8 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
             },
             isRepresentativeSelectionRequired,
             representatives,
+            // What the form asks when the register lists nobody.
+            nameWithoutRepresentatives: listed?.nameWithoutList ?? "typed",
             isPlayground: teamIsPlayground,
             isMandateRequired,
             countryRequirements: getVerificationCountryRequirements(company.country, isMandateRequired, company.isSmpRecipient),
@@ -97,6 +92,12 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
         }
         return c.json(actionFailure("Could not fetch verification context"), 500);
     }
+}
+
+/** The name the session was started for, or null while it is unknown. */
+function getRepresentativeName({ firstName, lastName }: { firstName: string | null; lastName: string | null }): string | null {
+    const name = [firstName, lastName].filter((part) => part && part.trim() && part !== "UNKNOWN").join(" ").trim();
+    return name || null;
 }
 
 export type GetVerificationContext = typeof _getVerificationContext;

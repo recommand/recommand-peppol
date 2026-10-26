@@ -1,4 +1,5 @@
 import { z } from "zod";
+import "zod-openapi/extend";
 
 export const ISO_ICD_SCHEME_IDENTIFIERS: { key: string, name: string }[] = [
   { key: '0002', name: 'System Information et Repertoire des Entreprise et des Etablissements: SIRENE' },
@@ -239,6 +240,10 @@ export const ISO_ICD_SCHEME_IDENTIFIERS: { key: string, name: string }[] = [
 ]
 
 
-export const zodValidIsoIcdSchemeIdentifiers = z.enum(
-  ISO_ICD_SCHEME_IDENTIFIERS.map((scheme) => scheme.key) as [string, ...string[]]
-);
+export const zodValidIsoIcdSchemeIdentifiers = z
+  .enum(ISO_ICD_SCHEME_IDENTIFIERS.map((scheme) => scheme.key) as [string, ...string[]])
+  .openapi({
+    description: "The ISO/IEC 6523 scheme an enterprise number is issued under.",
+    examples: ["0208"],
+    ref: "EnterpriseNumberScheme",
+  });

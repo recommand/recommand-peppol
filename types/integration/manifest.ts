@@ -1,4 +1,5 @@
 import { z } from "zod";
+import "zod-openapi/extend";
 
 // **********************************************************
 // * Integration Manifest Schema
@@ -15,7 +16,10 @@ export const integrationEventSchema = z.enum([
   "integration.cron.medium",
   "integration.cron.long",
   "integration.task.retry",
-]);
+]).openapi({
+  description: "An event an integration can handle.",
+  ref: "IntegrationEvent",
+});
 
 export const integrationAuthTypeSchema = z.enum(["bearer"]);
 
@@ -25,7 +29,8 @@ export const manifestCapabilitySchema = z
     description: z.string().min(1),
     required: z.boolean(),
   })
-  .strict();
+  .strict()
+  .openapi({ ref: "IntegrationCapability" });
 
 export const manifestFieldSchema = z
   .object({
@@ -38,7 +43,8 @@ export const manifestFieldSchema = z
     type: z.enum(["string", "boolean", "number"]),
     required: z.boolean(),
   })
-  .strict();
+  .strict()
+  .openapi({ ref: "IntegrationField" });
 
 export const manifestSchema = z
   .object({
@@ -51,7 +57,8 @@ export const manifestSchema = z
     authTypes: z.array(integrationAuthTypeSchema).min(1),
     fields: z.array(manifestFieldSchema),
   })
-  .strict();
+  .strict()
+  .openapi({ ref: "IntegrationManifest" });
 
 export type IntegrationManifest = z.infer<typeof manifestSchema>;
 export type IntegrationEvent = z.infer<typeof integrationEventSchema>;

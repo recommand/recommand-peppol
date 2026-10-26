@@ -88,7 +88,7 @@ function payloadForRecord(record: Record<string, unknown>): Record<string, unkno
   return rest;
 }
 
-server.post("/postmark", describeRoute({ hide: true }), async (c) => {
+server.post("/postmark", describeRoute({ hide: true, security: [] }), async (c) => {
   const secret = process.env.POSTMARK_WEBHOOK_SECRET;
   if (!secret) {
     console.error("POSTMARK_WEBHOOK_SECRET environment variable is not set");

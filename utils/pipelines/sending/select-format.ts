@@ -9,6 +9,7 @@ import {
 } from "@peppol/utils/type-repository/document-formats";
 import type { AnyDocumentFormat } from "@peppol/utils/type-repository/document-formats/types";
 import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";
+import { buyerLeitwegId } from "@peppol/utils/parsing/buyer-reference";
 import { SendingFailure } from "./errors";
 import { isFranceRegulatedSendingSupported } from "./france-regulated-guard";
 
@@ -33,6 +34,9 @@ export type FormatSelection = {
  * registry declares them and processes in the order the format declares them, both of
  * which state their priority. Without a lookup, the first format and the process the
  * document selects are used, which is what sending did before autorouting existed.
+ *
+ * One recipient changes that order: a German public authority, addressed by its
+ * Leitweg-ID, gets XRechnung first. See orderFormatsForRecipient.
  */
 export async function selectFormatAndProcess(options: {
   documentType: AnyDocumentType;
@@ -61,7 +65,9 @@ export async function selectFormatAndProcess(options: {
     ? normalizeProcessId(options.processId)
     : undefined;
 
-  let candidateFormats = requestedFormat ? [requestedFormat] : formats;
+  let candidateFormats = requestedFormat
+    ? [requestedFormat]
+    : orderFormatsForRecipient(formats, options.recipientAddress);
   if (requestedProcessId) {
     // Unlike raw XML, where the process id only names the process the document travels
     // over, here it is written into the document we generate as its profile identifier.
@@ -128,4 +134,26 @@ export async function selectFormatAndProcess(options: {
     ...defaultSelection,
     peppolRoutingFailure: `Recipient ${options.recipientAddress} is not registered to receive ${documentType.translatableTitle.toLowerCase()} documents in any format this company can send.`,
   };
+}
+
+/**
+ * The formats to try for this recipient, most preferred first. German public
+ * authorities, addressed by a Leitweg-ID (scheme 0204), require invoices in XRechnung:
+ * the federal invoice portal refuses Peppol BIS documents, although an authority's
+ * Peppol registration may list them. For such a recipient the XRechnung formats go
+ * first, in registry order, followed by the rest. Every other recipient keeps the
+ * registry order, which puts Peppol BIS first.
+ */
+function orderFormatsForRecipient(
+  formats: AnyDocumentFormat[],
+  recipientAddress: string | null,
+): AnyDocumentFormat[] {
+  if (buyerLeitwegId(recipientAddress) === null) {
+    return formats;
+  }
+  const isXRechnung = (format: AnyDocumentFormat) => format.key.startsWith("xrechnung-");
+  return [
+    ...formats.filter(isXRechnung),
+    ...formats.filter((format) => !isXRechnung(format)),
+  ];
 }

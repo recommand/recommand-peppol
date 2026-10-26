@@ -13,7 +13,7 @@ export const integrationResponse = z.object({
     state: stateSchema,
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
-});
+}).openapi({ ref: "Integration" });
 
 export const integrationTaskLogResponse = z.object({
     id: z.string(),
@@ -25,5 +25,5 @@ export const integrationTaskLogResponse = z.object({
     context: z.string(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
-});
+}).openapi({ ref: "IntegrationTaskLog" });
 

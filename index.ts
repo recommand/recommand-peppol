@@ -1,9 +1,7 @@
 import type { RecommandApp } from "@recommand/lib/app";
 import { Server } from "@recommand/lib/api";
 import { Logger } from "@recommand/lib/logger";
-import subscriptionServer from "./api/subscription";
-import billingProfileServer from "./api/billing-profile";
-import billingServer from "./api/billing";
+import { withoutEmptyPaths, withoutUnusedSchemas } from "./utils/openapi";
 import reportingServer from "./api/reporting";
 import companiesServer from "./api/companies";
 import labelsServer from "@peppol/api/labels";
@@ -16,11 +14,8 @@ import diditWebhookServer from "./api/internal/didit-webhook";
 import arratechWebhookServer from "./api/internal/arratech-webhook";
 import postmarkWebhookServer from "./api/internal/postmark-webhook";
 import transmittedDocumentsServer from "./api/documents";
-import {
-  generateSpecs,
-  openAPISpecs,
-  type OpenApiSpecsOptions,
-} from "hono-openapi";
+import { generateSpecs, type OpenApiSpecsOptions } from "hono-openapi";
+import type { Context } from "hono";
 import webhooksServer from "./api/webhooks";
 import integrationsServer from "./api/integrations";
 import recipientServer from "./api/recipients";
@@ -28,6 +23,7 @@ import receivingCapabilitiesServer from "./api/receiving-capabilities";
 import playgroundsServer from "./api/playgrounds";
 import suppliersServer from "@peppol/api/suppliers";
 import teamsServer from "./api/teams/get-team-extension";
+import teamEntitlementsServer from "./api/teams/get-team-entitlements";
 import customersServer from "@peppol/api/customers";
 import { initializeIntegrationCronJobs } from "./data/integrations/cron";
 import { initializeOffloadCronJobs } from "./data/offload/cron";
@@ -38,12 +34,12 @@ import { initializeFrenchReportingDeclarantCron } from "./data/fr-reporting-decl
 import { initializeFrenchReportingStatusCron } from "./data/fr-reporting-submissions";
 import { initializeDeliveryReconciliationCron } from "./data/deliveries/reconcile";
 import { initializeEmailDeliveryReconciliationCron } from "./data/deliveries/reconcile-email";
+import { initializeDeletedNorwegianOrganisationsCron } from "./data/bronnoysund/deleted-organisations";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
 import { registerPeppolEventTypes } from "./lib/event-types";
 import { initializeMetricsServer } from "./utils/metrics";
-import "./lib/permissions";
 
 export let logger: Logger;
 
@@ -57,18 +53,15 @@ export async function init(app: RecommandApp, server: Server) {
   addBackendEventListener(CORE_BACKEND_EVENTS.TEAM_CREATED, onTeamCreated);
   addBackendEventListener(CORE_BACKEND_EVENTS.TEAM_BEFORE_DELETE, onTeamBeforeDelete);
 
-  initializeIntegrationCronJobs(logger);
-  initializeOffloadCronJobs(logger);
-  initializeProviderSentCronJobs(logger);
-  initializeS3DeletionCronJobs(logger);
-  initializeArratechOnboardingCron(logger);
-  initializeFrenchReportingDeclarantCron(logger);
-  initializeFrenchReportingStatusCron(logger);
-  initializeDeliveryReconciliationCron(logger);
-  initializeEmailDeliveryReconciliationCron(logger);
+  registerOpenApiRoutes(server);
+}
 
-  initializeMetricsServer(logger);
-
+/**
+ * Serves the OpenAPI document of every route on `server` at `/openapi`, and the
+ * same document as Markdown at `/llms-full.txt`. Exported so that tooling can
+ * build the document exactly as it is served, without the rest of `init()`.
+ */
+export function registerOpenApiRoutes(server: Server) {
   const exclude: RegExp[] = [
     /^\/api\/core(?!\/auth\/verify).*$/, // Exclude all core API endpoints except the auth/verify endpoint
     /^\/api\/peppol.*$/, // Exclude all peppol API endpoints (these have been replaced by the new v1 API)
@@ -204,12 +197,44 @@ For additional support or questions, don't hesitate to contact our support team.
       ],
     },
   };
-  server.get("/openapi", openAPISpecs(server, specsOptions));
+  // hono-openapi builds each response schema in place the first time it
+  // generates the document, so a second generation lacks the component
+  // schemas those responses refer to. Generate the document once and serve
+  // it from both routes. Before caching it, drop the empty path items
+  // hono-openapi leaves behind for hidden routes (see withoutEmptyPaths).
+  let openApiDocument: ReturnType<typeof generateSpecs> | undefined;
+  const getOpenApiDocument = (c: Context) => {
+    openApiDocument ??= generateSpecs(server, specsOptions, undefined, c).then(
+      (document) => withoutUnusedSchemas(withoutEmptyPaths(document)),
+      (error) => {
+        openApiDocument = undefined;
+        throw error;
+      }
+    );
+    return openApiDocument;
+  };
+  server.get("/openapi", async (c) => c.json(await getOpenApiDocument(c)));
   server.get("/llms-full.txt", async (c) => {
-    const specs = await generateSpecs(server, specsOptions, undefined, c);
-    const markdown = await createMarkdownFromOpenApi(specs);
+    const markdown = await createMarkdownFromOpenApi(
+      await getOpenApiDocument(c)
+    );
     return c.text(markdown);
   });
+}
+
+export function start() {
+  initializeIntegrationCronJobs(logger);
+  initializeOffloadCronJobs(logger);
+  initializeProviderSentCronJobs(logger);
+  initializeS3DeletionCronJobs(logger);
+  initializeArratechOnboardingCron(logger);
+  initializeFrenchReportingDeclarantCron(logger);
+  initializeFrenchReportingStatusCron(logger);
+  initializeDeliveryReconciliationCron(logger);
+  initializeEmailDeliveryReconciliationCron(logger);
+  initializeDeletedNorwegianOrganisationsCron(logger);
+
+  initializeMetricsServer(logger);
 }
 
 for (const prefix of ["/peppol/", "/v1/"]) {
@@ -234,11 +259,9 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, customersServer);
   server.route(prefix, labelsServer);
 
-  server.route(prefix, billingProfileServer); 
-  server.route(prefix, billingServer);
   server.route(prefix, reportingServer);
-  server.route(prefix, subscriptionServer);
   server.route(prefix, teamsServer);
+  server.route(prefix, teamEntitlementsServer);
 }
 
 export default server;

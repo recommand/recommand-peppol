@@ -8,7 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
-import { describeErrorResponse, describeSuccessResponseWithZod } from "@core/lib/api-docs";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { labelResponse } from "./shared";
 import { UserFacingError } from "@peppol/utils/util";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -22,8 +22,9 @@ const createLabelRouteDescription = describeRoute({
     summary: "Create Label",
     tags: ["Labels"],
     responses: {
-        ...describeSuccessResponseWithZod("Successfully created label", z.object({ label: labelResponse })),
+        ...describeSuccessResponse("Successfully created label", z.object({ label: labelResponse.openapi({ description: "The label, as created." }) })),
         ...describeErrorResponse(400, "Invalid request data"),
+        ...describeErrorResponse(401, "Unauthorized"),
         ...describeErrorResponse(500, "Failed to create label"),
     },
 });
@@ -32,15 +33,15 @@ const hexColorRegex = /^#[A-Fa-f0-9]{6}$/;
 
 const createLabelJsonBodySchema = z.object({
     name: z.string().min(1, "Name is required").openapi({
-        example: "ERP",
+        examples: ["ERP"],
         description: "The label's name. Keep it short: it is what you match on in your own routing code.",
     }),
     colorHex: z.string().regex(hexColorRegex, "Color must be a valid hex color (e.g., #3B82F6)").openapi({
-        example: "#3B82F6",
+        examples: ["#3B82F6"],
         description: "The colour the label is shown in, as a hex code such as `#3B82F6`.",
     }),
     externalId: z.string().optional().nullable().openapi({
-        example: "erp-routing-inbox",
+        examples: ["erp-routing-inbox"],
         description: "Your own identifier for the label. It must be unique within the team.",
     }),
 });

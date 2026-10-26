@@ -7,6 +7,16 @@ import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import { UserFacingError } from "@peppol/utils/util";
 
+export const PEPPOL_BACKEND_EVENTS = Object.freeze({
+  // A playground team was created for a user. Context: PlaygroundCreatedEvent.
+  PLAYGROUND_CREATED: "peppol.playground.created",
+});
+
+export type PlaygroundCreatedEvent = {
+  teamId: string;
+  userId: string;
+};
+
 export async function onTeamCreated(_event: string, context: { id: string, tx: PgTransaction<NodePgQueryResultHKT, Record<string, never>, ExtractTablesWithRelations<Record<string, never>>> }) {
   console.log("onTeamCreated", context);
   // This is not triggered for playground teams, as they are created through a non-core API

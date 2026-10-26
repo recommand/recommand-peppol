@@ -7,42 +7,45 @@ import {
   lineSchema,
   partySchema,
   paymentMeansSchema,
+  paymentTermsSchema,
+  periodSchema,
   sendVatTotalsSchema,
   surchargeSchema,
   totalsSchema,
   vatTotalsSchema,
 } from "../invoice/schemas";
-import { CURRENCIES, zCurrencies } from "@peppol/utils/currencies";
+import { zCurrencies } from "@peppol/utils/currencies";
 import { countrySpecificSchema } from "../country-specific/schemas";
 
 export const creditNoteInvoiceReferenceSchema = z.object({
-  id: z.string().min(1).openapi({ example: "INV-2024-001", description: "The reference to the invoice that is being credited" }),
-  issueDate: z.string().date().nullish().openapi({ example: "2024-03-20", description: "The issue date of the invoice that is being credited" }),
-});
+  id: z.string().min(1).openapi({ examples: ["INV-2024-001"], description: "The reference to the invoice that is being credited" }),
+  issueDate: z.string().date().nullish().openapi({ examples: ["2024-03-20"], description: "The issue date of the invoice that is being credited" }),
+}).openapi({ ref: "InvoiceReference" });
 
 export const baseCreditNoteSchema = z.object({
-  creditNoteNumber: z.string().openapi({ example: "CN-2024-001" }),
-  issueDate: z.string().date().openapi({ example: "2024-03-20" }),
-  note: z.string().nullish().openapi({ example: "Thank you for your business" }),
-  buyerReference: z.string().nullish().openapi({ example: "PO-2024-001" }),
-  invoiceReferences: z.array(creditNoteInvoiceReferenceSchema).default([]).openapi({ description: "References to one or more invoices that are being credited" }),
-  purchaseOrderReference: z.string().nullish().openapi({ example: "PO-2024-001", description: "A reference to a related purchase order" }),
-  salesOrderReference: z.string().nullish().openapi({ example: "SO-2024-001", description: "A reference to a related sales order." }),
-  despatchReference: z.string().nullish().openapi({ example: "DE-2024-001", description: "A reference to a related despatch advice document (e.g. packing slip)" }),
+  creditNoteNumber: z.string().openapi({ examples: ["CN-2024-001"] }),
+  issueDate: z.string().date().openapi({ examples: ["2024-03-20"] }),
+  dueDate: z.string().date().nullish().openapi({ examples: ["2024-04-20"], description: "The date the credited amount is due (BT-9). Optional: when left out, the credit note states no due date. In CII, including Factur-X, it is the payment due date of the payment terms; in UBL it is stated on the first payment means, so a UBL credit note without `paymentMeans` does not carry it." }),
+  note: z.string().nullish().openapi({ examples: ["Thank you for your business"] }),
+  buyerReference: z.string().nullish().openapi({ examples: ["CC-4120"], description: "A reference the buyer asked you to put on the credit note so they can route it internally (BT-10). If neither this nor `purchaseOrderReference` is provided, the credit note number is used, as it is when seller and buyer are both located in Germany, where this field is required. For a German public authority addressed by its Leitweg-ID (recipient scheme `0204`), this must be a Leitweg-ID: the recipient's is filled in when left out, a different Leitweg-ID the authority asked for is kept, and any other value is refused." }),
+  invoiceReferences: z.array(creditNoteInvoiceReferenceSchema).default([]).openapi({ description: "References to one or more invoices that are being credited. A French regulated credit note (`countrySpecific.country` `FR`) needs at least one reference with its `issueDate`." }),
+  purchaseOrderReference: z.string().nullish().openapi({ examples: ["4500012345"], description: "The buyer's purchase order number (BT-13), written to the order reference." }),
+  salesOrderReference: z.string().nullish().openapi({ examples: ["SO-2024-001"], description: "A reference to a related sales order." }),
+  despatchReference: z.string().nullish().openapi({ examples: ["DE-2024-001"], description: "A reference to a related despatch advice document (e.g. packing slip)" }),
+  contractReference: z.string().nullish().openapi({ examples: ["CT-2024-017"], description: "The identifier of the contract the credit note is issued under (BT-12)." }),
+  billingPeriod: periodSchema.nullish().openapi({ description: "The period the credit note bills for (BG-14), for example the month of a subscription." }),
   seller: partySchema,
   buyer: partySchema,
   delivery: deliverySchema.nullish().openapi({ description: "Optional delivery information." }),
   paymentMeans: z.array(paymentMeansSchema).nullish(),
-  paymentTerms: z.object({
-    note: z.string().openapi({ example: "Net 30" }),
-  }).nullish(),
+  paymentTerms: paymentTermsSchema.nullish(),
   lines: z.array(lineSchema).min(1),
   discounts: z.array(discountSchema).nullish().openapi({ description: "Optional global discounts" }),
   surcharges: z.array(surchargeSchema).nullish().openapi({ description: "Optional global surcharges" }),
   totals: totalsSchema.nullish(),
   vat: vatTotalsSchema.nullish(),
   attachments: z.array(attachmentSchema).nullish().openapi({ description: "Optional attachments to the credit note" }),
-  currency: zCurrencies.default("EUR").openapi({ example: "EUR", description: "The currency of the credit note. Defaults to EUR.", enum: CURRENCIES.map((currency) => currency.code) }),
+  currency: zCurrencies.default("EUR").openapi({ description: "The currency of the credit note. Defaults to EUR.", examples: ["EUR"] }),
 });
 
 export const _creditNoteSchema = baseCreditNoteSchema.extend({
@@ -52,8 +55,7 @@ export const _creditNoteSchema = baseCreditNoteSchema.extend({
 export const creditNoteSchema = _creditNoteSchema.openapi({ ref: "CreditNote" });
 
 export const _sendCreditNoteSchema = creditNoteSchema.extend({
-  issueDate: z.string().date().nullish().openapi({ example: "2024-03-20", description: "If not provided, the issue date will be the current date." }),
-  dueDate: z.string().date().nullish().openapi({ example: "2024-04-20", description: "If not provided, the due date will be 1 month from the issue date." }),
+  issueDate: z.string().date().nullish().openapi({ examples: ["2024-03-20"], description: "If not provided, the issue date will be the current date." }),
   seller: partySchema.nullish().openapi({ description: "If not provided, the seller will be the company that is sending the credit note." }),
   vat: sendVatTotalsSchema.nullish().openapi({ description: "If not provided, the VAT totals will be calculated from the document lines." }),
 })

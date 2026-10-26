@@ -41,7 +41,8 @@ export async function ensureApprovedKyc({
   request: Request;
   path: string;
   siren: string;
-  siret: string;
+  /** Absent for a send-only participant, whose KYC Arratech files under the SIREN alone. */
+  siret?: string;
   mandate: Buffer;
   fileName: string;
 }): Promise<void> {
@@ -52,13 +53,13 @@ export async function ensureApprovedKyc({
     const created = await request(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jurisdiction: 'FR', metaData: { siren, siret } }),
+      body: JSON.stringify({ jurisdiction: 'FR', metaData: siret ? { siren, siret } : { siren } }),
     });
     if (created.status !== 409) await readKycResponse(created);
     response = await request(path, { method: 'GET' });
   }
   const kyc = await readKycResponse<KycRecord>(response);
-  if (kyc.jurisdiction !== 'FR' || kyc.metaData?.siren !== siren || kyc.metaData?.siret !== siret) {
+  if (kyc.jurisdiction !== 'FR' || kyc.metaData?.siren !== siren || (kyc.metaData?.siret ?? undefined) !== siret) {
     throw new KycOnboardingError(
       'KYC identity does not match the signed mandate; review the SIREN and SIRET.',
     );

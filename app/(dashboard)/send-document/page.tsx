@@ -87,11 +87,12 @@ export default function SendDocumentPage() {
 
   const client = useMemo(() => rc<PreviewDocumentApi>("peppol"), []);
 
-  const handleFormChange = (data: Partial<SendDocument>) => {
-    setFormData(data);
-  };
-
-  useEffect(() => {
+  // Start over when the team changes. This happens while rendering, not in an
+  // effect: the form's own effects run before the page's and fill in the new
+  // document's defaults, which a reset in an effect would then wipe.
+  const [formTeamId, setFormTeamId] = useState(activeTeam?.id);
+  if (formTeamId !== activeTeam?.id) {
+    setFormTeamId(activeTeam?.id);
     setDocumentType(DocumentType.INVOICE);
     setSelectedCompanyId("");
     setFormData({
@@ -104,15 +105,15 @@ export default function SendDocumentPage() {
     });
     setPreviewHtml(null);
     setIsPreviewLoading(false);
-  }, [activeTeam?.id]);
+  }
 
   const handleDocumentTypeChange = (value: string) => {
     setDocumentType(value);
     const newDocumentType =
       value as (typeof DocumentType)[keyof typeof DocumentType];
 
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       documentType: newDocumentType,
       document:
         newDocumentType === DocumentType.XML
@@ -122,10 +123,10 @@ export default function SendDocumentPage() {
             ? ({ creditNoteNumber: "", lines: [] } as any)
             : ({ invoiceNumber: "", lines: [] } as any),
       doctypeId:
-        newDocumentType === DocumentType.XML ? formData.doctypeId : undefined,
+        newDocumentType === DocumentType.XML ? prev.doctypeId : undefined,
       processId:
-        newDocumentType === DocumentType.XML ? formData.processId : undefined,
-    });
+        newDocumentType === DocumentType.XML ? prev.processId : undefined,
+    }));
   };
 
   useEffect(() => {
@@ -356,7 +357,7 @@ export default function SendDocumentPage() {
                 key={activeTeam?.id ?? "no-team"}
                 type={getFormType(documentType)}
                 formData={formData}
-                onFormChange={handleFormChange}
+                onFormChange={setFormData}
                 selectedCompanyId={selectedCompanyId}
                 onCompanyChange={setSelectedCompanyId}
                 mode={developerMode ? "developer" : "billing"}

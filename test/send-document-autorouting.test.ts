@@ -151,6 +151,34 @@ describe("send document autorouting", () => {
     expect(selection.processId).toBe(BILLING_PROCESS_ID);
   });
 
+  it("routes a company outside France to a French receiver over the non-regulated process", async () => {
+    // A French receiver publishes Peppol BIS 3 under the French processes only. An invoice
+    // from a supplier outside France is outside the French reform, so it travels as Peppol
+    // BIS 3 over the non-regulated process, never the regulated one listed before it.
+    const selection = await select({
+      company: belgianCompany,
+      capabilities: registeredFor({
+        [BIS3_DOC_TYPE_ID]: [FRANCE_REGULATED_PROCESS_ID, FRANCE_NON_REGULATED_PROCESS_ID],
+        [FRANCE_CIUS_DOC_TYPE_ID]: [FRANCE_REGULATED_PROCESS_ID, FRANCE_NON_REGULATED_PROCESS_ID],
+      }),
+    });
+
+    expect(selection.peppolRoutingFailure).toBeUndefined();
+    expect(selection.format.key).toBe("peppol-ubl-bis3-invoice");
+    expect(selection.processId).toBe(FRANCE_NON_REGULATED_PROCESS_ID);
+  });
+
+  it("keeps the French formats reserved for French companies, also over the non-regulated process", async () => {
+    const selection = await select({
+      company: belgianCompany,
+      capabilities: registeredFor({
+        [FRANCE_CIUS_DOC_TYPE_ID]: [FRANCE_NON_REGULATED_PROCESS_ID],
+      }),
+    });
+
+    expect(selection.peppolRoutingFailure).toBeDefined();
+  });
+
   it("reports a recipient that receives nothing we can send, and still prepares the document", async () => {
     const selection = await select({
       capabilities: registeredFor({}),

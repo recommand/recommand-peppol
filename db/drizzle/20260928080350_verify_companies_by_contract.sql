@@ -1,0 +1,1 @@
+ALTER TABLE "peppol_team_extensions" ADD COLUMN "can_verify_companies_by_contract" boolean DEFAULT false NOT NULL;

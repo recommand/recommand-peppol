@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { Button } from "@core/components/ui/button";
 import { Label } from "@core/components/ui/label";
 import { toast } from "@core/components/ui/sonner";
@@ -34,6 +42,12 @@ import {
 import { ChevronDown } from "lucide-react";
 import { PartyForm } from "./party-form";
 import { useTranslation } from "@core/hooks/use-translation";
+import {
+  setDocumentField,
+  updateFormDocument,
+  type DocumentDraft,
+  type Updater,
+} from "./document-updates";
 
 const client = rc<SendDocumentAPI>("peppol");
 const customersClient = rc<Customers>("v1");
@@ -41,7 +55,8 @@ const customersClient = rc<Customers>("v1");
 interface DocumentFormProps {
   type: "invoice" | "creditNote" | "xml";
   formData: Partial<SendDocument>;
-  onFormChange: (data: Partial<SendDocument>) => void;
+  /** Takes updaters as well as values, like a state setter. */
+  onFormChange: Dispatch<SetStateAction<Partial<SendDocument>>>;
   selectedCompanyId: string;
   onCompanyChange: (companyId: string) => void;
   mode: "billing" | "developer";
@@ -128,10 +143,11 @@ export function DocumentForm({
       return;
     }
     lastAutoPdfFilenameRef.current = auto;
-    onFormChange({
-      ...formData,
-      pdfGeneration: { enabled: true, filename: auto },
-    });
+    onFormChange((prev) =>
+      prev.pdfGeneration?.enabled
+        ? { ...prev, pdfGeneration: { enabled: true, filename: auto } }
+        : prev
+    );
   }, [
     formData,
     formData.documentType,
@@ -230,17 +246,15 @@ export function DocumentForm({
     return party && typeof party === "object" ? (party as Party) : undefined;
   }, [counterpartyKey, formData.document]);
 
+  const updateDocument = useCallback(
+    (update: Updater<DocumentDraft>) =>
+      onFormChange(updateFormDocument(update)),
+    [onFormChange]
+  );
+
   const handleCounterpartyChange = (party: Party) => {
     if (!counterpartyKey) return;
-    const doc: any = formData.document;
-    if (!doc || typeof doc !== "object") return;
-    onFormChange({
-      ...formData,
-      document: {
-        ...doc,
-        [counterpartyKey]: party,
-      },
-    });
+    updateDocument(setDocumentField(counterpartyKey, party));
   };
 
   useEffect(() => {
@@ -265,10 +279,7 @@ export function DocumentForm({
 
     if (shouldAutoUpdate && currentRecipient !== autoRecipient) {
       lastAutoRecipientRef.current = autoRecipient;
-      onFormChange({
-        ...formData,
-        recipient: autoRecipient,
-      });
+      onFormChange((prev) => ({ ...prev, recipient: autoRecipient }));
     }
   }, [selectedCustomer, formData.recipient, onFormChange]);
 
@@ -276,51 +287,40 @@ export function DocumentForm({
     setIsCounterpartyOpen(mode === "developer");
   }, [mode, selectedCustomerId, selectedCompanyId, formData.documentType]);
 
-  const handleDocumentChange = (documentData: any) => {
-    onFormChange({
-      ...formData,
-      document: documentData,
-    });
+  const handleXmlChange = (xml: string) => {
+    onFormChange((prev) => ({ ...prev, document: xml }) as Partial<SendDocument>);
   };
 
   const handleRecipientChange = (recipient: string) => {
-    onFormChange({
-      ...formData,
-      recipient,
-    });
+    onFormChange((prev) => ({ ...prev, recipient }));
   };
 
   const handleEmailOptionsChange = (emailOptions: any) => {
-    onFormChange({
-      ...formData,
-      email: emailOptions,
-    });
+    onFormChange((prev) => ({ ...prev, email: emailOptions }));
   };
 
   const handlePdfGenerationToggle = (enabled: boolean) => {
-    const auto = getAutoPdfFilename();
-    onFormChange({
-      ...formData,
-      pdfGeneration: enabled
-        ? auto
-          ? (() => {
-              lastAutoPdfFilenameRef.current = auto;
-              return { enabled: true, filename: auto };
-            })()
-          : { enabled: true }
-        : undefined,
-    });
+    const auto = enabled ? getAutoPdfFilename() : null;
+    if (auto) {
+      lastAutoPdfFilenameRef.current = auto;
+    }
+    const pdfGeneration = enabled
+      ? auto
+        ? { enabled: true, filename: auto }
+        : { enabled: true }
+      : undefined;
+    onFormChange((prev) => ({ ...prev, pdfGeneration }));
   };
 
   const handlePdfFilenameChange = (filename: string) => {
     const nextFilename = filename.trim().length > 0 ? filename : undefined;
-    onFormChange({
-      ...formData,
+    onFormChange((prev) => ({
+      ...prev,
       pdfGeneration: {
         enabled: true,
         ...(nextFilename ? { filename: nextFilename } : {}),
       },
-    });
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -507,8 +507,8 @@ export function DocumentForm({
       <div className="border-t pt-6">
         {type === "invoice" && (
           <InvoiceForm
-            document={formData.document || {}}
-            onChange={handleDocumentChange}
+            document={(formData.document as DocumentDraft) || {}}
+            onChange={updateDocument}
             companyId={selectedCompanyId}
             isSelfBilling={
               formData.documentType === DocumentType.SELF_BILLING_INVOICE
@@ -520,8 +520,8 @@ export function DocumentForm({
         )}
         {type === "creditNote" && (
           <CreditNoteForm
-            document={formData.document || {}}
-            onChange={handleDocumentChange}
+            document={(formData.document as DocumentDraft) || {}}
+            onChange={updateDocument}
             companyId={selectedCompanyId}
             isSelfBilling={
               formData.documentType === DocumentType.SELF_BILLING_CREDIT_NOTE
@@ -534,14 +534,14 @@ export function DocumentForm({
         {type === "xml" && (
           <XmlForm
             document={(formData.document as string) || ""}
-            onChange={handleDocumentChange}
+            onChange={handleXmlChange}
             doctypeId={formData.doctypeId}
             onDoctypeIdChange={(id) =>
-              onFormChange({ ...formData, doctypeId: id })
+              onFormChange((prev) => ({ ...prev, doctypeId: id }))
             }
             processId={formData.processId}
             onProcessIdChange={(id) =>
-              onFormChange({ ...formData, processId: id })
+              onFormChange((prev) => ({ ...prev, processId: id }))
             }
           />
         )}

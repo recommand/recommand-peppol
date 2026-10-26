@@ -6,9 +6,7 @@ import { stateSchema } from "@peppol/types/integration/state";
 import { type IntegrationManifest, type IntegrationConfiguration, type IntegrationState, type IntegrationEvent, taskLogSchema } from "@peppol/types/integration";
 import { UserFacingError } from "@peppol/utils/util";
 import { getCompany } from "@peppol/data/companies";
-import { getActiveSubscription } from "@peppol/data/subscriptions";
-import { isPlayground } from "@peppol/data/teams";
-import { canUseIntegrations } from "@peppol/utils/plan-validation";
+import { checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { getIntegrationManifestFromUrl, validateManifest, postToIntegration } from "./client";
 
 export type ActivatedIntegration = typeof activatedIntegrations.$inferSelect;
@@ -255,6 +253,42 @@ export async function updateIntegrationState(
     .where(and(eq(activatedIntegrations.teamId, teamId), eq(activatedIntegrations.id, integrationId)));
 }
 
+/**
+ * How many scheduled runs in a row have to fail before the team hears about it. A
+ * single failed run usually means the external service had a hiccup, which the next
+ * run gets past on its own; a failure that lasts this long needs someone to look.
+ */
+export const FAILED_RUNS_BEFORE_NOTIFICATION = 3;
+
+/**
+ * Counts a scheduled run that failed as a whole. True exactly once per incident: for
+ * the run that reaches the threshold while the team has not been told yet.
+ */
+export async function recordFailedRun(integrationId: string): Promise<boolean> {
+  const [row] = await db
+    .update(activatedIntegrations)
+    .set({
+      consecutiveFailedRuns: sql`${activatedIntegrations.consecutiveFailedRuns} + 1`,
+      failureNotifiedAt: sql`case when ${activatedIntegrations.failureNotifiedAt} is null and ${activatedIntegrations.consecutiveFailedRuns} + 1 >= ${FAILED_RUNS_BEFORE_NOTIFICATION} then now() else ${activatedIntegrations.failureNotifiedAt} end`,
+    })
+    .where(eq(activatedIntegrations.id, integrationId))
+    // now() is the statement's transaction time, so it only matches a notification
+    // time this very update set.
+    .returning({ notify: sql<boolean>`${activatedIntegrations.failureNotifiedAt} is not distinct from now()` });
+  return row?.notify === true;
+}
+
+/** Ends an incident: the next failure starts counting from zero again. */
+export async function recordSuccessfulRun(integrationId: string): Promise<void> {
+  await db
+    .update(activatedIntegrations)
+    .set({ consecutiveFailedRuns: 0, failureNotifiedAt: null })
+    .where(and(
+      eq(activatedIntegrations.id, integrationId),
+      sql`(${activatedIntegrations.consecutiveFailedRuns} > 0 or ${activatedIntegrations.failureNotifiedAt} is not null)`,
+    ));
+}
+
 export async function deleteIntegration(
   teamId: string,
   integrationId: string
@@ -300,9 +334,8 @@ export async function executeCronJob(event: IntegrationEvent): Promise<void> {
 
   for (const integration of integrations) {
     try {
-      const teamIsPlayground = await isPlayground(integration.teamId);
-      const subscription = await getActiveSubscription(integration.teamId);
-      if (!canUseIntegrations(teamIsPlayground, subscription)) {
+      const entitlement = await checkPeppolEntitlementForTeamId(integration.teamId, PEPPOL_ENTITLEMENTS.INTEGRATIONS);
+      if (!entitlement.allowed) {
         console.warn(`Skipping cron job ${event} for integration ${integration.id}: team does not have access to integrations`);
         continue;
       }

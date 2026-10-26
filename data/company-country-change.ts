@@ -1,6 +1,7 @@
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { COUNTRIES } from "@peppol/utils/countries";
-import { validateIdentifier } from "@peppol/utils/identifier-validation";
+import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
+import { vatNumberIdentifier } from "@peppol/utils/identifiers/vat-number";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { cleanIdentifier, cleanScheme, validateIdentifierAgainstCompany } from "./company-identifiers";
 import { findUnsupportedIdentifiers } from "./company-identifier-policy";
@@ -52,30 +53,65 @@ export type CountryChangePlan = {
 };
 
 /**
+ * Enterprise number schemes a country used to default to and no longer does. Germany
+ * registered the register number under 0204 and wrote 0204 as its BT-30 scheme, but
+ * 0204 is the Leitweg-ID of a public authority. Companies created back then still
+ * carry both, and a country change has to recognise them as the old country's
+ * defaults rather than as something the customer chose.
+ */
+const LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES: Record<string, string> = {
+  DE: "0204",
+};
+
+/**
  * The identifiers a country gives a company by default: its business register
- * number and its VAT number under the country's schemes. These are the ones a
- * country change replaces; anything else the customer added is kept and re-checked.
+ * number and its VAT number under the country's schemes, or the enterprise number
+ * under the scheme the company names it under when that is not one of the country's,
+ * such as a GLN, and any identifier the country builds from those numbers. These are
+ * the ones a country change replaces; anything else the customer added is kept and
+ * re-checked.
  */
 function defaultIdentifiersFor(
   country: string,
   enterpriseNumber: string | null,
-  vatNumber: string | null
+  enterpriseNumberScheme: string | null,
+  vatNumber: string | null,
+  options: { includeLegacy?: boolean } = {}
 ): NewIdentifier[] {
-  const countryInfo = COUNTRIES.find((entry) => entry.code === country);
   const defaults: NewIdentifier[] = [];
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(enterpriseNumber);
-  if (countryInfo?.defaultEnterpriseNumberScheme && cleanedEnterpriseNumber) {
+  const enterpriseNumberSchemes = [
+    enterpriseNumberIdentifierScheme(country, enterpriseNumberScheme),
+    options.includeLegacy ? LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES[country] : undefined,
+  ].filter((scheme): scheme is string => !!scheme);
+  for (const scheme of enterpriseNumberSchemes) {
+    if (cleanedEnterpriseNumber) {
+      defaults.push({
+        scheme: cleanScheme(scheme),
+        identifier: normalizeIdentifierValue(cleanScheme(scheme), cleanIdentifier(cleanedEnterpriseNumber)),
+      });
+    }
+  }
+  const vatIdentifier = vatNumberIdentifier(country, vatNumber);
+  if (vatIdentifier) {
     defaults.push({
-      scheme: cleanScheme(countryInfo.defaultEnterpriseNumberScheme),
-      identifier: cleanIdentifier(cleanedEnterpriseNumber),
+      scheme: cleanScheme(vatIdentifier.scheme),
+      identifier: cleanIdentifier(vatIdentifier.identifier),
     });
   }
+  // A VAT number stored before it was held to the country's prefix was registered as
+  // written, under the country's default scheme, which may differ from what
+  // vatNumberIdentifier makes of it now. That form is a default too.
+  const legacyVatScheme = COUNTRIES.find((entry) => entry.code === country)?.defaultVatScheme;
   const cleanedVatNumber = cleanVatNumber(vatNumber);
-  if (countryInfo?.defaultVatScheme && cleanedVatNumber) {
-    defaults.push({
-      scheme: cleanScheme(countryInfo.defaultVatScheme),
-      identifier: cleanIdentifier(cleanedVatNumber),
-    });
+  if (options.includeLegacy && legacyVatScheme && cleanedVatNumber) {
+    const legacy = { scheme: cleanScheme(legacyVatScheme), identifier: cleanIdentifier(cleanedVatNumber) };
+    if (!defaults.some((identifier) => sameIdentifier(identifier, legacy))) {
+      defaults.push(legacy);
+    }
+  }
+  for (const identifier of derivedDefaultIdentifiers(country, { enterpriseNumber, vatNumber })) {
+    defaults.push({ scheme: cleanScheme(identifier.scheme), identifier: cleanIdentifier(identifier.identifier) });
   }
   return defaults;
 }
@@ -85,8 +121,12 @@ function defaultEnterpriseNumberSchemeFor(country: string): string | null {
   return scheme && zodValidIsoIcdSchemeIdentifiers.safeParse(scheme).success ? scheme : null;
 }
 
+/** Stored identifiers may predate normalizeIdentifierValue, so both sides are normalised. */
 function sameIdentifier(left: NewIdentifier, right: NewIdentifier): boolean {
-  return left.scheme === right.scheme && left.identifier === right.identifier;
+  return (
+    left.scheme === right.scheme &&
+    normalizeIdentifierValue(left.scheme, left.identifier) === normalizeIdentifierValue(right.scheme, right.identifier)
+  );
 }
 
 /**
@@ -108,15 +148,36 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
     throw new UserFacingError(COUNTRY_CHANGE_BLOCKED_MESSAGE);
   }
 
-  const providers = resolveDefaultPeppolProviders(input.newCountry);
+  const providers = resolveDefaultPeppolProviders(input.newCountry, {
+    useTestNetwork: input.teamExtension?.useTestNetwork ?? false,
+  });
   const providersChanged = !samePeppolProviders(providers, input.oldCompany);
+
+  let enterpriseNumberScheme: string | null | undefined;
+  if (input.requestedEnterpriseNumberScheme !== undefined) {
+    enterpriseNumberScheme = input.requestedEnterpriseNumberScheme;
+  } else if (
+    input.oldCompany.enterpriseNumberScheme === null ||
+    input.oldCompany.enterpriseNumberScheme === defaultEnterpriseNumberSchemeFor(input.oldCompany.country) ||
+    input.oldCompany.enterpriseNumberScheme === LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES[input.oldCompany.country]
+  ) {
+    // The scheme followed the old country's default, so it follows the new one's.
+    enterpriseNumberScheme = defaultEnterpriseNumberSchemeFor(input.newCountry);
+  }
 
   const oldDefaults = defaultIdentifiersFor(
     input.oldCompany.country,
     input.oldCompany.enterpriseNumber,
-    input.oldCompany.vatNumber
+    input.oldCompany.enterpriseNumberScheme,
+    input.oldCompany.vatNumber,
+    { includeLegacy: true }
   );
-  const newDefaults = defaultIdentifiersFor(input.newCountry, input.enterpriseNumber, input.vatNumber);
+  const newDefaults = defaultIdentifiersFor(
+    input.newCountry,
+    input.enterpriseNumber,
+    enterpriseNumberScheme !== undefined ? enterpriseNumberScheme : input.oldCompany.enterpriseNumberScheme,
+    input.vatNumber
+  );
 
   // An old default the new country would create again stays where it is.
   const deleted = input.identifiers.filter(
@@ -130,6 +191,7 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
   );
 
   const updatedCompany = {
+    country: input.newCountry,
     smpProvider: providers.smpProvider,
     enterpriseNumber: input.enterpriseNumber,
     vatNumber: input.vatNumber,
@@ -161,17 +223,6 @@ export function planCompanyCountryChange(input: CountryChangeInput): CountryChan
       }
       throw error;
     }
-  }
-
-  let enterpriseNumberScheme: string | null | undefined;
-  if (input.requestedEnterpriseNumberScheme !== undefined) {
-    enterpriseNumberScheme = input.requestedEnterpriseNumberScheme;
-  } else if (
-    input.oldCompany.enterpriseNumberScheme === null ||
-    input.oldCompany.enterpriseNumberScheme === defaultEnterpriseNumberSchemeFor(input.oldCompany.country)
-  ) {
-    // The scheme followed the old country's default, so it follows the new one's.
-    enterpriseNumberScheme = defaultEnterpriseNumberSchemeFor(input.newCountry);
   }
 
   return {

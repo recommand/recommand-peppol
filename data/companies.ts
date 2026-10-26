@@ -6,21 +6,24 @@ import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { getTeamExtension } from "./teams";
 import { createCompanyDocumentType } from "./company-document-types";
-import { canUpsertCompanyIdentifier, createCompanyIdentifier, getCompanyIdentifiers } from "./company-identifiers";
+import { assertIdentifiersFreeForRecipient, canUpsertCompanyIdentifier, createCompanyIdentifier } from "./company-identifiers";
 import { COUNTRIES, getCountrySupportLevel } from "@peppol/utils/countries";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { createVerificationSession, type VerificationExpectedDetails } from "./didit/client";
 import { getCompanyVerificationLog, revokeOpenCompanyVerificationSessions } from "./company-verification";
 import { companyDocumentsS3Prefix } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
-import { validateCountryIdentifier } from "@peppol/utils/identifier-validation";
+import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, validateCompanyNumbers } from "@peppol/utils/identifier-validation";
+import { vatNumberIdentifier } from "@peppol/utils/identifiers/vat-number";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import { publishCompanyCreatedEvent, publishCompanyDeletedEvent, publishCompanyUpdatedEvent } from "./company-events";
 import type { Tx } from "@core/data/rules/db";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
+import { getSmpProviderDescriptor } from "./smp-providers/descriptors";
 import { planCompanyCountryChange } from "./company-country-change";
 import { lockCompanyRow } from "./company-row-lock";
 import { getPartnerRegisteredFrenchReportingDeclarants } from "./fr-reporting-declarants";
+import { registerReleasingDerivedIdentifiers } from "./derived-identifiers";
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = typeof companies.$inferInsert;
@@ -139,30 +142,6 @@ export async function getCompanyByPeppolId(options: {
   return company;
 }
 
-function validateCompanyCountryIdentifiers({
-  country,
-  vatNumber,
-  enterpriseNumber,
-}: {
-  country?: string | null;
-  vatNumber?: string | null;
-  enterpriseNumber?: string | null;
-}): void {
-  if (vatNumber && !/^[A-Z]{2}/.test(vatNumber)) {
-    throw new UserFacingError("VAT number must start with a country code (e.g. BE, NL, DE)");
-  }
-  if (vatNumber && country && vatNumber.substring(0, 2).toUpperCase() !== country.toUpperCase()) {
-    throw new UserFacingError(`VAT number country code (${vatNumber.substring(0, 2)}) does not match the selected country (${country})`);
-  }
-  if (!country) {
-    return;
-  }
-  validateCountryIdentifier(country, {
-    vatNumber,
-    enterpriseNumber,
-  });
-}
-
 /**
  * Creates a company on the providers its country is served by. Callers name a
  * country, never a provider: the mapping is ours, and a company on the wrong one
@@ -171,21 +150,21 @@ function validateCompanyCountryIdentifiers({
 export async function createCompany(company: Omit<InsertCompany, "accessPointProvider" | "smpProvider"> & { skipDefaultCompanySetup: boolean }): Promise<Company> {
   const cleanedVat = cleanVatNumber(company.vatNumber);
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
-  const defaultPeppolProviders = resolveDefaultPeppolProviders(company.country);
-
   if (getCountrySupportLevel(company.country) === "unsupported") {
-    throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be created in this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`);
+    throw new UserFacingError(`Country ${company.country} is not supported yet, so companies cannot be created in this country. We are working on supporting more countries in the future. Would you like to see support for this country? Let us know at support@recommand.eu.`, { field: "country" });
   }
 
-  validateCompanyCountryIdentifiers({
+  validateCompanyNumbers({
     country: company.country,
     vatNumber: cleanedVat,
     enterpriseNumber: cleanedEnterpriseNumber,
+    enterpriseNumberScheme: company.enterpriseNumberScheme,
   });
 
   const teamExtension = await getTeamExtension(company.teamId);
   const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
+  const defaultPeppolProviders = resolveDefaultPeppolProviders(company.country, { useTestNetwork });
 
   const createdCompany = await db
     .insert(companies)
@@ -197,10 +176,12 @@ export async function createCompany(company: Omit<InsertCompany, "accessPointPro
     .then((rows) => rows[0]);
 
   try {
-    sendSystemAlert(
-      "Company Created",
-      `Company ${createdCompany.name} has been created. It is ${createdCompany.isSmpRecipient ? "registered as an SMP recipient" : "not registered as an SMP recipient"}.`
-    );
+    if (!isPlaygroundTeam) {
+      sendSystemAlert(
+        "Company Created",
+        `Company ${createdCompany.name} (${createdCompany.country}) has been created. It is ${createdCompany.isSmpRecipient ? "registered as an SMP recipient" : "not registered as an SMP recipient"}.`
+      );
+    }
     if (!company.skipDefaultCompanySetup) {
       await setupCompanyDefaults({ company: createdCompany, isPlayground: isPlaygroundTeam, useTestNetwork, verificationRequirements: teamExtension?.verificationRequirements ?? undefined });
     }
@@ -224,7 +205,7 @@ export async function createCompany(company: Omit<InsertCompany, "accessPointPro
  * @param isPlayground Whether the company is in a playground team, if so we don't register the company in the SMP
  */
 async function setupCompanyDefaults({ company, isPlayground, useTestNetwork, verificationRequirements }: { company: Company, isPlayground: boolean, useTestNetwork: boolean, verificationRequirements?: string }): Promise<void> {
-  const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements });
+  const skipSmpRegistration = !shouldRegisterWithSmp({ isPlayground, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements, smpProvider: company.smpProvider });
   const countryInfo = COUNTRIES.find((country) => country.code === company.country);
 
   for (const documentType of countryInfo?.defaultDocumentTypes ?? []) {
@@ -239,12 +220,13 @@ async function setupCompanyDefaults({ company, isPlayground, useTestNetwork, ver
     });
   }
   const cleanedEnterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
-  if (countryInfo?.defaultEnterpriseNumberScheme && cleanedEnterpriseNumber) {
+  const enterpriseNumberScheme = enterpriseNumberIdentifierScheme(company.country, company.enterpriseNumberScheme);
+  if (enterpriseNumberScheme && cleanedEnterpriseNumber) {
     try {
       await createCompanyIdentifier({
         companyIdentifier: {
           companyId: company.id,
-          scheme: countryInfo.defaultEnterpriseNumberScheme,
+          scheme: enterpriseNumberScheme,
           identifier: cleanedEnterpriseNumber,
         },
         skipSmpRegistration,
@@ -254,20 +236,30 @@ async function setupCompanyDefaults({ company, isPlayground, useTestNetwork, ver
       console.error(`Failed to create enterprise number identifier for company ${company.id}: ${error}`);
     }
   }
-  const cleanedVatNumber = cleanVatNumber(company.vatNumber);
-  if (countryInfo?.defaultVatScheme && cleanedVatNumber) {
+  const vatIdentifier = vatNumberIdentifier(company.country, company.vatNumber);
+  if (vatIdentifier) {
     try {
       await createCompanyIdentifier({
         companyIdentifier: {
           companyId: company.id,
-          scheme: countryInfo.defaultVatScheme,
-          identifier: cleanedVatNumber,
+          ...vatIdentifier,
         },
         skipSmpRegistration,
         useTestNetwork,
       });
     } catch (error) {
       console.error(`Failed to create vat number identifier for company ${company.id}: ${error}`);
+    }
+  }
+  for (const identifier of derivedDefaultIdentifiers(company.country, company)) {
+    try {
+      await createCompanyIdentifier({
+        companyIdentifier: { companyId: company.id, ...identifier },
+        skipSmpRegistration,
+        useTestNetwork,
+      });
+    } catch (error) {
+      console.error(`Failed to create ${identifier.scheme} identifier for company ${company.id}: ${error}`);
     }
   }
 }
@@ -292,10 +284,28 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   const effectiveVat = company.vatNumber !== undefined ? newCleanedVatNumber : cleanVatNumber(oldCompany.vatNumber);
   const effectiveEnterpriseNumber = company.enterpriseNumber !== undefined ? newCleanedEnterpriseNumber : cleanEnterpriseNumber(oldCompany.enterpriseNumber);
 
-  validateCompanyCountryIdentifiers({
+  // Only a number the update changes is held against the country's formats, or
+  // both when the country changes. A stored number that predates a format check must not
+  // block an unrelated change, such as a new address.
+  const countryChanged = effectiveCountry !== oldCompany.country;
+  // A scheme the request leaves out stays, unless the country changes and the scheme
+  // follows the new country's default.
+  const effectiveEnterpriseNumberScheme =
+    company.enterpriseNumberScheme !== undefined
+      ? company.enterpriseNumberScheme
+      : countryChanged
+        ? null
+        : oldCompany.enterpriseNumberScheme;
+  validateCompanyNumbers({
     country: effectiveCountry,
-    vatNumber: effectiveVat,
-    enterpriseNumber: effectiveEnterpriseNumber,
+    vatNumber: countryChanged || effectiveVat !== cleanVatNumber(oldCompany.vatNumber) ? effectiveVat : null,
+    enterpriseNumber:
+      countryChanged ||
+      effectiveEnterpriseNumber !== cleanEnterpriseNumber(oldCompany.enterpriseNumber) ||
+      effectiveEnterpriseNumberScheme !== oldCompany.enterpriseNumberScheme
+        ? effectiveEnterpriseNumber
+        : null,
+    enterpriseNumberScheme: effectiveEnterpriseNumberScheme,
   });
 
   const teamExtension = await getTeamExtension(company.teamId);
@@ -320,14 +330,24 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
   const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
   const verificationRequirements = teamExtension?.verificationRequirements ?? undefined;
-  const wasRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: oldCompany.isSmpRecipient, isVerified: oldCompany.isVerified, verificationRequirements });
+  const wasRegistered = shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: oldCompany.isSmpRecipient, isVerified: oldCompany.isVerified, verificationRequirements, smpProvider: oldCompany.smpProvider });
   const shouldBeRegistered = shouldRegisterWithSmp({
     isPlayground: isPlaygroundTeam,
     useTestNetwork,
     isSmpRecipient: updatedFields.isSmpRecipient ?? oldCompany.isSmpRecipient,
     isVerified: updatedFields.isVerified ?? oldCompany.isVerified,
     verificationRequirements,
+    // A new country brings that country's providers with it.
+    smpProvider: countryChanged ? resolveDefaultPeppolProviders(effectiveCountry, { useTestNetwork }).smpProvider : oldCompany.smpProvider,
   });
+
+  // Arratech holds a verified French company either as a receiving participant or
+  // as a send-only EXTERNAL one, filed under different mandates. Switching between
+  // the two needs Arratech, so it goes through support.
+  const isSmpRecipientChanged = (updatedFields.isSmpRecipient ?? oldCompany.isSmpRecipient) !== oldCompany.isSmpRecipient;
+  if (isSmpRecipientChanged && oldCompany.isVerified && oldCompany.smpProvider === "at-shared-smp-fr" && !useTestNetwork && !isPlaygroundTeam) {
+    throw new UserFacingError("Contact support@recommand.eu to change whether this French company receives documents through Recommand.");
+  }
 
   const newCountry = company.country && company.country !== oldCompany.country ? company.country : null;
   if (newCountry) {
@@ -344,7 +364,7 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
       vatNumber: effectiveVat ?? null,
       teamExtension,
     });
-    await finishCompanyUpdate({ oldCompany, updatedCompany, isPlaygroundTeam, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
+    await finishCompanyUpdate({ oldCompany, updatedCompany, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
     return updatedCompany;
   }
 
@@ -358,16 +378,37 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     .then((rows) => rows[0]);
 
   if (!wasRegistered && shouldBeRegistered) {
-    try {
-      await upsertCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
-    } catch (error) {
-      // If registration fails, unregister any company registrations that might have been registered
+    // A refusal before anything was registered only rolls back the update of the
+    // company: unregistering would reach the participant of the company that holds
+    // the identifier.
+    let registrationStarted = false;
+    const undoRegistration = async () => {
+      if (!registrationStarted) {
+        return;
+      }
+      registrationStarted = false;
       try {
         await unregisterCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
       } catch (rollbackError) {
         // If this fails, we can't do much about it, we at least want to rollback the update of the company
         console.error(`Failed to unregister company registrations for company ${updatedCompany.id} after registration failed: ${rollbackError}`);
       }
+    };
+    try {
+      // An identifier the company's country derives for it, such as the German GEBA,
+      // never holds up the registration.
+      await registerReleasingDerivedIdentifiers({
+        company: updatedCompany,
+        useTestNetwork,
+        register: async () => {
+          await assertIdentifiersFreeForRecipient(updatedCompany.id);
+          registrationStarted = true;
+          await upsertCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
+        },
+        undoRegistration,
+      });
+    } catch (error) {
+      await undoRegistration();
       // Also rollback the update of the company
       await db.update(companies).set(oldCompany).where(eq(companies.id, company.id));
       throw error;
@@ -390,12 +431,16 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
   } else {
     try {
       // Ensure none of the company's identifiers are already registered as recipient with another company within the same class (playground, playground with test network, production)
-      const identifiers = await getCompanyIdentifiers(updatedCompany.id);
-      for (const identifier of identifiers) {
-        const canUpsert = await canUpsertCompanyIdentifier(identifier.scheme, identifier.identifier, identifier.id, updatedCompany.id);
-        if (!canUpsert) {
-          throw new UserFacingError("Company cannot be registered as SMP recipient, it has identifiers that are already registered as recipient with another company.");
-        }
+      await assertIdentifiersFreeForRecipient(updatedCompany.id);
+      // An SMP that keeps the company's name and contact details gets the new ones.
+      if (
+        shouldBeRegistered &&
+        getSmpProviderDescriptor(updatedCompany.smpProvider).republishOnCompanyDetailsChange &&
+        (updatedCompany.name !== oldCompany.name ||
+          updatedCompany.email !== oldCompany.email ||
+          updatedCompany.phone !== oldCompany.phone)
+      ) {
+        await upsertCompanyRegistrations({ companyId: updatedCompany.id, useTestNetwork });
       }
     } catch (error) {
       // If the check fails, rollback the update of the company
@@ -404,31 +449,22 @@ export async function updateCompany(company: Partial<InsertCompany> & { id: stri
     }
   }
 
-  await finishCompanyUpdate({ oldCompany, updatedCompany, isPlaygroundTeam, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
+  await finishCompanyUpdate({ oldCompany, updatedCompany, numbersChanged: enterpriseNumberChanged || vatNumberChanged });
 
   return updatedCompany;
 }
 
-/** What every successful update ends with: the alert, and the revocations a number change brings. */
+/** What every successful update ends with: the revocations a number change brings. */
 async function finishCompanyUpdate({
   oldCompany,
   updatedCompany,
-  isPlaygroundTeam,
   numbersChanged,
 }: {
   oldCompany: Company;
   updatedCompany: Company;
-  isPlaygroundTeam: boolean;
   numbersChanged: boolean;
 }): Promise<void> {
   await publishCompanyUpdatedEvent(updatedCompany);
-
-  if (!isPlaygroundTeam) {
-    sendSystemAlert(
-      "Company Updated",
-      `Company ${updatedCompany.name} has been updated. It is ${updatedCompany.isSmpRecipient ? "registered as an SMP recipient" : "not registered as an SMP recipient"}.`
-    );
-  }
 
   if (numbersChanged) {
     await revokeOpenCompanyVerificationSessions(updatedCompany.id);
@@ -520,6 +556,7 @@ async function applyCompanyCountryChange({
       isSmpRecipient: lockedCompany.isSmpRecipient,
       isVerified: lockedCompany.isVerified,
       verificationRequirements: teamExtension?.verificationRequirements ?? undefined,
+      smpProvider: lockedCompany.smpProvider,
     });
     // A submission's claim on a session waits for the row lock above; the
     // sessions are read after taking it so one that got there first is seen.
@@ -611,7 +648,7 @@ export async function deleteCompany({
   const teamExtension = await getTeamExtension(teamId);
   const isPlaygroundTeam = teamExtension?.isPlayground ?? false;
   const useTestNetwork = teamExtension?.useTestNetwork ?? false;
-  if (shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements: teamExtension?.verificationRequirements ?? undefined })) {
+  if (shouldRegisterWithSmp({ isPlayground: isPlaygroundTeam, useTestNetwork, isSmpRecipient: company.isSmpRecipient, isVerified: company.isVerified, verificationRequirements: teamExtension?.verificationRequirements ?? undefined, smpProvider: company.smpProvider })) {
     await unregisterCompanyRegistrations({ companyId, useTestNetwork });
   }
 
