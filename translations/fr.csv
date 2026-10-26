@@ -994,3 +994,4 @@ The Peppol rules for Norway require the registration of a deleted organisation t
 If you think this is a mistake\, contact,Si vous pensez qu'il s'agit d'une erreur\, contactez
 Peppol registration removed for {0},Enregistrement Peppol supprimé pour {0}
 Is your name not on the list? Contact,Votre nom ne figure pas dans la liste ? Contactez
+For Luxembourg businesses\, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under schemes 9938 and 0240\, next to your VAT number.,Pour les entreprises luxembourgeoises\, saisissez le matricule à 11 chiffres plutôt que le numéro RCS. Le matricule devient votre adresse Peppol sous les schémas 9938 et 0240\, en plus de votre numéro de TVA.

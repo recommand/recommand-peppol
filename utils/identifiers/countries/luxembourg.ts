@@ -121,10 +121,13 @@ export const luxembourg: CountryIdentifierRules = {
     validate: validateLuxembourgIdentifierBelongsToCompany,
   },
   // Luxembourg has no default enterprise number scheme, because a company records its
-  // matricule or its RCS number there. A matricule is published under 0240; an RCS
-  // number is no Peppol address and derives nothing.
+  // matricule or its RCS number there. A matricule is published under 9938, the scheme
+  // Luxembourg addresses every organisation under, and under 0240; an RCS number is no
+  // Peppol address and derives nothing.
   derivedIdentifiers: (company) => {
     const matricule = cleanEnterpriseNumber(company.enterpriseNumber);
-    return matricule && MATRICULE.test(matricule) ? [{ scheme: MATRICULE_SCHEME, identifier: matricule }] : [];
+    return matricule && MATRICULE.test(matricule)
+      ? [{ scheme: "9938", identifier: matricule }, { scheme: MATRICULE_SCHEME, identifier: matricule }]
+      : [];
   },
 };

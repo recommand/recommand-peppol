@@ -164,8 +164,8 @@ const BASE_COUNTRIES: BaseCountryInfo[] = ([
         flag: "🇱🇺",
         supportLevel: "supported",
         // A Luxembourg company records its matricule or its RCS number as its enterprise
-        // number, so there is no default scheme for it; a matricule derives its 0240
-        // identifier (see derivedIdentifiers in identifiers/countries/luxembourg.ts).
+        // number, so there is no default scheme for it; a matricule derives its 9938 and
+        // 0240 identifiers (see derivedIdentifiers in identifiers/countries/luxembourg.ts).
         defaultVatScheme: "9938",
     },
     {

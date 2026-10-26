@@ -151,6 +151,7 @@ export function CompanyIdentityFields({
                         />
                     </div>
                     {country === "FR" && <p className="text-xs text-pretty text-muted-foreground">{t`For French businesses, select scheme 0002 and enter the 9 digit SIREN. The establishment SIRET is requested during verification.`}</p>}
+                    {country === "LU" && <p className="text-xs text-pretty text-muted-foreground">{t`For Luxembourg businesses, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under schemes 9938 and 0240, next to your VAT number.`}</p>}
                     {showDutchEnterpriseNumberSchemeAlert && country === "NL" && enterpriseNumberScheme !== "0106" && enterpriseNumberScheme !== "0190" && enterpriseNumber.trim() && (
                         <StatusMessage
                             tone="warning"
