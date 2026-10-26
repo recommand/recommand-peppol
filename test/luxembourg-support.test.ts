@@ -135,3 +135,48 @@ describe("scheme 9938 against the company", () => {
     })).toThrow("a company can only register its own");
   });
 });
+
+// 0240 is the register of legal persons' own scheme. It takes the matricule alone,
+// so it is held to the company's matricule as 9938 is, or any company could publish
+// another's under it.
+describe("scheme 0240", () => {
+  const withMatricule = { ...luxembourgish, country: "LU", enterpriseNumber: "20042228800" };
+
+  it("accepts an 11 digit matricule, however it is written", () => {
+    for (const matricule of validMatricules) {
+      expect(() => validateIdentifier("0240", matricule), matricule).not.toThrow();
+    }
+  });
+
+  it("refuses another length, a VAT number and a register number", () => {
+    for (const identifier of [...invalidMatricules, "LU15027442", "B123456"]) {
+      expect(() => validateIdentifier("0240", identifier), identifier).toThrow("must be an 11 digit Luxembourg matricule");
+    }
+  });
+
+  it("takes the company's own matricule", () => {
+    for (const identifier of ["20042228800", "2004 2228 800"]) {
+      expect(() => validateIdentifierAgainstCompany({
+        scheme: "0240", identifier, company: withMatricule as any, teamExtension: team,
+      })).not.toThrow();
+    }
+  });
+
+  it("refuses another matricule, or one the company has not recorded", () => {
+    expect(() => validateIdentifierAgainstCompany({
+      scheme: "0240", identifier: "19656100039", company: withMatricule as any, teamExtension: team,
+    })).toThrow("must match the company enterprise number when it is a matricule");
+    expect(() => validateIdentifierAgainstCompany({
+      scheme: "0240", identifier: "20042228800", company: { ...luxembourgish, country: "LU" } as any, teamExtension: team,
+    })).toThrow("requires the company enterprise number to be set to that matricule");
+  });
+
+  it("refuses a matricule for a company outside Luxembourg, or not known to be in it", () => {
+    expect(() => validateIdentifierAgainstCompany({
+      scheme: "0240", identifier: "20042228800", company: { ...withMatricule, country: "BE" } as any, teamExtension: team,
+    })).toThrow("Scheme 0240 is for matricules from Luxembourg");
+    expect(() => validateIdentifierAgainstCompany({
+      scheme: "0240", identifier: "20042228800", company: { ...luxembourgish, enterpriseNumber: "20042228800" } as any, teamExtension: team,
+    })).toThrow("can only be a matricule for a company in Luxembourg");
+  });
+});
