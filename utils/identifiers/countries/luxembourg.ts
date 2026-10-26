@@ -122,12 +122,11 @@ export const luxembourg: CountryIdentifierRules = {
   },
   // Luxembourg has no default enterprise number scheme, because a company records its
   // matricule or its RCS number there. A matricule is published under 9938, the scheme
-  // Luxembourg addresses every organisation under, and under 0240; an RCS number is no
-  // Peppol address and derives nothing.
+  // Luxembourg addresses every organisation under, and not under 0240, which Luxembourg
+  // does not use; a company can still add 0240 itself. An RCS number is no Peppol
+  // address and derives nothing.
   derivedIdentifiers: (company) => {
     const matricule = cleanEnterpriseNumber(company.enterpriseNumber);
-    return matricule && MATRICULE.test(matricule)
-      ? [{ scheme: "9938", identifier: matricule }, { scheme: MATRICULE_SCHEME, identifier: matricule }]
-      : [];
+    return matricule && MATRICULE.test(matricule) ? [{ scheme: "9938", identifier: matricule }] : [];
   },
 };
