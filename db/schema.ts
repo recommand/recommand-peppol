@@ -428,6 +428,11 @@ export const companyNotificationEmailAddresses = pgTable(
     includeDocumentJsonOutgoing: boolean("include_document_json_outgoing")
       .notNull()
       .default(false),
+    // Set when the mail service stopped accepting mail for the address: it refused a
+    // notification outright, or deactivated the address after a bounce. Cleared when
+    // a notification to it is delivered again, or when the address is changed.
+    unreachableSince: timestamp("unreachable_since", { withTimezone: true }),
+    unreachableReason: text("unreachable_reason"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -836,6 +841,44 @@ export const providerDeliveryReports = pgTable(
       name: "peppol_provider_delivery_reports_pkey",
       columns: [table.provider, table.providerTransactionId],
     }),
+  ]
+);
+
+// One row per notification email about a document to one of its company's configured
+// addresses (see data/document-notifications). Unlike a delivery, a notification goes
+// to the company itself, not to the other party, so it is kept apart: it is not billed
+// and says nothing about whether the document arrived. A notification sent again is a
+// new row, so the latest row per document and address says where that address stands.
+export const documentNotifications = pgTable(
+  "peppol_document_notifications",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "dntf_" + ulid()),
+    transmittedDocumentId: text("transmitted_document_id")
+      .references(() => transmittedDocuments.id, { onDelete: "cascade" })
+      .notNull(),
+    companyId: text("company_id").notNull(),
+    direction: transferEventDirectionEnum("direction").notNull(),
+    // Stored as configured, which is lowercase.
+    address: text("address").notNull(),
+    status: deliveryStatusEnum("status").notNull(),
+    statusChangedAt: timestamp("status_changed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    failureCategory: deliveryFailureCategoryEnum("failure_category"),
+    failureMessage: text("failure_message"),
+    failureProviderCode: text("failure_provider_code"),
+    // The mail service's message id, once it accepted the message.
+    providerMessageId: text("provider_message_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: autoUpdateTimestamp(),
+  },
+  (table) => [
+    index("peppol_document_notifications_document_idx").on(table.transmittedDocumentId),
+    index("peppol_document_notifications_address_idx").on(table.address, table.createdAt),
   ]
 );
 

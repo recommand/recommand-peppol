@@ -471,6 +471,7 @@ Notification email address added successfully,Benachrichtigungs-E-Mail-Adresse e
 Notification email address deleted successfully,Benachrichtigungs-E-Mail-Adresse erfolgreich gelöscht
 Notification email address updated successfully,Benachrichtigungs-E-Mail-Adresse erfolgreich aktualisiert
 Notifications,Benachrichtigungen
+Notifications to this address have failed since {0}: our mail service no longer accepts mail for it. Check the address with its mail provider and then contact support@recommand.eu to resume notifications.,Benachrichtigungen an diese Adresse schlagen seit {0} fehl: Unser E-Mail-Dienst nimmt keine E-Mails mehr für diese Adresse an. Prüfen Sie die Adresse bei ihrem E-Mail-Anbieter und wenden Sie sich dann an support@recommand.eu\, um die Benachrichtigungen fortzusetzen.
 Notify for,Benachrichtigen bei
 of Recommand on behalf of {0}.,von Recommand im Namen von {0}.
 One,Stück

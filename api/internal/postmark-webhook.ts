@@ -9,14 +9,17 @@ import {
   EMAIL_DELIVERY_PROVIDER,
   interpretPostmarkWebhook,
 } from "@peppol/data/deliveries";
+import { applyNotificationReport, notificationIdFromEmailMetadata } from "@peppol/data/document-notifications";
 
 // Postmark reports what became of each message it accepted: a delivery once the
 // recipient's mail server took it, a bounce or spam complaint when it did not. A
 // document email is sent with its delivery id as message metadata, which every
 // report returns, so the report finds the delivery it is about; the message id is
 // the fallback. Mail that is not a document delivery carries no such metadata and
-// is acknowledged without further ado. Postmark retries any answer but 2xx, so
-// only a failure of our own is answered that way.
+// is acknowledged without further ado. A notification email to a company's own
+// address carries its notification id instead, and its report moves that record and
+// tells whether Postmark deactivated the address. Postmark retries any answer but
+// 2xx, so only a failure of our own is answered that way.
 
 const server = new Server();
 
@@ -43,6 +46,10 @@ const webhookRecordSchema = z
     TypeCode: z.number().optional(),
     Description: z.string().optional(),
     Details: z.string().optional(),
+    // Whether the bounce made Postmark deactivate the address.
+    Inactive: z.boolean().optional(),
+    DeliveredAt: z.string().optional(),
+    BouncedAt: z.string().optional(),
   })
   .passthrough();
 
@@ -80,6 +87,12 @@ export function isAuthorizedPostmarkRequest(
   const username = separator === -1 ? credentials : credentials.slice(0, separator);
   const password = separator === -1 ? "" : credentials.slice(separator + 1);
   return password ? matchesSecret(secret, password) : matchesSecret(secret, username);
+}
+
+/** When Postmark says the delivery or bounce happened; now when it does not say. */
+function reportedAt(value: string | undefined): Date {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : new Date();
 }
 
 /** The stored copy of a report leaves out the bounce dump, which can be large. */
@@ -122,6 +135,22 @@ server.post("/postmark", describeRoute({ hide: true, security: [] }), async (c) 
 
     if (!DELIVERY_RECORD_TYPES.has(record.RecordType)) {
       return c.json(actionSuccess({ message: "Record type not processed" }), 200);
+    }
+
+    const notificationId = notificationIdFromEmailMetadata(record.Metadata);
+    if (notificationId) {
+      const interpretation = interpretPostmarkWebhook(record);
+      if (!interpretation || interpretation.kind === "informational") {
+        return c.json(actionSuccess({ message: "Not a delivery outcome" }), 200);
+      }
+      const outcome = await applyNotificationReport({
+        notificationId,
+        status: interpretation.status,
+        failure: interpretation.failure,
+        addressDeactivated: interpretation.status === "failed" && record.Inactive === true,
+        occurredAt: reportedAt(record.DeliveredAt ?? record.BouncedAt),
+      });
+      return c.json(actionSuccess({ outcome }), 200);
     }
 
     const deliveryId = deliveryIdFromEmailMetadata(record.Metadata);

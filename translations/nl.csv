@@ -631,6 +631,7 @@ Notification email address added successfully,E-mailadres voor meldingen is toeg
 Notification email address deleted successfully,E-mailadres voor meldingen is verwijderd
 Notification email address updated successfully,E-mailadres voor meldingen is bijgewerkt
 Notifications,Meldingen
+Notifications to this address have failed since {0}: our mail service no longer accepts mail for it. Check the address with its mail provider and then contact support@recommand.eu to resume notifications.,Meldingen naar dit adres mislukken sinds {0}: onze maildienst aanvaardt geen mail meer voor dit adres. Controleer het adres bij de mailprovider en neem daarna contact op met support@recommand.eu om de meldingen te hervatten.
 Notify for,Meldingen ontvangen voor
 One,Stuk
 Only if Peppol fails,Alleen als Peppol mislukt

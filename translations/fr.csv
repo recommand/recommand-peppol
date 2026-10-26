@@ -578,6 +578,7 @@ Notification email address added successfully,Adresse e-mail de notification ajo
 Notification email address deleted successfully,Adresse e-mail de notification supprimée avec succès
 Notification email address updated successfully,Adresse e-mail de notification mise à jour avec succès
 Notifications,Notifications
+Notifications to this address have failed since {0}: our mail service no longer accepts mail for it. Check the address with its mail provider and then contact support@recommand.eu to resume notifications.,Les notifications vers cette adresse échouent depuis le {0} : notre service d'e-mail n'accepte plus de messages pour cette adresse. Vérifiez l'adresse auprès de son fournisseur de messagerie puis contactez support@recommand.eu pour reprendre les notifications.
 Notify for,Notifier pour
 One,Unité
 Only if Peppol fails,Uniquement en cas d'échec de Peppol
