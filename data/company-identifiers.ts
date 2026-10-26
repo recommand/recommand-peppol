@@ -167,6 +167,12 @@ const SENDER_ADDITIONS: { addition: (identifier: SenderCandidate) => boolean; gi
     addition: (identifier) => identifier.scheme === "9938" && /^\d{11}$/.test(identifier.identifier),
     givesWayTo: (identifier) => identifier.scheme === "9938" && /^lu\d{8}$/i.test(identifier.identifier),
   },
+  // A Luxembourg matricule under 0240 gives way to the scheme Luxembourg addresses
+  // companies under, 9938.
+  {
+    addition: (identifier) => identifier.scheme === "0240",
+    givesWayTo: (identifier) => identifier.scheme === "9938",
+  },
 ];
 
 function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly SenderCandidate[]): boolean {
@@ -193,7 +199,7 @@ function givesWayAsSender(candidate: SenderCandidate, identifiers: readonly Send
  *   reception, which is never the address a supplier sends from.
  * - An identifier a company adds next to the one it sends from, such as a GEBA
  *   beside the German VAT number or a Luxembourg matricule beside the VAT
- *   number, is passed over as well; see SENDER_ADDITIONS.
+ *   number or under 0240, is passed over as well; see SENDER_ADDITIONS.
  */
 export function chooseSendingCompanyIdentifier<T extends Pick<CompanyIdentifier, "scheme" | "identifier">>(
   company: Pick<Company, "accessPointProvider">,
