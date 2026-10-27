@@ -37,8 +37,13 @@ function DashboardLink() {
     const { t } = useTranslation();
     if (!user) return null;
     return (
-        <Button variant="outline" className="w-full" asChild>
-            <Link to="/companies">{t`Go to Companies`}</Link>
+        <Button
+            variant="outline"
+            className="w-full"
+            nativeButton={false}
+            render={<Link to="/companies" />}
+        >
+            {t`Go to Companies`}
         </Button>
     );
 }

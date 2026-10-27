@@ -24,8 +24,13 @@ export function WithdrawnNotice({ companyName }: { companyName: string }) {
                     description={t`This link was withdrawn because an earlier verification of ${companyName} had already been submitted. It is not a rejection, and you do not need to submit anything here.`}
                 />
                 {user && (
-                    <Button variant="outline" className="w-full" asChild>
-                        <Link to="/companies">{t`Go to Companies`}</Link>
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        nativeButton={false}
+                        render={<Link to="/companies" />}
+                    >
+                        {t`Go to Companies`}
                     </Button>
                 )}
             </div>
