@@ -1,3 +1,4 @@
+import { AppLogo } from "@core/components/app-logo";
 import { PageTemplate } from "@core/components/page-template";
 import { useIsPlayground } from "@peppol/lib/client/playgrounds";
 import { Factory, ToyBrick } from "lucide-react";
@@ -11,7 +12,7 @@ export default function Page() {
     <PageTemplate>
       <div className="flex flex-col items-center justify-center py-12 space-y-6 h-[calc(100vh-10rem)]">
         <div className="p-6">
-          <img src="/logo.svg" alt={t`Recommand Logo`} className="h-8 w-auto min-w-32" />
+          <AppLogo className="h-8 w-auto" />
         </div>
         <p className="text-muted-foreground max-w-md text-center">
           {t`Manage your companies, send and receive Peppol documents, and monitor your subscription all in one place.`}
