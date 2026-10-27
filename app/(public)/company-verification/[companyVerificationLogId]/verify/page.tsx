@@ -487,7 +487,7 @@ export default function Page() {
                                             {context.representatives.map((rep, index) => (
                                                 <label
                                                     key={index}
-                                                    className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors hover:bg-muted/50 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-primary/5"
+                                                    className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors hover:bg-muted/50 has-data-checked:border-primary has-data-checked:bg-active"
                                                 >
                                                     <RadioGroupItem value={String(index)} />
                                                     <div className="flex-1 min-w-0">
