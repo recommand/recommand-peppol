@@ -27,15 +27,12 @@ export function DocumentTypeCell({ type, validation }: DocumentTypeCellProps) {
       <span>{getDocumentTypeLabel(t, type)}</span>
       {showsStatus && validation && (
         <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-          <PopoverTrigger asChild>
-            <button
+          <PopoverTrigger render={<button
               className="flex items-center justify-center"
               onMouseEnter={() => setIsPopoverOpen(true)}
-              onMouseLeave={() => setIsPopoverOpen(false)}
-            >
+              onMouseLeave={() => setIsPopoverOpen(false)} />}>
               <ValidationStatusIcon validation={validation} />
-            </button>
-          </PopoverTrigger>
+            </PopoverTrigger>
           <PopoverContent
             className="w-80 p-0"
             align="start"

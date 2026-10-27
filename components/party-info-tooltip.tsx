@@ -35,9 +35,7 @@ export function PartyInfoTooltip({ partyInfo, peppolAddress }: PartyInfoTooltipP
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <Info className="h-4 w-4 text-muted-foreground" />
-      </TooltipTrigger>
+      <TooltipTrigger render={<Info className="h-4 w-4 text-muted-foreground" />} />
       <TooltipContent>
         <div>
           <p className="font-medium">{partyInfo.name}</p>

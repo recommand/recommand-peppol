@@ -416,11 +416,9 @@ export default function Page() {
               />
             ))}
             <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" title={t`Add label`}>
+              <PopoverTrigger render={<Button variant="ghost" size="icon" title={t`Add label`} />}>
                   <Tag className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
+                </PopoverTrigger>
               <PopoverContent className="w-64 p-0" align="start">
                 <div className="p-2">
                   <div className="text-sm font-medium mb-2">{t`Assign Labels`}</div>
@@ -551,17 +549,14 @@ export default function Page() {
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
         >
-          <DialogTrigger asChild>
-            <Button
+          <DialogTrigger render={<Button
               onClick={() => {
                 setDialogMode("create");
                 setFormData(defaultSupplierFormData);
                 setEditingSupplier(null);
-              }}
-            >
+              }} />}>
               {t`Create Supplier`}
-            </Button>
-          </DialogTrigger>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>

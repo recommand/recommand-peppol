@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import {
@@ -12,7 +12,7 @@ import { useTranslation } from "@core/hooks/use-translation";
 interface DocumentLabelPickerProps {
   labels: Label[];
   assignedLabels: Pick<Label, "id">[];
-  trigger: ReactNode;
+  trigger: ReactElement;
   onAssign: (label: Label) => Promise<void> | void;
   onUnassign?: (label: Label) => Promise<void> | void;
   showAssignedLabels?: boolean;
@@ -61,7 +61,7 @@ export function DocumentLabelPicker({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverTrigger render={trigger} />
       <PopoverContent className="w-64 p-0" align={align}>
         <div className="p-2">
           <div className="mb-2 text-sm font-medium">{resolvedTitle}</div>

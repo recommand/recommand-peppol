@@ -30,10 +30,8 @@ export default function PlaygroundUI() {
         </p>
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="w-4 h-4 cursor-pointer" />
-            </TooltipTrigger>
-            <TooltipContent variant="muted" className="max-w-sm">
+            <TooltipTrigger render={<Info className="w-4 h-4 cursor-pointer" />} />
+            <TooltipContent className="max-w-sm">
               <p className="text-sm text-pretty">
                 {t`A playground is used to test the Recommand API without affecting production data or communicating over the Peppol network. ${testNetworkText} You can switch to a production environment by clicking the team switcher in the top left.`}
               </p>

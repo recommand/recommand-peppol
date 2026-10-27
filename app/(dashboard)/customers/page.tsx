@@ -448,17 +448,14 @@ export default function Page() {
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
         >
-          <DialogTrigger asChild>
-            <Button
+          <DialogTrigger render={<Button
               onClick={() => {
                 setDialogMode("create");
                 setFormData(defaultCustomerFormData);
                 setEditingCustomer(null);
-              }}
-            >
+              }} />}>
               {t`Create Customer`}
-            </Button>
-          </DialogTrigger>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
               <DialogTitle>
