@@ -2,7 +2,7 @@ import type { PublicTransmittedDocument } from "@peppol/data/transmitted-documen
 import { BILLING_DOCUMENT_TEMPLATE } from "@peppol/templates/billing-document";
 import { FRANCE_CDAR_TEMPLATE } from "@peppol/templates/france-cdar";
 import { MESSAGE_LEVEL_RESPONSE_TEMPLATE } from "@peppol/templates/message-level-response";
-import { PAYMENT_MEANS } from "@peppol/utils/payment-means";
+import { hasPayeeAccount, PAYMENT_MEANS } from "@peppol/utils/payment-means";
 import { getUnitCodeName } from "@peppol/utils/unit-codes";
 import type {
   FranceCdar,
@@ -73,6 +73,7 @@ type TemplatePaymentMeans = {
   paymentMethodName: string;
   reference?: string | null;
   iban: string;
+  accountName?: string | null;
   financialInstitutionBranch?: string | null;
   mandateReference?: string | null;
 };
@@ -451,9 +452,12 @@ function buildTemplateData(
     ? paymentMeansRaw.map((payment) => {
         const paymentMethod = PAYMENT_MEANS.find((pm) => pm.key === payment.paymentMethod);
         return {
-          paymentMethodName: payment.name || paymentMethod?.name || payment.paymentMethod || "Payment",
+          paymentMethodName: paymentMethod?.name ?? "Payment",
           reference: payment.reference || null,
           iban: payment.iban || "",
+          // name is the payee account name (BT-85): the serializers write it only with
+          // the payee account and read it back from there.
+          accountName: hasPayeeAccount(payment) ? payment.name || null : null,
           financialInstitutionBranch: payment.financialInstitutionBranch || null,
           mandateReference: payment.mandate?.reference || null,
         };

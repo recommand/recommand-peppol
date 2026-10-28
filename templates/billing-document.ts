@@ -220,6 +220,9 @@ export const BILLING_DOCUMENT_TEMPLATE = `<!DOCTYPE html>
               <div class="space-y-1">
                 <p class="font-medium text-slate-900">{{paymentMethodName}}</p>
                 {{#iban}}<p class="text-slate-600 font-mono">{{iban}}</p>{{/iban}}
+                {{#accountName}}
+                  <p class="text-xs text-slate-500">Account name: {{accountName}}</p>
+                {{/accountName}}
                 {{#reference}}
                   <p class="text-xs text-slate-500">Reference: {{reference}}</p>
                 {{/reference}}
