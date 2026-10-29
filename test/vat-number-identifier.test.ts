@@ -37,7 +37,7 @@ describe("vatNumberIdentifier", () => {
     expect(vatNumberIdentifier("GR", "094259216", { schemes: "codeList" })).toEqual({ scheme: "9933", identifier: "EL094259216" });
     expect(vatNumberIdentifier("FR", "FR40303265045", { schemes: "codeList" })).toEqual({ scheme: "9957", identifier: "FR40303265045" });
     // Not in our country list, but in the code list.
-    expect(vatNumberIdentifier(null, "CZ25596641", { schemes: "codeList" })).toEqual({ scheme: "9929", identifier: "CZ25596641" });
+    expect(vatNumberIdentifier(null, "MK4030003475089", { schemes: "codeList" })).toEqual({ scheme: "9942", identifier: "MK4030003475089" });
     // A default scheme still comes first, and a country the code list lacks has none.
     expect(vatNumberIdentifier("DE", "DE811569869", { schemes: "codeList" })).toEqual({ scheme: "9930", identifier: "DE811569869" });
     expect(vatNumberIdentifier("DK", "DK13585628", { schemes: "codeList" })).toBeNull();
@@ -45,7 +45,7 @@ describe("vatNumberIdentifier", () => {
 
   it("keeps to the default schemes otherwise, as company registration does", () => {
     expect(vatNumberIdentifier("FR", "FR40303265045")).toBeNull();
-    expect(vatNumberIdentifier(null, "CZ25596641")).toBeNull();
+    expect(vatNumberIdentifier(null, "MK4030003475089")).toBeNull();
   });
 
   it("is null when the number names no country, or there is no number", () => {

@@ -578,6 +578,7 @@ Notification email address added successfully,Adresse e-mail de notification ajo
 Notification email address deleted successfully,Adresse e-mail de notification supprimée avec succès
 Notification email address updated successfully,Adresse e-mail de notification mise à jour avec succès
 Notifications,Notifications
+Notifications to this address have failed since {0}: our mail service no longer accepts mail for it. Check the address with its mail provider and then contact support@recommand.eu to resume notifications.,Les notifications vers cette adresse échouent depuis le {0} : notre service d'e-mail n'accepte plus de messages pour cette adresse. Vérifiez l'adresse auprès de son fournisseur de messagerie puis contactez support@recommand.eu pour reprendre les notifications.
 Notify for,Notifier pour
 One,Unité
 Only if Peppol fails,Uniquement en cas d'échec de Peppol
@@ -971,6 +972,10 @@ Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France)\, 9930 (Germ
 XRechnung 3.0 UBL Invoice,Facture XRechnung 3.0 UBL
 XRechnung 3.0 UBL Credit Note,Avoir XRechnung 3.0 UBL
 XRechnung 3.0 CII Invoice + Credit Note,Facture + Avoir XRechnung 3.0 CII
+Peppol BIS Billing 3.0 Invoice,Facture Peppol BIS Billing 3.0
+Peppol BIS Billing 3.0 Credit Note,Avoir Peppol BIS Billing 3.0
+Peppol BIS Self-Billing 3.0 Invoice,Facture Peppol BIS Self-Billing 3.0
+Peppol BIS Self-Billing 3.0 Credit Note,Avoir Peppol BIS Self-Billing 3.0
 Verification Link Withdrawn,Lien de vérification retiré
 This link was withdrawn because an earlier verification of {0} had already been submitted. It is not a rejection\, and you do not need to submit anything here.,Ce lien a été retiré car une vérification antérieure de {0} avait déjà été soumise. Il ne s'agit pas d'un refus et vous n'avez rien à soumettre ici.
 Set up later,Configurer plus tard
@@ -989,3 +994,4 @@ The Peppol rules for Norway require the registration of a deleted organisation t
 If you think this is a mistake\, contact,Si vous pensez qu'il s'agit d'une erreur\, contactez
 Peppol registration removed for {0},Enregistrement Peppol supprimé pour {0}
 Is your name not on the list? Contact,Votre nom ne figure pas dans la liste ? Contactez
+For Luxembourg businesses\, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under scheme 9938\, next to your VAT number.,Pour les entreprises luxembourgeoises\, saisissez le matricule à 11 chiffres plutôt que le numéro RCS. Le matricule devient votre adresse Peppol sous le schéma 9938\, en plus de votre numéro de TVA.

@@ -999,17 +999,14 @@ export default function TransmittedDocumentDetailPage() {
                         doc.receivedPeppolSignalMessage ||
                         doc.envelopeId) && (
                         <Collapsible>
-                          <CollapsibleTrigger asChild>
-                            <Button
+                          <CollapsibleTrigger render={<Button
                               variant="ghost"
-                              className="w-full font-normal [&[data-state=open]>svg]:rotate-180"
-                            >
+                              className="w-full font-normal [&[data-panel-open]>svg]:rotate-180" />}>
                               <span className="text-sm font-medium">
                                 {t`Advanced`}
                               </span>
                               <ChevronDown className="h-4 w-4 transition-transform duration-200" />
-                            </Button>
-                          </CollapsibleTrigger>
+                            </CollapsibleTrigger>
                           <CollapsibleContent>
                             <div className="grid grid-cols-1 gap-3 text-xs md:text-sm">
                               {doc.peppolMessageId && (

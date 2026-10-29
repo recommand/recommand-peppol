@@ -86,7 +86,7 @@ export function FrenchReportingStatusBadge({ reporting, size = "md" }: FrenchRep
   }
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{badge}</TooltipTrigger>
+      <TooltipTrigger render={badge} />
       <TooltipContent>
         <div className="space-y-1 text-xs">
           {details.map((detail) => (

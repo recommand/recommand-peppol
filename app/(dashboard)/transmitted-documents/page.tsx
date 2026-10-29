@@ -721,9 +721,9 @@ export default function Page() {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
+          checked={table.getIsAllPageRowsSelected()}
+          indeterminate={
+            table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label={t`Select all rows`}
@@ -1281,20 +1281,17 @@ export default function Page() {
                   {t`Mark as read`}
                 </Button>
                 <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
+                  <PopoverTrigger render={<Button
                       variant="outline"
                       size="sm"
-                      disabled={isBulkMarkingAsRead || isBulkExporting || isBulkDeleting || bulkAssigningLabelId !== null}
-                    >
+                      disabled={isBulkMarkingAsRead || isBulkExporting || isBulkDeleting || bulkAssigningLabelId !== null} />}>
                       {bulkAssigningLabelId ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <Tag className="mr-2 h-4 w-4" />
                       )}
                       {t`Add label`}
-                    </Button>
-                  </PopoverTrigger>
+                    </PopoverTrigger>
                   <PopoverContent className="w-64 p-0" align="start">
                     <div className="p-2">
                       <div className="mb-2 text-sm font-medium">{t`Assign label`}</div>
@@ -1322,20 +1319,17 @@ export default function Page() {
                   </PopoverContent>
                 </Popover>
                 <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
+                  <PopoverTrigger render={<Button
                       variant="outline"
                       size="sm"
-                      disabled={isBulkMarkingAsRead || isBulkExporting || isBulkDeleting || bulkAssigningLabelId !== null}
-                    >
+                      disabled={isBulkMarkingAsRead || isBulkExporting || isBulkDeleting || bulkAssigningLabelId !== null} />}>
                       {isBulkExporting ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <Download className="mr-2 h-4 w-4" />
                       )}
                       {t`Download ZIP`}
-                    </Button>
-                  </PopoverTrigger>
+                    </PopoverTrigger>
                   <PopoverContent className="w-56 p-2" align="start">
                     <div className="space-y-1">
                       <button

@@ -76,6 +76,17 @@ describe("the address a company sends under", () => {
     expect(chooseSendingCompanyIdentifier(otherCompany, sorted(vat, matricule, gln))).toBe(gln);
   });
 
+  it("keeps a Luxembourg company sending under 9938 when it also holds its matricule under 0240", () => {
+    const vat = { scheme: "9938", identifier: "lu15027442" };
+    const matricule = { scheme: "9938", identifier: "20042228800" };
+    const registerMatricule = { scheme: "0240", identifier: "20042228800" };
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(registerMatricule, vat))).toBe(vat);
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(registerMatricule, matricule))).toBe(matricule);
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(registerMatricule, vat, matricule))).toBe(vat);
+    // Without an identifier under 9938, 0240 is the address.
+    expect(chooseSendingCompanyIdentifier(otherCompany, sorted(registerMatricule))).toBe(registerMatricule);
+  });
+
   it("refuses a company without identifiers the same way for every access point", () => {
     for (const company of [frenchCompany, otherCompany]) {
       expect(() => chooseSendingCompanyIdentifier(company, [])).toThrow(

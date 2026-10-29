@@ -24,6 +24,17 @@ mock.module("@peppol/data/deliveries", () => ({
   },
 }));
 
+const notificationReports: Record<string, unknown>[] = [];
+mock.module("@recommand/db", () => ({ db: {} }));
+const notifications = await import("../../data/document-notifications");
+mock.module("@peppol/data/document-notifications", () => ({
+  ...notifications,
+  applyNotificationReport: async (report: Record<string, unknown>) => {
+    notificationReports.push(report);
+    return "applied";
+  },
+}));
+
 const { default: server, isAuthorizedPostmarkRequest } = await import("../../api/internal/postmark-webhook");
 
 const messageId = "883953f4-6105-42a2-a16a-77a8eac79483";
@@ -82,6 +93,7 @@ async function post(body: unknown, headers: Record<string, string> = { authoriza
 
 beforeEach(() => {
   reports.length = 0;
+  notificationReports.length = 0;
   outcome = "applied";
   process.env.POSTMARK_WEBHOOK_SECRET = secret;
 });
@@ -238,5 +250,42 @@ describe("records", () => {
     expect((await post("not json")).status).toBe(400);
     expect((await post({ MessageID: messageId })).status).toBe(400);
     expect(reports).toEqual([]);
+  });
+});
+
+describe("notification reports", () => {
+  const notificationMetadata = { notificationId: "dntf_1" };
+
+  it("delivers the notification a delivered message was sent for", async () => {
+    const result = await post({ ...delivery, Metadata: notificationMetadata });
+
+    expect(result.status).toBe(200);
+    expect(notificationReports).toEqual([{
+      notificationId: "dntf_1",
+      status: "delivered",
+      failure: null,
+      addressDeactivated: false,
+      occurredAt: new Date("2026-09-09T16:33:54.9070259Z"),
+    }]);
+    expect(reports).toEqual([]);
+  });
+
+  it("fails the notification of a bounce, and says whether Postmark deactivated the address", async () => {
+    await post({ ...bounce("HardBounce", 1), Metadata: notificationMetadata });
+    await post({ ...bounce("SoftBounce", 4096), Inactive: false, Metadata: notificationMetadata });
+
+    expect(notificationReports).toMatchObject([
+      { notificationId: "dntf_1", status: "failed", addressDeactivated: true,
+        failure: { category: "recipient_not_found", providerCode: "HardBounce" } },
+      { notificationId: "dntf_1", status: "failed", addressDeactivated: false,
+        failure: { category: "transport", providerCode: "SoftBounce" } },
+    ]);
+  });
+
+  it("acknowledges a bounce that says nothing about the outcome without touching the notification", async () => {
+    const result = await post({ ...bounce("AutoResponder", 16), Metadata: notificationMetadata });
+
+    expect(result.status).toBe(200);
+    expect(notificationReports).toEqual([]);
   });
 });

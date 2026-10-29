@@ -28,7 +28,7 @@ export const peppolUblBis3CreditnoteFormat: DocumentFormat<
     nonRegulatedProcessId,
   ],
   smpRegistration: [
-    { processId: billingProcessId, translatableTitle: "Credit Note" },
+    { processId: billingProcessId, translatableTitle: "Peppol BIS Billing 3.0 Credit Note" },
     {
       processId: regulatedProcessId,
       translatableTitle: "France Peppol BIS Billing 3.0 UBL Credit Note",

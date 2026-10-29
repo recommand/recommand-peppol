@@ -38,11 +38,9 @@ export function DeliveryFailedBadge({ deliveries, size = "md" }: DeliveryFailedB
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge variant="destructive" className={size === "sm" ? "text-xs" : undefined}>
+      <TooltipTrigger render={<Badge variant="destructive" className={size === "sm" ? "text-xs" : undefined} />}>
           {t`Delivery failed`}
-        </Badge>
-      </TooltipTrigger>
+        </TooltipTrigger>
       <TooltipContent>
         <div className="max-w-sm space-y-1 text-xs">
           {details.map((detail) => (

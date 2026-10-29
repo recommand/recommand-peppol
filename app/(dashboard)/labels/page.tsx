@@ -303,17 +303,14 @@ export default function Page() {
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
         >
-          <DialogTrigger asChild>
-            <Button
+          <DialogTrigger render={<Button
               onClick={() => {
                 setDialogMode("create");
                 setFormData(defaultLabelFormData);
                 setEditingLabel(null);
-              }}
-            >
+              }} />}>
               {t`Create Label`}
-            </Button>
-          </DialogTrigger>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>

@@ -325,11 +325,9 @@ export default function Page() {
           open={isDialogOpen}
           onOpenChange={handleDialogOpenChange}
         >
-          <DialogTrigger asChild>
-            <Button>
+          <DialogTrigger render={<Button />}>
               {t`Create Company`}
-            </Button>
-          </DialogTrigger>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
               <DialogTitle>{t`Create New Company`}</DialogTitle>

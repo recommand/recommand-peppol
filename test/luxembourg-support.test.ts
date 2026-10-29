@@ -5,7 +5,7 @@ import { describe, expect, it, mock } from "bun:test";
 // scheme took any value, so a register number (RCS, e.g. B123456) could be published
 // as if it were one of them.
 
-import { validateCountryIdentifier, validateIdentifier } from "../utils/identifier-validation";
+import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, validateCountryIdentifier, validateIdentifier } from "../utils/identifier-validation";
 
 const validVatNumbers = ["LU15027442", "lu15027442", "LU 1502.74-42", "LU20260743"];
 const invalidVatNumbers = [
@@ -133,5 +133,81 @@ describe("scheme 9938 against the company", () => {
     expect(() => validateIdentifierAgainstCompany({
       scheme: "9938", identifier: "LU15027442", company: { ...luxembourgish, country: "BE", vatNumber: "BE0123456749" } as any, teamExtension: team,
     })).toThrow("a company can only register its own");
+  });
+});
+
+// 0240 is the register of legal persons' own scheme. It takes the matricule alone,
+// so it is held to the company's matricule as 9938 is, or any company could publish
+// another's under it.
+describe("scheme 0240", () => {
+  const withMatricule = { ...luxembourgish, country: "LU", enterpriseNumber: "20042228800" };
+
+  it("accepts an 11 digit matricule, however it is written", () => {
+    for (const matricule of validMatricules) {
+      expect(() => validateIdentifier("0240", matricule), matricule).not.toThrow();
+    }
+  });
+
+  it("refuses another length, a VAT number and a register number", () => {
+    for (const identifier of [...invalidMatricules, "LU15027442", "B123456"]) {
+      expect(() => validateIdentifier("0240", identifier), identifier).toThrow("must be an 11 digit Luxembourg matricule");
+    }
+  });
+
+  it("takes the company's own matricule", () => {
+    for (const identifier of ["20042228800", "2004 2228 800"]) {
+      expect(() => validateIdentifierAgainstCompany({
+        scheme: "0240", identifier, company: withMatricule as any, teamExtension: team,
+      })).not.toThrow();
+    }
+  });
+
+  it("refuses another matricule, or one the company has not recorded", () => {
+    expect(() => validateIdentifierAgainstCompany({
+      scheme: "0240", identifier: "19656100039", company: withMatricule as any, teamExtension: team,
+    })).toThrow("must match the company enterprise number when it is a matricule");
+    expect(() => validateIdentifierAgainstCompany({
+      scheme: "0240", identifier: "20042228800", company: { ...luxembourgish, country: "LU" } as any, teamExtension: team,
+    })).toThrow("requires the company enterprise number to be set to that matricule");
+  });
+
+  it("refuses a matricule for a company outside Luxembourg, or not known to be in it", () => {
+    expect(() => validateIdentifierAgainstCompany({
+      scheme: "0240", identifier: "20042228800", company: { ...withMatricule, country: "BE" } as any, teamExtension: team,
+    })).toThrow("Scheme 0240 is for matricules from Luxembourg");
+    expect(() => validateIdentifierAgainstCompany({
+      scheme: "0240", identifier: "20042228800", company: { ...luxembourgish, enterpriseNumber: "20042228800" } as any, teamExtension: team,
+    })).toThrow("can only be a matricule for a company in Luxembourg");
+  });
+});
+
+// Luxembourg has no default enterprise number scheme: a company records its matricule
+// or its RCS number. A matricule derives its identifier under 9938, the scheme
+// Luxembourg addresses organisations under, also for a company that names 0240 as its
+// enterprise number scheme. 0240, which Luxembourg does not use, is not derived.
+describe("the identifier a Luxembourg matricule derives", () => {
+  it("is derived from a matricule, however it is written", () => {
+    for (const enterpriseNumber of ["20042228800", "2004 2228 800"]) {
+      expect(derivedDefaultIdentifiers("LU", { enterpriseNumber, vatNumber: "LU15027442" })).toEqual([
+        { scheme: "9938", identifier: "20042228800" },
+      ]);
+    }
+    expect(derivedDefaultIdentifiers("LU", { enterpriseNumber: "20042228800", vatNumber: null })).toEqual([
+      { scheme: "9938", identifier: "20042228800" },
+    ]);
+  });
+
+  it("is not derived from an RCS number, or without an enterprise number", () => {
+    expect(derivedDefaultIdentifiers("LU", { enterpriseNumber: "B123456", vatNumber: "LU15027442" })).toEqual([]);
+    expect(derivedDefaultIdentifiers("LU", { enterpriseNumber: null, vatNumber: "LU15027442" })).toEqual([]);
+  });
+
+  it("is not derived for a company of another country", () => {
+    expect(derivedDefaultIdentifiers("BE", { enterpriseNumber: "20042228800", vatNumber: null })).toEqual([]);
+  });
+
+  it("takes the place of 0240 named as the enterprise number scheme, which is Luxembourg's own", () => {
+    expect(enterpriseNumberIdentifierScheme("LU", "0240")).toBeNull();
+    expect(enterpriseNumberIdentifierScheme("LU", null)).toBeNull();
   });
 });

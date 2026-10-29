@@ -38,6 +38,14 @@ export const companyNotificationEmailAddressResponse = z.object({
         description: "Whether the notification for an outgoing document carries the document's JSON representation as an attachment.",
         examples: [false],
     }),
+    unreachableSince: z.string().datetime().nullable().openapi({
+        description: "When our mail service stopped accepting mail for this address, after it bounced or was refused. Notifications to it fail until it accepts mail again; contact support once the address works. Null while the address is reachable.",
+        examples: [null],
+    }),
+    unreachableReason: z.string().nullable().openapi({
+        description: "Why the mail service stopped accepting mail for this address, as it reported. Null while the address is reachable.",
+        examples: [null],
+    }),
     createdAt: z.string().datetime().openapi({
         description: "When the address was added to the company.",
     }),

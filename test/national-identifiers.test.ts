@@ -65,6 +65,12 @@ const cases: CountryCase[] = [
     vatNumber: { valid: ["CY10290930F", "CY90000020C"], badFormat: "CY102909301" },
   },
   {
+    country: "CZ",
+    // Alza.cz, Ministerstvo financí; the 10 digit form is a well formed birth number
+    vatNumber: { valid: ["CZ27082440", "CZ00006947", "CZ 270 824 40", "CZ7103192745"], badCheck: "CZ27082441", badFormat: "CZ2708244" },
+    enterpriseNumber: { valid: ["27082440", "00006947"], badCheck: "27082441", badFormat: "2708244" },
+  },
+  {
     country: "DE",
     vatNumber: { valid: ["DE136695976", "DE811569869"], badCheck: "DE136695977", badFormat: "DE13669597" },
   },
@@ -145,6 +151,13 @@ const cases: CountryCase[] = [
     enterpriseNumber: { valid: ["00484960588", "80415740580", "RSSMRA85T10A562S"], badCheck: "00484960589", badFormat: "0048496058" },
   },
   {
+    country: "LT",
+    // Well formed examples of both lengths; the legal entity codes of the Ministry of
+    // Finance and the Peppol code list's example
+    vatNumber: { valid: ["LT120212314", "LT100006634513"], badCheck: "LT120212315", badFormat: "LT12021231" },
+    enterpriseNumber: { valid: ["288601650", "111963319"], badCheck: "288601651", badFormat: "28860165" },
+  },
+  {
     country: "LU",
     vatNumber: { valid: ["LU15027442", "LU20260743"], badCheck: "LU15027443", badFormat: "LU1502744" },
   },
@@ -153,6 +166,11 @@ const cases: CountryCase[] = [
     // Latvenergo, Valsts ieņēmumu dienests
     vatNumber: { valid: ["LV40003032949", "LV90000069281"], badFormat: "LV4000303294" },
     enterpriseNumber: { valid: ["40003032949", "90000069281"], badFormat: "10003032949" },
+  },
+  {
+    country: "MT",
+    // Malta Information Technology Agency, Malta Business Registry
+    vatNumber: { valid: ["MT19134013", "MT26077906", "MT 2607-7906"], badCheck: "MT19134014", badFormat: "MT01913401" },
   },
   {
     country: "NL",
@@ -345,7 +363,7 @@ describe("VAT schemes that are no country's default", () => {
   });
 
   it("only take the company's own VAT number", () => {
-    for (const [scheme, identifier] of [["9933", "EL094014201"], ["9929", "CZ12345678"], ["9943", "MT12345678"]]) {
+    for (const [scheme, identifier] of [["9933", "EL094014201"], ["9929", "CZ27082440"], ["9943", "MT19134013"]]) {
       expect(() => validateIdentifierBelongsToCompany({ scheme: scheme!, identifier: identifier!, company: belgian })).toThrow(
         "must match the company VAT number"
       );

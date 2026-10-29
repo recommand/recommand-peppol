@@ -1,8 +1,12 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, describe, expect, it, mock, spyOn } from "bun:test";
 
 // The scheduling and status rules are pure; the database is never touched here.
 mock.module("@recommand/db", () => ({ db: {} }));
-mock.module("@core/data/rules/events", () => ({ publishEvent: async () => {} }));
+// Spied on rather than replaced as a module: a module mock lasts for the whole test
+// run, and this stand-in lacks exports that other files import.
+const events = await import("@core/data/rules/events");
+const publishEventSpy = spyOn(events, "publishEvent").mockResolvedValue(undefined as never);
+afterAll(() => publishEventSpy.mockRestore());
 
 const {
   applyStatusReport,

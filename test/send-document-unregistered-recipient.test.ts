@@ -15,20 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 // time. Everything that would is stubbed below.
 mock.module("@recommand/db", () => ({ db: {} }));
 
-// Recording and the access points are replaced as modules rather than spied on: their
-// own imports include the deliveries module and the Arratech client, which other files
-// in the same run replace with stand-ins that lack what they need. Each test sets what
-// they do.
-let recordOutgoingDocument: (options: any) => Promise<any> = async () => {
-  throw new Error("recordOutgoingDocument is not stubbed in this test");
-};
-mock.module("@peppol/data/record-outgoing-document", () => ({
-  recordOutgoingDocument: (options: any) => recordOutgoingDocument(options),
-}));
 let sendAs4: ReturnType<typeof mock>;
-mock.module("@peppol/data/access-point-providers", () => ({
-  getAccessPointProvider: () => ({ sendAs4: (options: unknown) => sendAs4(options) }),
-}));
 
 const { sendingPipeline } = await import("../utils/pipelines/sending");
 const { sendDocumentSchema } = await import("../utils/parsing/send-document");
@@ -41,6 +28,8 @@ const recipient = await import("../data/recipient");
 const recipientCapabilities = await import("../data/recipient-capabilities");
 const simulator = await import("../data/playground/simulate-ap");
 const validation = await import("../utils/pipelines/sending/validate-document");
+const recording = await import("../data/record-outgoing-document");
+const accessPoints = await import("../data/access-point-providers");
 
 const RECIPIENT = "0208:0598726857";
 const SENDER = { scheme: "0208", identifier: "1234567894" };
@@ -111,10 +100,11 @@ beforeEach(() => {
     sentEmails.push({ to: options.to, xmlDocument: options.xmlDocument });
     return { messageId: `msg-${sentEmails.length}` };
   });
-  recordOutgoingDocument = async (options) => {
+  stub(accessPoints, "getAccessPointProvider").mockReturnValue({ sendAs4: (options: unknown) => sendAs4(options) } as any);
+  stub(recording, "recordOutgoingDocument").mockImplementation(async (options: any) => {
     recorded.push(options);
-    return { id: options.id, deliveries: [] };
-  };
+    return { id: options.id, deliveries: [] } as any;
+  });
   stub(metrics, "recordSendDocumentDelivery").mockImplementation(() => {});
 });
 

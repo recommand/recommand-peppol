@@ -21,9 +21,7 @@ export function TransmissionStatusIcons({
     <div className="flex items-center gap-1">
       {!sentOverPeppol && !isReporting && (
         <Tooltip>
-          <TooltipTrigger asChild>
-            <CloudAlert className="h-4 w-4 text-muted-foreground" />
-          </TooltipTrigger>
+          <TooltipTrigger render={<CloudAlert className="h-4 w-4 text-muted-foreground" />} />
           <TooltipContent>
             <p>{t`Not sent over Peppol network`}</p>
           </TooltipContent>
@@ -31,9 +29,7 @@ export function TransmissionStatusIcons({
       )}
       {sentOverEmail && (
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </TooltipTrigger>
+          <TooltipTrigger render={<Mail className="h-4 w-4 text-muted-foreground" />} />
           <TooltipContent>
             <div>
               <p className="font-medium">{t`Sent via email to:`}</p>

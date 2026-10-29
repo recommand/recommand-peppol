@@ -30,6 +30,17 @@ export function validateLuxembourgVatNumber(identifier: string): void {
  */
 const MATRICULE = /^\d{11}$/;
 
+/** The register of legal persons' own scheme, which takes the matricule alone. */
+const MATRICULE_SCHEME = "0240";
+
+function validateLuxembourgMatricule(identifier: string): void {
+  if (!MATRICULE.test(identifier.replace(/[\.\-\s]/g, ""))) {
+    throw new UserFacingError(
+      `Identifier under scheme ${MATRICULE_SCHEME} must be an 11 digit Luxembourg matricule (e.g. 12345678910)`
+    );
+  }
+}
+
 /**
  * Luxembourg addresses every organisation under 9938, with either its VAT number or
  * its matricule: "la codelist à utiliser dans Peppol pour les 2 types de numéros est
@@ -50,8 +61,9 @@ export function validateLuxembourgPeppolIdentifier(identifier: string): void {
 }
 
 /**
- * An identifier under 9938 has to be the company's own number: its VAT number, or its
- * matricule, which a Luxembourg company records as its enterprise number.
+ * An identifier under 9938 or 0240 has to be the company's own number: its VAT number
+ * (9938 only), or its matricule, which a Luxembourg company records as its enterprise
+ * number.
  */
 function validateLuxembourgIdentifierBelongsToCompany(
   scheme: string,
@@ -62,11 +74,11 @@ function validateLuxembourgIdentifierBelongsToCompany(
   const country = company.country?.toUpperCase();
   if (country && country !== "LU") {
     throw new UserFacingError(
-      `Scheme ${scheme} is for VAT numbers and matricules from Luxembourg, and a company can only register its own. Register a number from Luxembourg on a separate company in that country.`
+      `Scheme ${scheme} is for ${scheme === MATRICULE_SCHEME ? "matricules" : "VAT numbers and matricules"} from Luxembourg, and a company can only register its own. Register a number from Luxembourg on a separate company in that country.`
     );
   }
 
-  if (MATRICULE.test(cleanedIdentifier)) {
+  if (scheme === MATRICULE_SCHEME || MATRICULE.test(cleanedIdentifier)) {
     // Any number of 11 digits would pass the comparison below, such as an Australian
     // ABN, so a matricule is only taken from a company known to be in Luxembourg.
     if (!country) {
@@ -102,9 +114,19 @@ export const luxembourg: CountryIdentifierRules = {
   vatNumber: validateLuxembourgVatNumber,
   schemes: {
     "9938": validateLuxembourgPeppolIdentifier,
+    [MATRICULE_SCHEME]: validateLuxembourgMatricule,
   },
   companyIdentifiers: {
-    schemes: ["9938"],
+    schemes: ["9938", MATRICULE_SCHEME],
     validate: validateLuxembourgIdentifierBelongsToCompany,
+  },
+  // Luxembourg has no default enterprise number scheme, because a company records its
+  // matricule or its RCS number there. A matricule is published under 9938, the scheme
+  // Luxembourg addresses every organisation under, and not under 0240, which Luxembourg
+  // does not use; a company can still add 0240 itself. An RCS number is no Peppol
+  // address and derives nothing.
+  derivedIdentifiers: (company) => {
+    const matricule = cleanEnterpriseNumber(company.enterpriseNumber);
+    return matricule && MATRICULE.test(matricule) ? [{ scheme: "9938", identifier: matricule }] : [];
   },
 };

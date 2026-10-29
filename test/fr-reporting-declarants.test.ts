@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { getFrenchSiren } from "../utils/identifier-validation";
 
 const requests: { path: string; method: string; body: unknown }[] = [];
@@ -7,17 +7,24 @@ let respond: (path: string, method: string) => Response;
 // The retry policy is pure; the database is never touched in this file.
 mock.module("@recommand/db", () => ({ db: {} }));
 
-mock.module("@peppol/data/at/client", () => ({
-  getArratechConfig: () => ({ orgId: "org-1" }),
-  fetchArratech: async (path: string, options: RequestInit) => {
+// Spied on rather than replaced as a module: a module mock lasts for the whole test
+// run, and this stand-in lacks exports that other files import.
+const atClient = await import("../data/at/client");
+const spies = [
+  spyOn(atClient, "getArratechConfig").mockImplementation(() => ({ orgId: "org-1" }) as never),
+  spyOn(atClient, "fetchArratech").mockImplementation(async (path: string, options: RequestInit = {}) => {
     requests.push({
       path,
       method: options.method ?? "GET",
       body: typeof options.body === "string" ? JSON.parse(options.body) : null,
     });
     return respond(path, options.method ?? "GET");
-  },
-}));
+  }),
+];
+
+afterAll(() => {
+  for (const spy of spies) spy.mockRestore();
+});
 
 const {
   ArratechDeclarantError,

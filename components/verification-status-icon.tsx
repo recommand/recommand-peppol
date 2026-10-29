@@ -11,9 +11,7 @@ export function VerificationStatusIcon({ isVerified }: VerificationStatusIconPro
   if (isVerified) {
     return (
       <Tooltip>
-        <TooltipTrigger asChild>
-          <CheckCircle2 className="h-4 w-4" />
-        </TooltipTrigger>
+        <TooltipTrigger render={<CheckCircle2 className="h-4 w-4" />} />
         <TooltipContent>
           <p>{t`Company is verified`}</p>
         </TooltipContent>
@@ -23,9 +21,7 @@ export function VerificationStatusIcon({ isVerified }: VerificationStatusIconPro
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <XCircle className="h-4 w-4 text-destructive" />
-      </TooltipTrigger>
+      <TooltipTrigger render={<XCircle className="h-4 w-4 text-destructive" />} />
       <TooltipContent>
         <p>{t`Company is not verified`}</p>
       </TooltipContent>

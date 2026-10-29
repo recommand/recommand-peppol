@@ -471,6 +471,7 @@ Notification email address added successfully,Benachrichtigungs-E-Mail-Adresse e
 Notification email address deleted successfully,Benachrichtigungs-E-Mail-Adresse erfolgreich gelöscht
 Notification email address updated successfully,Benachrichtigungs-E-Mail-Adresse erfolgreich aktualisiert
 Notifications,Benachrichtigungen
+Notifications to this address have failed since {0}: our mail service no longer accepts mail for it. Check the address with its mail provider and then contact support@recommand.eu to resume notifications.,Benachrichtigungen an diese Adresse schlagen seit {0} fehl: Unser E-Mail-Dienst nimmt keine E-Mails mehr für diese Adresse an. Prüfen Sie die Adresse bei ihrem E-Mail-Anbieter und wenden Sie sich dann an support@recommand.eu\, um die Benachrichtigungen fortzusetzen.
 Notify for,Benachrichtigen bei
 of Recommand on behalf of {0}.,von Recommand im Namen von {0}.
 One,Stück
@@ -971,6 +972,10 @@ Common schemes: 0208 (Belgium)\, 0106 (Netherlands)\, 0225 (France)\, 9930 (Germ
 XRechnung 3.0 UBL Invoice,XRechnung-3.0-UBL-Rechnung
 XRechnung 3.0 UBL Credit Note,XRechnung-3.0-UBL-Gutschrift
 XRechnung 3.0 CII Invoice + Credit Note,XRechnung-3.0-CII-Rechnung + Gutschrift
+Peppol BIS Billing 3.0 Invoice,Peppol-BIS-Billing-3.0-Rechnung
+Peppol BIS Billing 3.0 Credit Note,Peppol-BIS-Billing-3.0-Gutschrift
+Peppol BIS Self-Billing 3.0 Invoice,Peppol-BIS-Self-Billing-3.0-Rechnung
+Peppol BIS Self-Billing 3.0 Credit Note,Peppol-BIS-Self-Billing-3.0-Gutschrift
 Verification Link Withdrawn,Verifizierungslink zurückgezogen
 This link was withdrawn because an earlier verification of {0} had already been submitted. It is not a rejection\, and you do not need to submit anything here.,Dieser Link wurde zurückgezogen\, weil bereits eine frühere Verifizierung für {0} eingereicht worden war. Dies ist keine Ablehnung\, und Sie müssen hier nichts einreichen.
 Set up later,Später einrichten
@@ -989,3 +994,4 @@ The Peppol rules for Norway require the registration of a deleted organisation t
 If you think this is a mistake\, contact,Wenn Sie glauben\, dass es sich um einen Fehler handelt\, wenden Sie sich an
 Peppol registration removed for {0},Peppol-Registrierung entfernt für {0}
 Is your name not on the list? Contact,Steht Ihr Name nicht auf der Liste? Wenden Sie sich an
+For Luxembourg businesses\, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under scheme 9938\, next to your VAT number.,Geben Sie für luxemburgische Unternehmen die elfstellige Matrikelnummer ein\, nicht die RCS-Nummer. Die Matrikelnummer wird neben Ihrer USt-IdNr. Ihre Peppol-Adresse unter Schema 9938.

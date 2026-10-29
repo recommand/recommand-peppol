@@ -265,15 +265,12 @@ export default function IntegrationDetailPage() {
 
     return (
       <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-        <PopoverTrigger asChild>
-          <div
+        <PopoverTrigger nativeButton={false} render={<div
             className="max-w-[300px] truncate cursor-pointer"
             onMouseEnter={() => setIsPopoverOpen(true)}
-            onMouseLeave={() => setIsPopoverOpen(false)}
-          >
+            onMouseLeave={() => setIsPopoverOpen(false)} />}>
             {message}
-          </div>
-        </PopoverTrigger>
+          </PopoverTrigger>
         <PopoverContent
           className="w-96 max-w-[90vw]"
           align="start"

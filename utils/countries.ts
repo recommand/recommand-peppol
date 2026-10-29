@@ -62,6 +62,13 @@ const BASE_COUNTRIES: BaseCountryInfo[] = ([
         defaultVatScheme: "9928",
     },
     {
+        code: "CZ",
+        name: "Czechia",
+        flag: "🇨🇿",
+        supportLevel: "supported",
+        defaultVatScheme: "9929",
+    },
+    {
         code: "DK",
         name: "Denmark",
         flag: "🇩🇰",
@@ -144,11 +151,29 @@ const BASE_COUNTRIES: BaseCountryInfo[] = ([
         defaultEnterpriseNumberScheme: "0218",
     },
     {
+        code: "LT",
+        name: "Lithuania",
+        flag: "🇱🇹",
+        supportLevel: "supported",
+        defaultVatScheme: "9937",
+        defaultEnterpriseNumberScheme: "0200",
+    },
+    {
         code: "LU",
         name: "Luxembourg",
         flag: "🇱🇺",
         supportLevel: "supported",
+        // A Luxembourg company records its matricule or its RCS number as its enterprise
+        // number, so there is no default scheme for it; a matricule derives its 9938
+        // identifier (see derivedIdentifiers in identifiers/countries/luxembourg.ts).
         defaultVatScheme: "9938",
+    },
+    {
+        code: "MT",
+        name: "Malta",
+        flag: "🇲🇹",
+        supportLevel: "supported",
+        defaultVatScheme: "9943",
     },
     {
         code: "NL",
