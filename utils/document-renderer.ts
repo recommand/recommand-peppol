@@ -95,6 +95,7 @@ type BillingTemplateData = {
   issueDate?: string | null;
   dueDate?: string | null;
   buyerReference?: string | null;
+  purchaseOrderReference?: string | null;
   billingPeriod?: string | null;
   note?: string | null;
   currency?: string | null;
@@ -482,6 +483,7 @@ function buildTemplateData(
     issueDate,
     dueDate,
     buyerReference,
+    purchaseOrderReference: parsed?.purchaseOrderReference ?? null,
     billingPeriod: formatBillingPeriod((parsed as any)?.billingPeriod),
     note: (parsed as any)?.note ?? null,
     currency: (parsed as any)?.currency ?? null,
