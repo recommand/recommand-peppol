@@ -14,6 +14,7 @@ import {
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
+import { withDocumentDeliveries } from "@peppol/data/deliveries";
 
 const server = new Server();
 
@@ -70,7 +71,7 @@ const _getInbox = server.get(
 async function _getInboxImplementation(c: GetInboxContext) {
     try {
         const { companyId } = c.req.valid("query");
-        const documents = await getInbox(c.var.team.id, companyId);
+        const documents = await withDocumentDeliveries(await getInbox(c.var.team.id, companyId));
         return c.json(actionSuccess({ documents }));
     } catch (error) {
         return c.json(actionFailure("Failed to fetch inbox documents"), 500);

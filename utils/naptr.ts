@@ -38,13 +38,7 @@ const NO_SUCH_RECORD_CODES = new Set(["ENOTFOUND", "ENODATA"]);
  */
 export const smlResolver = new dns.Resolver({ timeout: 2000, tries: 2 });
 
-type SmlResolver = Pick<InstanceType<typeof dns.Resolver>, "resolveNaptr" | "resolveCname">;
-
-/**
- * What DNS said about a name: `found` when it holds the record, `absent` when the DNS
- * server answered that it does not, and `unknown` when no such answer came.
- */
-export type DnsLookup = { status: "found" } | { status: "absent" } | { status: "unknown" };
+type SmlResolver = Pick<InstanceType<typeof dns.Resolver>, "resolveNaptr">;
 
 /**
  * The SMP a participant's NAPTR record points to. A record that exists but names no
@@ -96,14 +90,4 @@ export async function resolveNaptr(hostname: string, resolver: SmlResolver = sml
     }
 
     return { status: "found", smpUrl };
-}
-
-/** Whether a CNAME record exists for a name, the way the SML published participants before NAPTR. */
-export async function lookUpCname(hostname: string, resolver: SmlResolver = smlResolver): Promise<DnsLookup> {
-    try {
-        const records = await resolver.resolveCname(hostname);
-        return records && records.length > 0 ? { status: "found" } : { status: "absent" };
-    } catch (error) {
-        return failedLookup(error);
-    }
 }

@@ -97,7 +97,6 @@ describe.skipIf(!testDatabaseUrl)("unregistering an identifier another company p
         naptrLookups++;
         return { status: "absent" };
       },
-      lookUpCname: async () => ({ status: "absent" }),
       smlResolver: {},
     }));
     // The event registry is set up when the app starts, which these tests do not do.

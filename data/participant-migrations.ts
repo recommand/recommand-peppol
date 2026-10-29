@@ -23,7 +23,7 @@ import {
   startOutboundMigration as smpStartOutboundMigration,
 } from "./phoss-smp/migration";
 import { isRecommandSmpUrl } from "./phoss-smp/client";
-import { getSmpUrl } from "./recipient";
+import { lookUpSmpUrl, SmlLookupError } from "./recipient";
 
 // A Peppol participant can only be published for receiving by one SMP. Moving it to
 // another SMP without a gap goes through a one-time migration key: the SMP that has
@@ -364,13 +364,19 @@ export async function cancelOutboundMigration(migrationId: string): Promise<Part
   return await setStatus(migration.id, "cancelled");
 }
 
-/** Whether the SML still resolves the participant to our SMP. */
+/**
+ * Whether the SML still resolves the participant to our SMP. Throws when the SML gives
+ * no answer: the participant may still be routed to us, so nothing may be concluded.
+ */
 export async function isPublishedByRecommand(participant: Participant & { useTestNetwork: boolean }): Promise<boolean> {
-  const smpUrl = await getSmpUrl({
+  const lookup = await lookUpSmpUrl({
     recipientAddress: participantAddress(participant),
     useTestNetwork: participant.useTestNetwork,
   });
-  return isRecommandSmpUrl(smpUrl, participant.useTestNetwork);
+  if (lookup.status === "unknown") {
+    throw new SmlLookupError(participantAddress(participant));
+  }
+  return lookup.status === "found" && isRecommandSmpUrl(lookup.smpUrl, participant.useTestNetwork);
 }
 
 export type OutboundFinalization = {
