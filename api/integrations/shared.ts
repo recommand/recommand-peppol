@@ -7,7 +7,9 @@ import { stateSchema } from "@peppol/types/integration/state";
 export const integrationResponse = z.object({
     id: z.string(),
     teamId: z.string(),
-    companyId: z.string(),
+    companyId: z.string().openapi({
+        description: "The ID of the company the integration is for",
+    }),
     manifest: manifestSchema,
     configuration: configurationSchema,
     state: stateSchema,

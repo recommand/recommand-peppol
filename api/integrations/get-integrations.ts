@@ -24,7 +24,9 @@ const getIntegrationsRouteDescription = describeRoute({
 });
 
 const getIntegrationsQuerySchema = z.object({
-    companyId: z.string().optional(),
+    companyId: z.string().optional().openapi({
+        description: "Return the integrations of this company. Leave it out to list all of the team's integrations.",
+    }),
 });
 
 const getIntegrationsParamSchemaWithTeamId = z.object({
