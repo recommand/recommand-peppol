@@ -451,7 +451,10 @@ type FrenchB2CReportingContext = Context<
 >;
 
 const submitFrenchB2CReportParamSchema = z.object({
-  companyId: z.string(),
+  companyId: z.string().openapi({
+    description:
+      "The ID of the company the report is for. It must be registered for French e-reporting first.",
+  }),
 });
 
 const _submitFrenchB2CReport = server.post(
@@ -507,7 +510,10 @@ type FrenchB2BiReportingContext = Context<
 >;
 
 const submitFrenchB2BiReportParamSchema = z.object({
-  companyId: z.string(),
+  companyId: z.string().openapi({
+    description:
+      "The ID of the company the report is for. It must be registered for French e-reporting first.",
+  }),
 });
 
 const _submitFrenchB2BiReport = server.post(

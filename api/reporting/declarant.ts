@@ -174,7 +174,9 @@ Calling this endpoint again updates the VAT regime and exigibility. Changing the
 });
 
 const getFrenchReportingDeclarantParamSchema = z.object({
-  companyId: z.string(),
+  companyId: z.string().openapi({
+    description: "The ID of the company to get the French e-reporting registration for",
+  }),
 });
 
 const _getFrenchReportingDeclarant = server.get(
@@ -207,7 +209,9 @@ type RegisterFrenchReportingDeclarantContext = Context<
 >;
 
 const registerFrenchReportingDeclarantParamSchema = z.object({
-  companyId: z.string(),
+  companyId: z.string().openapi({
+    description: "The ID of the company to register for French e-reporting",
+  }),
 });
 
 const _registerFrenchReportingDeclarant = server.put(

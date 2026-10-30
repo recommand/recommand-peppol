@@ -28,6 +28,9 @@ const getIdentifierRouteDescription = describeRoute({
 });
 
 const getIdentifierParamSchema = z.object({
+    companyId: z.string().openapi({
+        description: "The ID of the company the identifier belongs to",
+    }),
     identifierId: z.string().openapi({
         description: "The ID of the identifier to retrieve",
     }),
