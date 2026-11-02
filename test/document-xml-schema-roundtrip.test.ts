@@ -173,7 +173,9 @@ function normalizeBillingDocument<T extends BillingDocument>(document: T): T {
     ...line,
     netAmount: calculateLineAmount(line),
   }));
-  const withLines = { ...document, lines };
+  // Only the seller has a tax registration identifier (BT-32).
+  const { taxRegistrationId: _taxRegistrationId, ...buyer } = document.buyer ?? {};
+  const withLines = { ...document, ...(document.buyer && { buyer }), lines };
   const vat = calculateVat({ document: withLines, isDocumentValidationEnforced: false });
   const totals = calculateTotals({ ...withLines, vat, totals: undefined });
 

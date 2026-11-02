@@ -55,6 +55,7 @@ type TemplateParty = {
   city?: string | null;
   country?: string | null;
   vatNumber?: string | null;
+  taxRegistrationId?: string | null;
   email?: string | null;
   phone?: string | null;
 };
@@ -346,6 +347,7 @@ function buildTemplateData(
       city: p.city ?? null,
       country: p.country ?? null,
       vatNumber: p.vatNumber ?? null,
+      taxRegistrationId: p.taxRegistrationId ?? null,
       email: p.email ?? null,
       phone: p.phone ?? null,
     };

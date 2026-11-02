@@ -125,6 +125,11 @@ export const partySchema = z
       description:
         "The national registration number without a country prefix, paired with `enterpriseNumberScheme`.",
     }),
+    taxRegistrationId: z.string().min(1).nullish().openapi({
+      examples: ["Foretaksregisteret"],
+      description:
+        "The seller's tax registration identifier (BT-32): a local tax number, or a statement of the seller's registered tax status that the seller's country requires. A Norwegian AS or ASA states `Foretaksregisteret`, a Swedish seller approved for F-tax states `Godkänd för F-skatt`. Only the seller has one: it is refused on the buyer, and not read from a received buyer.",
+    }),
     partyIdentifiers: z.array(partyIdentifierSchema).nullish().openapi({
       examples: [[{ identifier: "50012345" }]],
       description:

@@ -5,6 +5,7 @@ import { parsePeppolAddress } from "../../peppol-address";
 import { resolveBuyerReference } from "../../buyer-reference";
 import { billingPeriodToUBL } from "../../billing-period";
 import { partyIdentifiersToUBL } from "../../party-identifiers";
+import { partyTaxSchemesToUBL } from "../../tax-registration";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -156,14 +157,7 @@ export function prebuildCreditNoteUBL({
               "cbc:IdentificationCode": creditNote.seller.country,
             },
           },
-          ...(creditNote.seller.vatNumber && {
-            "cac:PartyTaxScheme": {
-              "cbc:CompanyID": creditNote.seller.vatNumber,
-              "cac:TaxScheme": {
-                "cbc:ID": "VAT",
-              },
-            },
-          }),
+          ...partyTaxSchemesToUBL(creditNote.seller, "seller"),
           "cac:PartyLegalEntity": {
             "cbc:RegistrationName": creditNote.seller.name,
             ...(creditNote.seller.enterpriseNumber && { "cbc:CompanyID": {
@@ -199,14 +193,7 @@ export function prebuildCreditNoteUBL({
               "cbc:IdentificationCode": creditNote.buyer.country,
             },
           },
-          ...(creditNote.buyer.vatNumber && {
-            "cac:PartyTaxScheme": {
-              "cbc:CompanyID": creditNote.buyer.vatNumber,
-              "cac:TaxScheme": {
-                "cbc:ID": "VAT",
-              },
-            },
-          }),
+          ...partyTaxSchemesToUBL(creditNote.buyer, "buyer"),
           "cac:PartyLegalEntity": {
             "cbc:RegistrationName": creditNote.buyer.name,
             ...(creditNote.buyer.enterpriseNumber && { "cbc:CompanyID": {
