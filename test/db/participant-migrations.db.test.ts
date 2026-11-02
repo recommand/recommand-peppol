@@ -16,6 +16,8 @@ let cancelOutboundMigration: typeof import("../../data/participant-migrations").
 let finalizeOutboundMigration: typeof import("../../data/participant-migrations").finalizeOutboundMigration;
 let getParticipantMigrations: typeof import("../../data/participant-migrations").getParticipantMigrations;
 let createCompanyIdentifier: typeof import("../../data/company-identifiers").createCompanyIdentifier;
+let updateCompanyIdentifier: typeof import("../../data/company-identifiers").updateCompanyIdentifier;
+let deleteCompanyIdentifier: typeof import("../../data/company-identifiers").deleteCompanyIdentifier;
 let upsertCompanyRegistrations: typeof import("../../data/smp-providers").upsertCompanyRegistrations;
 let updateCompany: typeof import("../../data/companies").updateCompany;
 
@@ -108,7 +110,7 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
     }));
     ({ requestInboundMigration, startOutboundMigration, cancelOutboundMigration, finalizeOutboundMigration, getParticipantMigrations } =
       await import("../../data/participant-migrations"));
-    ({ createCompanyIdentifier } = await import("../../data/company-identifiers"));
+    ({ createCompanyIdentifier, updateCompanyIdentifier, deleteCompanyIdentifier } = await import("../../data/company-identifiers"));
     ({ upsertCompanyRegistrations } = await import("../../data/smp-providers"));
     ({ updateCompany } = await import("../../data/companies"));
     await seedTeam(TEAM_STRICT, "strict");
@@ -282,6 +284,104 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
         requestInboundMigration({ companyId: "c_fr", identifierId: "c_fr_0208", migrationKey: KEY })
       ).rejects.toThrow("partner SMP");
       expect(await migrationRows("c_fr")).toEqual([]);
+    });
+  });
+
+  describe("removing or changing an identifier", () => {
+    // The previous provider refuses a key it has voided; a stale key used for a
+    // re-added identifier fails the registration it is part of.
+    const staleKeyRefused = (url: string) =>
+      url.includes("/migration/inbound/")
+        ? new Response("Failed to confirm the migration for participant in SML, hence the migration failed.", { status: 500 })
+        : undefined;
+
+    it("forgets the key of a removed identifier, so adding it again does not use it", async () => {
+      await seedCompany("c_removed", TEAM_LAX, {
+        isVerified: true,
+        isSmpRecipient: false,
+        identifiers: [["0208", "0123456749"], ["9925", "be0123456749"]],
+      });
+      await requestInboundMigration({ companyId: "c_removed", identifierId: "c_removed_0208", migrationKey: KEY });
+
+      await deleteCompanyIdentifier({ companyId: "c_removed", identifierId: "c_removed_0208", skipSmpRegistration: true, useTestNetwork: false });
+      expect(await migrationRows("c_removed")).toEqual([
+        { address: "0208:0123456749", direction: "inbound", status: "cancelled", key: KEY, error: "The identifier was removed or changed" },
+      ]);
+
+      await createCompanyIdentifier({
+        companyIdentifier: { companyId: "c_removed", scheme: "0208", identifier: "0123456749" },
+        skipSmpRegistration: true,
+        useTestNetwork: false,
+      });
+      smpScript = staleKeyRefused;
+      await updateCompany({ id: "c_removed", teamId: TEAM_LAX, isSmpRecipient: true });
+
+      expect(smpUrls("/migration/inbound/")).toEqual([]);
+      const { rows } = await pool.query(`SELECT is_smp_recipient FROM peppol_companies WHERE id = 'c_removed'`);
+      expect(rows[0].is_smp_recipient).toBe(true);
+    });
+
+    it("forgets the key of an identifier given another value, also when it is changed back", async () => {
+      await seedCompany("c_edited", TEAM_LAX, { isVerified: true, isSmpRecipient: false });
+      await requestInboundMigration({ companyId: "c_edited", identifierId: "c_edited_0208", migrationKey: KEY });
+
+      await updateCompanyIdentifier({
+        companyIdentifier: { id: "c_edited_0208", companyId: "c_edited", scheme: "0088", identifier: "5400000000003" },
+        skipSmpRegistration: true,
+        useTestNetwork: false,
+      });
+      expect(await migrationRows("c_edited")).toEqual([
+        { address: "0208:0123456749", direction: "inbound", status: "cancelled", key: KEY, error: "The identifier was removed or changed" },
+      ]);
+
+      await updateCompanyIdentifier({
+        companyIdentifier: { id: "c_edited_0208", companyId: "c_edited", scheme: "0208", identifier: "0123456749" },
+        skipSmpRegistration: true,
+        useTestNetwork: false,
+      });
+      smpScript = staleKeyRefused;
+      await updateCompany({ id: "c_edited", teamId: TEAM_LAX, isSmpRecipient: true });
+
+      expect(smpUrls("/migration/inbound/")).toEqual([]);
+      expect(await migrationRows("c_edited")).toEqual([
+        { address: "0208:0123456749", direction: "inbound", status: "cancelled", key: KEY, error: "The identifier was removed or changed" },
+      ]);
+    });
+
+    it("keeps the key when an identifier is saved with the same value", async () => {
+      await seedCompany("c_same", TEAM_LAX, { isVerified: true, isSmpRecipient: false });
+      await requestInboundMigration({ companyId: "c_same", identifierId: "c_same_0208", migrationKey: KEY });
+
+      await updateCompanyIdentifier({
+        companyIdentifier: { id: "c_same_0208", companyId: "c_same", scheme: "0208", identifier: "0123456749" },
+        skipSmpRegistration: true,
+        useTestNetwork: false,
+      });
+      expect(await migrationRows("c_same")).toEqual([
+        { address: "0208:0123456749", direction: "inbound", status: "pending", key: KEY, error: null },
+      ]);
+    });
+
+    it("refuses to remove or change an identifier that is migrating out", async () => {
+      await seedCompany("c_leaving", TEAM_LAX, { identifiers: [["0208", "0123456749"], ["9925", "be0123456749"]] });
+      smpScript = (url) => (url.includes("/migration/outbound/start/") ? new Response(outboundOk) : undefined);
+      await startOutboundMigration({ companyId: "c_leaving", identifierId: "c_leaving_0208" });
+      smpRequests.length = 0;
+
+      await expect(
+        deleteCompanyIdentifier({ companyId: "c_leaving", identifierId: "c_leaving_0208", skipSmpRegistration: false, useTestNetwork: false })
+      ).rejects.toThrow("Finalize or cancel it first");
+      await expect(
+        updateCompanyIdentifier({
+          companyIdentifier: { id: "c_leaving_0208", companyId: "c_leaving", scheme: "0088", identifier: "5400000000003" },
+          skipSmpRegistration: false,
+          useTestNetwork: false,
+        })
+      ).rejects.toThrow("Finalize or cancel it first");
+
+      expect(smpRequests).toEqual([]);
+      expect(await identifierRows("c_leaving")).toEqual(["0208:0123456749", "9925:be0123456749"]);
+      expect((await migrationRows("c_leaving")).map((row) => row.status)).toEqual(["inProgress"]);
     });
   });
 
