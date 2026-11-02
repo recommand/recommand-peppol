@@ -20,6 +20,8 @@ export type DocumentDetails = {
   amount?: string;
   currency?: string;
   senderName?: string;
+  /** The issuer's email address as the document states it, where a reply to the document belongs. */
+  senderEmail?: string;
   receiverName?: string;
 };
 

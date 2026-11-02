@@ -40,6 +40,7 @@ export type EmailFallbackRequest = {
   to: string[];
   subject?: string;
   htmlBody?: string;
+  replyTo?: string;
   /** Set while a run holds the request; a stopped run leaves it, and a later run takes over once it is stale. */
   startedAt?: string;
   /** Per address, the delivery it is or was sent as. Noted before mailing, so no address is ever mailed twice. */
@@ -59,7 +60,10 @@ export const EMAIL_FALLBACK_CLAIM_STALE_MS = 15 * 60 * 1000;
  * An address named twice is mailed once.
  */
 export function emailFallbackRequest(
-  email: { when: "always" | "on_peppol_failure"; to: string[]; subject?: string; htmlBody?: string } | null | undefined,
+  email:
+    | { when: "always" | "on_peppol_failure"; to: string[]; subject?: string; htmlBody?: string; replyTo?: string }
+    | null
+    | undefined,
   sentPeppol: boolean
 ): EmailFallbackRequest | null {
   if (!email || email.when !== "on_peppol_failure" || !sentPeppol || email.to.length === 0) {
@@ -69,6 +73,7 @@ export function emailFallbackRequest(
     to: [...new Set(email.to)],
     ...(email.subject !== undefined ? { subject: email.subject } : {}),
     ...(email.htmlBody !== undefined ? { htmlBody: email.htmlBody } : {}),
+    ...(email.replyTo !== undefined ? { replyTo: email.replyTo } : {}),
   };
 }
 
@@ -118,6 +123,7 @@ export type EmailFallbackDependencies = {
     to: string;
     subject?: string;
     htmlBody?: string;
+    replyTo?: string;
     xmlDocument: string | null;
     type: StoredDocumentType;
     parsedDocument: ParsedDocument | null;
@@ -199,6 +205,7 @@ export async function runEmailFallback(
         to,
         subject: document.request.subject,
         htmlBody: document.request.htmlBody,
+        replyTo: document.request.replyTo,
         xmlDocument: payload.xml,
         type: document.type,
         parsedDocument: payload.parsed,

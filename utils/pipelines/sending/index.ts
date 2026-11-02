@@ -281,6 +281,7 @@ export async function sendingPipeline(c: SendingContext) {
           to,
           subject: email.subject,
           htmlBody: email.htmlBody,
+          replyTo: email.replyTo,
           xmlDocument,
           type: prepared.type as any,
           parsedDocument: prepared.parsed,
