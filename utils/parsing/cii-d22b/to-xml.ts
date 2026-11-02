@@ -5,6 +5,7 @@ import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
 import { resolveBuyerReference } from "../buyer-reference";
 import { partyIdentifiersToCII } from "../party-identifiers";
+import { taxRegistrationsToCII } from "../tax-registration";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -127,11 +128,7 @@ function tradeParty(party: Party, peppolAddress: string): XmlNode {
     "ram:URIUniversalCommunication": {
       "ram:URIID": id(parsedAddress.identifier, parsedAddress.schemeId),
     },
-    ...(party.vatNumber && {
-      "ram:SpecifiedTaxRegistration": {
-        "ram:ID": id(party.vatNumber, "VA"),
-      },
-    }),
+    ...taxRegistrationsToCII(party),
   };
 }
 

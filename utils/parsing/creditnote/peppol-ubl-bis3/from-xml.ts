@@ -5,6 +5,7 @@ import type { SelfBillingCreditNote } from "../../self-billing-creditnote/schema
 import { getPaymentKeyByCode } from "@peppol/utils/payment-means";
 import { parseUblBillingPeriod } from "../../billing-period";
 import { parseUblPartyIdentifiers } from "../../party-identifiers";
+import { parseUblTaxRegistration } from "../../tax-registration";
 import { parseUblPaymentMandate } from "../../payment-mandate";
 import { parseUblCommodityClassifications } from "../../commodity-classifications";
 
@@ -73,7 +74,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     city: getTextContent(sellerParty.PostalAddress?.CityName),
     postalZone: getTextContent(sellerParty.PostalAddress?.PostalZone),
     country: getTextContent(sellerParty.PostalAddress?.Country?.IdentificationCode),
-    vatNumber: sellerParty.PartyTaxScheme?.CompanyID ? getTextContent(sellerParty.PartyTaxScheme?.CompanyID) : null,
+    ...parseUblTaxRegistration(sellerParty),
     enterpriseNumberScheme: getNullableTextContent(sellerParty.PartyLegalEntity?.CompanyID?.["@_schemeID"]),
     enterpriseNumber: getNullableTextContent(
       sellerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
@@ -97,7 +98,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     city: getTextContent(buyerParty.PostalAddress?.CityName),
     postalZone: getTextContent(buyerParty.PostalAddress?.PostalZone),
     country: getTextContent(buyerParty.PostalAddress?.Country?.IdentificationCode),
-    vatNumber: buyerParty.PartyTaxScheme?.CompanyID ? getTextContent(buyerParty.PartyTaxScheme?.CompanyID) : null,
+    ...parseUblTaxRegistration(buyerParty),
     enterpriseNumberScheme: getNullableTextContent(buyerParty.PartyLegalEntity?.CompanyID?.["@_schemeID"]),
     enterpriseNumber: getNullableTextContent(
       buyerParty.PartyLegalEntity?.CompanyID?.["#text"] ??

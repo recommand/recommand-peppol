@@ -54,6 +54,7 @@ export const BILLING_DOCUMENT_TEMPLATE = `<!DOCTYPE html>
             <p class="text-slate-600">{{postalZone}} {{city}}</p>
             <p class="text-slate-600">{{country}}</p>
             {{#vatNumber}}<p class="mt-1 text-xs text-slate-500">VAT {{vatNumber}}</p>{{/vatNumber}}
+            {{#taxRegistrationId}}<p class="mt-1 text-xs text-slate-500">{{taxRegistrationId}}</p>{{/taxRegistrationId}}
             {{#email}}<p class="mt-1 text-xs text-slate-500">{{email}}</p>{{/email}}
             {{#phone}}<p class="mt-1 text-xs text-slate-500">{{phone}}</p>{{/phone}}
           {{/seller}}

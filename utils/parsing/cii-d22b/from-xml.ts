@@ -8,6 +8,7 @@ import {
   getTextContent,
 } from "../xml-helpers";
 import { parseCiiPartyIdentifiers } from "../party-identifiers";
+import { parseCiiTaxRegistration } from "../tax-registration";
 import { parseCiiCommodityClassifications } from "../commodity-classifications";
 
 const parser = new XMLParser({
@@ -83,9 +84,7 @@ function party(tradeParty: any) {
     city: getTextContent(tradeParty.PostalTradeAddress?.CityName),
     postalZone: getTextContent(tradeParty.PostalTradeAddress?.PostcodeCode),
     country: getTextContent(tradeParty.PostalTradeAddress?.CountryID),
-    vatNumber: tradeParty.SpecifiedTaxRegistration?.ID
-      ? getTextContent(tradeParty.SpecifiedTaxRegistration.ID)
-      : null,
+    ...parseCiiTaxRegistration(tradeParty),
     enterpriseNumberScheme: getNullableTextContent(
       tradeParty.SpecifiedLegalOrganization?.ID?.["@_schemeID"]
     ),
