@@ -60,12 +60,9 @@ export async function sendingPipeline(c: SendingContext) {
     const documentId = `doc_${ulid()}`;
     const recipientAddress = normalizePeppolAddress(input.recipient);
 
-    const documentType = getDocumentType(input.documentType);
-    if (recipientAddress === null && documentType?.class !== "billing") {
-      throw new SendingFailure(
-        "Only billing document types (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote) are supported when recipient is null.",
-        400,
-      );
+    // Raw XML only says what it is once it is read, so its type is checked below.
+    if (recipientAddress === null && input.documentType !== "xml") {
+      assertEmailOnlyDocumentType(input.documentType, BILLING_ONLY_WITHOUT_RECIPIENT);
     }
     if (recipientAddress === null && !input.email?.to.length) {
       throw new SendingFailure(
@@ -121,8 +118,10 @@ export async function sendingPipeline(c: SendingContext) {
     // Without a Peppol recipient a document is emailed as a PDF, unless the caller names
     // the format it is to be written in: it is then written, validated and attached as
     // it would be for a Peppol recipient, so a buyer who is not on Peppol still receives
-    // a structured document.
-    const isStructuredEmail = recipientAddress === null && !!input.doctypeId;
+    // a structured document. Raw XML already is one, and is emailed as it was given.
+    const isStructuredEmail =
+      recipientAddress === null &&
+      (input.documentType === "xml" || !!input.doctypeId);
     if (isStructuredEmail) {
       assertNotFranceRegulatedByEmailOnly({
         docTypeId: input.doctypeId,
@@ -153,6 +152,15 @@ export async function sendingPipeline(c: SendingContext) {
       processId: prepared.processId,
     });
 
+    // Checked first: a French regulated document without a Peppol recipient is refused
+    // for that reason, whatever the company is set up for.
+    if (isStructuredEmail) {
+      assertNotFranceRegulatedByEmailOnly({
+        docTypeId: prepared.docTypeId,
+        processId: prepared.processId,
+      });
+    }
+
     // We want to ensure French regulated flows are only supported for companies in France and over the AT access point.
     assertFranceRegulatedSendingSupported({
       docTypeId: prepared.docTypeId,
@@ -160,13 +168,6 @@ export async function sendingPipeline(c: SendingContext) {
       company,
       isPlayground,
     });
-
-    if (isStructuredEmail) {
-      assertNotFranceRegulatedByEmailOnly({
-        docTypeId: prepared.docTypeId,
-        processId: prepared.processId,
-      });
-    }
 
     const xmlDocument =
       recipientAddress === null && !isStructuredEmail ? null : prepared.xml;
@@ -186,6 +187,12 @@ export async function sendingPipeline(c: SendingContext) {
     const validation = xmlDocument
       ? await validateDocument(xmlDocument, prepared.docTypeId)
       : undefined;
+
+    // After validation, so XML in a known format that could not be read is refused with
+    // the rules it breaks rather than only for its unknown type.
+    if (recipientAddress === null && input.documentType === "xml") {
+      assertEmailOnlyDocumentType(prepared.type, RAW_XML_BILLING_ONLY_WITHOUT_RECIPIENT);
+    }
 
     let sentPeppol = false;
     let as4Response: SendAs4Response | null = null;
@@ -439,6 +446,22 @@ async function isRecipientUnregistered(options: {
     recipientAddress: options.recipientAddress,
     useTestNetwork: options.useTestNetwork,
   });
+}
+
+const BILLING_ONLY_WITHOUT_RECIPIENT =
+  "Only billing document types (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote) are supported when recipient is null.";
+const RAW_XML_BILLING_ONLY_WITHOUT_RECIPIENT =
+  "A raw XML document can only be sent without a Peppol recipient when it is an invoice, credit note, self-billing invoice or self-billing credit note in a supported format.";
+
+/**
+ * Email is a channel for billing documents only: a message level response or a report
+ * goes to a Peppol participant or nowhere. A raw XML document that could not be read as
+ * one of the supported formats has no known type, and is refused as well.
+ */
+function assertEmailOnlyDocumentType(type: string, message: string): void {
+  if (getDocumentType(type)?.class !== "billing") {
+    throw new SendingFailure(message, 400);
+  }
 }
 
 export default sendingPipeline;
