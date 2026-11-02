@@ -17,6 +17,7 @@ let finalizeOutboundMigration: typeof import("../../data/participant-migrations"
 let getParticipantMigrations: typeof import("../../data/participant-migrations").getParticipantMigrations;
 let createCompanyIdentifier: typeof import("../../data/company-identifiers").createCompanyIdentifier;
 let upsertCompanyRegistrations: typeof import("../../data/smp-providers").upsertCompanyRegistrations;
+let updateCompany: typeof import("../../data/companies").updateCompany;
 
 const TEAM_STRICT = "team_strict";
 const TEAM_LAX = "team_lax";
@@ -60,14 +61,14 @@ async function seedTeam(id: string, verificationRequirements: "strict" | "lax") 
 async function seedCompany(
   id: string,
   teamId: string,
-  options: { isVerified?: boolean; identifiers?: [string, string][]; smpProvider?: string } = {}
+  options: { isVerified?: boolean; isSmpRecipient?: boolean; identifiers?: [string, string][]; smpProvider?: string } = {}
 ) {
   const smpProvider = options.smpProvider ?? "recommand-smp1";
   await pool.query(
     `INSERT INTO peppol_companies (id, team_id, name, address, postal_code, city, country, enterprise_number_scheme, enterprise_number, vat_number,
        is_smp_recipient, is_verified, access_point_provider, smp_provider)
-     VALUES ($1, $2, 'Example BV', 'Straat 1', '9000', 'Gent', 'BE', '0208', '0123456749', 'BE0123456749', true, $3, 'recommand-ap1', $4)`,
-    [id, teamId, options.isVerified ?? false, smpProvider]
+     VALUES ($1, $2, 'Example BV', 'Straat 1', '9000', 'Gent', 'BE', '0208', '0123456749', 'BE0123456749', $5, $3, 'recommand-ap1', $4)`,
+    [id, teamId, options.isVerified ?? false, smpProvider, options.isSmpRecipient ?? true]
   );
   const identifiers = options.identifiers ?? [["0208", "0123456749"]];
   for (const [scheme, identifier] of identifiers) {
@@ -109,6 +110,7 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
       await import("../../data/participant-migrations"));
     ({ createCompanyIdentifier } = await import("../../data/company-identifiers"));
     ({ upsertCompanyRegistrations } = await import("../../data/smp-providers"));
+    ({ updateCompany } = await import("../../data/companies"));
     await seedTeam(TEAM_STRICT, "strict");
     await seedTeam(TEAM_LAX, "lax");
   });
@@ -164,6 +166,61 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
       expect(await migrationRows("c_wait")).toEqual([
         { address: "0208:0123456749", direction: "inbound", status: "completed", key: KEY, error: null },
       ]);
+    });
+
+    it("keeps the key for a verified company that does not receive yet and uses it when it starts receiving", async () => {
+      await seedCompany("c_recipient", TEAM_LAX, { isVerified: true, isSmpRecipient: false });
+
+      const migration = await requestInboundMigration({ companyId: "c_recipient", identifierId: "c_recipient_0208", migrationKey: KEY });
+      expect(migration.status).toBe("pending");
+      expect(smpRequests).toEqual([]);
+
+      // Another SMP publishes the participant, so creating it ourselves is refused and
+      // only the key can bring it over.
+      smpScript = (url) =>
+        url.includes("/migration/inbound/")
+          ? new Response(inboundOk)
+          : url === "https://smp.net.recommand.com/iso6523-actorid-upis::0208:0123456749"
+            ? new Response("Participant is registered at another SMP", { status: 400 })
+            : undefined;
+      await updateCompany({ id: "c_recipient", teamId: TEAM_LAX, isSmpRecipient: true });
+
+      expect(smpUrls("/migration/inbound/")).toHaveLength(1);
+      expect(await migrationRows("c_recipient")).toEqual([
+        { address: "0208:0123456749", direction: "inbound", status: "completed", key: KEY, error: null },
+      ]);
+      const { rows } = await pool.query(`SELECT is_smp_recipient FROM peppol_companies WHERE id = 'c_recipient'`);
+      expect(rows[0].is_smp_recipient).toBe(true);
+    });
+
+    it("does not use a key while another identifier of the company still has to come over", async () => {
+      // Both participants are on another SMP, but there is a key for only one. Using it
+      // and then failing on the other would leave the first one published nowhere once
+      // the registration is rolled back.
+      await seedCompany("c_partial", TEAM_LAX, {
+        isVerified: true,
+        isSmpRecipient: false,
+        identifiers: [["0208", "0123456749"], ["9925", "be0123456749"]],
+      });
+      smlTarget = "https://smp.other.example";
+      await requestInboundMigration({ companyId: "c_partial", identifierId: "c_partial_0208", migrationKey: KEY });
+
+      smpScript = (url) =>
+        url.includes("/migration/inbound/")
+          ? new Response(inboundOk)
+          : url === "https://smp.net.recommand.com/iso6523-actorid-upis::9925:be0123456749"
+            ? new Response("Participant is registered at another SMP", { status: 400 })
+            : undefined;
+      await expect(updateCompany({ id: "c_partial", teamId: TEAM_LAX, isSmpRecipient: true })).rejects.toThrow(
+        "9925:be0123456749"
+      );
+
+      expect(smpUrls("/migration/inbound/")).toEqual([]);
+      expect(await migrationRows("c_partial")).toEqual([
+        { address: "0208:0123456749", direction: "inbound", status: "pending", key: KEY, error: null },
+      ]);
+      const { rows } = await pool.query(`SELECT is_smp_recipient FROM peppol_companies WHERE id = 'c_partial'`);
+      expect(rows[0].is_smp_recipient).toBe(false);
     });
 
     it("records a refused key as failed with the reason and reports it", async () => {
@@ -287,6 +344,14 @@ describe.skipIf(!testDatabaseUrl)("participant migrations against PostgreSQL", (
     it("refuses to let go of an identifier we do not publish", async () => {
       await seedCompany("c_unpublished", TEAM_STRICT, { isVerified: false });
       await expect(startOutboundMigration({ companyId: "c_unpublished", identifierId: "c_unpublished_0208" })).rejects.toThrow(
+        "nothing to migrate out"
+      );
+      expect(smpRequests).toEqual([]);
+    });
+
+    it("refuses to let go of an identifier of a company that does not receive", async () => {
+      await seedCompany("c_send_only", TEAM_LAX, { isVerified: true, isSmpRecipient: false });
+      await expect(startOutboundMigration({ companyId: "c_send_only", identifierId: "c_send_only_0208" })).rejects.toThrow(
         "nothing to migrate out"
       );
       expect(smpRequests).toEqual([]);

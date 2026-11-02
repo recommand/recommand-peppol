@@ -13,13 +13,18 @@ import type { CompanyIdentifier } from "@peppol/data/company-identifiers";
 import type { ParticipantMigration } from "@peppol/data/participant-migrations";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { useTranslation } from "@core/hooks/use-translation";
+import { getPlayground, type PlaygroundType } from "@peppol/lib/client/playgrounds";
+import { shouldInteractWithPeppolNetwork } from "@peppol/utils/playground";
 
 const client = rc<CompanyIdentifiers>("peppol");
 
 type CompanyIdentifiersManagerProps = {
     teamId: string;
     companyId: string;
-    /** Migration keys only apply to recipient registrations; a send-only company gets no migration controls. */
+    /**
+     * Whether the company receives documents. A company that does not yet can still take
+     * a migration key: it is used when the company is registered as a recipient.
+     */
     isSmpRecipient?: boolean;
     /**
      * Whether the company's identifiers are currently registered on the SMP. Until then, for
@@ -71,8 +76,12 @@ export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = 
     const [supportedSchemes, setSupportedSchemes] = useState<string[] | null>(null);
     const restricted = supportedSchemes !== null;
     const defaultScheme = supportedSchemes?.length === 1 ? supportedSchemes[0] : "";
+    // The team's playground settings, looked up for the team this list belongs to. Until
+    // they are known, migration controls stay hidden rather than flash in a playground.
+    const [playground, setPlayground] = useState<PlaygroundType | null | undefined>(undefined);
     // A restricted scheme list means a partner SMP publishes this company, and partner SMPs have no migration keys.
-    const canMigrate = isSmpRecipient && !restricted;
+    // A playground off the test network registers nothing, so there is nothing to take over either.
+    const canMigrate = !restricted && playground !== undefined && shouldInteractWithPeppolNetwork({ isPlayground: playground?.isPlayground, useTestNetwork: playground?.useTestNetwork });
     // A new identifier is never ours yet; an existing one only needs a key while the company is not published.
     const canMigrateExisting = canMigrate && !publishedOnSmp;
 
@@ -80,6 +89,11 @@ export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = 
         fetchIdentifiers();
         fetchSupportedSchemes();
     }, [teamId, companyId]);
+
+    useEffect(() => {
+        setPlayground(undefined);
+        getPlayground(teamId).then(setPlayground);
+    }, [teamId]);
 
     const fetchSupportedSchemes = async () => {
         try {
@@ -160,6 +174,8 @@ export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = 
 
             if (json.migration.status === "completed") {
                 toast.success(t`Identifier moved to Recommand`);
+            } else if (!isSmpRecipient) {
+                toast.success(t`Migration key stored. It is used as soon as you register the company as a recipient and, where required, the company is verified.`);
             } else {
                 toast.success(t`Migration key stored. It is used as soon as the company is verified and registered.`);
             }
@@ -400,7 +416,9 @@ export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = 
                                     onChange={(e) => setFormData({ ...formData, migrationKey: e.target.value })}
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    {t`Moving this identifier from another Peppol provider? Ask them for a migration key and enter it here. The identifier then moves to Recommand without a gap in reception.`}
+                                    {isSmpRecipient
+                                        ? t`Moving this identifier from another Peppol provider? Ask them for a migration key and enter it here. The identifier then moves to Recommand without a gap in reception.`
+                                        : t`Want to receive through Recommand on an identifier another Peppol provider holds? Ask them for a migration key and enter it here. It is used when you register the company as a recipient and, where required, the company is verified, so the identifier moves without a gap in reception.`}
                                 </p>
                             </div>
                         )}
@@ -489,7 +507,9 @@ export function CompanyIdentifiersManager({ teamId, companyId, isSmpRecipient = 
                                                 size={1}
                                             />
                                             <p className="text-xs text-muted-foreground">
-                                                {t`Enter the migration key your current Peppol provider issued for this identifier. The registration moves to Recommand without a gap in reception.`}
+                                                {isSmpRecipient
+                                                    ? t`Enter the migration key your current Peppol provider issued for this identifier. The registration moves to Recommand without a gap in reception.`
+                                                    : t`Enter the migration key your current Peppol provider issued for this identifier. It is used when you register the company as a recipient and, where required, the company is verified, so the identifier moves to Recommand without a gap in reception.`}
                                             </p>
                                         </div>
                                         <div className="flex gap-2 justify-end">

@@ -382,7 +382,7 @@ export default function CompanyDetailPage() {
         {activeTeam && (
           <div className="space-y-4">
             <CompanyIdentifiersManager
-              key={`${company.id}:${company.country}`}
+              key={`${company.id}:${company.country}:${company.isSmpRecipient}`}
               teamId={activeTeam.id}
               companyId={company.id}
               isSmpRecipient={company.isSmpRecipient}
