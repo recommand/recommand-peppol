@@ -21,6 +21,11 @@ describe("keeping the email fallback with the document", () => {
       subject: "Invoice 1",
       htmlBody: "<p>Hi</p>",
     });
+    expect(emailFallbackRequest({ ...email, replyTo: "billing@example.com" }, true)).toEqual({
+      to: ["a@example.com"],
+      subject: "Invoice 1",
+      replyTo: "billing@example.com",
+    });
   });
 
   it("keeps an address named twice only once, so it is only ever mailed once", () => {
@@ -72,7 +77,7 @@ function fakeDependencies(options: {
 }) {
   let request: EmailFallbackRequest | null = options.document?.request ?? null;
   const sent: string[] = [];
-  const messages: { to: string; metadata: Record<string, string> }[] = [];
+  const messages: { to: string; replyTo?: string; metadata: Record<string, string> }[] = [];
   const deliveries = new Map<string, EmailFallbackDelivery>(
     (options.existingDeliveries ?? []).map((delivery) => [delivery.id, delivery])
   );
@@ -108,7 +113,7 @@ function fakeDependencies(options: {
         throw new Error(`Mailbox ${email.to} rejected the message`);
       }
       sent.push(email.to);
-      messages.push({ to: email.to, metadata: email.metadata });
+      messages.push({ to: email.to, replyTo: email.replyTo, metadata: email.metadata });
       return { messageId: `msg-${sent.length}` };
     },
     async playgroundMemberAddresses() {
@@ -190,6 +195,16 @@ describe("sending the email fallback after a later failure", () => {
     ]);
     // The request is gone: a later report finds nothing left to do.
     expect(request()).toBeNull();
+  });
+
+  it("sends with the reply address the sender asked for", async () => {
+    const { deps, messages } = fakeDependencies({
+      document: { ...document, request: { ...document.request, replyTo: "billing@example.com" } },
+    });
+
+    await runEmailFallback("doc_1", deps);
+
+    expect(messages.map((message) => message.replyTo)).toEqual(["billing@example.com", "billing@example.com"]);
   });
 
   it("sends once when two failure reports arrive at the same time", async () => {

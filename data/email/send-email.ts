@@ -7,6 +7,7 @@ import {
 } from "@peppol/utils/document-filename";
 import { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
+import { z } from "zod";
 
 export { extractDocumentAttachments } from "@peppol/data/email/document-attachments";
 
@@ -17,6 +18,7 @@ export async function sendDocumentEmail(options: {
   to: string;
   subject?: string;
   htmlBody?: string;
+  replyTo?: string;
   isPlayground?: boolean;
   /** Sent with the message and returned in every report about it (see send-document-emails). */
   metadata?: Record<string, string>;
@@ -34,6 +36,7 @@ export async function sendDocumentEmail(options: {
       ? documentType.email.extractDocumentDetails(options.parsedDocument)
       : undefined;
   const senderName = details?.senderName ?? "";
+  const replyTo = documentEmailReplyTo(options.replyTo, details?.senderEmail);
 
   const subject =
     options.subject ??
@@ -71,8 +74,27 @@ export async function sendDocumentEmail(options: {
     to: options.to,
     subject: finalSubject,
     email: htmlBody,
+    replyTo,
     attachments: attachments,
     metadata: options.metadata,
   });
   return { messageId: result.messageId ?? null };
+}
+
+/**
+ * Where a reply to a document email goes: the address the sender asked for, else the
+ * issuer's address from the document, so a recipient who answers the email reaches
+ * the issuer rather than our sending address. An address in the document that the
+ * mail service would refuse is left out instead of failing the email.
+ */
+export function documentEmailReplyTo(
+  requested: string | undefined,
+  documentSenderEmail: string | undefined
+): string | undefined {
+  if (requested) {
+    return requested;
+  }
+  return documentSenderEmail && z.string().email().safeParse(documentSenderEmail).success
+    ? documentSenderEmail
+    : undefined;
 }

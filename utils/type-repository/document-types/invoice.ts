@@ -80,6 +80,7 @@ export const invoiceDocumentType: DocumentType<
         amount: document.totals?.payableAmount?.toString(),
         currency: document.totals ? "-" : undefined,
         senderName: senderName ?? undefined,
+        senderEmail: normalize(document.seller?.email) ?? undefined,
         receiverName: receiverName ?? undefined,
       };
     },

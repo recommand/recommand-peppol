@@ -83,6 +83,7 @@ export const selfBillingCreditNoteDocumentType: DocumentType<
         amount: document.totals?.payableAmount?.toString(),
         currency: document.totals ? "-" : undefined,
         senderName: senderName ?? undefined,
+        senderEmail: normalize(document.buyer?.email) ?? undefined,
         receiverName: receiverName ?? undefined,
       };
     },
