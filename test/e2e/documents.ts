@@ -350,7 +350,7 @@ export type DocumentVariant = {
   document: () => unknown;
   doctypeId?: string;
   processId?: string;
-  /** Only billing documents may be sent with a null recipient. */
+  /** Only billing documents may be sent with a null recipient; raw XML counts as the type it is read as. */
   isBillingType: boolean;
   /** PDF generation is rejected for message level responses and raw XML. */
   supportsPdf: boolean;
@@ -424,7 +424,7 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
     key: "xml",
     documentType: "xml",
     document: () => invoiceXmlDocument(),
-    isBillingType: false,
+    isBillingType: true,
     supportsPdf: false,
     storedDocTypeId: DOC_TYPE_ID.invoice,
     storedProcessId: PROCESS_ID.billing,
@@ -435,7 +435,7 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
     documentType: "xml",
     document: () => invoiceXmlDocument(),
     doctypeId: DOC_TYPE_ID.invoice,
-    isBillingType: false,
+    isBillingType: true,
     supportsPdf: false,
     storedDocTypeId: DOC_TYPE_ID.invoice,
     storedProcessId: PROCESS_ID.billing,
@@ -446,7 +446,7 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
     documentType: "xml",
     document: () => invoiceXmlDocument(),
     processId: CUSTOM_PROCESS_ID,
-    isBillingType: false,
+    isBillingType: true,
     supportsPdf: false,
     refusedBy: (receiverId) =>
       `Recipient ${receiverId} is not registered to receive document type ${DOC_TYPE_ID.invoice} under process ${CUSTOM_PROCESS_ID}.`,
@@ -460,7 +460,7 @@ export const DOCUMENT_VARIANTS: DocumentVariant[] = [
     document: () => invoiceXmlDocument(),
     doctypeId: DOC_TYPE_ID.invoice,
     processId: CUSTOM_PROCESS_ID,
-    isBillingType: false,
+    isBillingType: true,
     supportsPdf: false,
     refusedBy: (receiverId) =>
       `Recipient ${receiverId} is not registered to receive document type ${DOC_TYPE_ID.invoice} under process ${CUSTOM_PROCESS_ID}.`,

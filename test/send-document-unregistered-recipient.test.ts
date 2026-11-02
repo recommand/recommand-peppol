@@ -9,62 +9,22 @@
  * transmission to be attempted.
  */
 
-import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
+import { SENDER, company, send, useSendingPipeline } from "./utils/sending-pipeline";
 
-// Nothing under test touches the database, but some of the modules connect at import
-// time. Everything that would is stubbed below.
-mock.module("@recommand/db", () => ({ db: {} }));
-
-let sendAs4: ReturnType<typeof mock>;
-
-const { sendingPipeline } = await import("../utils/pipelines/sending");
 const { sendDocumentSchema } = await import("../utils/parsing/send-document");
 const { prepareJsonDocument } = await import("../utils/pipelines/sending/prepare-json-document");
 const { invoiceDocument } = await import("./e2e/documents");
-const companyIdentifiers = await import("../data/company-identifiers");
-const email = await import("../data/email/send-email");
-const metrics = await import("../utils/metrics");
 const recipient = await import("../data/recipient");
 const recipientCapabilities = await import("../data/recipient-capabilities");
 const simulator = await import("../data/playground/simulate-ap");
-const validation = await import("../utils/pipelines/sending/validate-document");
-const recording = await import("../data/record-outgoing-document");
-const accessPoints = await import("../data/access-point-providers");
 
 const RECIPIENT = "0208:0598726857";
-const SENDER = { scheme: "0208", identifier: "1234567894" };
 const EMAIL_TO = "accounting@buyer.example";
 const DOC_TYPE_ID =
   "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1";
 const PROCESS_ID = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 const NOT_REGISTERED = `Recipient ${RECIPIENT} is not registered on the Peppol network.`;
-
-const company = {
-  id: "c_1",
-  name: "Recommand E2E Seller",
-  address: "Teststraat 1",
-  postalCode: "1000",
-  city: "Brussels",
-  country: "BE",
-  vatNumber: "BE1234567894",
-  enterpriseNumber: "1234567894",
-  enterpriseNumberScheme: "0208",
-  email: "seller@example.com",
-  phone: "+32 2 123 45 67",
-  accessPointProvider: "recommand-ap1",
-} as any;
-
-function context(input: unknown, team: { isPlayground?: boolean; useTestNetwork?: boolean } = {}) {
-  return {
-    req: { valid: () => sendDocumentSchema.parse(input) },
-    var: { company, team: { id: "team_1", isPlayground: false, useTestNetwork: false, ...team } },
-    set: () => {},
-    json: (body: any, status = 200) => ({ body, status }),
-  } as any;
-}
-
-const send = (input: unknown, team?: { isPlayground?: boolean; useTestNetwork?: boolean }) =>
-  sendingPipeline(context(input, team)) as unknown as Promise<{ body: any; status: number }>;
 
 const jsonInvoice = (extra: Record<string, unknown> = {}) => ({
   recipient: RECIPIENT,
@@ -73,44 +33,15 @@ const jsonInvoice = (extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
-let spies: { mockRestore(): void }[] = [];
-let sentEmails: { to: string; xmlDocument: string | null }[];
-let recorded: any[];
-
-function stub<T extends object, K extends keyof T>(module: T, name: K) {
-  const spy = spyOn(module, name as any);
-  spies.push(spy);
-  return spy;
-}
-
-beforeEach(() => {
-  sentEmails = [];
-  recorded = [];
-  sendAs4 = mock(async () => ({
+const { sentEmails, recorded, sendAs4, stub } = useSendingPipeline({
+  transmission: () => ({
     ok: false,
     peppolMessageId: null,
     peppolConversationId: null,
     receivedPeppolSignalMessage: null,
     sbdhInstanceIdentifier: null,
     sendingException: { message: "Unable to reach the receiving access point", category: "transport" },
-  }));
-  stub(companyIdentifiers, "getSendingCompanyIdentifier").mockResolvedValue(SENDER as any);
-  stub(validation, "validateDocument").mockResolvedValue({ result: "valid", errors: [] } as any);
-  stub(email, "sendDocumentEmail").mockImplementation(async (options: any) => {
-    sentEmails.push({ to: options.to, xmlDocument: options.xmlDocument });
-    return { messageId: `msg-${sentEmails.length}` };
-  });
-  stub(accessPoints, "getAccessPointProvider").mockReturnValue({ sendAs4: (options: unknown) => sendAs4(options) } as any);
-  stub(recording, "recordOutgoingDocument").mockImplementation(async (options: any) => {
-    recorded.push(options);
-    return { id: options.id, deliveries: [] } as any;
-  });
-  stub(metrics, "recordSendDocumentDelivery").mockImplementation(() => {});
-});
-
-afterEach(() => {
-  for (const spy of spies) spy.mockRestore();
-  spies = [];
+  }),
 });
 
 describe("a JSON send that leaves the format open", () => {

@@ -344,9 +344,10 @@ async function expectStoredDocument(
   });
   expect(typeof document.senderId).toBe("string");
 
-  // The XML is only stored when there is a Peppol recipient: the matrix sends no
-  // JSON document with a doctypeId, which would have an email-only one stored too.
-  if (combination.recipient.value === null) {
+  // The XML is stored when there is a Peppol recipient, or when it was given as raw
+  // XML: the matrix sends no JSON document with a doctypeId, which would have an
+  // email-only one stored too.
+  if (combination.recipient.value === null && combination.variant.documentType !== "xml") {
     expect(document.xml).toBeNull();
   } else {
     expect(typeof document.xml).toBe("string");
