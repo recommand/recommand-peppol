@@ -157,7 +157,7 @@ export function prebuildCreditNoteUBL({
               "cbc:IdentificationCode": creditNote.seller.country,
             },
           },
-          ...partyTaxSchemesToUBL(creditNote.seller),
+          ...partyTaxSchemesToUBL(creditNote.seller, "seller"),
           "cac:PartyLegalEntity": {
             "cbc:RegistrationName": creditNote.seller.name,
             ...(creditNote.seller.enterpriseNumber && { "cbc:CompanyID": {
@@ -193,7 +193,7 @@ export function prebuildCreditNoteUBL({
               "cbc:IdentificationCode": creditNote.buyer.country,
             },
           },
-          ...partyTaxSchemesToUBL(creditNote.buyer),
+          ...partyTaxSchemesToUBL(creditNote.buyer, "buyer"),
           "cac:PartyLegalEntity": {
             "cbc:RegistrationName": creditNote.buyer.name,
             ...(creditNote.buyer.enterpriseNumber && { "cbc:CompanyID": {

@@ -149,7 +149,7 @@ export function prebuildInvoiceUBL({
               "cbc:IdentificationCode": invoice.seller.country,
             },
           },
-          ...partyTaxSchemesToUBL(invoice.seller),
+          ...partyTaxSchemesToUBL(invoice.seller, "seller"),
           "cac:PartyLegalEntity": {
             "cbc:RegistrationName": invoice.seller.name,
             ...(invoice.seller.enterpriseNumber && { "cbc:CompanyID": {
@@ -185,7 +185,7 @@ export function prebuildInvoiceUBL({
               "cbc:IdentificationCode": invoice.buyer.country,
             },
           },
-          ...partyTaxSchemesToUBL(invoice.buyer),
+          ...partyTaxSchemesToUBL(invoice.buyer, "buyer"),
           "cac:PartyLegalEntity": {
             "cbc:RegistrationName": invoice.buyer.name,
             ...(invoice.buyer.enterpriseNumber && { "cbc:CompanyID": {

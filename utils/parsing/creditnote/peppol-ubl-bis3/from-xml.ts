@@ -74,7 +74,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     city: getTextContent(sellerParty.PostalAddress?.CityName),
     postalZone: getTextContent(sellerParty.PostalAddress?.PostalZone),
     country: getTextContent(sellerParty.PostalAddress?.Country?.IdentificationCode),
-    ...parseUblTaxRegistration(sellerParty),
+    ...parseUblTaxRegistration(sellerParty, "seller"),
     enterpriseNumberScheme: getNullableTextContent(sellerParty.PartyLegalEntity?.CompanyID?.["@_schemeID"]),
     enterpriseNumber: getNullableTextContent(
       sellerParty.PartyLegalEntity?.CompanyID?.["#text"] ??
@@ -98,7 +98,7 @@ export function parseCreditNoteFromXML(xml: string): CreditNote {
     city: getTextContent(buyerParty.PostalAddress?.CityName),
     postalZone: getTextContent(buyerParty.PostalAddress?.PostalZone),
     country: getTextContent(buyerParty.PostalAddress?.Country?.IdentificationCode),
-    ...parseUblTaxRegistration(buyerParty),
+    ...parseUblTaxRegistration(buyerParty, "buyer"),
     enterpriseNumberScheme: getNullableTextContent(buyerParty.PartyLegalEntity?.CompanyID?.["@_schemeID"]),
     enterpriseNumber: getNullableTextContent(
       buyerParty.PartyLegalEntity?.CompanyID?.["#text"] ??

@@ -176,4 +176,93 @@ describe("seller tax registration identifier", () => {
     expect(() => encode(peppolUblBis3InvoiceFormat, withBuyerTaxRegistration)).toThrow("Only the seller");
     expect(() => encode(ciiD22bEn16931Format, withBuyerTaxRegistration)).toThrow("Only the seller");
   });
+
+  it("is not written on the buyer when validation is not enforced", () => {
+    const withBuyerTaxRegistration = invoice({
+      seller: { ...norwegianSeller, taxRegistrationId: undefined },
+      buyer: { ...buyer, taxRegistrationId: "Foretaksregisteret" },
+    });
+    for (const format of [peppolUblBis3InvoiceFormat, ciiD22bEn16931Format]) {
+      const xml = format.encode(withBuyerTaxRegistration as any, format.supportedProcessIds[0], {
+        ...context,
+        isDocumentValidationEnforced: false,
+      });
+      expect(xml, format.key).not.toContain("Foretaksregisteret");
+    }
+  });
+});
+
+describe("reading the tax schemes of a received party", () => {
+  // Our own documents put the VAT number first; a received one need not. The
+  // parties are encoded without tax schemes, and the fragments under test are
+  // placed in them.
+  const bare = {
+    seller: { ...norwegianSeller, vatNumber: null, taxRegistrationId: undefined },
+    buyer: { ...buyer, vatNumber: null },
+  };
+
+  const ublTaxScheme = (companyId: string, scheme: string | null) =>
+    `<cac:PartyTaxScheme><cbc:CompanyID>${companyId}</cbc:CompanyID><cac:TaxScheme>${scheme === null ? "" : `<cbc:ID>${scheme}</cbc:ID>`}</cac:TaxScheme></cac:PartyTaxScheme>`;
+
+  const receivedUbl = (sellerSchemes: string, buyerSchemes = "") => {
+    let party = 0;
+    const xml = encode(peppolUblBis3InvoiceFormat, invoice(bare)).replace(
+      /<cac:PartyLegalEntity>/g,
+      (match) => (party++ === 0 ? sellerSchemes : buyerSchemes) + match
+    );
+    return decode(peppolUblBis3InvoiceFormat, xml);
+  };
+
+  const ciiRegistration = (id: string, scheme: string | null) =>
+    `<ram:SpecifiedTaxRegistration><ram:ID${scheme === null ? "" : ` schemeID="${scheme}"`}>${id}</ram:ID></ram:SpecifiedTaxRegistration>`;
+
+  const receivedCii = (sellerRegistrations: string, buyerRegistrations = "") => {
+    const xml = encode(ciiD22bEn16931Format, invoice(bare))
+      .replace("</ram:SellerTradeParty>", `${sellerRegistrations}</ram:SellerTradeParty>`)
+      .replace("</ram:BuyerTradeParty>", `${buyerRegistrations}</ram:BuyerTradeParty>`);
+    return decode(ciiD22bEn16931Format, xml);
+  };
+
+  it("finds the VAT number in UBL whatever the order of the tax schemes", () => {
+    const { seller } = receivedUbl(ublTaxScheme("Foretaksregisteret", "TAX") + ublTaxScheme("NO123456785MVA", "VAT"));
+    expect(seller.vatNumber).toBe("NO123456785MVA");
+    expect(seller.taxRegistrationId).toBe("Foretaksregisteret");
+  });
+
+  it("does not read a UBL tax registration as the VAT number", () => {
+    const { seller } = receivedUbl(ublTaxScheme("Foretaksregisteret", "TAX"));
+    expect(seller.vatNumber).toBeNull();
+    expect(seller.taxRegistrationId).toBe("Foretaksregisteret");
+  });
+
+  it("reads a UBL tax scheme without an ID, or with spaces around VAT, as VAT", () => {
+    expect(receivedUbl(ublTaxScheme("NO123456785MVA", null)).seller.vatNumber).toBe("NO123456785MVA");
+    expect(receivedUbl(ublTaxScheme("NO123456785MVA", " VAT ")).seller.vatNumber).toBe("NO123456785MVA");
+  });
+
+  it("finds the VAT number in CII whatever the order of the registrations", () => {
+    const { seller } = receivedCii(ciiRegistration("Foretaksregisteret", "FC") + ciiRegistration("NO123456785MVA", "VA"));
+    expect(seller.vatNumber).toBe("NO123456785MVA");
+    expect(seller.taxRegistrationId).toBe("Foretaksregisteret");
+  });
+
+  it("does not read a CII tax number as the VAT number", () => {
+    const { seller } = receivedCii(ciiRegistration("Foretaksregisteret", "FC"));
+    expect(seller.vatNumber).toBeNull();
+    expect(seller.taxRegistrationId).toBe("Foretaksregisteret");
+  });
+
+  it("reads a CII registration without a scheme as VAT", () => {
+    expect(receivedCii(ciiRegistration("NO123456785MVA", null)).seller.vatNumber).toBe("NO123456785MVA");
+  });
+
+  it("reads only the VAT number of the buyer", () => {
+    const ubl = receivedUbl("", ublTaxScheme("BE0123456749", "VAT") + ublTaxScheme("12/345/67890", "TAX")).buyer;
+    expect(ubl.vatNumber).toBe("BE0123456749");
+    expect("taxRegistrationId" in ubl).toBe(false);
+
+    const cii = receivedCii("", ciiRegistration("12/345/67890", "FC")).buyer;
+    expect(cii.vatNumber).toBeNull();
+    expect("taxRegistrationId" in cii).toBe(false);
+  });
 });

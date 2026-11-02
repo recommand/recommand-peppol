@@ -5,7 +5,9 @@ import type { Party } from "./invoice/schemas";
 // A party's VAT identifier (BT-31, BT-48) and the seller's tax registration
 // identifier (BT-32) share one element: UBL tells them apart by the tax scheme
 // (VAT or anything else), CII by the schemeID (VA or FC). EN 16931 has no tax
-// registration identifier for the buyer.
+// registration identifier for the buyer, so it is neither written nor read there.
+
+export type PartyRole = "seller" | "buyer";
 
 export function assertTaxRegistration(document: { buyer: Party }) {
   if (document.buyer.taxRegistrationId) {
@@ -15,10 +17,15 @@ export function assertTaxRegistration(document: { buyer: Party }) {
   }
 }
 
-export function partyTaxSchemesToUBL(party: Party) {
+function taxRegistrationId(party: Party, role: PartyRole) {
+  return role === "seller" ? party.taxRegistrationId : null;
+}
+
+export function partyTaxSchemesToUBL(party: Party, role: PartyRole) {
+  const registration = taxRegistrationId(party, role);
   const taxSchemes = [
     ...(party.vatNumber ? [{ companyId: party.vatNumber, scheme: "VAT" }] : []),
-    ...(party.taxRegistrationId ? [{ companyId: party.taxRegistrationId, scheme: "TAX" }] : []),
+    ...(registration ? [{ companyId: registration, scheme: "TAX" }] : []),
   ];
   if (taxSchemes.length === 0) return {};
   return {
@@ -31,10 +38,11 @@ export function partyTaxSchemesToUBL(party: Party) {
   };
 }
 
-export function taxRegistrationsToCII(party: Party) {
+export function taxRegistrationsToCII(party: Party, role: PartyRole) {
+  const registration = taxRegistrationId(party, role);
   const registrations = [
     ...(party.vatNumber ? [{ "@_schemeID": "VA", "#text": party.vatNumber }] : []),
-    ...(party.taxRegistrationId ? [{ "@_schemeID": "FC", "#text": party.taxRegistrationId }] : []),
+    ...(registration ? [{ "@_schemeID": "FC", "#text": registration }] : []),
   ];
   if (registrations.length === 0) return {};
   return {
@@ -49,28 +57,34 @@ function asArray(value: any): any[] {
 
 type TaxRegistration = { vatNumber: string | null; taxRegistrationId?: string };
 
-function withTaxRegistrationId(vatNumber: string | null, taxRegistrationId: string | null): TaxRegistration {
-  return { vatNumber, ...(taxRegistrationId && { taxRegistrationId }) };
+function withTaxRegistrationId(
+  role: PartyRole,
+  vatNumber: string | null,
+  taxRegistrationId: string | null
+): TaxRegistration {
+  return { vatNumber, ...(role === "seller" && taxRegistrationId && { taxRegistrationId }) };
 }
 
 // A tax scheme without an ID is read as VAT, as before tax registration
 // identifiers were read.
-export function parseUblTaxRegistration(party: any): TaxRegistration {
+export function parseUblTaxRegistration(party: any, role: PartyRole): TaxRegistration {
   const taxSchemes = asArray(party?.PartyTaxScheme);
   const isVat = (taxScheme: any) => {
     const scheme = getNullableTextContent(taxScheme?.TaxScheme?.ID);
     return !scheme || scheme.trim() === "VAT";
   };
   return withTaxRegistrationId(
+    role,
     getNullableTextContent(taxSchemes.find(isVat)?.CompanyID),
     getNullableTextContent(taxSchemes.find((taxScheme) => !isVat(taxScheme))?.CompanyID)
   );
 }
 
-export function parseCiiTaxRegistration(tradeParty: any): TaxRegistration {
+export function parseCiiTaxRegistration(tradeParty: any, role: PartyRole): TaxRegistration {
   const ids = asArray(tradeParty?.SpecifiedTaxRegistration).map((registration) => registration?.ID);
   const isTaxNumber = (id: any) => getNullableTextContent(id?.["@_schemeID"])?.trim() === "FC";
   return withTaxRegistrationId(
+    role,
     getNullableTextContent(ids.find((id) => !isTaxNumber(id))),
     getNullableTextContent(ids.find(isTaxNumber))
   );
