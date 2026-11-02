@@ -18,6 +18,7 @@ export const frenchInvoicingCdarDocumentType: DocumentType<
   key: "frenchInvoicingCdar",
   translatableTitle: getDocumentTypeTitle("frenchInvoicingCdar"),
   class: "transactionMessaging",
+  aiIntake: false,
   sendSchema: sendFranceCdarSchema,
   documentSchema: franceCdarSchema,
 

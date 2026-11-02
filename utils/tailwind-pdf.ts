@@ -1,4 +1,6 @@
 const RECOMMAND_RENDER_ENDPOINT = "https://render.recommand.dev";
+// A render service that does not answer must not hold the request or worker that waits for it.
+const RENDER_TIMEOUT_MS = 60_000;
 
 /**
  * Renders a Mustache template with Tailwind classes to HTML (preview) or PDF.
@@ -27,6 +29,7 @@ export async function renderTailwindTemplate(
       "Content-Type": "application/json",
     },
     body,
+    signal: AbortSignal.timeout(RENDER_TIMEOUT_MS),
   });
 
   if (!response.ok) {

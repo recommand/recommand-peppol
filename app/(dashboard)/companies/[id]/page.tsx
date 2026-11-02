@@ -14,6 +14,7 @@ import { CompanyForm } from "../../../../components/company-form";
 import { CompanyIdentifiersManager } from "../../../../components/company-identifiers-manager";
 import { CompanyDocumentTypesManager } from "../../../../components/company-document-types-manager";
 import { CompanyNotificationsManager } from "../../../../components/company-notifications-manager";
+import { CompanyInboundAddressesManager } from "../../../../components/company-inbound-addresses-manager";
 import { CompanyIntegrationsManager } from "../../../../components/company-integrations-manager";
 import { CompanyFrenchReportingManager } from "../../../../components/company-french-reporting-manager";
 import type { Company, CompanyFormData } from "@peppol/types/company";
@@ -396,6 +397,7 @@ export default function CompanyDetailPage() {
               teamId={activeTeam.id}
               companyId={company.id}
             />
+            <CompanyInboundAddressesManager companyId={company.id} />
             {company.country === "FR" && (
               <CompanyFrenchReportingManager
                 companyId={company.id}

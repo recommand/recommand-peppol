@@ -5,9 +5,13 @@ import {
 } from "@peppol/types/validation";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 
+// Well under the import worker's lease, so a validation service that does not answer
+// cannot hold an import beyond it.
+export const VALIDATION_TIMEOUT_MS = 60_000;
+
 export async function validateXmlDocument(
   xmlDocument: string,
-  options: { profile?: ValidationProfile } = {},
+  options: { profile?: ValidationProfile; timeoutMs?: number } = {},
 ): Promise<ValidationResponse> {
   try {
     const url = new URL(process.env.VALIDATION_SERVICE_URL ?? "https://validation.recommand.dev/validate");
@@ -20,6 +24,7 @@ export async function validateXmlDocument(
       headers: {
         "Content-Type": "application/xml",
       },
+      signal: AbortSignal.timeout(options.timeoutMs ?? VALIDATION_TIMEOUT_MS),
     });
 
     if (!response.ok) {

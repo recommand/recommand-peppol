@@ -17,6 +17,7 @@ export const creditNoteDocumentType: DocumentType<
   key: "creditNote",
   translatableTitle: getDocumentTypeTitle("creditNote"),
   class: "billing",
+  aiIntake: true,
   sendSchema: sendCreditNoteSchema,
   documentSchema: creditNoteSchema,
 

@@ -31,17 +31,23 @@ export async function recordUsageEvents(events: UsageEvent[], tx?: DbOrTransacti
   await (tx ?? db).insert(transferEvents).values(events).onConflictDoNothing({ target: transferEvents.id });
 }
 
-/** Count a team's usage events in [fromInclusive, toInclusive] or [fromInclusive, toExclusive). */
+/**
+ * Count a team's usage events in [fromInclusive, toInclusive] or [fromInclusive, toExclusive).
+ * `aiProcessed` narrows the count to the documents whose content a model extracted
+ * (true) or to all others (false); without it, every event counts.
+ */
 export async function countTeamUsage({
   teamId,
   fromInclusive,
   toInclusive,
   toExclusive,
+  aiProcessed,
 }: {
   teamId: string;
   fromInclusive: Date;
   toInclusive?: Date;
   toExclusive?: Date;
+  aiProcessed?: boolean;
 }): Promise<number> {
   const [row] = await db
     .select({ usage: count() })
@@ -51,7 +57,8 @@ export async function countTeamUsage({
         eq(transferEvents.teamId, teamId),
         gte(transferEvents.createdAt, fromInclusive),
         toInclusive ? lte(transferEvents.createdAt, toInclusive) : undefined,
-        toExclusive ? lt(transferEvents.createdAt, toExclusive) : undefined
+        toExclusive ? lt(transferEvents.createdAt, toExclusive) : undefined,
+        aiProcessed === undefined ? undefined : eq(transferEvents.aiProcessed, aiProcessed)
       )
     );
   return row?.usage ?? 0;
@@ -64,17 +71,22 @@ export type CompanyUsage = {
   usage: number;
 };
 
-/** A team's usage events in [fromInclusive, toInclusive] in one direction, per company. */
+/**
+ * A team's usage events in [fromInclusive, toInclusive] in one direction, per company.
+ * `aiProcessed` narrows them as in `countTeamUsage`.
+ */
 export async function getTeamUsageByCompany({
   teamId,
   fromInclusive,
   toInclusive,
   direction,
+  aiProcessed,
 }: {
   teamId: string;
   fromInclusive: Date;
   toInclusive: Date;
-  direction: UsageDirection;
+  direction?: UsageDirection;
+  aiProcessed?: boolean;
 }): Promise<CompanyUsage[]> {
   return await db
     .select({
@@ -89,7 +101,8 @@ export async function getTeamUsageByCompany({
         eq(transferEvents.teamId, teamId),
         gte(transferEvents.createdAt, fromInclusive),
         lte(transferEvents.createdAt, toInclusive),
-        eq(transferEvents.direction, direction)
+        direction ? eq(transferEvents.direction, direction) : undefined,
+        aiProcessed === undefined ? undefined : eq(transferEvents.aiProcessed, aiProcessed)
       )
     )
     .groupBy(companies.id);

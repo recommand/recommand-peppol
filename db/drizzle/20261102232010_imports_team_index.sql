@@ -1,0 +1,1 @@
+CREATE INDEX "peppol_imports_team_idx" ON "peppol_imports" USING btree ("team_id","id");

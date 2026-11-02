@@ -995,3 +995,96 @@ If you think this is a mistake\, contact,Denk je dat dit een vergissing is? Neem
 Peppol registration removed for {0},Peppol-registratie verwijderd voor {0}
 Is your name not on the list? Contact,Staat je naam niet in de lijst? Neem contact op met
 For Luxembourg businesses\, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under scheme 9938\, next to your VAT number.,Vul voor Luxemburgse bedrijven het matricule van 11 cijfers in\, niet het RCS-nummer. Het matricule wordt je Peppol-adres onder schema 9938\, naast je btw-nummer.
+Accept at least one document type,Accepteer minstens één documenttype
+Accepted document types,Geaccepteerde documenttypes
+All supported types,Alle ondersteunde types
+Choose a company and a file,Kies een bedrijf en een bestand
+Completed,Voltooid
+Copy,Kopiëren
+Delete import,Import verwijderen
+Delete inbound email address,Inkomend e-mailadres verwijderen
+Detect automatically,Automatisch herkennen
+Disable,Uitschakelen
+Disabled,Uitgeschakeld
+Documents uploaded or received by email\, and how they were processed into incoming documents.,Documenten die geüpload of per e-mail ontvangen zijn\, en hoe ze verwerkt zijn tot inkomende documenten.
+Each result is one document\, or the reason why no document was made.,Elk resultaat is één document\, of de reden waarom er geen document gemaakt is.
+Email address copied to clipboard,E-mailadres gekopieerd naar klembord
+Email sent to this address is refused from now on. The address cannot be used again. Documents already received stay.,E-mail naar dit adres wordt vanaf nu geweigerd. Het adres kan niet opnieuw gebruikt worden. Documenten die al ontvangen zijn blijven bewaard.
+Enable,Inschakelen
+Failed to load imports: {0},Imports laden mislukt: {0}
+Failed to load inbound email addresses: {0},Inkomende e-mailadressen laden mislukt: {0}
+File,Bestand
+Files,Bestanden
+Forward invoices and credit notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Stuur facturen en creditnota's door naar een van deze adressen. De PDF- en XML-bijlagen worden verwerkt tot inkomende documenten van dit bedrijf.
+Ignored,Genegeerd
+Import,Import
+Imports,Imports
+Inbound email address created,Inkomend e-mailadres aangemaakt
+Inbound email address deleted,Inkomend e-mailadres verwijderd
+Inbound email address updated,Inkomend e-mailadres bijgewerkt
+Inbound email addresses,Inkomende e-mailadressen
+Load more,Meer laden
+No business document was found in the files.,Er is geen zakelijk document gevonden in de bestanden.
+No imports yet,Nog geen imports
+No inbound email addresses,Geen inkomende e-mailadressen
+Add an address to receive documents by email,Voeg een adres toe om documenten per e-mail te ontvangen
+No results yet.,Nog geen resultaten.
+None of the files can be read,Geen enkel bestand kan gelezen worden
+One PDF or XML file of at most 25 MB.,Eén PDF- of XML-bestand van maximaal 25 MB.
+Partially completed,Gedeeltelijk voltooid
+Processing was temporarily unavailable,Verwerking was tijdelijk niet beschikbaar
+Processing,Bezig met verwerken
+Queued,In wachtrij
+Received,Ontvangen
+Results,Resultaten
+Source,Bron
+Subject,Onderwerp
+The PDF contains more than one document,De PDF bevat meer dan één document
+The PDF has too many pages,De PDF heeft te veel pagina's
+The XML format is not supported,Het XML-formaat wordt niet ondersteund
+The content could not be read correctly,De inhoud kon niet correct gelezen worden
+The document could not be processed,Het document kon niet verwerkt worden
+The document does not show enough to identify it,Het document bevat te weinig gegevens om het te identificeren
+The document is not of the expected type,Het document is niet van het verwachte type
+The file cannot be read,Het bestand kan niet gelezen worden
+The file is too large,Het bestand is te groot
+The file could not be downloaded: {0},Het bestand kon niet gedownload worden: {0}
+The file could not be uploaded: {0},Het bestand kon niet geüpload worden: {0}
+The file was uploaded and is being processed,Het bestand is geüpload en wordt verwerkt
+The files are being processed. Results appear here as they are ready.,De bestanden worden verwerkt. Resultaten verschijnen hier zodra ze klaar zijn.
+The import and its results are removed. The documents it produced stay.,De import en de resultaten ervan worden verwijderd. De documenten die eruit voortkwamen blijven bewaard.
+The import could not be deleted: {0},De import kon niet verwijderd worden: {0}
+The import was deleted,De import is verwijderd
+The type of document could not be recognised,Het type document kon niet herkend worden
+This type of document is not supported,Dit type document wordt niet ondersteund
+Upload a PDF or XML document\, or give the company an inbound email address on its page.,Upload een PDF- of XML-document\, of geef het bedrijf een inkomend e-mailadres op de bedrijfspagina.
+Upload a PDF or XML invoice or credit note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Upload een factuur of creditnota als PDF of XML. XML en PDF's met ingesloten XML worden gelezen zoals ze zijn; de inhoud van andere PDF's wordt met AI uitgelezen.
+Upload document,Document uploaden
+Upload,Uploaden
+View document,Document bekijken
+With a type\, a file that contains another type of document fails instead of being processed.,Met een type mislukt een bestand met een ander type document in plaats van verwerkt te worden.
+You do not have permission to see imports,Je hebt geen toestemming om imports te bekijken
+supporting,ondersteunend
+Read imports,Imports bekijken
+See uploaded and emailed files and how they were processed,Geüploade en gemailde bestanden bekijken en zien hoe ze verwerkt zijn
+Upload documents,Documenten uploaden
+Upload PDF and XML files to be processed into documents and delete finished imports,PDF- en XML-bestanden uploaden om ze tot documenten te verwerken en afgeronde imports verwijderen
+Read inbound email addresses,Inkomende e-mailadressen bekijken
+See the email addresses that receive documents for the team's companies,De e-mailadressen bekijken die documenten ontvangen voor de bedrijven van het team
+Manage inbound email addresses,Inkomende e-mailadressen beheren
+Create\, enable\, disable and delete the email addresses that receive documents for the team's companies,E-mailadressen die documenten ontvangen voor de bedrijven van het team aanmaken\, in- en uitschakelen en verwijderen
+Import changed,Import gewijzigd
+Import finished,Import afgerond
+The processing of an uploaded or emailed file finished: its documents and failures are on its results,De verwerking van een geüpload of gemaild bestand is afgerond: de documenten en fouten staan bij de resultaten
+Import deleted,Import verwijderd
+An import was deleted. The documents it produced stay.,Een import is verwijderd. De documenten die eruit voortkwamen blijven bewaard.
+Import status,Importstatus
+Failure code,Foutcode
+Channel,Kanaal
+XML only,Alleen XML
+An uploaded or emailed file was accepted for processing\, its processing started\, or one of its results was published before the import finished,Een geüpload of gemaild bestand is aanvaard voor verwerking\, de verwerking is gestart of een resultaat ervan is gepubliceerd voordat de import klaar was
+Inbound email address changed,Inkomend e-mailadres gewijzigd
+An inbound email address was created\, enabled or disabled\, or its accepted document types changed,Een inkomend e-mailadres is aangemaakt\, in- of uitgeschakeld\, of de geaccepteerde documenttypes zijn gewijzigd
+An inbound email address was deleted. It refuses email from then on; its imports stay.,Een inkomend e-mailadres is verwijderd. Het weigert vanaf dan e-mail; de imports ervan blijven bewaard.
+Inbound email,Inkomende e-mail
+Enabled,Ingeschakeld

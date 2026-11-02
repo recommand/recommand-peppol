@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import {
   Building,
+  FileUp,
   History,
   Webhook,
   Send,
@@ -15,6 +16,7 @@ import CompanyOnboarding from "@peppol/components/onboarding/company";
 import AddPlayground from "./add-playground";
 import PlaygroundUI from "./playground-ui";
 import { useTranslation } from "@core/hooks/use-translation";
+import { PEPPOL_PERMISSIONS } from "@peppol/lib/permission-ids";
 
 export default function Main({ children }: { children: React.ReactNode }) {
   const { registerMenuItem } = useMenuItemActions();
@@ -34,6 +36,14 @@ export default function Main({ children }: { children: React.ReactNode }) {
       title: t`Sent and received`,
       icon: History,
       href: "/transmitted-documents",
+    });
+
+    registerMenuItem({
+      id: "main.imports",
+      title: t`Imports`,
+      icon: FileUp,
+      href: "/imports",
+      requiredPermission: PEPPOL_PERMISSIONS.IMPORTS_READ,
     });
 
     registerMenuItem({

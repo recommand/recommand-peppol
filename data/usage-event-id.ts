@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export type UsageDirection = "incoming" | "outgoing";
-export type UsageChannel = "peppol" | "email" | "reporting";
+export type UsageChannel = "peppol" | "email" | "reporting" | "api";
 
 function hashAddress(address: string): string {
   return createHash("sha256").update(address.trim().toLowerCase()).digest("hex").slice(0, 24);

@@ -32,6 +32,7 @@
     "@react-email/components": "^1.0.12",
     "@scalar/openapi-to-markdown": "^0.6.0",
     "@tanstack/react-table": "^8.21.3",
+    "ai": "^7.0.157",
     "croner": "^9.1.0",
     "date-fns": "^4.4.0",
     "decimal.js": "^10.6.0",
@@ -48,6 +49,7 @@
     "react-router-dom": "^7.18.4",
     "shiki": "^3.23.0",
     "ulid": "^2.4.0",
+    "unpdf": "^2.1.0",
     "zod": "^3.25.76",
     "zod-openapi": "^4.2.4"
   }

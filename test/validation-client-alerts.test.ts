@@ -58,4 +58,17 @@ describe("system alerts without Telegram recipients", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
   }
+
+  it("lets validation return an error result when the validation service does not answer in time", async () => {
+    // Like a real fetch, the request only ends when its signal aborts it.
+    globalThis.fetch = ((_url: URL, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init.signal!.addEventListener("abort", () => reject(init.signal!.reason));
+      })) as unknown as typeof fetch;
+
+    const started = Date.now();
+    expect(await validateXmlDocument("<Invoice/>", { timeoutMs: 50 })).toEqual({ result: "error", errors: [] });
+    expect(Date.now() - started).toBeLessThan(1000);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 });

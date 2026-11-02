@@ -17,6 +17,7 @@ export const invoiceDocumentType: DocumentType<
   key: "invoice",
   translatableTitle: getDocumentTypeTitle("invoice"),
   class: "billing",
+  aiIntake: true,
   sendSchema: sendInvoiceSchema,
   documentSchema: invoiceSchema,
 

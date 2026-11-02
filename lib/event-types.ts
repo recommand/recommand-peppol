@@ -18,6 +18,13 @@ import {
   deliveryFailureCategories,
   deliveryStatuses,
 } from "@peppol/db/schema";
+import {
+  documentSourceChannels,
+  importChannels,
+  importStatuses,
+  inboundAddressStatuses,
+  processingMethods,
+} from "@peppol/types/intake";
 
 const receivedDocumentTypes = STORED_DOCUMENT_TYPE_KEYS;
 
@@ -54,12 +61,71 @@ const documentReceivedPayloadSchema = z.object({
   companyId: z.string(),
   docType: z.enum(receivedDocumentTypes),
   senderId: z.string(),
-  receiverId: z.string(),
+  // Null for a document received by email or upload for a company without a Peppol address.
+  receiverId: z.string().nullable(),
   peppolMessageId: z.string().nullable().optional(),
   peppolConversationId: z.string().nullable().optional(),
   envelopeId: z.string().nullable().optional(),
   countryC1: z.string(),
+  // Set when document intake produced the document from an uploaded or emailed file:
+  // the channel, the import and whether the content was parsed or extracted.
+  channel: z.enum(documentSourceChannels).optional(),
+  importId: z.string().optional(),
+  processingMethod: z.enum(processingMethods).optional(),
 });
+
+const importPayloadSchema = z.object({
+  companyId: z.string(),
+  importId: z.string(),
+  channel: z.enum(importChannels),
+  status: z.enum(importStatuses),
+  revision: z.number().int(),
+  resultCounts: z.object({ documents: z.number().int(), failed: z.number().int() }),
+});
+
+const importFinishedPayloadSchema = importPayloadSchema.extend({
+  // The code of a failure of the whole input, such as input_unreadable. Failures of
+  // single results are on the import's results, not here.
+  failureCode: z.string().nullable(),
+});
+
+const importDeletedPayloadSchema = z.object({
+  companyId: z.string(),
+  importId: z.string(),
+  revision: z.number().int(),
+  deletedAt: z.string().nullable(),
+  // Why the import left the API: "deleted" by a caller. A later retention policy adds "expired".
+  reason: z.enum(["deleted"]),
+});
+
+const inboundAddressPayloadSchema = z.object({
+  companyId: z.string(),
+  inboundAddressId: z.string(),
+  address: z.string(),
+  enabled: z.boolean(),
+  status: z.enum([...inboundAddressStatuses, "disabled"]),
+  // The document types the address accepts; null accepts every supported type.
+  acceptedTypes: z.array(z.string()).nullable(),
+  revision: z.number().int(),
+});
+
+const inboundAddressDeletedPayloadSchema = z.object({
+  companyId: z.string(),
+  inboundAddressId: z.string(),
+  address: z.string(),
+  revision: z.number().int(),
+  deletedAt: z.string(),
+  reason: z.enum(["deleted"]),
+});
+
+const importStatusLabels: Record<(typeof importStatuses)[number], string> = {
+  queued: "Queued",
+  processing: "Processing",
+  completed: "Completed",
+  partially_completed: "Partially completed",
+  failed: "Failed",
+  ignored: "Ignored",
+};
 
 const documentSentPayloadSchema = z.object({
   companyId: z.string(),
@@ -513,6 +579,122 @@ export function registerPeppolEventTypes() {
       label: "Company verification",
       description: "A company verification finished",
       group: "Companies",
+    },
+  });
+
+  const importFields: ConditionField[] = [
+    companyIdField,
+    { path: "payload.channel", label: "Channel", valueType: "enum", operators: ["eq", "neq"], enumValues: [...importChannels] },
+    { path: "payload.status", label: "Import status", valueType: "enum", operators: ["eq", "neq", "in", "notIn"], enumValues: [...importStatuses], enumLabels: importStatusLabels },
+  ];
+  const projectImport = (eventType: string) => (event: { aggregateId: string; teamId: string; payload?: unknown }) => {
+    const payload = event.payload as z.infer<typeof importPayloadSchema> & { failureCode?: string | null };
+    return {
+      eventType,
+      importId: event.aggregateId,
+      teamId: event.teamId,
+      companyId: payload.companyId,
+      status: payload.status,
+      resultCounts: payload.resultCounts,
+      ...(payload.failureCode !== undefined ? { failureCode: payload.failureCode } : {}),
+    };
+  };
+
+  registerEventType({
+    type: "peppol.import.changed.v1",
+    aggregateType: "peppol.import",
+    payload: importPayloadSchema,
+    conditionFields: importFields,
+    webhook: { eventType: "import.changed", project: projectImport("import.changed") },
+    ui: {
+      label: "Import changed",
+      description: "An uploaded or emailed file was accepted for processing, its processing started, or one of its results was published before the import finished",
+      group: "Imports",
+    },
+  });
+
+  registerEventType({
+    type: "peppol.import.finished.v1",
+    aggregateType: "peppol.import",
+    payload: importFinishedPayloadSchema,
+    conditionFields: [
+      ...importFields,
+      { path: "payload.failureCode", label: "Failure code", valueType: "string", operators: ["eq", "neq", "exists"] },
+    ],
+    webhook: { eventType: "import.finished", project: projectImport("import.finished") },
+    ui: {
+      label: "Import finished",
+      description: "The processing of an uploaded or emailed file finished: its documents and failures are on its results",
+      group: "Imports",
+    },
+  });
+
+  registerEventType({
+    type: "peppol.import.deleted.v1",
+    aggregateType: "peppol.import",
+    payload: importDeletedPayloadSchema,
+    conditionFields: [companyIdField],
+    webhook: {
+      eventType: "import.deleted",
+      project: (event) => {
+        const payload = event.payload as z.infer<typeof importDeletedPayloadSchema>;
+        return {
+          eventType: "import.deleted",
+          importId: event.aggregateId,
+          teamId: event.teamId,
+          companyId: payload.companyId,
+          deletedAt: payload.deletedAt,
+          reason: payload.reason,
+        };
+      },
+    },
+    ui: {
+      label: "Import deleted",
+      description: "An import was deleted. The documents it produced stay.",
+      group: "Imports",
+    },
+  });
+
+  registerEventType({
+    type: "peppol.inbound_address.changed.v1",
+    aggregateType: "peppol.inbound_address",
+    payload: inboundAddressPayloadSchema,
+    conditionFields: [
+      companyIdField,
+      { path: "payload.enabled", label: "Enabled", valueType: "boolean", operators: ["eq"] },
+    ],
+    webhook: {
+      eventType: "email.inbound_address.changed",
+      project: (event) => ({
+        eventType: "email.inbound_address.changed",
+        teamId: event.teamId,
+        ...(event.payload as z.infer<typeof inboundAddressPayloadSchema>),
+      }),
+    },
+    ui: {
+      label: "Inbound email address changed",
+      description: "An inbound email address was created, enabled or disabled, or its accepted document types changed",
+      group: "Inbound email",
+    },
+  });
+
+  registerEventType({
+    type: "peppol.inbound_address.deleted.v1",
+    aggregateType: "peppol.inbound_address",
+    payload: inboundAddressDeletedPayloadSchema,
+    conditionFields: [companyIdField],
+    webhook: {
+      eventType: "email.inbound_address.deleted",
+      project: (event) => ({
+        eventType: "email.inbound_address.deleted",
+        teamId: event.teamId,
+        ...(event.payload as z.infer<typeof inboundAddressDeletedPayloadSchema>),
+      }),
+    },
+    ui: {
+      label: "Inbound email address deleted",
+      description: "An inbound email address was deleted. It refuses email from then on; its imports stay.",
+      group: "Inbound email",
     },
   });
 }

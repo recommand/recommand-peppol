@@ -995,3 +995,96 @@ If you think this is a mistake\, contact,Si vous pensez qu'il s'agit d'une erreu
 Peppol registration removed for {0},Enregistrement Peppol supprimé pour {0}
 Is your name not on the list? Contact,Votre nom ne figure pas dans la liste ? Contactez
 For Luxembourg businesses\, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under scheme 9938\, next to your VAT number.,Pour les entreprises luxembourgeoises\, saisissez le matricule à 11 chiffres plutôt que le numéro RCS. Le matricule devient votre adresse Peppol sous le schéma 9938\, en plus de votre numéro de TVA.
+Accept at least one document type,Acceptez au moins un type de document
+Accepted document types,Types de documents acceptés
+All supported types,Tous les types pris en charge
+Choose a company and a file,Choisissez une entreprise et un fichier
+Completed,Terminé
+Copy,Copier
+Delete import,Supprimer l'import
+Delete inbound email address,Supprimer l'adresse e-mail de réception
+Detect automatically,Détecter automatiquement
+Disable,Désactiver
+Disabled,Désactivée
+Documents uploaded or received by email\, and how they were processed into incoming documents.,Documents téléversés ou reçus par e-mail\, et la manière dont ils ont été traités en documents entrants.
+Each result is one document\, or the reason why no document was made.,Chaque résultat est un document\, ou la raison pour laquelle aucun document n'a été créé.
+Email address copied to clipboard,Adresse e-mail copiée dans le presse-papiers
+Email sent to this address is refused from now on. The address cannot be used again. Documents already received stay.,Les e-mails envoyés à cette adresse sont désormais refusés. L'adresse ne peut plus être réutilisée. Les documents déjà reçus sont conservés.
+Enable,Activer
+Failed to load imports: {0},Échec du chargement des imports : {0}
+Failed to load inbound email addresses: {0},Échec du chargement des adresses e-mail de réception : {0}
+File,Fichier
+Files,Fichiers
+Forward invoices and credit notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Transférez les factures et les avoirs vers l'une de ces adresses. Les pièces jointes PDF et XML sont traitées en documents entrants de cette entreprise.
+Ignored,Ignoré
+Import,Import
+Imports,Imports
+Inbound email address created,Adresse e-mail de réception créée
+Inbound email address deleted,Adresse e-mail de réception supprimée
+Inbound email address updated,Adresse e-mail de réception mise à jour
+Inbound email addresses,Adresses e-mail de réception
+Load more,Charger plus
+No business document was found in the files.,Aucun document commercial n'a été trouvé dans les fichiers.
+No imports yet,Aucun import pour l'instant
+No inbound email addresses,Aucune adresse e-mail de réception
+Add an address to receive documents by email,Ajouter une adresse pour recevoir des documents par e-mail
+No results yet.,Aucun résultat pour l'instant.
+None of the files can be read,Aucun des fichiers ne peut être lu
+One PDF or XML file of at most 25 MB.,Un fichier PDF ou XML de 25 Mo maximum.
+Partially completed,Partiellement terminé
+Processing was temporarily unavailable,Le traitement était temporairement indisponible
+Processing,En cours de traitement
+Queued,En attente
+Received,Reçu
+Results,Résultats
+Source,Source
+Subject,Objet
+The PDF contains more than one document,Le PDF contient plus d'un document
+The PDF has too many pages,Le PDF contient trop de pages
+The XML format is not supported,Le format XML n'est pas pris en charge
+The content could not be read correctly,Le contenu n'a pas pu être lu correctement
+The document could not be processed,Le document n'a pas pu être traité
+The document does not show enough to identify it,Le document ne contient pas assez d'informations pour l'identifier
+The document is not of the expected type,Le document n'est pas du type attendu
+The file cannot be read,Le fichier ne peut pas être lu
+The file is too large,Le fichier est trop volumineux
+The file could not be downloaded: {0},Le fichier n'a pas pu être téléchargé : {0}
+The file could not be uploaded: {0},Le fichier n'a pas pu être téléversé : {0}
+The file was uploaded and is being processed,Le fichier a été téléversé et est en cours de traitement
+The files are being processed. Results appear here as they are ready.,Les fichiers sont en cours de traitement. Les résultats apparaissent ici dès qu'ils sont prêts.
+The import and its results are removed. The documents it produced stay.,L'import et ses résultats sont supprimés. Les documents qu'il a produits sont conservés.
+The import could not be deleted: {0},L'import n'a pas pu être supprimé : {0}
+The import was deleted,L'import a été supprimé
+The type of document could not be recognised,Le type de document n'a pas pu être reconnu
+This type of document is not supported,Ce type de document n'est pas pris en charge
+Upload a PDF or XML document\, or give the company an inbound email address on its page.,Téléversez un document PDF ou XML\, ou attribuez une adresse e-mail de réception à l'entreprise sur sa page.
+Upload a PDF or XML invoice or credit note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Téléversez une facture ou un avoir au format PDF ou XML. Le XML et les PDF contenant du XML intégré sont lus tels quels ; le contenu des autres PDF est extrait par IA.
+Upload document,Téléverser un document
+Upload,Téléverser
+View document,Voir le document
+With a type\, a file that contains another type of document fails instead of being processed.,Avec un type\, un fichier contenant un autre type de document échoue au lieu d'être traité.
+You do not have permission to see imports,Vous n'avez pas l'autorisation de voir les imports
+supporting,complémentaire
+Read imports,Voir les imports
+See uploaded and emailed files and how they were processed,Voir les fichiers téléversés et reçus par e-mail et leur traitement
+Upload documents,Téléverser des documents
+Upload PDF and XML files to be processed into documents and delete finished imports,Téléverser des fichiers PDF et XML à traiter en documents et supprimer les imports terminés
+Read inbound email addresses,Voir les adresses e-mail de réception
+See the email addresses that receive documents for the team's companies,Voir les adresses e-mail qui reçoivent des documents pour les entreprises de l'équipe
+Manage inbound email addresses,Gérer les adresses e-mail de réception
+Create\, enable\, disable and delete the email addresses that receive documents for the team's companies,Créer\, activer\, désactiver et supprimer les adresses e-mail qui reçoivent des documents pour les entreprises de l'équipe
+Import changed,Import modifié
+Import finished,Import terminé
+The processing of an uploaded or emailed file finished: its documents and failures are on its results,Le traitement d'un fichier téléversé ou reçu par e-mail est terminé : ses documents et ses échecs figurent dans ses résultats
+Import deleted,Import supprimé
+An import was deleted. The documents it produced stay.,Un import a été supprimé. Les documents qu'il a produits sont conservés.
+Import status,Statut de l'import
+Failure code,Code d'échec
+Channel,Canal
+XML only,XML uniquement
+An uploaded or emailed file was accepted for processing\, its processing started\, or one of its results was published before the import finished,Un fichier téléversé ou reçu par e-mail a été accepté pour traitement\, son traitement a commencé ou l'un de ses résultats a été publié avant la fin de l'import
+Inbound email address changed,Adresse e-mail de réception modifiée
+An inbound email address was created\, enabled or disabled\, or its accepted document types changed,Une adresse e-mail de réception a été créée\, activée ou désactivée\, ou ses types de documents acceptés ont changé
+An inbound email address was deleted. It refuses email from then on; its imports stay.,Une adresse e-mail de réception a été supprimée. Elle refuse désormais les e-mails ; ses imports sont conservés.
+Inbound email,E-mail entrant
+Enabled,Activée

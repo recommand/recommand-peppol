@@ -23,9 +23,12 @@ export type InsertTransmittedDocument = typeof transmittedDocuments.$inferInsert
 type TransmittedDocumentSearchField = "senderName" | "receiverName" | "documentNumber" | "searchText";
 type TransmittedDocumentLabel = Omit<Label, "teamId" | "createdAt" | "updatedAt">;
 type InternalProviderField = "accessPointProvider" | "smpProvider" | "apTransactionId" | "externalReferenceId" | "emailFallback";
+// How document intake produced the document. The v2 document reads will expose it; the
+// v1 reads keep their shape.
+type IntakeField = "sourceChannel" | "importId" | "processingMethod" | "findings";
 export type PublicTransmittedDocument = Omit<
   TransmittedDocument,
-  TransmittedDocumentSearchField | InternalProviderField | "offloadClaimedAt"
+  TransmittedDocumentSearchField | InternalProviderField | IntakeField | "offloadClaimedAt"
 >;
 export type PublicTransmittedDocumentWithLabels = PublicTransmittedDocument & {
   labels?: TransmittedDocumentLabel[];

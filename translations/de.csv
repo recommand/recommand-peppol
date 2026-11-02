@@ -995,3 +995,96 @@ If you think this is a mistake\, contact,Wenn Sie glauben\, dass es sich um eine
 Peppol registration removed for {0},Peppol-Registrierung entfernt für {0}
 Is your name not on the list? Contact,Steht Ihr Name nicht auf der Liste? Wenden Sie sich an
 For Luxembourg businesses\, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under scheme 9938\, next to your VAT number.,Geben Sie für luxemburgische Unternehmen die elfstellige Matrikelnummer ein\, nicht die RCS-Nummer. Die Matrikelnummer wird neben Ihrer USt-IdNr. Ihre Peppol-Adresse unter Schema 9938.
+Accept at least one document type,Akzeptieren Sie mindestens einen Dokumenttyp
+Accepted document types,Akzeptierte Dokumenttypen
+All supported types,Alle unterstützten Typen
+Choose a company and a file,Wählen Sie ein Unternehmen und eine Datei
+Completed,Abgeschlossen
+Copy,Kopieren
+Delete import,Import löschen
+Delete inbound email address,Eingangs-E-Mail-Adresse löschen
+Detect automatically,Automatisch erkennen
+Disable,Deaktivieren
+Disabled,Deaktiviert
+Documents uploaded or received by email\, and how they were processed into incoming documents.,Hochgeladene oder per E-Mail empfangene Dokumente und wie sie zu eingehenden Dokumenten verarbeitet wurden.
+Each result is one document\, or the reason why no document was made.,Jedes Ergebnis ist ein Dokument oder der Grund\, warum kein Dokument erstellt wurde.
+Email address copied to clipboard,E-Mail-Adresse in die Zwischenablage kopiert
+Email sent to this address is refused from now on. The address cannot be used again. Documents already received stay.,E-Mails an diese Adresse werden ab sofort abgelehnt. Die Adresse kann nicht erneut verwendet werden. Bereits empfangene Dokumente bleiben erhalten.
+Enable,Aktivieren
+Failed to load imports: {0},Importe konnten nicht geladen werden: {0}
+Failed to load inbound email addresses: {0},Eingangs-E-Mail-Adressen konnten nicht geladen werden: {0}
+File,Datei
+Files,Dateien
+Forward invoices and credit notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Leiten Sie Rechnungen und Gutschriften an eine dieser Adressen weiter. Die PDF- und XML-Anhänge werden zu eingehenden Dokumenten dieses Unternehmens verarbeitet.
+Ignored,Ignoriert
+Import,Import
+Imports,Importe
+Inbound email address created,Eingangs-E-Mail-Adresse erstellt
+Inbound email address deleted,Eingangs-E-Mail-Adresse gelöscht
+Inbound email address updated,Eingangs-E-Mail-Adresse aktualisiert
+Inbound email addresses,Eingangs-E-Mail-Adressen
+Load more,Mehr laden
+No business document was found in the files.,In den Dateien wurde kein Geschäftsdokument gefunden.
+No imports yet,Noch keine Importe
+No inbound email addresses,Keine Eingangs-E-Mail-Adressen
+Add an address to receive documents by email,Fügen Sie eine Adresse hinzu\, um Dokumente per E-Mail zu empfangen
+No results yet.,Noch keine Ergebnisse.
+None of the files can be read,Keine der Dateien kann gelesen werden
+One PDF or XML file of at most 25 MB.,Eine PDF- oder XML-Datei mit höchstens 25 MB.
+Partially completed,Teilweise abgeschlossen
+Processing was temporarily unavailable,Die Verarbeitung war vorübergehend nicht verfügbar
+Processing,In Bearbeitung
+Queued,In Warteschlange
+Received,Empfangen
+Results,Ergebnisse
+Source,Quelle
+Subject,Betreff
+The PDF contains more than one document,Die PDF enthält mehr als ein Dokument
+The PDF has too many pages,Das PDF hat zu viele Seiten
+The XML format is not supported,Das XML-Format wird nicht unterstützt
+The content could not be read correctly,Der Inhalt konnte nicht korrekt gelesen werden
+The document could not be processed,Das Dokument konnte nicht verarbeitet werden
+The document does not show enough to identify it,Das Dokument enthält nicht genug Angaben\, um es zu identifizieren
+The document is not of the expected type,Das Dokument hat nicht den erwarteten Typ
+The file cannot be read,Die Datei kann nicht gelesen werden
+The file is too large,Die Datei ist zu groß
+The file could not be downloaded: {0},Die Datei konnte nicht heruntergeladen werden: {0}
+The file could not be uploaded: {0},Die Datei konnte nicht hochgeladen werden: {0}
+The file was uploaded and is being processed,Die Datei wurde hochgeladen und wird verarbeitet
+The files are being processed. Results appear here as they are ready.,Die Dateien werden verarbeitet. Die Ergebnisse erscheinen hier\, sobald sie bereit sind.
+The import and its results are removed. The documents it produced stay.,Der Import und seine Ergebnisse werden entfernt. Die daraus erstellten Dokumente bleiben erhalten.
+The import could not be deleted: {0},Der Import konnte nicht gelöscht werden: {0}
+The import was deleted,Der Import wurde gelöscht
+The type of document could not be recognised,Der Dokumenttyp konnte nicht erkannt werden
+This type of document is not supported,Dieser Dokumenttyp wird nicht unterstützt
+Upload a PDF or XML document\, or give the company an inbound email address on its page.,Laden Sie ein PDF- oder XML-Dokument hoch oder geben Sie dem Unternehmen auf seiner Seite eine Eingangs-E-Mail-Adresse.
+Upload a PDF or XML invoice or credit note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Laden Sie eine Rechnung oder Gutschrift als PDF oder XML hoch. XML und PDFs mit eingebettetem XML werden unverändert gelesen; der Inhalt anderer PDFs wird mit KI extrahiert.
+Upload document,Dokument hochladen
+Upload,Hochladen
+View document,Dokument anzeigen
+With a type\, a file that contains another type of document fails instead of being processed.,Mit einem Typ schlägt eine Datei mit einem anderen Dokumenttyp fehl\, statt verarbeitet zu werden.
+You do not have permission to see imports,Sie haben keine Berechtigung\, Importe anzusehen
+supporting,ergänzend
+Read imports,Importe ansehen
+See uploaded and emailed files and how they were processed,Hochgeladene und per E-Mail empfangene Dateien und ihre Verarbeitung ansehen
+Upload documents,Dokumente hochladen
+Upload PDF and XML files to be processed into documents and delete finished imports,PDF- und XML-Dateien zur Verarbeitung in Dokumente hochladen und abgeschlossene Importe löschen
+Read inbound email addresses,Eingangs-E-Mail-Adressen ansehen
+See the email addresses that receive documents for the team's companies,Die E-Mail-Adressen ansehen\, die Dokumente für die Unternehmen des Teams empfangen
+Manage inbound email addresses,Eingangs-E-Mail-Adressen verwalten
+Create\, enable\, disable and delete the email addresses that receive documents for the team's companies,E-Mail-Adressen\, die Dokumente für die Unternehmen des Teams empfangen\, erstellen\, aktivieren\, deaktivieren und löschen
+Import changed,Import geändert
+Import finished,Import abgeschlossen
+The processing of an uploaded or emailed file finished: its documents and failures are on its results,Die Verarbeitung einer hochgeladenen oder per E-Mail empfangenen Datei ist abgeschlossen: ihre Dokumente und Fehler stehen in den Ergebnissen
+Import deleted,Import gelöscht
+An import was deleted. The documents it produced stay.,Ein Import wurde gelöscht. Die daraus erstellten Dokumente bleiben erhalten.
+Import status,Importstatus
+Failure code,Fehlercode
+Channel,Kanal
+XML only,Nur XML
+An uploaded or emailed file was accepted for processing\, its processing started\, or one of its results was published before the import finished,Eine hochgeladene oder per E-Mail empfangene Datei wurde zur Verarbeitung angenommen\, ihre Verarbeitung hat begonnen oder eines ihrer Ergebnisse wurde vor dem Abschluss des Imports veröffentlicht
+Inbound email address changed,Eingangs-E-Mail-Adresse geändert
+An inbound email address was created\, enabled or disabled\, or its accepted document types changed,Eine Eingangs-E-Mail-Adresse wurde erstellt\, aktiviert oder deaktiviert\, oder ihre akzeptierten Dokumenttypen wurden geändert
+An inbound email address was deleted. It refuses email from then on; its imports stay.,Eine Eingangs-E-Mail-Adresse wurde gelöscht. Sie lehnt ab dann E-Mails ab; ihre Importe bleiben erhalten.
+Inbound email,Eingehende E-Mail
+Enabled,Aktiviert

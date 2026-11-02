@@ -12,6 +12,7 @@ export const frenchB2CPaymentReportDocumentType: DocumentType<
   key: "frenchB2CPaymentReport",
   translatableTitle: getDocumentTypeTitle("frenchB2CPaymentReport"),
   class: "reporting",
+  aiIntake: false,
   sendSchema: frenchB2CPaymentsReportSchema,
   documentSchema: frenchB2CPaymentsReportSchema,
 

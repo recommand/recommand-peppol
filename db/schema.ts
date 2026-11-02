@@ -31,6 +31,20 @@ import type { ParsedDocument } from "@peppol/utils/type-repository/document-type
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
 import type { EmailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
+import {
+  documentSourceChannels,
+  importChannels,
+  importResultStatuses,
+  importStatuses,
+  inboundAddressStatuses,
+  processingMethods,
+  type Failure,
+  type FileFormat,
+  type FileProvenance,
+  type Finding,
+  type ImportSource,
+  type SourceLocation,
+} from "@peppol/types/intake";
 
 export const zodValidCountryCodes = z.enum(
   COUNTRIES.map((c) => c.code) as [string, ...string[]]
@@ -64,7 +78,16 @@ export const transferEventTypeEnum = pgEnum("peppol_transfer_event_type", [
   "peppol",
   "email",
   "reporting",
+  "api",
 ]);
+
+// Document intake (see the tables at the end of this file).
+export const documentSourceChannelEnum = pgEnum("peppol_document_source_channel", documentSourceChannels);
+export const processingMethodEnum = pgEnum("peppol_processing_method", processingMethods);
+export const importChannelEnum = pgEnum("peppol_import_channel", importChannels);
+export const importStatusEnum = pgEnum("peppol_import_status", importStatuses);
+export const importResultStatusEnum = pgEnum("peppol_import_result_status", importResultStatuses);
+export const inboundAddressStatusEnum = pgEnum("peppol_inbound_address_status", inboundAddressStatuses);
 
 export const validationResultEnum = pgEnum(
   "peppol_validation_result",
@@ -473,6 +496,9 @@ export const transferEvents = pgTable("peppol_transfer_events", {
   type: transferEventTypeEnum("type").notNull().default("peppol"),
   transmittedDocumentId: text("transmitted_document_id"),
   direction: transferEventDirectionEnum("direction").notNull(),
+  // Whether a model extracted the document's content from a PDF. A subscription can
+  // price these documents at their own rate.
+  aiProcessed: boolean("ai_processed").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -565,6 +591,14 @@ export const transmittedDocuments = pgTable(
     // exchanged over Peppol (e.g. the reporting partner's flow id for a French B2C
     // report). Null for documents sent over Peppol or email.
     externalReferenceId: text("external_reference_id"),
+
+    // How the document entered: null for the Peppol network, or the import that
+    // produced it from an uploaded or emailed file, and how its content was read.
+    sourceChannel: documentSourceChannelEnum("source_channel"),
+    // No foreign key: adding one would scan this large table under a lock.
+    importId: text("import_id"),
+    processingMethod: processingMethodEnum("processing_method"),
+    findings: jsonb("findings").$type<Finding[]>(),
 
     readAt: timestamp("read_at"), // defaults to null, set when the document is read
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -1057,3 +1091,188 @@ export const integrationTaskLogs = pgTable("integration_task_logs", {
     .notNull(),
   updatedAt: autoUpdateTimestamp(),
 });
+
+// ---------------------------------------------------------------------------
+// Document intake: PDF and XML files uploaded through the API or received by
+// email, processed in the background into incoming documents.
+// ---------------------------------------------------------------------------
+
+// An email address that turns the mail it receives into imports for one company. A
+// deleted address keeps its row, so its local part is never given to another company.
+export const inboundAddresses = pgTable(
+  "peppol_inbound_addresses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "iad_" + ulid()),
+    teamId: text("team_id")
+      .references(() => teams.id, { onDelete: "cascade" })
+      .notNull(),
+    companyId: text("company_id")
+      .references(() => companies.id, { onDelete: "cascade" })
+      .notNull(),
+    localPart: text("local_part").notNull(),
+    address: text("address").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    status: inboundAddressStatusEnum("status").notNull().default("active"),
+    // The document types the address accepts; null accepts every supported type.
+    acceptedTypes: text("accepted_types").array(),
+    error: jsonb("error").$type<Failure>(),
+    revision: integer("revision").notNull().default(1),
+    idempotencyKey: text("idempotency_key"),
+    requestHash: text("request_hash"),
+    // The body of the response that created the address, replayed for the same key.
+    idempotencyResponse: jsonb("idempotency_response").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("peppol_inbound_addresses_local_part_idx").on(table.localPart),
+    uniqueIndex("peppol_inbound_addresses_idempotency_idx")
+      .on(table.companyId, table.idempotencyKey)
+      .where(isNotNull(table.idempotencyKey)),
+    index("peppol_inbound_addresses_company_idx").on(table.companyId, table.id),
+  ]
+);
+
+export const imports = pgTable(
+  "peppol_imports",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "imp_" + ulid()),
+    teamId: text("team_id")
+      .references(() => teams.id, { onDelete: "cascade" })
+      .notNull(),
+    companyId: text("company_id")
+      .references(() => companies.id, { onDelete: "cascade" })
+      .notNull(),
+    channel: importChannelEnum("channel").notNull(),
+    inboundAddressId: text("inbound_address_id").references(() => inboundAddresses.id),
+    status: importStatusEnum("status").notNull().default("queued"),
+    revision: integer("revision").notNull().default(1),
+    expectedType: text("expected_type"),
+    // The types the receiving address accepted when the email arrived; null for all.
+    acceptedTypes: text("accepted_types").array(),
+    direction: transferEventDirectionEnum("direction").notNull().default("incoming"),
+    metadata: jsonb("metadata").$type<Record<string, string>>().notNull().default({}),
+    labelIds: text("label_ids").array().notNull().default([]),
+    source: jsonb("source").$type<ImportSource>().notNull(),
+    idempotencyKey: text("idempotency_key"),
+    requestHash: text("request_hash"),
+    // The body of the response that accepted the import, replayed for the same key.
+    idempotencyResponse: jsonb("idempotency_response").$type<Record<string, unknown>>(),
+    providerMessageId: text("provider_message_id"),
+    rawSha256: text("raw_sha256"),
+    // The output of the import-level plan step: the results it created. Null until then.
+    planCheckpoint: jsonb("plan_checkpoint").$type<{ resultIds: string[] }>(),
+    // The sequence the next published result gets.
+    resultSequence: integer("result_sequence").notNull().default(0),
+    documentCount: integer("document_count").notNull().default(0),
+    failedCount: integer("failed_count").notNull().default(0),
+    error: jsonb("error").$type<Failure>(),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).defaultNow().notNull(),
+    leaseUntil: timestamp("lease_until", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("peppol_imports_idempotency_idx")
+      .on(table.companyId, table.idempotencyKey)
+      .where(isNotNull(table.idempotencyKey)),
+    uniqueIndex("peppol_imports_provider_message_idx")
+      .on(table.inboundAddressId, table.providerMessageId)
+      .where(isNotNull(table.providerMessageId)),
+    index("peppol_imports_company_idx").on(table.companyId, table.id),
+    index("peppol_imports_team_idx").on(table.teamId, table.id),
+    // The imports a worker can claim.
+    index("peppol_imports_waiting_idx")
+      .on(table.nextAttemptAt)
+      .where(sql`${table.status} in ('queued', 'processing')`),
+  ]
+);
+
+// The v2 File resource: immutable bytes in S3, received or derived by an import.
+export const files = pgTable(
+  "peppol_files",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "file_" + ulid()),
+    teamId: text("team_id")
+      .references(() => teams.id, { onDelete: "cascade" })
+      .notNull(),
+    companyId: text("company_id")
+      .references(() => companies.id, { onDelete: "cascade" })
+      .notNull(),
+    importId: text("import_id").references(() => imports.id),
+    filename: text("filename").notNull(),
+    mediaType: text("media_type").notNull(),
+    format: text("format").$type<FileFormat>(),
+    size: integer("size").notNull(),
+    sha256: text("sha256").notNull(),
+    s3Key: text("s3_key").notNull(),
+    provenance: jsonb("provenance").$type<FileProvenance>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("peppol_files_import_idx").on(table.importId)]
+);
+
+// One unit of processing of an import: one business document, or one failure. It is
+// public once it has a sequence; an ignored result never gets one.
+export const importResults = pgTable(
+  "peppol_import_results",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "res_" + ulid()),
+    importId: text("import_id")
+      .references(() => imports.id, { onDelete: "cascade" })
+      .notNull(),
+    // The order the plan step created the result in, which is the order it is processed in.
+    position: integer("position").notNull(),
+    sequence: integer("sequence"),
+    locations: jsonb("locations").$type<SourceLocation[]>().notNull(),
+    status: importResultStatusEnum("status").notNull().default("pending"),
+    checkpoints: jsonb("checkpoints").$type<Record<string, unknown>>().notNull().default({}),
+    documentId: text("document_id").references(() => transmittedDocuments.id, { onDelete: "set null" }),
+    error: jsonb("error").$type<Failure>(),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("peppol_import_results_import_idx").on(table.importId, table.position),
+    uniqueIndex("peppol_import_results_sequence_idx")
+      .on(table.importId, table.sequence)
+      .where(isNotNull(table.sequence)),
+  ]
+);
+
+// Execution history of the pipeline: one row per model call, also a failed one. Internal.
+export const importAttempts = pgTable(
+  "peppol_import_attempts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "ima_" + ulid()),
+    importId: text("import_id")
+      .references(() => imports.id, { onDelete: "cascade" })
+      .notNull(),
+    resultId: text("result_id")
+      .references(() => importResults.id, { onDelete: "cascade" })
+      .notNull(),
+    stage: text("stage").notNull(),
+    model: text("model"),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+    error: text("error"),
+  },
+  (table) => [index("peppol_import_attempts_import_idx").on(table.importId)]
+);

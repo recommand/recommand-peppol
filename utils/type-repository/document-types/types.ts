@@ -58,6 +58,8 @@ export type DocumentType<SendSchema extends z.ZodSchema, DocumentSchema extends 
   key: DocumentTypeKey;
   translatableTitle: string;
   class: DocumentTypeClass;
+  /** Whether document intake may recognise this type in a PDF and extract it with a model. */
+  aiIntake: boolean;
   sendSchema: SendSchema;
   documentSchema: DocumentSchema;
   preprocessFromSendAPI: (

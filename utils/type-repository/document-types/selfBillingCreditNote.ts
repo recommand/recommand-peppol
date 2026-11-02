@@ -17,6 +17,7 @@ export const selfBillingCreditNoteDocumentType: DocumentType<
   key: "selfBillingCreditNote",
   translatableTitle: getDocumentTypeTitle("selfBillingCreditNote"),
   class: "billing",
+  aiIntake: true,
   sendSchema: sendSelfBillingCreditNoteSchema,
   documentSchema: selfBillingCreditNoteSchema,
 

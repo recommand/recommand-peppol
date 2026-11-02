@@ -13,6 +13,11 @@ import receiveDocumentServer from "./api/internal/receive-document";
 import diditWebhookServer from "./api/internal/didit-webhook";
 import arratechWebhookServer from "./api/internal/arratech-webhook";
 import postmarkWebhookServer from "./api/internal/postmark-webhook";
+import postmarkInboundWebhookServer from "./api/internal/postmark-inbound-webhook";
+import importsServer from "./api/v2/imports";
+import inboundAddressesServer from "./api/v2/inbound-addresses";
+import filesServer from "./api/v2/files";
+import intakeDocumentTypesServer from "./api/intake-document-types";
 import transmittedDocumentsServer from "./api/documents";
 import { generateSpecs, type OpenApiSpecsOptions } from "hono-openapi";
 import type { Context } from "hono";
@@ -35,11 +40,13 @@ import { initializeFrenchReportingStatusCron } from "./data/fr-reporting-submiss
 import { initializeDeliveryReconciliationCron } from "./data/deliveries/reconcile";
 import { initializeEmailDeliveryReconciliationCron } from "./data/deliveries/reconcile-email";
 import { initializeDeletedNorwegianOrganisationsCron } from "./data/bronnoysund/deleted-organisations";
+import { initializeImportCronJobs } from "./data/imports/cron";
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
 import { registerPeppolEventTypes } from "./lib/event-types";
 import { initializeMetricsServer } from "./utils/metrics";
+import "./lib/permissions";
 
 export let logger: Logger;
 
@@ -176,6 +183,20 @@ For additional support or questions, don't hesitate to contact our support team.
             "Endpoints for working with playgrounds. Playgrounds are used to test the Recommand API without affecting production data or communicating over the Peppol network. A new playground can be created via the Recommand dashboard by clicking the team switcher in the top left, or via the API outlined below. Usage of the playground is free.",
         },
         {
+          name: "Imports",
+          description:
+            "Upload PDF and XML files to be processed into incoming documents, and follow how they were processed. Imports use the v2 conventions: responses without a success envelope, errors as Problem Details, cursor pagination and idempotency keys.",
+        },
+        {
+          name: "Inbound Email Addresses",
+          description:
+            "Give a company email addresses that receive documents: the PDF and XML attachments of every email sent to an address are imported for the company.",
+        },
+        {
+          name: "Files",
+          description: "The files imports received or derived.",
+        },
+        {
           name: "Labels",
           description:
             "You can manage all labels for a team. Labels are used to organize and categorize your data.",
@@ -233,6 +254,7 @@ export function start() {
   initializeDeliveryReconciliationCron(logger);
   initializeEmailDeliveryReconciliationCron(logger);
   initializeDeletedNorwegianOrganisationsCron(logger);
+  initializeImportCronJobs(logger);
 
   initializeMetricsServer(logger);
 }
@@ -246,10 +268,12 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, transmittedDocumentsServer);
   server.route(prefix, recipientServer);
   server.route(prefix, receivingCapabilitiesServer);
+  server.route(prefix, intakeDocumentTypesServer);
   server.route(prefix + "internal/", receiveDocumentServer);
   server.route(prefix + "internal/", diditWebhookServer);
   server.route(prefix + "internal/", arratechWebhookServer);
   server.route(prefix + "internal/", postmarkWebhookServer);
+  server.route(prefix + "internal/", postmarkInboundWebhookServer);
 
   server.route(prefix, webhooksServer);
   server.route(prefix, integrationsServer);
@@ -263,5 +287,11 @@ for (const prefix of ["/peppol/", "/v1/"]) {
   server.route(prefix, teamsServer);
   server.route(prefix, teamEntitlementsServer);
 }
+
+// The Services API v2 operations. Their requests and responses follow the v2
+// conventions: no success envelope, errors as Problem Details.
+server.route("/v2/", importsServer);
+server.route("/v2/", inboundAddressesServer);
+server.route("/v2/", filesServer);
 
 export default server;

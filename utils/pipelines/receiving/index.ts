@@ -1,25 +1,10 @@
-import { publishEvent } from "@core/data/rules/events";
 import { getCompanyByPeppolId } from "@peppol/data/companies";
-import { assignSupplierLabelsToDocument } from "@peppol/data/document-labels";
-import {
-  parsedHasAttachments,
-  uploadDocumentOriginalPayload,
-  type OriginalPayloadContainerFormat,
-} from "@peppol/data/offload/storage";
 import { DOCUMENT_SCHEME, PROCESS_SCHEME } from "@peppol/data/phoss-smp/service-metadata";
-import { sendIncomingDocumentNotifications } from "@peppol/data/send-document-notifications";
-import { findSupplierByVatAndPeppolId } from "@peppol/data/suppliers";
-import { validateXmlDocument } from "@peppol/data/validation/client";
-import { getValidationProfile } from "@peppol/utils/type-repository/document-formats";
-import { transmittedDocuments } from "@peppol/db/schema";
-import { recordUsageEvents, usageEventId } from "@peppol/data/usage";
-import { isBillableDocument } from "@peppol/utils/type-repository/document-types/billing";
-import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
-import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
-import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
+import {
+  recordIncomingDocument,
+  runIncomingDocumentFollowUps,
+} from "@peppol/data/record-incoming-document";
 import { UserFacingError } from "@peppol/utils/util";
-import { db } from "@recommand/db";
-import { ulid } from "ulid";
 import { prepareIncomingDocument } from "./prepare-document";
 import type { ReceivingPipelineInput } from "./types";
 
@@ -59,180 +44,32 @@ export async function receivingPipeline(
     company,
     senderId,
   });
-  const validation = await validateXmlDocument(received.xmlDocument, {
-    profile: getValidationProfile(docTypeId),
-  });
-  const type = received.type;
-  const parsedDocument = received.parsedDocument;
-  const transmittedDocumentId = `doc_${ulid()}`;
-  const transmittedDocumentCreatedAt = new Date();
-  const counterparties = received.documentType && parsedDocument
-    ? received.documentType.extractCounterparties(parsedDocument)
-    : { senderName: null, receiverName: null };
-  const documentNumber = received.documentType && parsedDocument
-    ? received.documentType.extractDocumentNumber(parsedDocument)
-    : null;
-  const documentSearchableText = received.documentType && parsedDocument
-    ? received.documentType.extractSearchableText(parsedDocument)
-    : "";
-  const searchText = [
-    transmittedDocumentId,
-    senderId,
-    receiverId,
-    docTypeId,
-    processId,
-    options.countryC1,
-    documentSearchableText,
-  ]
-    .map((part) => part?.trim())
-    .filter(Boolean)
-    .join(" ");
-  let s3KeyPrefix: string | null = null;
-  let originalPayloadLocation: "none" | "s3" = "none";
-  let originalPayloadContainerFormat: OriginalPayloadContainerFormat = "none";
 
-  if (received.originalPayload) {
-    try {
-      s3KeyPrefix = await uploadDocumentOriginalPayload(
-        {
-          id: transmittedDocumentId,
-          teamId: company.teamId,
-          companyId: company.id,
-          createdAt: transmittedDocumentCreatedAt,
-        },
-        received.originalPayload.content,
-        received.originalPayload.containerFormat,
-      );
-      originalPayloadLocation = "s3";
-      originalPayloadContainerFormat = received.originalPayload.containerFormat;
-    } catch (error) {
-      console.error("Failed to upload original incoming payload:", error);
-      sendSystemAlert(
-        "Original Payload Upload Failed",
-        `Failed to upload original incoming payload. Error: \`\`\`\n${error}\n\`\`\``,
-        "error",
-      );
-    }
-  }
-
-  const transmittedDocument = await db
-    .insert(transmittedDocuments)
-    .values({
-      id: transmittedDocumentId,
-      teamId: company.teamId,
-      companyId: company.id,
-      createdAt: transmittedDocumentCreatedAt,
-      direction: "incoming",
+  const documentId = await recordIncomingDocument({
+    received,
+    company,
+    skipBilling: options.skipBilling,
+    source: {
+      channel: "peppol",
       senderId,
       receiverId,
       docTypeId,
       processId,
       countryC1: options.countryC1,
-      accessPointProvider: company.accessPointProvider,
-      smpProvider: company.smpProvider,
-      xml: received.xmlDocument,
-      xmlLocation: "db",
-      attachmentsLocation: parsedHasAttachments(parsedDocument) ? "db" : "none",
-      originalPayloadLocation,
-      originalPayloadContainerFormat,
-      s3KeyPrefix,
-      peppolMessageId: options.as4MessageId ?? null,
-      peppolConversationId: options.as4ConversationId ?? null,
-      envelopeId: options.sbdhInstanceIdentifier ?? null,
-      apTransactionId: options.apTransactionId ?? null,
-      type,
-      parsed: parsedDocument,
-      validation,
-      ...counterparties,
-      documentNumber,
-      searchText,
-    })
-    .returning({ id: transmittedDocuments.id })
-    .then((rows) => rows[0]);
-
-  await publishEvent("peppol.document.received.v1", {
-    teamId: company.teamId,
-    streamId: company.id,
-    aggregateType: "peppol.document",
-    aggregateId: transmittedDocument.id,
-    idempotencyKey: `peppol.document.received:${transmittedDocument.id}`,
-    payload: {
-      companyId: company.id,
-      docType: type,
-      senderId,
-      receiverId,
-      peppolMessageId: options.as4MessageId ?? null,
-      peppolConversationId: options.as4ConversationId ?? null,
-      envelopeId: options.sbdhInstanceIdentifier ?? null,
-      countryC1: options.countryC1,
-    },
-    data: {
-      direction: "incoming",
-      parsed: parsedDocument ?? null,
-      xml: received.xmlDocument ?? null,
+      as4MessageId: options.as4MessageId,
+      as4ConversationId: options.as4ConversationId,
+      sbdhInstanceIdentifier: options.sbdhInstanceIdentifier,
+      apTransactionId: options.apTransactionId,
     },
   });
 
-  // Transport receipts and platform-level lifecycle statuses are not charged; see
-  // isBillableDocument for the rule. The detected type decides, so a lifecycle
-  // status we could not read is not charged as an unknown business document.
-  if (!options.skipBilling && isBillableDocument(received.probableType, parsedDocument)) {
-    await recordUsageEvents([
-      {
-        id: usageEventId({
-          transmittedDocumentId: transmittedDocument.id,
-          direction: "incoming",
-          channel: "peppol",
-        }),
-        teamId: company.teamId,
-        companyId: company.id,
-        direction: "incoming",
-        transmittedDocumentId: transmittedDocument.id,
-      },
-    ]);
-  }
-
-  if (parsedDocument && (type === "invoice" || type === "creditNote")) {
-    try {
-      const vatNumber =
-        (parsedDocument as Invoice | CreditNote).seller?.vatNumber || null;
-      const supplier = await findSupplierByVatAndPeppolId(
-        company.teamId,
-        vatNumber,
-        senderId,
-      );
-
-      if (supplier) {
-        await assignSupplierLabelsToDocument(
-          company.teamId,
-          transmittedDocument.id,
-          supplier.id,
-        );
-      }
-    } catch (error) {
-      console.error("Failed to match supplier or assign labels:", error);
-    }
-  }
-
-  try {
-    await sendIncomingDocumentNotifications({
-      transmittedDocumentId: transmittedDocument.id,
-      companyId: company.id,
-      companyName: company.name,
-      type,
-      parsedDocument,
-      xmlDocument: received.xmlDocument,
-      isPlayground:
-        options.useTestNetwork || options.playgroundTeamId ? true : false,
-    });
-  } catch (error) {
-    console.error("Failed to send incoming document notifications:", error);
-    sendSystemAlert(
-      "Document Notification Sending Failed",
-      `Failed to send incoming document notification for document ${transmittedDocument.id}.`,
-      "error",
-    );
-  }
+  await runIncomingDocumentFollowUps({
+    documentId,
+    received,
+    company,
+    senderId,
+    isPlayground: options.useTestNetwork || options.playgroundTeamId ? true : false,
+  });
 }
 
 export type {
