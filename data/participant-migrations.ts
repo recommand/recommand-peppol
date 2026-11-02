@@ -124,6 +124,33 @@ export async function getPendingInboundMigration(
   return open?.direction === "inbound" && open.status === "pending" ? open : undefined;
 }
 
+/**
+ * Refuses to remove an identifier or give it another value while its participant is
+ * migrating out: the new provider holds a key for it, and the migration has to be
+ * finalized or cancelled first.
+ */
+export async function assertNotMigratingOut(options: Participant & { companyId: string; useTestNetwork: boolean }): Promise<void> {
+  const open = await getOpenParticipantMigration(options);
+  if (open?.direction === "outbound") {
+    throw new UserFacingError(
+      `An outbound migration of ${participantAddress(cleanParticipant(options))} is in progress. Finalize or cancel it first.`
+    );
+  }
+}
+
+/**
+ * Withdraws the pending inbound key of an identifier that is removed or given another
+ * value. The key was given for that participant; left behind, it would be used if the
+ * same identifier is added again later, when the previous provider may have voided
+ * it, and the registration would fail on it.
+ */
+export async function cancelPendingInboundMigration(options: Participant & { companyId: string; useTestNetwork: boolean }): Promise<void> {
+  const pending = await getPendingInboundMigration(options);
+  if (pending) {
+    await setStatus(pending.id, "cancelled", "The identifier was removed or changed");
+  }
+}
+
 async function setStatus(
   migrationId: string,
   status: ParticipantMigration["status"],
