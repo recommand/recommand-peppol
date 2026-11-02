@@ -454,12 +454,13 @@ const RAW_XML_BILLING_ONLY_WITHOUT_RECIPIENT =
   "A raw XML document can only be sent without a Peppol recipient when it is an invoice, credit note, self-billing invoice or self-billing credit note in a supported format.";
 
 /**
- * Email is a channel for billing documents only: a message level response or a report
- * goes to a Peppol participant or nowhere. A raw XML document that could not be read as
- * one of the supported formats has no known type, and is refused as well.
+ * Only document types that say they can be delivered by email may go without a Peppol
+ * recipient: the billing documents. A message level response or a report goes to a
+ * Peppol participant or nowhere. A raw XML document that could not be read as one of
+ * the supported formats has no known type, and is refused as well.
  */
 function assertEmailOnlyDocumentType(type: string, message: string): void {
-  if (getDocumentType(type)?.class !== "billing") {
+  if (!getDocumentType(type)?.email?.isEmailDeliverySupported) {
     throw new SendingFailure(message, 400);
   }
 }
