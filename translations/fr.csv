@@ -308,8 +308,6 @@ This company needs to be verified. Without verification\, it will soon be deacti
 This document could not be fully parsed. Only technical metadata and raw XML are available.,Ce document n'a pas pu être entièrement analysé. Seuls les métadonnées techniques et le XML brut sont disponibles.
 This document could not be fully parsed. Only technical metadata is available.,Ce document n'a pas pu être entièrement analysé. Seules les métadonnées techniques sont disponibles.
 This document has validation errors that need attention.,Ce document contient des erreurs de validation qui nécessitent votre attention.
-This is a Peppol Test Network playground environment,Ceci est un environnement de test connecté au réseau de test Peppol
-This is a playground environment,Ceci est un environnement de test
 This is a playground team\, so identity verification is simulated. Choose whether the verification for {0} should be accepted or rejected.,Ceci est une équipe de test\, la vérification d'identité est donc simulée. Choisissez si la vérification de {0} doit être acceptée ou rejetée.
 This is a playground team. You can use it to test the Recommand API without affecting production data or communicating over the Peppol network.,Ceci est une équipe de test. Vous pouvez l'utiliser pour tester l'API Recommand sans affecter les données de production ni communiquer sur le réseau Peppol.
 This is a production team. You can use it to send and receive Peppol documents.,Ceci est une équipe de production. Vous pouvez l'utiliser pour envoyer et recevoir des documents Peppol.
@@ -1088,3 +1086,8 @@ An inbound email address was created\, enabled or disabled\, or its accepted doc
 An inbound email address was deleted. It refuses email from then on; its imports stay.,Une adresse e-mail de réception a été supprimée. Elle refuse désormais les e-mails ; ses imports sont conservés.
 Inbound email,E-mail entrant
 Enabled,Activée
+Production,Production
+Playground,Environnement de test
+Playground · Test network,Environnement de test · réseau de test Peppol
+Not on the Peppol network,Hors du réseau Peppol
+On the Peppol test network,Sur le réseau de test Peppol

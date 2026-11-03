@@ -639,8 +639,6 @@ This company needs to be verified. Without verification\, it will soon be deacti
 This document could not be fully parsed. Only technical metadata and raw XML are available.,Dieses Dokument konnte nicht vollständig geparst werden. Es sind nur technische Metadaten und das Roh-XML verfügbar.
 This document could not be fully parsed. Only technical metadata is available.,Dieses Dokument konnte nicht vollständig geparst werden. Es sind nur technische Metadaten verfügbar.
 This document has validation errors that need attention.,Dieses Dokument weist Validierungsfehler auf\, die behoben werden müssen.
-This is a Peppol Test Network playground environment,Dies ist eine mit dem Peppol-Testnetzwerk verbundene Testumgebung
-This is a playground environment,Dies ist eine Testumgebung
 This is a playground team\, so identity verification is simulated. Choose whether the verification for {0} should be accepted or rejected.,Dies ist ein Testteam\, daher wird die Identitätsprüfung simuliert. Wählen Sie aus\, ob die Verifizierung für {0} angenommen oder abgelehnt werden soll.
 This is a playground team. You can use it to test the Recommand API without affecting production data or communicating over the Peppol network.,Dies ist ein Testteam. Sie können damit die Recommand API testen\, ohne Produktionsdaten zu beeinflussen oder über das Peppol-Netzwerk zu kommunizieren.
 This is a production team. You can use it to send and receive Peppol documents.,Dies ist ein Produktionsteam. Sie können damit Peppol-Dokumente senden und empfangen.
@@ -1088,3 +1086,8 @@ An inbound email address was created\, enabled or disabled\, or its accepted doc
 An inbound email address was deleted. It refuses email from then on; its imports stay.,Eine Eingangs-E-Mail-Adresse wurde gelöscht. Sie lehnt ab dann E-Mails ab; ihre Importe bleiben erhalten.
 Inbound email,Eingehende E-Mail
 Enabled,Aktiviert
+Production,Produktion
+Playground,Testumgebung
+Playground · Test network,Testumgebung · Peppol-Testnetzwerk
+Not on the Peppol network,Nicht im Peppol-Netzwerk
+On the Peppol test network,Im Peppol-Testnetzwerk

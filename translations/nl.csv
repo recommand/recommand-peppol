@@ -366,8 +366,6 @@ This company needs to be verified. Without verification\, it will soon be deacti
 This document could not be fully parsed. Only technical metadata and raw XML are available.,Dit document kon niet volledig worden geanalyseerd. Alleen technische metadata en ruwe XML zijn beschikbaar.
 This document could not be fully parsed. Only technical metadata is available.,Dit document kon niet volledig worden geanalyseerd. Alleen technische metadata is beschikbaar.
 This document has validation errors that need attention.,Dit document heeft validatiefouten die aandacht nodig hebben.
-This is a Peppol Test Network playground environment,Dit is een testomgeving op het Peppol-testnetwerk
-This is a playground environment,Dit is een testomgeving
 This is a playground team\, so identity verification is simulated. Choose whether the verification for {0} should be accepted or rejected.,Dit is een testteam\, dus de identiteitsverificatie wordt gesimuleerd. Kies of de verificatie voor {0} moet worden geaccepteerd of afgewezen.
 This is a playground team. You can use it to test the Recommand API without affecting production data or communicating over the Peppol network.,Dit is een testteam. Je kunt het gebruiken om de Recommand-API te testen zonder productiegegevens te beïnvloeden of via het Peppol-netwerk te communiceren.
 This is a production team. You can use it to send and receive Peppol documents.,Dit is een productieteam. Je kunt het gebruiken om Peppol-documenten te verzenden en te ontvangen.
@@ -1088,3 +1086,8 @@ An inbound email address was created\, enabled or disabled\, or its accepted doc
 An inbound email address was deleted. It refuses email from then on; its imports stay.,Een inkomend e-mailadres is verwijderd. Het weigert vanaf dan e-mail; de imports ervan blijven bewaard.
 Inbound email,Inkomende e-mail
 Enabled,Ingeschakeld
+Production,Productie
+Playground,Testomgeving
+Playground · Test network,Testomgeving · Peppol-testnetwerk
+Not on the Peppol network,Niet op het Peppol-netwerk
+On the Peppol test network,Op het Peppol-testnetwerk

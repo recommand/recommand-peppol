@@ -12,15 +12,17 @@ import {
 } from "lucide-react";
 import { useMenuItemActions } from "@core/lib/menu-store";
 import { useOnboardingActions } from "@core/lib/onboarding-store";
+import { useUIConfigActions } from "@core/lib/ui-config-store";
 import CompanyOnboarding from "@peppol/components/onboarding/company";
 import AddPlayground from "./add-playground";
-import PlaygroundUI from "./playground-ui";
+import { PlaygroundBanner, teamEnvironmentMeta } from "./team-environment";
 import { useTranslation } from "@core/hooks/use-translation";
 import { PEPPOL_PERMISSIONS } from "@peppol/lib/permission-ids";
 
 export default function Main({ children }: { children: React.ReactNode }) {
   const { registerMenuItem } = useMenuItemActions();
   const { registerOnboardingStep } = useOnboardingActions();
+  const { setUIConfig } = useUIConfigActions();
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -98,11 +100,15 @@ export default function Main({ children }: { children: React.ReactNode }) {
     });
   }, [registerMenuItem, registerOnboardingStep, t]);
 
+  useEffect(() => {
+    setUIConfig("team-switcher.meta", teamEnvironmentMeta);
+    setUIConfig("sidebar.footer", <PlaygroundBanner />);
+  }, [setUIConfig]);
+
   return (
     <>
       {children}
       <AddPlayground />
-      <PlaygroundUI />
     </>
   );
 }
