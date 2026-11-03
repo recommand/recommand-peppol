@@ -11,7 +11,7 @@ export const JEV_MODEL_ID = "typesafe-ai/jev-1.14.0";
  * Extracts the document content from a PDF with structured output, and classifies a
  * PDF without a text layer.
  */
-export const EXTRACTION_MODEL_ID = "anthropic/claude-haiku-5.5";
+export const EXTRACTION_MODEL_ID = "anthropic/claude-opus-5.5";
 
 /** Below this probability for the best type, classification is uncertain. */
 export const CLASSIFICATION_THRESHOLD = 0.5;

@@ -541,6 +541,16 @@ describe("extract and check", () => {
     );
   });
 
+  it("repairs an output without a document", async () => {
+    const { outcome, model } = await extractAndCheck("invoice", [
+      { findings: [], multipleDocuments: false },
+      { document: invoice.document, findings: [], multipleDocuments: false },
+    ]);
+    expect(outcome).toMatchObject({ checkpoint: { document: expect.any(Object) } });
+    expect(model.doGenerateCalls).toHaveLength(2);
+    expect(JSON.stringify(model.doGenerateCalls[1].prompt)).toContain("has these problems");
+  });
+
   it("repairs a string that is not a document", async () => {
     const { outcome, model } = await extractAndCheck("invoice", [
       { document: "not a document", findings: [], multipleDocuments: false },

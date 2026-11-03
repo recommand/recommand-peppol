@@ -65,7 +65,9 @@ export async function extractWithModel(options: {
       },
       ...(repair
         ? [
-            { role: "assistant" as const, content: JSON.stringify(repair.previous) },
+            // An output without a document has no previous document: JSON.stringify(undefined)
+            // is undefined, which is no message content.
+            { role: "assistant" as const, content: JSON.stringify(repair.previous ?? null) },
             {
               role: "user" as const,
               content: `The document in your output has these problems:\n${repair.issues.join("\n")}\nCorrect these problems. Do not add values that are not printed in the document.`,
