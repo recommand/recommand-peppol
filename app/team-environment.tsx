@@ -18,8 +18,7 @@ import {
 type Place = "sidebar" | "panel";
 
 /**
- * The environment marker under a team's name in the team switcher: an
- * outlined mint pixel for a playground, a filled one for production.
+ * The environment label under a team's name in the team switcher.
  */
 export function teamEnvironmentMeta(team: Team & { isMember?: boolean }, place: Place) {
   // Teams the user is not a member of are only listed for support; looking
@@ -60,9 +59,8 @@ function TeamEnvironment({ teamId, place }: { teamId: string; place: Place }) {
   }
 
   return (
-    <span className="flex items-center gap-1.5 text-table-head text-sidebar-muted-foreground [text-transform:var(--table-head-transform)]">
-      <StatusPixel size="xs" tone="positive" shape={playground?.isPlayground ? "outline" : "filled"} />
-      <span className="truncate">{label}</span>
+    <span className="truncate text-table-head text-sidebar-muted-foreground [text-transform:var(--table-head-transform)]">
+      {label}
     </span>
   );
 }
