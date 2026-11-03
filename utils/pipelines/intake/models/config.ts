@@ -17,6 +17,11 @@ export const EXTRACTION_MODEL_ID = "anthropic/claude-haiku-5.5";
 export const CLASSIFICATION_THRESHOLD = 0.5;
 /** The characters of the text layer that go into the classification state. */
 export const CLASSIFICATION_TEXT_LIMIT = 8000;
+/**
+ * The most repair calls for one extracted document. Each call gets the latest output
+ * and the problems found in it.
+ */
+export const MAX_REPAIR_CALLS = 3;
 /** A model call that takes longer is aborted and retried later. */
 export const MODEL_CALL_TIMEOUT_MS = 2 * 60 * 1000;
 

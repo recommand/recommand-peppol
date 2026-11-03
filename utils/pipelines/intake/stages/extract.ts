@@ -5,6 +5,12 @@ import type { ExtractionOutput } from "../schemas";
 import { failure, type Stage } from "../types";
 import { withAttempt } from "./attempt";
 
+/** A pointer into the document. A model can start it with the `document` property of its output. */
+function documentPointer(pointer: string) {
+  const absolute = pointer.startsWith("/") ? pointer : `/${pointer}`;
+  return absolute === "/document" || absolute.startsWith("/document/") ? absolute.slice("/document".length) : absolute;
+}
+
 /** The model's findings as document findings, which point into the document's content. */
 export function extractionFindings(findings: ExtractionOutput["findings"]): Finding[] {
   return (findings ?? []).map((finding) => ({
@@ -12,7 +18,7 @@ export function extractionFindings(findings: ExtractionOutput["findings"]): Find
     severity: "warning",
     scope: "extraction",
     message: finding.message,
-    pointer: `/content${finding.pointer.startsWith("/") ? finding.pointer : `/${finding.pointer}`}`,
+    pointer: `/content${documentPointer(finding.pointer)}`,
   }));
 }
 

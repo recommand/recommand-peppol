@@ -25,6 +25,7 @@ export function createResultContext(options: {
   company: Company;
   result: ImportResult;
   files: ImportFile[];
+  onProgress?: () => Promise<void>;
 }): ResultContext {
   const files = new Map(options.files.map((file) => [file.id, file]));
   const primary = options.result.locations.find((location) => location.role === "primary")!;
@@ -52,6 +53,7 @@ export function createResultContext(options: {
     addFile: (file) => files.set(file.id, file),
     recordAttempt: (attempt) =>
       recordAttempt({ ...attempt, importId: options.importRow.id, resultId: options.result.id }),
+    progress: options.onProgress ?? (async () => {}),
   };
   return context;
 }
@@ -73,7 +75,7 @@ async function runStage(stage: Stage, context: ResultContext): Promise<StageOutc
  * checkpoint is saved before the next stage starts, so a retry does not repeat a model
  * call. A failure or an ignored result ends it; so does publication.
  */
-export async function runResult(context: ResultContext, onProgress?: () => Promise<void>): Promise<void> {
+export async function runResult(context: ResultContext): Promise<void> {
   const save = () =>
     saveResultCheckpoints(context.result.id, context.checkpoints, context.result.locations);
   for (const stage of STAGES) {
@@ -84,7 +86,7 @@ export async function runResult(context: ResultContext, onProgress?: () => Promi
     if ("checkpoint" in outcome) {
       (context.checkpoints as Record<string, unknown>)[stage.name] = outcome.checkpoint;
       await save();
-      await onProgress?.();
+      await context.progress();
       continue;
     }
     if ("failure" in outcome) {

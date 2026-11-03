@@ -129,7 +129,9 @@ export async function processImport(claimed: Import): Promise<void> {
     const files = await getImportFiles(row.id);
     for (const result of await getImportResults(row.id)) {
       if (result.status !== "pending") continue;
-      await runResult(createResultContext({ importRow: row, company, result, files }), () => extendLease(claimed));
+      await runResult(
+        createResultContext({ importRow: row, company, result, files, onProgress: () => extendLease(claimed) }),
+      );
       await extendLease(claimed);
     }
     await finishImport(row.id);

@@ -61,6 +61,7 @@ const { structuredStage } = await import("@peppol/utils/pipelines/intake/stages/
 const { textStage } = await import("@peppol/utils/pipelines/intake/stages/text");
 const { PermanentStageError, withAttempt } = await import("@peppol/utils/pipelines/intake/stages/attempt");
 const { MAX_FILE_SIZE, MAX_PDF_PAGES } = await import("@peppol/utils/pipelines/intake/config");
+const { MAX_REPAIR_CALLS } = await import("@peppol/utils/pipelines/intake/models/config");
 const { APICallError } = await import("ai");
 const { classifyPdf, decideClassification, classifyStage } = await import("@peppol/utils/pipelines/intake/stages/classify");
 const { extractStage } = await import("@peppol/utils/pipelines/intake/stages/extract");
@@ -98,7 +99,7 @@ function context(options: {
   mediaType: "application/pdf" | "application/xml";
   checkpoints?: Checkpoints;
   importRow?: Partial<Import>;
-}): ResultContext & { attempts: unknown[] } {
+}): ResultContext & { attempts: unknown[]; progressCalls: number } {
   const primary = file("file_1", options.mediaType, options.mediaType === "application/pdf" ? "invoice.pdf" : "invoice.xml");
   const attempts: unknown[] = [];
   const bytes = Buffer.from(options.bytes);
@@ -116,7 +117,7 @@ function context(options: {
     publishedAt: null,
     createdAt: new Date(),
   };
-  return {
+  const run: ResultContext & { attempts: unknown[]; progressCalls: number } = {
     importRow: {
       id: "imp_1",
       teamId: "team_1",
@@ -138,8 +139,13 @@ function context(options: {
     recordAttempt: async (attempt) => {
       attempts.push(attempt);
     },
+    progress: async () => {
+      run.progressCalls++;
+    },
     attempts,
+    progressCalls: 0,
   };
+  return run;
 }
 
 const invoice = sampleDocument("invoice");
@@ -459,6 +465,8 @@ describe("extract and check", () => {
     expect(model.doGenerateCalls).toHaveLength(1);
     const call = model.doGenerateCalls[0];
     expect(JSON.stringify(call.prompt)).toContain("application/pdf");
+    // The rules of the billing class come with the rules for every type.
+    expect(JSON.stringify(call.prompt)).toContain("Use VAT category S only with a rate above 0.");
     expect(call.responseFormat).toMatchObject({ type: "json" });
   });
 
@@ -466,17 +474,26 @@ describe("extract and check", () => {
     const { outcome } = await extractAndCheck("invoice", [
       {
         document: invoice.document,
-        findings: [{ pointer: "/invoiceNumber", code: "uncertain_value", message: "Hard to read." }],
+        findings: [
+          { pointer: "/invoiceNumber", code: "uncertain_value", message: "Hard to read." },
+          { pointer: "/document/seller/name", code: "uncertain_value", message: "Small print." },
+          { pointer: "document", code: "missing_value", message: "No page 2." },
+        ],
         multipleDocuments: false,
       },
     ]);
-    expect((outcome as { checkpoint: { findings: unknown[] } }).checkpoint.findings).toContainEqual({
+    const findings = (outcome as { checkpoint: { findings: { pointer: string; [key: string]: unknown }[] } }).checkpoint.findings;
+    expect(findings).toContainEqual({
       code: "uncertain_value",
       severity: "warning",
       scope: "extraction",
       message: "Hard to read.",
       pointer: "/content/invoiceNumber",
     });
+    // A pointer that starts with the document property of the output points into the content.
+    expect(findings.map((finding) => finding.pointer)).toEqual(
+      expect.arrayContaining(["/content/seller/name", "/content"]),
+    );
   });
 
   it("fails a PDF with more than one document", async () => {
@@ -494,10 +511,101 @@ describe("extract and check", () => {
     expect(JSON.stringify(model.doGenerateCalls[1].prompt)).toContain("has these problems");
   });
 
-  it("fails an output that still does not parse after the repair", async () => {
+  it("fails an output that still does not parse after three repairs", async () => {
     const invalid = { document: { ...invoice.document, lines: [] }, findings: [], multipleDocuments: false };
-    const { outcome } = await extractAndCheck("invoice", [invalid, invalid]);
+    const { outcome, model, run } = await extractAndCheck("invoice", [invalid, invalid, invalid, invalid]);
     expect(outcome).toMatchObject({ failure: { code: "extraction_invalid", issues: [expect.objectContaining({ pointer: "/content/lines" })] } });
+    expect(model.doGenerateCalls).toHaveLength(1 + MAX_REPAIR_CALLS);
+    expect(run.progressCalls).toBe(MAX_REPAIR_CALLS);
+  });
+
+  it("reads a document that the model wrote as a JSON string", async () => {
+    const finding = { pointer: "/invoiceNumber", code: "uncertain_value", message: "Hard to read." };
+    const { outcome, model } = await extractAndCheck("invoice", [
+      { document: JSON.stringify(invoice.document), findings: [], multipleDocuments: false },
+    ]);
+    expect(outcome).toMatchObject({ checkpoint: { document: { invoiceNumber: invoice.number } } });
+    expect(model.doGenerateCalls).toHaveLength(1);
+
+    // The rest of the output can follow the document in the same string.
+    const { outcome: withRest, run } = await extractAndCheck("invoice", [
+      {
+        document: `${JSON.stringify(invoice.document)},"findings":[${JSON.stringify(finding)},{"pointer":1}]}`,
+        findings: [],
+        multipleDocuments: false,
+      },
+    ]);
+    expect(run.checkpoints.extract).toMatchObject({ document: { invoiceNumber: invoice.number } });
+    expect((withRest as { checkpoint: { findings: unknown[] } }).checkpoint.findings).toContainEqual(
+      expect.objectContaining({ code: "uncertain_value", pointer: "/content/invoiceNumber" }),
+    );
+  });
+
+  it("repairs a string that is not a document", async () => {
+    const { outcome, model } = await extractAndCheck("invoice", [
+      { document: "not a document", findings: [], multipleDocuments: false },
+      { document: invoice.document, findings: [], multipleDocuments: false },
+    ]);
+    expect(outcome).toMatchObject({ checkpoint: { document: expect.any(Object) } });
+    expect(model.doGenerateCalls).toHaveLength(2);
+  });
+
+  it("writes one VAT breakdown per category and rate", async () => {
+    const { lines, vat, totals } = invoice.document;
+    const deposit = (netAmount: string) => ({
+      ...lines[0],
+      name: "Crate",
+      netPriceAmount: netAmount.replace("-", ""),
+      quantity: netAmount.startsWith("-") ? "-1" : "1",
+      netAmount,
+      vat: { category: "Z", percentage: "0" },
+    });
+    const document = {
+      ...invoice.document,
+      lines: [...lines, deposit("120.00"), deposit("-40.00")],
+      vat: {
+        ...vat,
+        subtotals: [
+          ...vat.subtotals,
+          { category: "Z", percentage: "0", taxableAmount: "120.00", vatAmount: "0.00", exemptionReason: "Deposit" },
+          { category: "Z", percentage: "0.00", taxableAmount: "-40.00", vatAmount: "0.00", exemptionReason: "Deposit returned" },
+        ],
+      },
+      totals: {
+        ...totals,
+        linesAmount: totals.linesAmount && (Number(totals.linesAmount) + 80).toFixed(2),
+        taxExclusiveAmount: (Number(totals.taxExclusiveAmount) + 80).toFixed(2),
+        taxInclusiveAmount: (Number(totals.taxInclusiveAmount) + 80).toFixed(2),
+        payableAmount: totals.payableAmount && (Number(totals.payableAmount) + 80).toFixed(2),
+      },
+    };
+    const { outcome } = await extractAndCheck("invoice", [{ document, findings: [], multipleDocuments: false }]);
+    const checked = (outcome as { checkpoint: { document: Record<string, any> } }).checkpoint.document;
+    expect(checked.vat.subtotals).toHaveLength(vat.subtotals.length + 1);
+    expect(checked.vat.subtotals.at(-1)).toMatchObject({
+      category: "Z",
+      taxableAmount: "80.00",
+      vatAmount: "0.00",
+      exemptionReason: "Deposit; Deposit returned",
+    });
+  });
+
+  it("writes registration numbers and printed units in the form the formats require", async () => {
+    const document = {
+      ...invoice.document,
+      seller: { ...invoice.document.seller, vatNumber: "BE 0403.201.185", enterpriseNumber: "0403.201.185" },
+      lines: invoice.document.lines.map((line: Record<string, unknown>, index: number) => ({
+        ...line,
+        unitCode: ["kg", "PCE", "FF"][index % 3],
+      })),
+    };
+    const { outcome } = await extractAndCheck("invoice", [{ document, findings: [], multipleDocuments: false }]);
+    const checked = (outcome as { checkpoint: { document: Record<string, any> } }).checkpoint.document;
+    expect(checked.seller).toMatchObject({ vatNumber: "BE0403201185", enterpriseNumber: "0403201185" });
+    // FF is a valid code (hundred cubic metre), so it stays.
+    expect(checked.lines.map((line: { unitCode: string }) => line.unitCode)).toEqual(
+      document.lines.map((_: unknown, index: number) => ["KGM", "H87", "FF"][index % 3]),
+    );
   });
 
   const invalidAnswer = {
@@ -526,10 +634,26 @@ describe("extract and check", () => {
     expect(repairPrompt).not.toContain("A warning only.");
   });
 
-  it("fails a document that still does not pass validation after the repair", async () => {
+  it("repairs with the latest output until the document passes validation", async () => {
     validationAnswers.push(invalidAnswer, invalidAnswer);
+    const output = (invoiceNumber: string) => ({
+      document: { ...invoice.document, invoiceNumber },
+      findings: [],
+      multipleDocuments: false,
+    });
+    const { outcome, model, run } = await extractAndCheck("invoice", [output("A-1"), output("A-2"), output("A-3")]);
+    expect(outcome).toMatchObject({ checkpoint: { document: { invoiceNumber: "A-3" }, validation: { result: "valid" } } });
+    expect(model.doGenerateCalls).toHaveLength(3);
+    expect(JSON.stringify(model.doGenerateCalls[1].prompt)).toContain("A-1");
+    expect(JSON.stringify(model.doGenerateCalls[2].prompt)).toContain("A-2");
+    expect(JSON.stringify(model.doGenerateCalls[2].prompt)).not.toContain("A-1");
+    expect(run.progressCalls).toBe(2);
+  });
+
+  it("fails a document that still does not pass validation after three repairs", async () => {
+    validationAnswers.push(invalidAnswer, invalidAnswer, invalidAnswer, invalidAnswer);
     const output = { document: invoice.document, findings: [], multipleDocuments: false };
-    const { outcome, model } = await extractAndCheck("invoice", [output, output]);
+    const { outcome, model } = await extractAndCheck("invoice", [output, output, output, output]);
     expect(outcome).toEqual({
       failure: expect.objectContaining({
         code: "extraction_invalid",
@@ -537,7 +661,7 @@ describe("extract and check", () => {
         issues: [{ code: "BR-CO-15", message: "Invoice total amount with VAT is wrong." }],
       }),
     });
-    expect(model.doGenerateCalls).toHaveLength(2);
+    expect(model.doGenerateCalls).toHaveLength(1 + MAX_REPAIR_CALLS);
   });
 
   it("lets a document through when the validation service fails, like a received document", async () => {

@@ -6,9 +6,10 @@ import { getValidationProfile } from "@peppol/utils/type-repository/document-for
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import type { z } from "zod";
-import { checkFindings, minimumEvidenceIssues } from "../checks";
+import { checkFindings, minimumEvidenceIssues, normalizeExtraction } from "../checks";
 import { encodeResult } from "../encode";
 import { extractWithModel, getIntakeLanguageModel } from "../models/claude";
+import { MAX_REPAIR_CALLS } from "../models/config";
 import { type Checkpoints, failure, type ResultContext, type Stage, type StageOutcome } from "../types";
 import { withAttempt } from "./attempt";
 import { extractionFindings } from "./extract";
@@ -81,7 +82,7 @@ type Verdict =
  * because the validation service failed goes through.
  */
 async function verify(context: ResultContext, documentType: AnyDocumentType, candidate: unknown): Promise<Verdict> {
-  const parsed = documentType.documentSchema.safeParse(candidate);
+  const parsed = documentType.documentSchema.safeParse(normalizeExtraction(documentType, candidate));
   if (!parsed.success) {
     return {
       failure: {
@@ -127,34 +128,37 @@ async function verify(context: ResultContext, documentType: AnyDocumentType, can
   };
 }
 
-/** Verify the extracted document, after one repair call when the model can correct it. */
+/**
+ * Verify the extracted document. While the model can correct it, ask it to, at most
+ * `MAX_REPAIR_CALLS` times: each call gets the latest output and its problems.
+ */
 async function verifyExtraction(
   context: ResultContext,
   documentType: AnyDocumentType,
 ): Promise<{ verdict: Verdict; findings: Finding[] }> {
   const extracted = context.checkpoints.extract!;
-  const verdict = await verify(context, documentType, extracted.document);
-  if (!("failure" in verdict) || !verdict.repairHints) {
-    return { verdict, findings: extracted.findings };
+  let document = extracted.document;
+  let findings = extracted.findings;
+  let verdict = await verify(context, documentType, document);
+  for (let call = 0; call < MAX_REPAIR_CALLS; call++) {
+    if (!("failure" in verdict) || !verdict.repairHints) {
+      break;
+    }
+    const model = getIntakeLanguageModel();
+    if (!model) {
+      throw new Error("No extraction model is configured");
+    }
+    const pdf = await context.readFile(context.primaryFile.id);
+    const repair = { previous: document, issues: verdict.repairHints };
+    const { output } = await withAttempt(context, "check", () =>
+      extractWithModel({ model, pdf, documentType, company: context.company, repair }),
+    );
+    await context.progress();
+    document = output.document;
+    findings = extractionFindings(output.findings);
+    verdict = await verify(context, documentType, document);
   }
-  const model = getIntakeLanguageModel();
-  if (!model) {
-    throw new Error("No extraction model is configured");
-  }
-  const pdf = await context.readFile(context.primaryFile.id);
-  const { output } = await withAttempt(context, "check", () =>
-    extractWithModel({
-      model,
-      pdf,
-      documentType,
-      company: context.company,
-      repair: { previous: extracted.document, issues: verdict.repairHints! },
-    }),
-  );
-  return {
-    verdict: await verify(context, documentType, output.document),
-    findings: extractionFindings(output.findings),
-  };
+  return { verdict, findings };
 }
 
 async function check(context: ResultContext): Promise<StageOutcome> {

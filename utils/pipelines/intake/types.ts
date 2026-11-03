@@ -65,6 +65,8 @@ export type ResultContext = {
   /** Make a file known to the context, for a file a stage derived. */
   addFile: (file: ImportFile) => void;
   recordAttempt: (attempt: Omit<AttemptRecord, "importId" | "resultId">) => Promise<void>;
+  /** Tell the worker that the result makes progress, so that it keeps its lease. */
+  progress: () => Promise<void>;
 };
 
 export type StageOutcome =
