@@ -94,7 +94,12 @@ export function PlaygroundBanner() {
             />
           }
         >
-          <StatusPixel size="xs" tone="positive" shape="outline" />
+          <StatusPixel
+            size="xs"
+            tone="positive"
+            shape="outline"
+            className="hidden group-data-[collapsible=icon]:inline-block"
+          />
           <span className="grid min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm text-sidebar-accent-foreground">{t`Playground`}</span>
             <span className="truncate text-xs text-sidebar-muted-foreground">
