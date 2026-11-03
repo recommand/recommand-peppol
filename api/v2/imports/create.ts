@@ -170,7 +170,7 @@ server.post(
       labelIds: [...request.labelIds].sort(),
       file: { filename: file.name, sha256: sha256Hex(bytes) },
     });
-    const existing = await findImportByIdempotencyKey(company.id, key);
+    const existing = key ? await findImportByIdempotencyKey(company.id, key) : null;
     if (existing) {
       return await replay(c, existing, hash);
     }
@@ -222,7 +222,7 @@ server.post(
     } catch (error) {
       // The same key accepted by a request that ran at the same time: the unique index
       // made this insert wait for that commit, so its response is there to replay.
-      const concurrent = isUniqueViolation(error) ? await findImportByIdempotencyKey(company.id, key) : null;
+      const concurrent = key && isUniqueViolation(error) ? await findImportByIdempotencyKey(company.id, key) : null;
       if (concurrent) {
         return await replay(c, concurrent, hash);
       }
@@ -231,7 +231,7 @@ server.post(
     kickImportWorker();
     return c.json(row.idempotencyResponse, 202, {
       Location: importLocation(row.id),
-      ...idempotencyExpiryHeader(importActiveUntil(row)),
+      ...(key ? idempotencyExpiryHeader(importActiveUntil(row)) : {}),
     });
   }),
 );

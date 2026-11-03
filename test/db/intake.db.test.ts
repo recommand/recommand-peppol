@@ -263,13 +263,23 @@ describe.skipIf(!testDatabaseUrl)("document intake against PostgreSQL", () => {
       expect(conflict.status).toBe(409);
       expect(conflict.headers.get("Content-Type")).toContain("application/problem+json");
       expect(await conflict.json()).toMatchObject({ code: "idempotency_conflict", status: 409 });
-      expect((await upload(invoice.xml, "invoice.xml", {}, null)).status).toBe(400);
       expect(await rows(`SELECT id FROM peppol_imports`)).toHaveLength(1);
       // A key belongs to the company it was used for: another company can use it too.
       const otherCompany = await upload(invoice.xml, "invoice.xml", { companyId: "cmp_second" }, "key-1");
       expect(otherCompany.status).toBe(202);
       expect(otherCompany.headers.get("Idempotency-Replayed")).toBeNull();
       expect(await rows(`SELECT id FROM peppol_imports`)).toHaveLength(2);
+    });
+
+    it("accepts a request without a key as a new import each time", async () => {
+      const first = await upload(invoice.xml, "invoice.xml", {}, null);
+      expect(first.status).toBe(202);
+      expect(first.headers.get("Idempotency-Key-Expires-At")).toBeNull();
+      const second = await upload(invoice.xml, "invoice.xml", {}, null);
+      expect(second.status).toBe(202);
+      expect(second.headers.get("Idempotency-Replayed")).toBeNull();
+      expect((await second.json()).id).not.toBe((await first.json()).id);
+      expect(await rows(`SELECT id FROM peppol_imports WHERE idempotency_key IS NULL`)).toHaveLength(2);
     });
 
     it("removes the stored bytes when the import cannot be inserted", async () => {

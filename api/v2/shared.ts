@@ -25,7 +25,6 @@ export const PROBLEM_TYPE_BASE = "https://recommand.eu/problems/";
 const TITLES: Record<string, string> = {
   invalid_request: "Invalid request",
   invalid_cursor: "Invalid cursor",
-  idempotency_key_required: "Idempotency key required",
   idempotency_conflict: "Idempotency key reused",
   precondition_failed: "Precondition failed",
   unauthenticated: "Authentication required",
@@ -317,10 +316,11 @@ export function requestHash(input: unknown): string {
   return createHash("sha256").update(canonicalJson(input)).digest("hex");
 }
 
-export function idempotencyKey(c: Context): string {
+/** The Idempotency-Key of the request, or null without one: the key is optional. */
+export function idempotencyKey(c: Context): string | null {
   const key = c.req.header("Idempotency-Key")?.trim();
   if (!key) {
-    throw new ApiProblem(400, "idempotency_key_required", "Send an Idempotency-Key header with this request.");
+    return null;
   }
   if (key.length > 255) {
     throw new ApiProblem(400, "invalid_request", "The Idempotency-Key header is longer than 255 characters.");
@@ -340,14 +340,14 @@ export function assertSameRequest(stored: { requestHash: string | null }, hash: 
 export const IDEMPOTENCY_KEY_PARAMETER = {
   in: "header" as const,
   name: "Idempotency-Key",
-  required: true,
+  required: false,
   description:
-    "A key you choose for this command, unique per command within the company. Sending it again with the same request returns the response of the first request, with the header `Idempotency-Replayed: true`; with another request, it fails with `409 idempotency_conflict`. The response header `Idempotency-Key-Expires-At` tells until when the key is guaranteed to replay.",
+    "Optional. A key you choose for this command, unique per command within the company. Without a key, each request runs the command again. Sending it again with the same request returns the response of the first request, with the header `Idempotency-Replayed: true`; with another request, it fails with `409 idempotency_conflict`. The response header `Idempotency-Key-Expires-At` tells until when the key is guaranteed to replay.",
   schema: { type: "string" as const, maxLength: 255 },
 };
 
 export const IDEMPOTENCY_EXPIRES_HEADER = {
-  description: "Until when the Idempotency-Key is guaranteed to replay this response.",
+  description: "Until when the Idempotency-Key is guaranteed to replay this response. Only when the request had an Idempotency-Key.",
   schema: { type: "string" as const, format: "date-time" },
 };
 

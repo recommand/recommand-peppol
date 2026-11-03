@@ -117,7 +117,7 @@ function createdHeaders(row: InboundAddress, body: { revision: number }) {
   return {
     Location: inboundAddressLocation(row),
     ETag: etag(body.revision),
-    ...idempotencyExpiryHeader(row.createdAt),
+    ...(row.idempotencyKey ? idempotencyExpiryHeader(row.createdAt) : {}),
   };
 }
 
@@ -159,7 +159,7 @@ server.post(
     const body = c.req.valid("json" as never) as z.infer<typeof createSchema>;
     const acceptedTypes = normalizeTypes(body.acceptedTypes);
     const hash = requestHash({ companyId, enabled: body.enabled, acceptedTypes });
-    const existing = await findInboundAddressByIdempotencyKey(companyId, key);
+    const existing = key ? await findInboundAddressByIdempotencyKey(companyId, key) : null;
     if (existing) {
       return await replay(c, existing, hash);
     }
@@ -178,7 +178,7 @@ server.post(
         toInboundAddress,
       );
     } catch (error) {
-      const concurrent = isUniqueViolation(error) ? await findInboundAddressByIdempotencyKey(companyId, key) : null;
+      const concurrent = key && isUniqueViolation(error) ? await findInboundAddressByIdempotencyKey(companyId, key) : null;
       if (concurrent) {
         return await replay(c, concurrent, hash);
       }
