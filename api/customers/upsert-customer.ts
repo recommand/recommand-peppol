@@ -39,42 +39,42 @@ const upsertCustomerRouteDescription = describeRoute({
 const upsertCustomerJsonBodySchema = z.object({
   id: z.string().optional().openapi({
     description:
-      "The internal ID of the customer to update. If provided, updates by id.",
+      "The ID of the customer to update. When it does not match one of the team's customers, the request fails with a 400.",
   }),
   name: z.string().openapi({
-    description: "The name of the customer",
+    description: "The customer's name.",
   }),
   externalId: z.string().nullable().optional().openapi({
     description:
-      "The external ID of the customer. If provided without id, finds by externalId and updates or creates if not found.",
+      "Your own identifier for the customer, unique within the team. Without an id, the customer with this external ID is updated, or created when there is none. With an id, it replaces the customer's external ID; null clears it, and leaving it out keeps it.",
   }),
   vatNumber: z.string().nullable().optional().openapi({
-    description: "The VAT number of the customer",
+    description: "The customer's VAT number. Leaving it out on an update clears it.",
   }),
   enterpriseNumber: z.string().nullable().optional().openapi({
-    description: "The enterprise number of the customer",
+    description: "The customer's registration number in its national business register. Leaving it out on an update clears it.",
   }),
   peppolAddresses: z.array(z.string()).optional().default([]).openapi({
-    description: "The Peppol addresses of the customer",
+    description: "The customer's Peppol addresses, each as `scheme:identifier`. Leaving them out on an update clears them.",
   }),
   address: z.string().openapi({
-    description: "The street address of the customer",
+    description: "Street name and number of the customer's address.",
   }),
   city: z.string().openapi({
-    description: "The city of the customer",
+    description: "City of the customer's address.",
   }),
   postalCode: z.string().openapi({
-    description: "The postal code of the customer",
+    description: "Postal code of the customer's address.",
   }),
   country: z.string().openapi({
-    description: "The country code (ISO 3166-1 alpha-2) of the customer",
+    description: "The country of the customer's address, in ISO 3166-1 alpha-2 format.",
     examples: ["BE"],
   }),
   email: z.string().nullable().optional().openapi({
-    description: "The email address of the customer",
+    description: "Contact email address for the customer. Leaving it out on an update clears it.",
   }),
   phone: z.string().nullable().optional().openapi({
-    description: "The phone number of the customer",
+    description: "Contact phone number for the customer. Leaving it out on an update clears it.",
   }),
 });
 
