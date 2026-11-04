@@ -152,6 +152,7 @@ export const norwegianRepresentativeCheck: CountryRepresentativeCheck = {
   // a foreign company) the representative types their name: the checks hold it
   // against the register, and support needs it when the session is held for review.
   nameWithoutList: "typed",
+  refusesWithoutRegister: false,
 
   afterIdentity: async (company, name, dependencies) => {
     let assessment: NorwegianAssessment;

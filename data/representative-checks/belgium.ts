@@ -60,4 +60,5 @@ export const belgianRepresentativeCheck: CountryRepresentativeCheck = {
 
   listRepresentatives: namedRepresentatives,
   nameWithoutList: "unknown",
+  refusesWithoutRegister: true,
 };
