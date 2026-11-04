@@ -48,6 +48,7 @@ type VerificationContext = {
     isRepresentativeSelectionRequired: boolean;
     representatives: Representative[];
     nameWithoutRepresentatives: "unknown" | "typed";
+    isRegisterUnavailable: boolean;
     isPlayground: boolean;
     isMandateRequired: boolean;
     mandateTitle: string | null;
@@ -78,13 +79,15 @@ export default function Page() {
     const [isRestarting, setIsRestarting] = useState(false);
     const [restartError, setRestartError] = useState<string | null>(null);
 
+    // The register could not be read and the representative would be refused for it.
+    const registerUnavailable = context?.isRegisterUnavailable === true;
     const showRepresentativeSelection = context?.isRepresentativeSelectionRequired && context.representatives.length > 0;
     // A listed representative picks their name. When the register lists nobody, the
     // identity check runs on an unknown name and is reviewed, or the representative
     // types their name, depending on the country.
-    const noRepresentativesFound = context?.isRepresentativeSelectionRequired && context.representatives.length === 0
+    const noRepresentativesFound = !registerUnavailable && context?.isRepresentativeSelectionRequired && context.representatives.length === 0
         && context.nameWithoutRepresentatives === "unknown";
-    const showNameInputs = !showRepresentativeSelection && !noRepresentativesFound;
+    const showNameInputs = !registerUnavailable && !showRepresentativeSelection && !noRepresentativesFound;
 
     const selectedRepresentative = useMemo(() => {
         if (!showRepresentativeSelection || selectedRepresentativeIndex === null) return null;
@@ -103,6 +106,7 @@ export default function Page() {
             : (selectedRepresentative?.lastName ?? "");
 
     const isFormComplete =
+        !registerUnavailable &&
         effectiveFirstName.trim() !== "" &&
         effectiveLastName.trim() !== "" &&
         acceptTerms &&
@@ -457,7 +461,21 @@ export default function Page() {
                 ) : (
                     <>
                         <CountrySpecificFields requirements={context.countryRequirements} value={countrySpecific} onChange={setCountrySpecific} />
-                        {noRepresentativesFound ? (
+                        {registerUnavailable ? (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-base">{t`Representative Details`}</CardTitle>
+                                    <CardDescription>
+                                        {t`The company register cannot be reached right now, so we cannot check who represents this company. Please try again in a few minutes.`}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Button variant="outline" onClick={() => window.location.reload()}>
+                                        {t`Try again`}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ) : noRepresentativesFound ? (
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="text-base">{t`Representative Details`}</CardTitle>
