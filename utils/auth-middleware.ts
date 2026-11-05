@@ -1,5 +1,5 @@
-import { isMember } from "@core/data/teams";
 import {
+  checkTeamAccess,
   requireAuth,
   requireTeamAccess,
   type AuthenticatedTeamContext,
@@ -63,23 +63,8 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
       return c.json(actionFailure("Company not found"), 404);
     }
 
-    const contextTeamId = c.get("teamId");
-    const user: { id: string; isAdmin: boolean } | null = c.get("user");
-    if (contextTeamId) {
-      // If the user is authenticated via an API key, ensure the API key belongs to the team
-      // Admins bypass this check and can access any company
-      if (!user?.isAdmin && contextTeamId !== company.teamId) {
-        return c.json(actionFailure("Unauthorized"), 401);
-      }
-    } else {
-      if (!user?.id) {
-        return c.json(actionFailure("Unauthorized"), 401);
-      }
-      // If the user is not authenticated via an API key, ensure they are a member of the team
-      // Admins bypass this check and can access any company
-      if (!user.isAdmin && !(await isMember(user.id, company.teamId))) {
-        return c.json(actionFailure("Unauthorized"), 401);
-      }
+    if (!(await checkTeamAccess(c, company.teamId)).allowed) {
+      return c.json(actionFailure("Unauthorized"), 401);
     }
 
     // Get team based on company
