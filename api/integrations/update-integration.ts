@@ -35,7 +35,9 @@ const updateIntegrationParamSchema = z.object({
 });
 
 const updateIntegrationJsonBodySchema = z.object({
-    companyId: z.string(),
+    companyId: z.string().openapi({
+        description: "The ID of the company the integration is for",
+    }),
     configuration: configurationSchema,
 }).strict();
 
