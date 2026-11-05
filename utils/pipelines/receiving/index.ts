@@ -18,6 +18,7 @@ import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { UserFacingError } from "@peppol/utils/util";
+import { checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { db } from "@recommand/db";
 import { ulid } from "ulid";
 import { prepareIncomingDocument } from "./prepare-document";
@@ -50,6 +51,10 @@ export async function receivingPipeline(
   const processId = options.processId.startsWith(processSchemePrefix)
     ? options.processId.substring(processSchemePrefix.length)
     : options.processId;
+
+  // A team without access to its documents still receives them, so nothing sent to
+  // it is lost, but no event announces them, then or later.
+  const documentAccess = await checkPeppolEntitlementForTeamId(company.teamId, PEPPOL_ENTITLEMENTS.DOCUMENT_ACCESS);
 
   const received = await prepareIncomingDocument({
     docTypeId,
@@ -150,22 +155,24 @@ export async function receivingPipeline(
     .returning({ id: transmittedDocuments.id })
     .then((rows) => rows[0]);
 
-  await publishEvent("peppol.document.received.v1", {
-    teamId: company.teamId,
-    aggregateType: "peppol.document",
-    aggregateId: transmittedDocument.id,
-    idempotencyKey: `peppol.document.received:${transmittedDocument.id}`,
-    payload: {
-      companyId: company.id,
-      docType: type,
-      senderId,
-      receiverId,
-      peppolMessageId: options.as4MessageId ?? null,
-      peppolConversationId: options.as4ConversationId ?? null,
-      envelopeId: options.sbdhInstanceIdentifier ?? null,
-      countryC1: options.countryC1,
-    },
-  });
+  if (documentAccess.allowed) {
+    await publishEvent("peppol.document.received.v1", {
+      teamId: company.teamId,
+      aggregateType: "peppol.document",
+      aggregateId: transmittedDocument.id,
+      idempotencyKey: `peppol.document.received:${transmittedDocument.id}`,
+      payload: {
+        companyId: company.id,
+        docType: type,
+        senderId,
+        receiverId,
+        peppolMessageId: options.as4MessageId ?? null,
+        peppolConversationId: options.as4ConversationId ?? null,
+        envelopeId: options.sbdhInstanceIdentifier ?? null,
+        countryC1: options.countryC1,
+      },
+    });
+  }
 
   // Transport receipts and platform-level lifecycle statuses are not charged; see
   // isBillableDocument for the rule. The detected type decides, so a lifecycle

@@ -1,3 +1,4 @@
+import { requireDocumentAccess } from "@peppol/utils/auth-middleware";
 import { Server, type Context } from "@recommand/lib/api";
 import { z } from "zod";
 import "zod-openapi/extend";
@@ -44,6 +45,7 @@ type DeleteTransmittedDocumentContext = Context<AuthenticatedUserContext & Authe
 const _deleteTransmittedDocumentMinimal = server.delete(
     "/documents/:documentId",
     requireTeamAccess(),
+    requireDocumentAccess(),
     deleteTransmittedDocumentRouteDescription,
     zodValidator("param", deleteTransmittedDocumentParamSchema),
     _deleteTransmittedDocumentImplementation,
@@ -52,6 +54,7 @@ const _deleteTransmittedDocumentMinimal = server.delete(
 const _deleteTransmittedDocument = server.delete(
     "/:teamId/documents/:documentId",
     requireTeamAccess(),
+    requireDocumentAccess(),
     describeRoute({hide: true}),
     zodValidator("param", deleteTransmittedDocumentParamSchemaWithTeamId),
     _deleteTransmittedDocumentImplementation,

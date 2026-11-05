@@ -1,3 +1,4 @@
+import { requireDocumentAccess } from "@peppol/utils/auth-middleware";
 import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { audit } from "@core/lib/audit";
 import { deleteTransmittedDocuments } from "@peppol/data/transmitted-documents";
@@ -35,6 +36,7 @@ type BulkDeleteContext = Context<
 const _bulkDelete = server.delete(
   "/:teamId/documents/bulk-delete",
   requireTeamAccess(),
+  requireDocumentAccess(),
   describeRoute({ hide: true }),
   zodValidator("param", bulkDeleteParamSchema),
   zodValidator("json", bulkDeleteJsonBodySchema),
