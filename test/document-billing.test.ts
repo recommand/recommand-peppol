@@ -74,6 +74,12 @@ describe("Document billing", () => {
     expect(isBillableDocument("frenchInvoicingCdar", null)).toBe(false);
   });
 
+  it("classifies by the status when the declared phase contradicts it", () => {
+    expect(isBillableDocument("frenchInvoicingCdar", { phase: "23", statusCode: "202" } as never)).toBe(false);
+    expect(isBillableDocument("frenchInvoicingCdar", { phase: "23", statusCode: "203" } as never)).toBe(false);
+    expect(isBillableDocument("frenchInvoicingCdar", { phase: "305", statusCode: "205" } as never)).toBe(true);
+  });
+
   it("writes no transfer event for a status a platform generated, however it was sent", () => {
     const base = {
       teamId: "team_1",
