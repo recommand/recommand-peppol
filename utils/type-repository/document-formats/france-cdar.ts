@@ -9,6 +9,9 @@ import {
 } from "./france-process";
 
 const guidelineId = "urn.cpro.gouv.fr:1p0:CDV:invoice";
+// A platform's status on a lifecycle status message, such as its rejection of one
+// (DGFiP external specifications, rule G7.14).
+const lifecycleStatusGuidelineId = "urn.cpro.gouv.fr:1p0:CDV:messageCDV";
 const regulatedProcessId = "urn:peppol:france:billing:regulated";
 const nonRegulatedProcessId = "urn:peppol:france:billing:non-regulated";
 
@@ -34,11 +37,16 @@ export const franceCdarFormat: DocumentFormat<
       translatableTitle: "France Invoice Lifecycle Status (CDAR) (Non-Regulated)",
     },
   ],
+  // Only the regulated flows carry lifecycle statuses without a business process.
   resolveProcessId: (document) =>
-    getFranceCdarProcessId(document.businessProcess),
+    document.businessProcess
+      ? getFranceCdarProcessId(document.businessProcess)
+      : regulatedProcessId,
 
   encode: (document, processId) => {
-    assertFranceCdarProcessId(processId, document.businessProcess);
+    if (document.businessProcess) {
+      assertFranceCdarProcessId(processId, document.businessProcess);
+    }
     return franceCdarToXML({
       franceCdar: document,
     });
@@ -51,12 +59,17 @@ export const franceCdarFormat: DocumentFormat<
 
   // The guideline the document names is not the customization part of its doc type id,
   // and a CDAR may arrive inside a Standard Business Document envelope.
-  isFormat: (document) =>
-    ciiGuidelineId(
+  isFormat: (document) => {
+    const documentGuidelineId = ciiGuidelineId(
       document.CrossDomainAcknowledgementAndResponse ??
         document.StandardBusinessDocument
           ?.CrossDomainAcknowledgementAndResponse
-    ) === guidelineId,
+    );
+    return (
+      documentGuidelineId === guidelineId ||
+      documentGuidelineId === lifecycleStatusGuidelineId
+    );
+  },
 };
 
 export default franceCdarFormat;

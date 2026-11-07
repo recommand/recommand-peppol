@@ -7,6 +7,7 @@ import { getUnitCodeName } from "@peppol/utils/unit-codes";
 import type {
   FranceCdar,
   FranceCdarCollectedAmount,
+  FranceCdarRequestedActionCode,
   FranceCdarRoleCode,
   FranceCdarStatusCode,
 } from "@peppol/utils/parsing/france-cdar/schemas";
@@ -127,7 +128,7 @@ type FranceCdarTemplateData = {
   documentTypeLabel: string;
   responseId: string;
   issueDate: string;
-  businessProcess: string;
+  businessProcess?: string;
   phase: string;
   phaseLabel: string;
   senderRole: string;
@@ -152,6 +153,11 @@ type FranceCdarTemplateData = {
   reason?: string;
   reasonNote?: string;
   hasReason: boolean;
+  requestedActionCode?: string;
+  requestedActionLabel?: string;
+  requestedAction?: string;
+  hasRequestedAction: boolean;
+  isStatusOnLifecycleStatus: boolean;
   collectedAmounts?: FranceCdarCollectedAmount[];
   hasCollectedAmounts: boolean;
   isPositive: boolean;
@@ -256,7 +262,25 @@ const FRANCE_CDAR_STATUS_LABELS: Record<FranceCdarStatusCode, string> = {
   "212": "Payment received",
   "213": "Rejected",
   "214": "Endorsed",
+  "220": "Cancelled",
+  "221": "Routing error",
+  "224": "Direct payment requested",
+  "225": "Factored",
+  "226": "Factored (confidential)",
+  "227": "Account to pay changed",
+  "228": "No longer factored",
   "501": "Inadmissible",
+  "601": "Lifecycle status rejected",
+};
+
+const FRANCE_CDAR_REQUESTED_ACTION_LABELS: Record<FranceCdarRequestedActionCode, string> = {
+  NOA: "No action required",
+  PIN: "Provide the missing information",
+  NIN: "Issue a corrected invoice",
+  CNF: "Issue a credit note for the full invoice",
+  CNP: "Issue a partial credit note",
+  CNA: "Repay the amount paid",
+  OTH: "Other",
 };
 
 const FRANCE_CDAR_ROLE_LABELS: Record<FranceCdarRoleCode, string> = {
@@ -534,10 +558,13 @@ function buildFranceCdarTemplateData(
 ): FranceCdarTemplateData {
   const isNegative = parsed.statusCode === "210"
     || parsed.statusCode === "213"
-    || parsed.statusCode === "501";
+    || parsed.statusCode === "221"
+    || parsed.statusCode === "501"
+    || parsed.statusCode === "601";
   const isWarning = parsed.statusCode === "206"
     || parsed.statusCode === "207"
-    || parsed.statusCode === "208";
+    || parsed.statusCode === "208"
+    || parsed.statusCode === "220";
   const isPositive = parsed.statusCode === "205"
     || parsed.statusCode === "209"
     || parsed.statusCode === "211"
@@ -577,6 +604,14 @@ function buildFranceCdarTemplateData(
     reason: parsed.reason,
     reasonNote: parsed.reasonNote,
     hasReason: Boolean(parsed.reasonCode || parsed.reason || parsed.reasonNote),
+    requestedActionCode: parsed.requestedActionCode,
+    requestedActionLabel: parsed.requestedActionCode
+      ? FRANCE_CDAR_REQUESTED_ACTION_LABELS[parsed.requestedActionCode]
+      : undefined,
+    requestedAction: parsed.requestedAction,
+    hasRequestedAction: Boolean(parsed.requestedActionCode || parsed.requestedAction),
+    isStatusOnLifecycleStatus:
+      parsed.invoiceTypeCode === "305" || parsed.statusCode === "601",
     collectedAmounts: parsed.collectedAmounts,
     hasCollectedAmounts: Boolean(parsed.collectedAmounts?.length),
     isPositive,

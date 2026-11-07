@@ -78,7 +78,16 @@ describe("France CDAR JSON sending", () => {
   });
 
   it("maps every status to its documented phase", () => {
-    for (const statusCode of ["200", "201", "202", "203", "213", "501"] as const) {
+    for (const statusCode of [
+      "200",
+      "201",
+      "202",
+      "203",
+      "213",
+      "221",
+      "501",
+      "601",
+    ] as const) {
       expect(getFranceCdarPhaseForStatus(statusCode)).toBe("305");
     }
 
@@ -93,6 +102,12 @@ describe("France CDAR JSON sending", () => {
       "211",
       "212",
       "214",
+      "220",
+      "224",
+      "225",
+      "226",
+      "227",
+      "228",
     ] as const) {
       expect(getFranceCdarPhaseForStatus(statusCode)).toBe("23");
     }
@@ -1206,5 +1221,193 @@ describe("France CDAR JSON sending", () => {
     }).replace(' currencyID="EUR"', "");
 
     expect(() => parseFranceCdarFromXML(xmlWithoutCurrency)).toThrow();
+  });
+
+  // A platform's rejection of a lifecycle status message it received, in the shape
+  // of the DGFiP external specifications (rules G7.14, G7.15 and G7.19): no business
+  // process, the rejected message as referenced document and status 601.
+  const lifecycleStatusRejection = `<ns3:CrossDomainAcknowledgementAndResponse xmlns:ns4="urn:un:unece:uncefact:data:standard:QualifiedDataType:100" xmlns:ns2="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100" xmlns:ns3="urn:un:unece:uncefact:data:standard:CrossDomainAcknowledgementAndResponse:100">
+    <ns3:ExchangedDocumentContext>
+        <ns2:GuidelineSpecifiedDocumentContextParameter>
+            <ns2:ID>urn.cpro.gouv.fr:1p0:CDV:messageCDV</ns2:ID>
+        </ns2:GuidelineSpecifiedDocumentContextParameter>
+    </ns3:ExchangedDocumentContext>
+    <ns3:ExchangedDocument>
+        <ns2:ID>CDV_0000000000000TEST1</ns2:ID>
+        <ns2:Name>Cycle de vie de CDV</ns2:Name>
+        <ns2:IssueDateTime>
+            <DateTimeString format="204">20261107092537</DateTimeString>
+        </ns2:IssueDateTime>
+        <ns2:SenderTradeParty>
+            <ns2:GlobalID schemeID="0238">9998</ns2:GlobalID>
+            <ns2:RoleCode>WK</ns2:RoleCode>
+        </ns2:SenderTradeParty>
+        <ns2:IssuerTradeParty>
+            <ns2:GlobalID schemeID="0238">9998</ns2:GlobalID>
+            <ns2:RoleCode>WK</ns2:RoleCode>
+        </ns2:IssuerTradeParty>
+        <ns2:RecipientTradeParty>
+            <ns2:GlobalID schemeID="0002">123456789</ns2:GlobalID>
+            <ns2:RoleCode>BY</ns2:RoleCode>
+        </ns2:RecipientTradeParty>
+    </ns3:ExchangedDocument>
+    <ns3:AcknowledgementDocument>
+        <ns2:MultipleReferencesIndicator>
+            <Indicator>false</Indicator>
+        </ns2:MultipleReferencesIndicator>
+        <ns2:TypeCode>305</ns2:TypeCode>
+        <ns2:IssueDateTime>
+            <DateTimeString format="204">20261107092537</DateTimeString>
+        </ns2:IssueDateTime>
+        <ns2:ReferenceReferencedDocument>
+            <ns2:IssuerAssignedID>CDAR-2026-REJECTED</ns2:IssuerAssignedID>
+            <ns2:TypeCode>305</ns2:TypeCode>
+            <ns2:ReferenceTypeCode>urn.cpro.gouv.fr:1p0:CDV:messageCDV</ns2:ReferenceTypeCode>
+            <ns2:FormattedIssueDateTime>
+                <ns4:DateTimeString format="204">20261107082617</ns4:DateTimeString>
+            </ns2:FormattedIssueDateTime>
+            <ns2:ProcessConditionCode>601</ns2:ProcessConditionCode>
+            <ns2:ProcessCondition>Rejeté</ns2:ProcessCondition>
+            <ns2:SpecifiedDocumentStatus>
+                <ns2:ReferenceDateTime>
+                    <DateTimeString format="204">20261107092537</DateTimeString>
+                </ns2:ReferenceDateTime>
+                <ns2:ReasonCode>REJ_RG</ns2:ReasonCode>
+                <ns2:Reason>Autre</ns2:Reason>
+                <ns2:RequestedActionCode>PIN</ns2:RequestedActionCode>
+                <ns2:RequestedAction>Provide information : Missing information requested without re-issuing invoice</ns2:RequestedAction>
+                <ns2:SequenceNumeric>1</ns2:SequenceNumeric>
+                <ns2:IncludedNote>
+                    <ns2:ContentCode>SCHEMATRON</ns2:ContentCode>
+                    <ns2:Content />
+                    <ns2:SubjectCode />
+                </ns2:IncludedNote>
+            </ns2:SpecifiedDocumentStatus>
+        </ns2:ReferenceReferencedDocument>
+    </ns3:AcknowledgementDocument>
+</ns3:CrossDomainAcknowledgementAndResponse>`;
+
+  it("reads a platform's rejection of a lifecycle status message", () => {
+    expect(parseFranceCdarFromXML(lifecycleStatusRejection)).toEqual({
+      id: "CDV_0000000000000TEST1",
+      issueDate: "2026-11-07T09:25:37",
+      phase: "305",
+      senderRole: "WK",
+      issuerRole: "WK",
+      issuerLegalId: "9998",
+      issuerLegalIdScheme: "0238",
+      recipientRole: "BY",
+      recipientLegalId: "123456789",
+      recipientLegalIdScheme: "0002",
+      statusCode: "601",
+      statusDate: "2026-11-07T09:25:37",
+      invoiceId: "CDAR-2026-REJECTED",
+      invoiceTypeCode: "305",
+      invoiceIssueDate: "2026-11-07",
+      reasonCode: "REJ_RG",
+      reason: "Autre",
+      requestedActionCode: "PIN",
+      requestedAction:
+        "Provide information : Missing information requested without re-issuing invoice",
+    });
+    expect(
+      detectDocumentFormat(lifecycleStatusRejection, {})?.key
+    ).toBe("france-cdar");
+    // The rejection a platform sends is a transmission status, so it is not billed.
+    expect(getFranceCdarPhaseForStatus("601")).toBe("305");
+  });
+
+  it("keeps a status on a lifecycle status message out of the CDARs it sends", () => {
+    for (const fields of [
+      { statusCode: "601", senderRole: "WK", issuerRole: "WK", reasonCode: "REJ_SEMAN" },
+      { invoiceTypeCode: "305" },
+    ] as const) {
+      const result = sendFranceCdarSchema.safeParse({ ...request.document, ...fields });
+      expect(result.success).toBe(false);
+    }
+    for (const reasonCode of ["REJ_INC", "REJ_INEX", "REJ_RG", "REJ_HAB", "REJ_ENCAISSEMENT"]) {
+      expect(franceCdarReasonCodeSchema.safeParse(reasonCode).success).toBe(true);
+      const result = sendFranceCdarSchema.safeParse({
+        ...request.document,
+        statusCode: "207",
+        reasonCode,
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.message).toContain("cannot be sent");
+    }
+  });
+
+  it("requires the business process when sending only", () => {
+    const { businessProcess: _, ...withoutBusinessProcess } = request.document;
+
+    expect(sendFranceCdarSchema.safeParse(withoutBusinessProcess).success).toBe(false);
+
+    const document = franceCdarSchema.parse({
+      ...withoutBusinessProcess,
+      id: "CDAR-2026-NO-PROCESS",
+      issueDate: "2026-07-23T14:05:09",
+      phase: "23",
+      recipientElectronicAddress: "987654321",
+      recipientElectronicAddressScheme: "0225",
+    });
+    const xml = franceCdarToXML({ franceCdar: document });
+
+    expect(xml).not.toContain("BusinessProcessSpecifiedDocumentContextParameter");
+    expect(parseFranceCdarFromXML(xml)).toEqual(document);
+    expect(franceCdarFormat.resolveProcessId!(document)).toBe(
+      FRANCE_REGULATED_PROCESS_ID
+    );
+  });
+
+  it("sends the statuses XP Z12-012 added in June 2026 with their roles", () => {
+    for (const statusCode of ["220", "224", "225", "226", "227", "228"] as const) {
+      expect(
+        sendFranceCdarSchema.safeParse({ ...request.document, statusCode }).success
+      ).toBe(true);
+    }
+
+    const routingError = {
+      ...request.document,
+      senderRole: "WK",
+      issuerRole: "WK",
+      issuerLegalId: undefined,
+      issuerLegalIdScheme: undefined,
+      statusCode: "221",
+    } as const;
+    expect(sendFranceCdarSchema.parse(routingError).phase).toBe("305");
+    expect(
+      sendFranceCdarSchema.safeParse({ ...routingError, reasonCode: "ROUTAGE_ERR" })
+        .success
+    ).toBe(true);
+    expect(
+      sendFranceCdarSchema.safeParse({ ...routingError, reasonCode: "DEST_ERR" })
+        .success
+    ).toBe(false);
+  });
+
+  it("serializes and parses the requested action (MDT-121, MDT-122)", async () => {
+    const sent = sendFranceCdarSchema.parse({
+      ...request.document,
+      statusCode: "207",
+      reasonCode: "PU_ERR",
+      requestedActionCode: "NIN",
+      requestedAction: "Issue a corrected invoice with the agreed unit price",
+    });
+    const document = franceCdarSchema.parse({
+      ...sent,
+      id: "CDAR-2026-NIN",
+      issueDate: "2026-07-23T14:05:09",
+      statusDate: "2026-07-23T14:05:09",
+      recipientElectronicAddress: "987654321",
+      recipientElectronicAddressScheme: "0225",
+    });
+    const xml = franceCdarToXML({ franceCdar: document });
+
+    expect(parseFranceCdarFromXML(xml)).toEqual(document);
+    expect(
+      sendFranceCdarSchema.safeParse({ ...request.document, requestedActionCode: "XXX" })
+        .success
+    ).toBe(false);
+    await validateXml(xml, "CDAR 207 with requested action");
   });
 });
