@@ -21,6 +21,13 @@ mock.module("@peppol/data/company-notification-emails", () => ({
   getIncomingCompanyNotificationEmailAddresses: async () => addresses,
   getOutgoingCompanyNotificationEmailAddresses: async () => addresses,
 }));
+mock.module("@peppol/data/companies", () => ({
+  getCompanyById: async () => ({ id: "company", teamId: "team" }),
+}));
+mock.module("@peppol/lib/entitlements", () => ({
+  PEPPOL_ENTITLEMENTS: { DOCUMENT_ACCESS: "peppol.document-access" },
+  checkPeppolEntitlementForTeamId: async () => ({ allowed: true }),
+}));
 mock.module("@peppol/data/email/document-notification-props", () => ({
   buildIncomingDocumentNotificationAttachmentParts: async () => {
     if (failBuildingAttachments) throw new Error("attachments unavailable");

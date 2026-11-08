@@ -5,6 +5,7 @@
 export const PEPPOL_ENTITLEMENTS = Object.freeze({
   TRANSACTIONS: "peppol.transactions",
   INTEGRATIONS: "peppol.integrations",
+  DOCUMENT_ACCESS: "peppol.document-access",
 });
 
 export type PeppolEntitlementId = (typeof PEPPOL_ENTITLEMENTS)[keyof typeof PEPPOL_ENTITLEMENTS];
