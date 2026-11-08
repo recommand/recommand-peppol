@@ -37,6 +37,11 @@ export type CountryRepresentativeCheck = {
    * name that is listed is always picked from the list.
    */
   nameWithoutList: "unknown" | "typed";
+  /**
+   * Whether the check before the identity check refuses everyone while the register
+   * cannot be read. The form then asks to try again instead of offering a name.
+   */
+  refusesWithoutRegister: boolean;
   /** After a successful identity check: why support has to decide, or null to verify. */
   afterIdentity?: (company: CheckedCompany, name: RepresentativeName, dependencies: RepresentativeCheckDependencies) => Promise<string | null>;
   /** Tells support about a session afterIdentity held. */

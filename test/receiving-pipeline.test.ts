@@ -174,7 +174,7 @@ describe("receiving pipeline", () => {
     // A status code the parser does not know yet.
     const body = franceCdarToXML({ franceCdar: cdar }).replace(
       "<ram:ProcessConditionCode>205</ram:ProcessConditionCode>",
-      "<ram:ProcessConditionCode>220</ram:ProcessConditionCode>",
+      "<ram:ProcessConditionCode>699</ram:ProcessConditionCode>",
     );
 
     const received = await prepareIncomingDocument({

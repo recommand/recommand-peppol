@@ -23,8 +23,10 @@ export const FRANCE_CDAR_TEMPLATE = `<!DOCTYPE html>
               <span>Issue date: {{issueDate}}</span>
               <span>&bull;</span>
               <span>{{phaseLabel}} ({{phase}})</span>
-              <span>&bull;</span>
-              <span>{{businessProcess}}</span>
+              {{#businessProcess}}
+                <span>&bull;</span>
+                <span>{{businessProcess}}</span>
+              {{/businessProcess}}
             </p>
           </div>
         </div>
@@ -70,15 +72,15 @@ export const FRANCE_CDAR_TEMPLATE = `<!DOCTYPE html>
         </div>
 
         <div>
-          <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">Referenced invoice</p>
+          <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">{{#isStatusOnLifecycleStatus}}Referenced lifecycle status{{/isStatusOnLifecycleStatus}}{{^isStatusOnLifecycleStatus}}Referenced invoice{{/isStatusOnLifecycleStatus}}</p>
           <dl class="grid grid-cols-1 gap-3 text-sm">
             <div>
-              <dt class="text-xs text-slate-500">Invoice number</dt>
+              <dt class="text-xs text-slate-500">{{#isStatusOnLifecycleStatus}}Message ID{{/isStatusOnLifecycleStatus}}{{^isStatusOnLifecycleStatus}}Invoice number{{/isStatusOnLifecycleStatus}}</dt>
               <dd class="text-slate-700 font-mono break-all">{{invoiceId}}</dd>
             </div>
             {{#invoiceIssueDate}}
               <div>
-                <dt class="text-xs text-slate-500">Invoice issue date</dt>
+                <dt class="text-xs text-slate-500">{{#isStatusOnLifecycleStatus}}Message date{{/isStatusOnLifecycleStatus}}{{^isStatusOnLifecycleStatus}}Invoice issue date{{/isStatusOnLifecycleStatus}}</dt>
                 <dd class="text-slate-700">{{invoiceIssueDate}}</dd>
               </div>
             {{/invoiceIssueDate}}
@@ -105,6 +107,18 @@ export const FRANCE_CDAR_TEMPLATE = `<!DOCTYPE html>
             {{/reasonNote}}
           </div>
         {{/hasReason}}
+
+        {{#hasRequestedAction}}
+          <div>
+            <p class="text-xs font-semibold tracking-wide uppercase text-slate-500 mb-2">Requested action</p>
+            {{#requestedActionCode}}
+              <p class="text-sm text-slate-700"><span class="font-mono">{{requestedActionCode}}</span>{{#requestedActionLabel}} &ndash; {{requestedActionLabel}}{{/requestedActionLabel}}</p>
+            {{/requestedActionCode}}
+            {{#requestedAction}}
+              <p class="text-sm text-slate-700{{#requestedActionCode}} mt-1{{/requestedActionCode}}">{{requestedAction}}</p>
+            {{/requestedAction}}
+          </div>
+        {{/hasRequestedAction}}
 
         {{#hasCollectedAmounts}}
           <div>

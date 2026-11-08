@@ -99,9 +99,10 @@ async function listSignatories(
 async function notifySupport(review: ManualReview): Promise<void> {
   const { company, sessionId, representativeName, finding } = review;
   const number = company.enterpriseNumber?.replace(/\D/g, "") ?? "";
+  // The alert leaves our infrastructure, so it leaves out the representative's name; the support email below has it.
   await sendSystemAlert(
     "Norwegian Verification Needs Manual Review",
-    `${representativeName} passed the identity check for ${company.name} (${company.id}, 0192:${number}). ${finding} Session ${sessionId} is held under review; decide it with support complete-verification.`,
+    `The representative passed the identity check for ${company.name} (${company.id}, 0192:${number}). ${finding} Session ${sessionId} is held under review; decide it with support complete-verification.`,
     "warning"
   );
   try {
@@ -152,6 +153,7 @@ export const norwegianRepresentativeCheck: CountryRepresentativeCheck = {
   // a foreign company) the representative types their name: the checks hold it
   // against the register, and support needs it when the session is held for review.
   nameWithoutList: "typed",
+  refusesWithoutRegister: false,
 
   afterIdentity: async (company, name, dependencies) => {
     let assessment: NorwegianAssessment;

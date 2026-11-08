@@ -15,6 +15,7 @@ const parser = new XMLParser({
     name === "ReferenceReferencedDocument" ||
     name === "SpecifiedDocumentStatus" ||
     name === "IncludedNote" ||
+    name === "RequestedAction" ||
     name === "SpecifiedDocumentCharacteristic" ||
     name === "GlobalID" ||
     name === "RecipientTradeParty",
@@ -147,6 +148,12 @@ export function parseFranceCdarFromXML(xml: string): FranceCdar {
     getNullableTextContent(
       first(first(currentStatusDetail?.IncludedNote)?.Content)
     ) ?? undefined;
+  const requestedActionCode =
+    getNullableTextContent(currentStatusDetail?.RequestedActionCode) ??
+    undefined;
+  const requestedAction =
+    getNullableTextContent(first(currentStatusDetail?.RequestedAction)) ??
+    undefined;
   const collectedAmounts: FranceCdarCollectedAmount[] = [];
 
   for (const characteristic of asArray(
@@ -194,12 +201,17 @@ export function parseFranceCdarFromXML(xml: string): FranceCdar {
       "AcknowledgementDocument IssueDateTime"
     ) ?? dateOrDateTime(exchangedDocument?.IssueDateTime, "IssueDateTime");
 
+  // MDT-2 is left out of the CDARs exchanged with the PPF and of a platform's
+  // rejection of a lifecycle status.
+  const businessProcess =
+    getNullableTextContent(
+      exchangedDocumentContext?.BusinessProcessSpecifiedDocumentContextParameter?.ID
+    ) ?? undefined;
+
   return franceCdarSchema.parse({
     id: getTextContent(exchangedDocument?.ID),
     issueDate: dateOrDateTime(exchangedDocument?.IssueDateTime, "IssueDateTime"),
-    businessProcess: getTextContent(
-      exchangedDocumentContext?.BusinessProcessSpecifiedDocumentContextParameter?.ID
-    ),
+    ...(businessProcess ? { businessProcess } : {}),
     phase: getTextContent(acknowledgement?.TypeCode),
     senderRole: getTextContent(exchangedDocument?.SenderTradeParty?.RoleCode),
     issuerRole: getTextContent(issuer?.RoleCode),
@@ -235,6 +247,8 @@ export function parseFranceCdarFromXML(xml: string): FranceCdar {
       : {}),
     ...(reasonCode ? { reasonCode } : {}),
     ...(reason ? { reason } : {}),
+    ...(requestedActionCode ? { requestedActionCode } : {}),
+    ...(requestedAction ? { requestedAction } : {}),
     ...(reasonNote ? { reasonNote } : {}),
     ...(collectedAmounts.length > 0 ? { collectedAmounts } : {}),
   });

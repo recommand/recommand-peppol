@@ -158,6 +158,7 @@ describe("the representative of a Norwegian company", () => {
       const { deps } = dependencies(soleOrBoard);
       expect(await listRepresentatives(company, deps)).toEqual({
         nameWithoutList: "typed",
+        registerUnavailable: false,
         representatives: [
           { firstName: "Ingrid", lastName: "Berg", function: "Daglig leder" },
           { firstName: "Kari", lastName: "Nordmann", function: "Styrets leder" },
@@ -169,7 +170,7 @@ describe("the representative of a Norwegian company", () => {
 
     it("lets the representative type their name when the register lists nobody or cannot be reached", async () => {
       const { deps } = dependencies(new BronnoysundUnavailableError("down"));
-      expect(await listRepresentatives(company, deps)).toEqual({ representatives: [], nameWithoutList: "typed" });
+      expect(await listRepresentatives(company, deps)).toEqual({ representatives: [], nameWithoutList: "typed", registerUnavailable: false });
     });
   });
 
@@ -251,6 +252,7 @@ describe("the representative check per country", () => {
     expect(await listRepresentatives(belgian, deps)).toEqual({
       representatives: [{ firstName: "Jan", lastName: "Peeters", function: "" }],
       nameWithoutList: "unknown",
+      registerUnavailable: false,
     });
   });
 

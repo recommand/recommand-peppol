@@ -3,6 +3,7 @@ import { describeRoute } from "hono-openapi";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { z } from "zod";
+import "zod-openapi/extend";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@recommand/db";
 import { transmittedDocuments } from "@peppol/db/schema";
@@ -23,6 +24,12 @@ import {
 
 const server = new Server();
 
+const getDocumentDefaultsParamSchema = z.object({
+  companyId: z.string().openapi({
+    description: "The ID of the company the next document is for",
+  }),
+});
+
 const getDocumentDefaultsQuerySchema = z.object({
   documentType: documentTypeSchema,
 });
@@ -31,8 +38,14 @@ type GetDocumentDefaultsContext = Context<
   AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext,
   string,
   {
-    in: { query: z.input<typeof getDocumentDefaultsQuerySchema> };
-    out: { query: z.infer<typeof getDocumentDefaultsQuerySchema> };
+    in: {
+      param: z.input<typeof getDocumentDefaultsParamSchema>;
+      query: z.input<typeof getDocumentDefaultsQuerySchema>;
+    };
+    out: {
+      param: z.infer<typeof getDocumentDefaultsParamSchema>;
+      query: z.infer<typeof getDocumentDefaultsQuerySchema>;
+    };
   }
 >;
 
@@ -40,6 +53,7 @@ const _getDocumentDefaults = server.get(
   "/:companyId/documentDefaults",
   requireIntegrationSupportedCompanyAccess(),
   describeRoute({ hide: true }),
+  zodValidator("param", getDocumentDefaultsParamSchema),
   zodValidator("query", getDocumentDefaultsQuerySchema),
   async (c: GetDocumentDefaultsContext) => {
     try {
