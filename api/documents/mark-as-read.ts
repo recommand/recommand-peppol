@@ -12,7 +12,7 @@ import {
     describeErrorResponse,
     describeSuccessResponse,
 } from "@core/lib/api-docs";
-import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireDocumentAccess, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -52,6 +52,7 @@ const _markAsReadMinimal = server.post(
     "/documents/:documentId/mark-as-read",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("peppol.documents.mark_as_read"),
     markAsReadRouteDescription,
     zodValidator("param", markAsReadParamSchema),
     zodValidator("json", markAsReadJsonBodySchema),
@@ -62,6 +63,7 @@ const _markAsRead = server.post(
     "/:teamId/documents/:documentId/markAsRead",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("peppol.documents.mark_as_read"),
     describeRoute({hide: true}),
     zodValidator("param", markAsReadParamSchemaWithTeamId),
     zodValidator("json", markAsReadJsonBodySchema),

@@ -11,7 +11,7 @@ import {
 import {
     describeErrorResponse,
 } from "@core/lib/api-docs";
-import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireDocumentAccess, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { isExportRangeWithinLimit } from "@peppol/utils/export-range";
 import { buildDocumentsArchive } from "./archive";
 import { documentDirectionSchema, exportOutputTypeSchema, pdfGenerationModeSchema } from "./shared";
@@ -77,6 +77,7 @@ const _exportDocuments = server.post(
     "/:teamId/documents/export",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("peppol.documents.export"),
     describeRoute({ hide: true }),
     zodValidator("param", exportDocumentsParamSchemaWithTeamId),
     zodValidator("json", exportDocumentsBodySchema),
@@ -87,6 +88,7 @@ const _exportDocumentsMinimal = server.post(
     "/documents/export",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("peppol.documents.export"),
     exportDocumentsRouteDescription,
     zodValidator("json", exportDocumentsBodySchema),
     _exportDocumentsImplementation,

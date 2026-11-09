@@ -13,6 +13,7 @@ import {
 import {
   requireCompanyVerificationForStrictTeams,
   requireIntegrationSupportedCompanyAccess,
+  requirePermission,
   requireTransactionEntitlement,
 } from "@peppol/utils/auth-middleware";
 import { sendingPipeline } from "@peppol/utils/pipelines/sending";
@@ -145,6 +146,7 @@ server.use("/:companyId/send", trackSendDocument);
 const sendDocument = server.post(
   "/:companyId/sendDocument",
   requireIntegrationSupportedCompanyAccess(),
+  requirePermission("peppol.documents.send"),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   describeRoute({ hide: true }),
@@ -158,6 +160,7 @@ const sendDocument = server.post(
 const sendDocumentMinimal = server.post(
   "/:companyId/send",
   requireIntegrationSupportedCompanyAccess(),
+  requirePermission("peppol.documents.send"),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   routeDescription,
