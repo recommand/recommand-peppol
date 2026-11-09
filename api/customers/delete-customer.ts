@@ -47,7 +47,7 @@ type DeleteCustomerContext = Context<
 
 const _deleteCustomerMinimal = server.delete(
   "/customers/:customerId",
-  requireIntegrationSupportedTeamAccess(),
+  requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
   requirePermission("exchange.customers.delete"),
   deleteCustomerRouteDescription,
   zodValidator("param", customerIdParamSchema),

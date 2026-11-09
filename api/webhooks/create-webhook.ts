@@ -51,7 +51,7 @@ type CreateWebhookContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 
 const _createWebhookMinimal = server.post(
     "/webhooks",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.webhooks.write"),
     createWebhookRouteDescription,
     zodValidator("json", createWebhookJsonBodySchema),

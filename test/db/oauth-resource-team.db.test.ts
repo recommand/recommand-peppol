@@ -22,7 +22,10 @@ let accessToken: string;
 // From a grant for one team, which acts in that team when the path names a resource it can't reach
 let singleTeamAccessToken: string;
 
-const call = (path: string, token = accessToken) => app.request(path, { headers: { Authorization: `Bearer ${token}` } });
+const call = (path: string, team?: string, token = accessToken) =>
+  app.request(path, {
+    headers: { Authorization: `Bearer ${token}`, ...(team ? { "Recommand-Team": team } : {}) },
+  });
 
 // Per resource, a path that names one in a team the user isn't a member of and one that names nothing
 const OUTSIDE_AND_UNKNOWN_PATHS = [
@@ -38,9 +41,9 @@ const answerOutsideAndUnknown = (token: string) =>
     OUTSIDE_AND_UNKNOWN_PATHS.map(async (paths) =>
       Promise.all(
         paths.map(async (path) => {
-          const response = await call(path, token);
+          const response = await call(path, undefined, token);
 
-          return [response.status, await response.json(), response.headers.get("WWW-Authenticate")];
+          return [response.status, await response.json(), response.headers.get("Vary"), response.headers.get("WWW-Authenticate")];
         })
       )
     )
@@ -182,6 +185,13 @@ describe.skipIf(!testDatabaseUrl)("OAuth grants for several teams on routes that
       [400, "team_required"],
       [400, "team_required"],
     ]);
+    expect((await call("/customers/customer-1", TEAM_ID)).status).toBe(200);
+  });
+
+  it("refuses a header that names another team than the resource's, never applying it", async () => {
+    const response = await call("/labels/lbl_granted", OTHER_TEAM_ID);
+    expect(response.status).toBe(400);
+    expect((await response.json()).code).toBe("team_mismatch");
   });
 
   it("asks for the team of a resource the user can add to the grant", async () => {
@@ -194,6 +204,7 @@ describe.skipIf(!testDatabaseUrl)("OAuth grants for several teams on routes that
     const answers = await answerOutsideAndUnknown(accessToken);
     answers.forEach(([outside, unknown]) => {
       expect(outside).toEqual(unknown);
+      expect(outside[2]).toBe("Recommand-Team");
     });
     expect(answers.map(([[status]]) => status)).toEqual([400, 404, 404, 400, 404]);
   });
@@ -202,6 +213,7 @@ describe.skipIf(!testDatabaseUrl)("OAuth grants for several teams on routes that
     const answers = await answerOutsideAndUnknown(singleTeamAccessToken);
     answers.forEach(([outside, unknown]) => {
       expect(outside).toEqual(unknown);
+      expect(outside[2]).toBe("Recommand-Team");
     });
     // The webhook routes check their permission, which no app can be granted, before the webhook
     expect(answers.map(([[status]]) => status)).toEqual([404, 404, 404, 404, 403]);

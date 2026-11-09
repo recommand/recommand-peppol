@@ -2,8 +2,12 @@ import { isMember } from "@core/data/teams";
 import { audit } from "@core/lib/audit";
 import {
   checkTeamAccess,
+  getTeamHeader,
+  refuseTeamMismatch,
   requireAuth,
   requireTeamAccess as requireCoreTeamAccess,
+  TEAM_HEADER,
+  withTeamHeader,
   type AuthenticatedTeamContext,
   type AuthenticatedUserContext,
   type TeamAccessOptions,
@@ -67,6 +71,11 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
     }
 
 
+    // The answer can depend on `Recommand-Team`, so caches keep the answers apart. Set before the
+    // company is looked up, so a company that doesn't exist answers exactly like one in a team
+    // the user isn't a member of.
+    c.header("Vary", TEAM_HEADER, { append: true });
+
     const companyId = c.req.param("companyId");
     if (!companyId) {
       return c.json(actionFailure("Company ID is required"), 400);
@@ -101,6 +110,13 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
 
     if (!access.allowed) {
       return c.json(actionFailure("Unauthorized"), 401);
+    }
+
+    // The company decides the team, so a header naming another one is refused, never applied.
+    // Only once the request may act in the company's team, so no one else learns which team it's in.
+    const headerTeamId = getTeamHeader(c);
+    if (headerTeamId && headerTeamId !== company.teamId) {
+      return refuseTeamMismatch(c);
     }
 
     // Get team based on company
@@ -317,7 +333,7 @@ const findResourceTeamId = async (c: Context): Promise<string | null> => {
 export const requireTeamAccess = (options: TeamAccessOptions = {}) => {
   const check = requireCoreTeamAccess({ findTeamId: findResourceTeamId, ...options });
 
-  return createMiddleware<AuthenticatedUserContext & AuthenticatedTeamContext>(async (c, next) => {
+  const middleware = createMiddleware<AuthenticatedUserContext & AuthenticatedTeamContext>(async (c, next) => {
     const response = await check(c, next);
     // With a resource in the path, `team_required` means findResourceTeamId found no such resource
     const notFound = resourceTeamLookups.find(({ notFound, param }) => notFound && c.req.param(param))?.notFound;
@@ -327,6 +343,8 @@ export const requireTeamAccess = (options: TeamAccessOptions = {}) => {
 
     return response;
   });
+
+  return options.documentTeamHeader ? withTeamHeader(middleware) : middleware;
 };
 
 export function requireIntegrationSupportedTeamAccess(options: TeamAccessOptions = {}) {

@@ -49,7 +49,7 @@ type GetSuppliersContext = Context<AuthenticatedUserContext & AuthenticatedTeamC
 
 const _getSuppliersMinimal = server.get(
     "/suppliers",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.suppliers.read"),
     getSuppliersRouteDescription,
     zodValidator("query", getSuppliersQuerySchema),

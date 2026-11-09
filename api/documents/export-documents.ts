@@ -86,7 +86,7 @@ const _exportDocuments = server.post(
 
 const _exportDocumentsMinimal = server.post(
     "/documents/export",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requireDocumentAccess(),
     requirePermission("exchange.documents.export"),
     exportDocumentsRouteDescription,

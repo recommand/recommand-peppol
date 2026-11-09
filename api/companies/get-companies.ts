@@ -45,7 +45,7 @@ type GetCompaniesContext = Context<AuthenticatedUserContext & AuthenticatedTeamC
 
 const _getCompaniesMinimal = server.get(
     "/companies",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.companies.read"),
     getCompaniesRouteDescription,
     zodValidator("query", getCompaniesQuerySchema),

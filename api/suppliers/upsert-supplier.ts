@@ -54,7 +54,7 @@ type UpsertSupplierContext = Context<AuthenticatedUserContext & AuthenticatedTea
 
 const _upsertSupplierMinimal = server.post(
   "/suppliers",
-  requireIntegrationSupportedTeamAccess(),
+  requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
   requirePermission("exchange.suppliers.write"),
   upsertSupplierRouteDescription,
   zodValidator("json", upsertSupplierJsonBodySchema),

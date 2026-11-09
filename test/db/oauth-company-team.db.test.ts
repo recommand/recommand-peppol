@@ -24,8 +24,11 @@ let accessToken: string;
 // From a grant for one team, which acts in that team when the path names a company it can't reach
 let singleTeamAccessToken: string;
 
-const call = (path: string, init: RequestInit = {}) =>
-  app.request(path, { ...init, headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" } });
+const call = (path: string, init: RequestInit = {}, team?: string) =>
+  app.request(path, {
+    ...init,
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json", ...(team ? { "Recommand-Team": team } : {}) },
+  });
 
 describe.skipIf(!testDatabaseUrl)("OAuth grants for several teams on Peppol routes against PostgreSQL", () => {
   beforeAll(async () => {
@@ -122,6 +125,35 @@ describe.skipIf(!testDatabaseUrl)("OAuth grants for several teams on Peppol rout
     expect((await response.json()).code).toBe("team_required");
   });
 
+  it("acts in the team the Recommand-Team header names when the path names none", async () => {
+    const response = await call("/companies", {}, TEAM_ID);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Vary")).toContain("Recommand-Team");
+    expect((await response.json()).companies.map(({ id }: { id: string }) => id)).toEqual([COMPANY_ID]);
+    expect((await call("/companies", {}, OUTSIDE_TEAM_ID)).status).toBe(404);
+  });
+
+  it("refuses a header that names another team than the company's, never applying it", async () => {
+    const answers = await Promise.all(
+      [`/companies/${COMPANY_ID}`, `/documents/${COMPANY_ID}`].map(async (path) => {
+        const response = await call(path, {}, OTHER_TEAM_ID);
+
+        return [response.status, (await response.json()).code];
+      })
+    );
+    expect(answers).toEqual([
+      [400, "team_mismatch"],
+      [400, "team_mismatch"],
+    ]);
+    expect(await (await call(`/documents/${COMPANY_ID}`, {}, TEAM_ID)).json()).toEqual({ team: TEAM_ID });
+  });
+
+  it("refuses a company outside the grant before comparing a header, so it can't learn which team the company is in", async () => {
+    const response = await call(`/documents/${OUTSIDE_COMPANY_ID}`, {}, TEAM_ID);
+    expect(response.status).toBe(404);
+    expect((await response.json()).code).not.toBe("team_mismatch");
+  });
+
   it("answers 404 for a company that doesn't exist", async () => {
     expect((await call("/companies/cmp_unknown")).status).toBe(404);
   });
@@ -146,6 +178,8 @@ describe.skipIf(!testDatabaseUrl)("OAuth grants for several teams on Peppol rout
     const outside = await call(`/documents/${OUTSIDE_COMPANY_ID}`);
     const unknown = await call("/documents/cmp_unknown");
     expect([outside.status, await outside.json()]).toEqual([unknown.status, await unknown.json()]);
+    expect(outside.headers.get("Vary")).toBe(unknown.headers.get("Vary"));
+    expect(outside.headers.get("Vary")).toBe("Recommand-Team");
     expect(outside.status).toBe(404);
     expect(outside.headers.get("WWW-Authenticate")).toBeNull();
   });
@@ -162,13 +196,14 @@ describe.skipIf(!testDatabaseUrl)("OAuth grants for several teams on Peppol rout
               headers: { Authorization: `Bearer ${singleTeamAccessToken}` },
             });
 
-            return [response.status, await response.json(), response.headers.get("WWW-Authenticate")];
+            return [response.status, await response.json(), response.headers.get("Vary"), response.headers.get("WWW-Authenticate")];
           })
         )
       )
     );
     answers.forEach(([outside, unknown]) => {
       expect(outside).toEqual(unknown);
+      expect(outside[2]).toBe("Recommand-Team");
     });
   });
 

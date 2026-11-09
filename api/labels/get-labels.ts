@@ -31,7 +31,7 @@ type GetLabelsContext = Context<AuthenticatedUserContext & AuthenticatedTeamCont
 
 const _getLabelsMinimal = server.get(
     "/labels",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.labels.read"),
     getLabelsRouteDescription,
     _getLabelsImplementation,

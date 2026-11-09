@@ -46,7 +46,7 @@ type GetPlaygroundContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 
 const _getPlaygroundMinimal = server.get(
   "/playgrounds/current",
-  requireTeamAccess(),
+  requireTeamAccess({ documentTeamHeader: true }),
   getPlaygroundRouteDescription,
  _getPlaygroundImplementation,
 );

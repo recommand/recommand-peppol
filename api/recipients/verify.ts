@@ -63,7 +63,7 @@ type VerifyRecipientContext = Context<AuthenticatedUserContext & AuthenticatedTe
 
 const _verifyRecipient = server.post(
     "/verify",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     verifyRecipientRouteDescription,
     zodValidator("json", verifyRecipientJsonBodySchema),
     _verifyRecipientImplementation,
