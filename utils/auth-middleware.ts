@@ -6,6 +6,7 @@ import {
   type AuthenticatedUserContext,
   type TeamAccessOptions,
 } from "@core/lib/auth-middleware";
+import { presentsOAuthAccessToken, setBearerChallenge } from "@core/lib/oauth/bearer";
 import { requirePermission as requireTeamPermission } from "@core/lib/permissions/permission-middleware";
 import { verifySession, type SessionVerificationExtension } from "@core/lib/session";
 import { getCompanyById, type Company } from "@peppol/data/companies";
@@ -13,6 +14,7 @@ import { verifyIntegrationJwt } from "@peppol/data/integrations/auth";
 import { getExtendedTeam, type ExtendedTeam } from "@peppol/data/teams";
 import { checkPeppolEntitlement, checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { actionFailure } from "@recommand/lib/utils";
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { requiresCompanyVerification } from "@peppol/utils/playground";
 
@@ -51,9 +53,10 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
     // Verify user's session
     const session = await verifySession(c, options.extensions);
     if (!session) {
+      // Tells an OAuth client that its token is no longer valid
+      setBearerChallenge(c, presentsOAuthAccessToken(c) ? { error: "invalid_token" } : {});
       return c.json(actionFailure("Unauthorized"), 401);
     }
-
 
     const companyId = c.req.param("companyId");
     if (!companyId) {
@@ -64,7 +67,13 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
       return c.json(actionFailure("Company not found"), 404);
     }
 
-    if (!(await checkTeamAccess(c, company.teamId)).allowed) {
+    const access = await checkTeamAccess(c, company.teamId);
+    // The user can grant the client the company's team on the consent screen
+    if (!access.allowed && access.reason === "not_in_grant") {
+      setBearerChallenge(c, { error: "insufficient_scope" });
+      return c.json(actionFailure("This team isn't part of the OAuth grant"), 403);
+    }
+    if (!access.allowed) {
       return c.json(actionFailure("Unauthorized"), 401);
     }
 
@@ -191,8 +200,15 @@ export function requireIntegrationSupportedAuth() {
   })
 }
 
+// The team of the company a path names, for an OAuth grant that covers several teams
+const findCompanyTeamId = async (c: Context): Promise<string | null> => {
+  const companyId = c.req.param("companyId");
+  return companyId ? ((await getCompanyById(companyId))?.teamId ?? null) : null;
+};
+
 export function requireIntegrationSupportedTeamAccess(options: TeamAccessOptions = {}) {
   return requireTeamAccess({
+    findTeamId: findCompanyTeamId,
     ...options,
     extensions: integrationSupportedAuthExtensions,
   });
