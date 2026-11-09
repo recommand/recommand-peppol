@@ -1,4 +1,4 @@
-import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import type { AuthenticatedTeamContext, AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { audit } from "@core/lib/audit";
 import { getCompany } from "@peppol/data/companies";
 import { verifyCompanyByContract } from "@peppol/data/company-contract-verification";
@@ -12,7 +12,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requirePermission } from "@peppol/utils/auth-middleware";
+import { requirePermission, requireTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 

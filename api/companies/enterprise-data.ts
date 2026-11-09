@@ -1,4 +1,4 @@
-import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import type { AuthenticatedTeamContext, AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { getCompany } from "@peppol/data/companies";
 import { getEnterpriseData } from "@peppol/data/cbe-public-search/client";
 import { Server, type Context } from "@recommand/lib/api";
@@ -9,7 +9,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
-import { requirePermission } from "@peppol/utils/auth-middleware";
+import { requirePermission, requireTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 

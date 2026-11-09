@@ -1,10 +1,10 @@
-import { requireDocumentAccess, requirePermission } from "@peppol/utils/auth-middleware";
+import { requireDocumentAccess, requirePermission, requireTeamAccess } from "@peppol/utils/auth-middleware";
 import { Server, type Context } from "@recommand/lib/api";
 import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
-import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { describeRoute } from "hono-openapi";
 import {
     deleteTransmittedDocument,

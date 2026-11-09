@@ -21,6 +21,15 @@ export async function getLabel(
     .then((rows) => rows[0]);
 }
 
+/** The team a label belongs to, for finding the team a request acts in. */
+export async function getLabelTeamId(labelId: string): Promise<string | undefined> {
+  return await db
+    .select({ teamId: labels.teamId })
+    .from(labels)
+    .where(eq(labels.id, labelId))
+    .then((rows) => rows[0]?.teamId);
+}
+
 export async function createLabel(label: InsertLabel): Promise<Label> {
   const createdLabel = await db
     .insert(labels)

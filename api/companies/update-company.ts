@@ -1,4 +1,4 @@
-import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import type { AuthenticatedTeamContext, AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import {
     updateCompany,
 } from "@peppol/data/companies";
@@ -14,7 +14,7 @@ import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { audit } from "@core/lib/audit";
-import { requirePermission } from "@peppol/utils/auth-middleware";
+import { requirePermission, requireTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
