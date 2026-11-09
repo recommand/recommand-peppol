@@ -8,7 +8,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
@@ -45,6 +45,7 @@ type DeleteIdentifierContext = Context<AuthenticatedUserContext & AuthenticatedT
 const _deleteIdentifierMinimal = server.delete(
     "/companies/:companyId/identifiers/:identifierId",
     requireCompanyAccess(),
+    requirePermission("peppol.identifiers.delete"),
     deleteIdentifierRouteDescription,
     zodValidator("param", deleteIdentifierParamSchema),
     _deleteIdentifierImplementation,
@@ -53,6 +54,7 @@ const _deleteIdentifierMinimal = server.delete(
 const _deleteIdentifier = server.delete(
     "/:teamId/companies/:companyId/identifiers/:identifierId",
     requireCompanyAccess(),
+    requirePermission("peppol.identifiers.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteIdentifierParamSchemaWithTeamId),
     _deleteIdentifierImplementation,

@@ -5,7 +5,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { companyNotificationEmailAddressResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { getCompanyNotificationEmailAddress } from "@peppol/data/company-notification-emails";
@@ -41,6 +41,7 @@ type GetAddressContext = Context<AuthenticatedUserContext & AuthenticatedTeamCon
 const _getAddressMinimal = server.get(
     "/companies/:companyId/notification-email-addresses/:notificationEmailAddressId",
     requireCompanyAccess(),
+    requirePermission("peppol.notification_email_addresses.read"),
     getAddressRouteDescription,
     zodValidator("param", getAddressParamSchema),
     _getAddressImplementation,
@@ -49,6 +50,7 @@ const _getAddressMinimal = server.get(
 const _getAddress = server.get(
     "/:teamId/companies/:companyId/notification-email-addresses/:notificationEmailAddressId",
     requireCompanyAccess(),
+    requirePermission("peppol.notification_email_addresses.read"),
     describeRoute({hide: true}),
     zodValidator("param", getAddressParamSchemaWithTeamId),
     _getAddressImplementation,

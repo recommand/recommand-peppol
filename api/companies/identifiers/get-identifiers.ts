@@ -8,7 +8,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 
@@ -39,6 +39,7 @@ type GetIdentifiersContext = Context<AuthenticatedUserContext & AuthenticatedTea
 const _getIdentifiersMinimal = server.get(
   "/companies/:companyId/identifiers",
   requireCompanyAccess(),
+  requirePermission("peppol.identifiers.read"),
   getIdentifiersRouteDescription,
   zodValidator("param", getIdentifiersParamSchema),
   _getIdentifiersImplementation,
@@ -47,6 +48,7 @@ const _getIdentifiersMinimal = server.get(
 const _getIdentifiers = server.get(
   "/:teamId/companies/:companyId/identifiers",
   requireCompanyAccess(),
+  requirePermission("peppol.identifiers.read"),
   describeRoute({hide: true}),
   zodValidator("param", getIdentifiersParamSchemaWithTeamId),
   _getIdentifiersImplementation,

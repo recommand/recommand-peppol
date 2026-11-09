@@ -15,7 +15,7 @@ import {
   paginationQuery,
   paginationResponse,
 } from "@core/lib/api-docs";
-import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireDocumentAccess, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import {
   deliveryStatusSchema,
   documentDirectionSchema,
@@ -116,6 +116,7 @@ const _transmittedDocumentsMinimal = server.get(
     "/documents",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("peppol.documents.read"),
     getTransmittedDocumentsRouteDescription,
     zodValidator("query", getTransmittedDocumentsQuerySchema),
     _getTransmittedDocumentsImplementation,
@@ -125,6 +126,7 @@ const _transmittedDocuments = server.get(
     "/:teamId/documents",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("peppol.documents.read"),
     describeRoute({hide: true}),
     zodValidator("query", getTransmittedDocumentsQuerySchema),
     _getTransmittedDocumentsImplementation,

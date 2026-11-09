@@ -9,6 +9,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
+import { requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -24,6 +25,7 @@ type EnterpriseDataContext = Context<AuthenticatedUserContext & AuthenticatedTea
 const _getCompanyEnterpriseData = server.get(
     "/:teamId/companies/:companyId/enterprise-data",
     requireTeamAccess(),
+    requirePermission("peppol.companies.read"),
     describeRoute({ hide: true }),
     zodValidator("param", enterpriseDataParamSchema),
     _getCompanyEnterpriseDataImplementation,

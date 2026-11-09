@@ -21,10 +21,11 @@ import {
   zodFrVatRegimes,
 } from "@peppol/db/schema";
 import {
+  type CompanyAccessContext,
   requireCompanyVerificationForStrictTeams,
   requireIntegrationSupportedCompanyAccess,
+  requirePermission,
   requireTransactionEntitlement,
-  type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
 import { Server, type Context } from "@recommand/lib/api";
@@ -182,6 +183,7 @@ const getFrenchReportingDeclarantParamSchema = z.object({
 const _getFrenchReportingDeclarant = server.get(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
+  requirePermission("peppol.reporting.read"),
   zodValidator("param", getFrenchReportingDeclarantParamSchema),
   getRouteDescription,
   async (c: FrenchReportingDeclarantContext) => {
@@ -217,6 +219,7 @@ const registerFrenchReportingDeclarantParamSchema = z.object({
 const _registerFrenchReportingDeclarant = server.put(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
+  requirePermission("peppol.reporting.write"),
   zodValidator("param", registerFrenchReportingDeclarantParamSchema),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),

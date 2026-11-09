@@ -8,8 +8,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@recommand/db";
 import { transmittedDocuments } from "@peppol/db/schema";
 import {
-  requireIntegrationSupportedCompanyAccess,
   type CompanyAccessContext,
+  requireIntegrationSupportedCompanyAccess,
+  requirePermission,
 } from "@peppol/utils/auth-middleware";
 import type {
   AuthenticatedTeamContext,
@@ -52,6 +53,7 @@ type GetDocumentDefaultsContext = Context<
 const _getDocumentDefaults = server.get(
   "/:companyId/documentDefaults",
   requireIntegrationSupportedCompanyAccess(),
+  requirePermission("peppol.documents.generate"),
   describeRoute({ hide: true }),
   zodValidator("param", getDocumentDefaultsParamSchema),
   zodValidator("query", getDocumentDefaultsQuerySchema),

@@ -9,7 +9,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierResponse, supplierIdParamSchema } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -35,6 +35,7 @@ type GetSupplierContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 const _getSupplierMinimal = server.get(
     "/suppliers/:supplierId",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("peppol.suppliers.read"),
     getSupplierRouteDescription,
     zodValidator("param", supplierIdParamSchema),
     _getSupplierImplementation,
@@ -43,6 +44,7 @@ const _getSupplierMinimal = server.get(
 const _getSupplier = server.get(
     "/:teamId/suppliers/:supplierId",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("peppol.suppliers.read"),
     describeRoute({hide: true}),
     zodValidator("param", getSupplierParamSchemaWithTeamId),
     _getSupplierImplementation,

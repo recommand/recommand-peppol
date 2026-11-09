@@ -5,7 +5,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { companyDocumentTypeResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { getCompanyDocumentType } from "@peppol/data/company-document-types";
@@ -41,6 +41,7 @@ type GetDocumentTypeContext = Context<AuthenticatedUserContext & AuthenticatedTe
 const _getDocumentTypeMinimal = server.get(
     "/companies/:companyId/document-types/:documentTypeId",
     requireCompanyAccess(),
+    requirePermission("peppol.document_types.read"),
     getDocumentTypeRouteDescription,
     zodValidator("param", getDocumentTypeParamSchema),
     _getDocumentTypeImplementation,
@@ -49,6 +50,7 @@ const _getDocumentTypeMinimal = server.get(
 const _getDocumentType = server.get(
     "/:teamId/companies/:companyId/documentTypes/:documentTypeId",
     requireCompanyAccess(),
+    requirePermission("peppol.document_types.read"),
     describeRoute({hide: true}),
     zodValidator("param", getDocumentTypeParamSchemaWithTeamId),
     _getDocumentTypeImplementation,

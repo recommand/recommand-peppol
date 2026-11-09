@@ -4,7 +4,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireIntegrationAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { deleteIntegration } from "@peppol/data/integrations";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -38,6 +38,7 @@ type DeleteIntegrationContext = Context<AuthenticatedUserContext & Authenticated
 const _deleteIntegrationMinimal = server.delete(
     "/integrations/:integrationId",
     requireTeamAccess(),
+    requirePermission("peppol.integrations.delete"),
     requireIntegrationAccess(),
     deleteIntegrationRouteDescription,
     zodValidator("param", deleteIntegrationParamSchema),
@@ -47,6 +48,7 @@ const _deleteIntegrationMinimal = server.delete(
 const _deleteIntegration = server.delete(
     "/:teamId/integrations/:integrationId",
     requireTeamAccess(),
+    requirePermission("peppol.integrations.delete"),
     requireIntegrationAccess(),
     describeRoute({hide: true}),
     zodValidator("param", deleteIntegrationParamSchemaWithTeamId),

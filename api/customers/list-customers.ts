@@ -16,7 +16,7 @@ import {
   paginationResponse,
 } from "@core/lib/api-docs";
 import { customerResponse } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -67,6 +67,7 @@ type GetCustomersContext = Context<
 const _getCustomersMinimal = server.get(
   "/customers",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("peppol.customers.read"),
   getCustomersRouteDescription,
   zodValidator("query", getCustomersQuerySchema),
   _getCustomersImplementation
@@ -75,6 +76,7 @@ const _getCustomersMinimal = server.get(
 const _getCustomers = server.get(
   "/:teamId/customers",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("peppol.customers.read"),
   describeRoute({ hide: true }),
   zodValidator("query", getCustomersQuerySchema),
   zodValidator("param", getCustomersParamSchema),

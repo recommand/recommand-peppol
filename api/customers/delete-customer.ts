@@ -15,7 +15,7 @@ import {
 } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { customerIdParamSchema } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -48,6 +48,7 @@ type DeleteCustomerContext = Context<
 const _deleteCustomerMinimal = server.delete(
   "/customers/:customerId",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("peppol.customers.delete"),
   deleteCustomerRouteDescription,
   zodValidator("param", customerIdParamSchema),
   _deleteCustomerImplementation
@@ -56,6 +57,7 @@ const _deleteCustomerMinimal = server.delete(
 const _deleteCustomer = server.delete(
   "/:teamId/customers/:customerId",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("peppol.customers.delete"),
   describeRoute({ hide: true }),
   zodValidator("param", deleteCustomerParamSchemaWithTeamId),
   _deleteCustomerImplementation
