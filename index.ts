@@ -38,6 +38,7 @@ import { initializeDeletedNorwegianOrganisationsCron } from "./data/bronnoysund/
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
+import { oauth2SecurityScheme } from "@core/lib/oauth/security-scheme";
 import { registerPeppolEventTypes } from "./lib/event-types";
 import "./lib/permissions";
 import { initializeMetricsServer } from "./utils/metrics";
@@ -128,6 +129,7 @@ For additional support or questions, don't hesitate to contact our support team.
             description:
               "JWT authentication. Create a new JWT token in the Recommand dashboard.",
           },
+          oauth2: oauth2SecurityScheme(),
         },
       },
       security: [{ httpBasic: [] }, { jwt: [] }],
