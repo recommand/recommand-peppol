@@ -5,6 +5,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { describeRoute } from "hono-openapi";
+import { anyCredentialSecurity } from "@peppol/utils/openapi";
 import {
     describeErrorResponse,
     describeSuccessResponse,
@@ -36,6 +37,7 @@ const searchDirectoryRouteDescription = describeRoute({
     operationId: "searchDirectory",
     description: "Run a free-text search against the Peppol Directory and get back the participants that match, with the document types each is registered to receive. Use it to find a recipient's Peppol address when you only know who they are, then pass that address to the verify recipient endpoint. The Peppol Directory only lists participants that publish a directory entry, so a recipient that is reachable on the network can still be missing here. Returns a 503 when the directory itself cannot be reached.",
     summary: "Search Directory",
+    security: anyCredentialSecurity,
     tags: ["Recipients"],
     responses: {
         ...describeSuccessResponse("Successfully searched directory", z.object({
@@ -63,7 +65,7 @@ const _searchDirectoryMinimal = server.post(
 const _searchDirectory = server.post(
     "/searchPeppolDirectory",
     requireIntegrationSupportedTeamAccess(),
-    describeRoute({hide: true}),
+    describeRoute({ hide: true, security: anyCredentialSecurity }),
     zodValidator("json", searchDirectoryJsonBodySchema),
     _searchDirectoryImplementation,
 );

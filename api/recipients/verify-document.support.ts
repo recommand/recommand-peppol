@@ -5,6 +5,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionSuccess } from "@recommand/lib/utils";
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { describeRoute } from "hono-openapi";
+import { anyCredentialSecurity } from "@peppol/utils/openapi";
 import {
     describeErrorResponse,
     describeSuccessResponse,
@@ -25,6 +26,7 @@ const verifyDocumentSupportRouteDescription = describeRoute({
     operationId: "verifyDocumentSupport",
     description: "Check whether a Peppol address is registered to receive one specific document type, optionally under one specific process. Use it before sending a document type the recipient may not accept. A lookup that fails, including an address that is registered but not for this document type, is not an error: the response is `{ isValid: false }` with no further fields. In a playground that is not connected to the Peppol Test Network, an address that belongs to a company in the same playground is checked against that company's document types, and the response has no SMP or endpoint fields; any other address is checked against the production network, as the send endpoint does.",
     summary: "Verify Document Support",
+    security: anyCredentialSecurity,
     tags: ["Recipients"],
     responses: {
         ...describeSuccessResponse("Successfully verified document support", z.object({
@@ -58,7 +60,7 @@ const _verifyDocumentSupportMinimal = server.post(
 const _verifyDocumentSupport = server.post(
     "/verifyDocumentSupport",
     requireIntegrationSupportedTeamAccess(),
-    describeRoute({hide: true}),
+    describeRoute({ hide: true, security: anyCredentialSecurity }),
     zodValidator("json", verifyDocumentSupportJsonBodySchema),
     _verifyDocumentSupportImplementation,
 );

@@ -3,6 +3,7 @@ import { getPlayground, createPlayground } from "@peppol/data/playground/playgro
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { describeRoute } from "hono-openapi";
+import { anyCredentialSecurity } from "@peppol/utils/openapi";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { z } from "zod";
 import "zod-openapi/extend";
@@ -29,6 +30,7 @@ const getPlaygroundRouteDescription = describeRoute({
   operationId: "getPlayground",
   description: "Get the playground settings of the current team, including whether it sends over the Peppol test network. Returns a 404 for a team that is not a playground, which is how you tell the two apart.",
   summary: "Get Playground",
+  security: anyCredentialSecurity,
   tags: ["Playgrounds"],
   responses: {
     ...describeSuccessResponse("Successfully retrieved playground", z.object({
