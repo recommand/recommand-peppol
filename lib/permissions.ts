@@ -1,6 +1,7 @@
 import { memberPermission, registerPermission } from "@core/lib/permissions";
 
-// Every member could use these routes before they required a permission, so every member gets them
+// Every member could use these routes before they required a permission, so every member gets them.
+// OAuth clients can be granted them too; the ones they could set up to outlive the grant start unticked.
 [
   { description: "Delete companies, and take them off the Peppol network", id: "exchange.companies.delete", name: "Delete companies", resource: "Companies" },
   { description: "See companies, and look up company data by VAT or enterprise number", id: "exchange.companies.read", name: "Read companies", resource: "Companies" },
@@ -24,7 +25,8 @@ import { memberPermission, registerPermission } from "@core/lib/permissions";
   { description: "Add and change a company's Peppol identifiers", id: "exchange.identifiers.write", name: "Manage identifiers", resource: "Identifiers" },
   { description: "Delete integrations, which stops them syncing", id: "exchange.integrations.delete", name: "Delete integrations", resource: "Integrations" },
   { description: "See integrations and their task logs", id: "exchange.integrations.read", name: "Read integrations", resource: "Integrations" },
-  { description: "Set up and change integrations, and reset their state", id: "exchange.integrations.write", name: "Manage integrations", resource: "Integrations" },
+  // An integration keeps syncing the team's documents wherever the app set it up
+  { delegation: "opt_in" as const, description: "Set up and change integrations, and reset their state", id: "exchange.integrations.write", name: "Manage integrations", resource: "Integrations" },
   { description: "Delete labels, which removes them from documents and suppliers", id: "exchange.labels.delete", name: "Delete labels", resource: "Labels" },
   { description: "See the labels used to sort documents and suppliers", id: "exchange.labels.read", name: "Read labels", resource: "Labels" },
   { description: "Create and change labels", id: "exchange.labels.write", name: "Manage labels", resource: "Labels" },
@@ -39,5 +41,6 @@ import { memberPermission, registerPermission } from "@core/lib/permissions";
   { description: "Create and change suppliers, and label them", id: "exchange.suppliers.write", name: "Manage suppliers", resource: "Suppliers" },
   { description: "Delete webhooks, so their events are no longer delivered", id: "exchange.webhooks.delete", name: "Delete webhooks", resource: "Webhooks" },
   { description: "See webhooks and the addresses their events go to", id: "exchange.webhooks.read", name: "Read webhooks", resource: "Webhooks" },
-  { description: "Create and change webhooks", id: "exchange.webhooks.write", name: "Manage webhooks", resource: "Webhooks" },
+  // A webhook keeps sending the team's events wherever the app pointed it
+  { delegation: "opt_in" as const, description: "Create and change webhooks", id: "exchange.webhooks.write", name: "Manage webhooks", resource: "Webhooks" },
 ].forEach((permission) => registerPermission(memberPermission(permission)));
