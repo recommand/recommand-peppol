@@ -5,7 +5,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { deleteCompanyDocumentType } from "@peppol/data/company-document-types";
 import { UserFacingError } from "@peppol/utils/util";
@@ -42,6 +42,7 @@ type DeleteDocumentTypeContext = Context<AuthenticatedUserContext & Authenticate
 const _deleteDocumentTypeMinimal = server.delete(
     "/companies/:companyId/document-types/:documentTypeId",
     requireCompanyAccess(),
+    requirePermission("peppol.document_types.delete"),
     deleteDocumentTypeRouteDescription,
     zodValidator("param", deleteDocumentTypeParamSchema),
     _deleteDocumentTypeImplementation,
@@ -50,6 +51,7 @@ const _deleteDocumentTypeMinimal = server.delete(
 const _deleteDocumentType = server.delete(
     "/:teamId/companies/:companyId/documentTypes/:documentTypeId",
     requireCompanyAccess(),
+    requirePermission("peppol.document_types.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteDocumentTypeParamSchemaWithTeamId),
     _deleteDocumentTypeImplementation,

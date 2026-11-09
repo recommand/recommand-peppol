@@ -76,7 +76,7 @@ const countedSends = async (outcome: string) => {
     .reduce((total, line) => total + Number(line.split(" ").at(-1)), 0);
 };
 
-/** A verified Belgian company of the team sending through the regular access point, and an API key of the team. */
+/** A verified Belgian company of the team sending through the regular access point, and an API key of the team that may send. */
 const seedSender = async ({ companyId, teamId }: { companyId: string; teamId: string }) => {
   await pool.query(
     `UPDATE peppol_companies SET country = 'BE', enterprise_number_scheme = '0208', enterprise_number = '0123456749', vat_number = 'BE0123456749',
@@ -92,6 +92,12 @@ const seedSender = async ({ companyId, teamId }: { companyId: string; teamId: st
   await pool.query(
     `INSERT INTO api_keys (id, name, team_id, user_id, secret_hash) VALUES ($1, 'Sender', $2, $3, $4)`,
     [`key_${teamId}`, teamId, `usr_${teamId}`, await Bun.password.hash("secret", { algorithm: "bcrypt", cost: 4 })]
+  );
+  // The send routes require the permission, held by the key and by its owner
+  await pool.query(`INSERT INTO user_permissions (user_id, team_id, permission_id) VALUES ($1, $2, 'peppol.documents.send')`, [`usr_${teamId}`, teamId]);
+  await pool.query(
+    `INSERT INTO principal_permissions (principal_type, principal_id, team_id, permission_id) VALUES ('api_key', $1, $2, 'peppol.documents.send')`,
+    [`key_${teamId}`, teamId]
   );
 
   return `Basic ${Buffer.from(`key_${teamId}:secret`).toString("base64")}`;
@@ -140,6 +146,8 @@ describe.skipIf(!testDatabaseUrl)("sending with an Idempotency-Key against Postg
     authorization = await seedSender({ companyId: COMPANY_ID, teamId: TEAM_ID });
 
     (await import("../../lib/event-types")).registerPeppolEventTypes();
+    // The app registers the permissions the routes require when it starts
+    await import("../../lib/permissions");
     const { default: sendDocument } = await import("../../api/send-document");
     const { createErrorHandler } = await import("@recommand/lib/error-handler");
     app = new Hono();
