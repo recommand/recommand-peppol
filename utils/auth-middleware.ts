@@ -1,11 +1,13 @@
+import { audit } from "@core/lib/audit";
 import {
   checkTeamAccess,
   requireAuth,
-  requireTeamAccess,
+  requireTeamAccess as requireCoreTeamAccess,
   type AuthenticatedTeamContext,
   type AuthenticatedUserContext,
   type TeamAccessOptions,
 } from "@core/lib/auth-middleware";
+import { presentsBearerToken, presentsOAuthAccessToken, setBearerChallenge } from "@core/lib/oauth/bearer";
 import { hasRequestPermission, requirePermission as requireTeamPermission } from "@core/lib/permissions/permission-middleware";
 import { verifySession, type SessionVerificationExtension } from "@core/lib/session";
 import { getCompanyById, type Company } from "@peppol/data/companies";
@@ -52,6 +54,9 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
     // Verify user's session
     const session = await verifySession(c, options.extensions);
     if (!session) {
+      // Tells a client whose bearer token didn't authenticate it that the token is invalid
+      setBearerChallenge(c, presentsBearerToken(c) ? { error: "invalid_token" } : {});
+
       return c.json(actionFailure("Unauthorized"), 401);
     }
 
@@ -65,7 +70,24 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
       return c.json(actionFailure("Company not found"), 404);
     }
 
-    if (!(await checkTeamAccess(c, company.teamId)).allowed) {
+    const access = await checkTeamAccess(c, company.teamId);
+    // Answered as Core's `requireTeamAccess` answers an OAuth grant: the user can grant
+    // the client a team they're a member of on the consent screen, but not another team
+    if (!access.allowed && c.get("grant")) {
+      await audit(c, {
+        action: "authorize",
+        objectId: company.teamId,
+        objectType: "core.team",
+        outcome: "denied",
+        reasonCode: access.reason,
+        subsystem: "core.team_access",
+      });
+      setBearerChallenge(c, access.reason === "not_in_grant" ? { error: "insufficient_scope" } : {});
+
+      return c.json(actionFailure("This team isn't part of the OAuth grant"), 403);
+    }
+
+    if (!access.allowed) {
       return c.json(actionFailure("Unauthorized"), 401);
     }
 
@@ -143,7 +165,8 @@ const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
     }
     const authorizationType = authorizationHeader[0];
     const encodedCredentials = authorizationHeader[1];
-    if (authorizationType !== "Bearer" || !encodedCredentials) {
+    // An OAuth access token is verified by Core, after this extension
+    if (authorizationType !== "Bearer" || !encodedCredentials || presentsOAuthAccessToken(c)) {
       return null;
     }
     try {
@@ -209,6 +232,32 @@ export function requireIntegrationSupportedAuth() {
     extensions: integrationSupportedAuthExtensions,
   })
 }
+
+// The team of the company a path names, for an OAuth grant that covers several teams
+const findCompanyTeamId = async (c: Context): Promise<string | null> => {
+  const companyId = c.req.param("companyId");
+
+  return companyId ? ((await getCompanyById(companyId))?.teamId ?? null) : null;
+};
+
+/**
+ * Core's `requireTeamAccess`, which also finds the team of the company a path names,
+ * for an OAuth grant that covers several teams. A company that doesn't exist answers
+ * `404`, rather than asking the client to name a team.
+ */
+export const requireTeamAccess = (options: TeamAccessOptions = {}) => {
+  const check = requireCoreTeamAccess({ findTeamId: findCompanyTeamId, ...options });
+
+  return createMiddleware<AuthenticatedUserContext & AuthenticatedTeamContext>(async (c, next) => {
+    const response = await check(c, next);
+    // With a company in the path, `team_required` means findCompanyTeamId found no such company
+    if (response?.status === 400 && c.req.param("companyId") && (await response.clone().json()).code === "team_required") {
+      return c.json(actionFailure("Company not found"), 404);
+    }
+
+    return response;
+  });
+};
 
 export function requireIntegrationSupportedTeamAccess(options: TeamAccessOptions = {}) {
   return requireTeamAccess({
