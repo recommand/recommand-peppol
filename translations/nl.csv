@@ -999,3 +999,84 @@ Peppol registration removed for {0},Peppol-registratie verwijderd voor {0}
 Is your name not on the list? Contact,Staat je naam niet in de lijst? Neem contact op met
 For Luxembourg businesses\, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under scheme 9938\, next to your VAT number.,Vul voor Luxemburgse bedrijven het matricule van 11 cijfers in\, niet het RCS-nummer. Het matricule wordt je Peppol-adres onder schema 9938\, naast je btw-nummer.
 The company register cannot be reached right now\, so we cannot check who represents this company. Please try again in a few minutes.,Het ondernemingsregister is op dit moment niet bereikbaar\, waardoor we niet kunnen nagaan wie dit bedrijf vertegenwoordigt. Probeer het over enkele minuten opnieuw.
+Delete companies,Bedrijven verwijderen
+Read companies,Bedrijven bekijken
+See companies\, and look up company data by VAT or enterprise number,Bedrijven bekijken en bedrijfsgegevens opzoeken via btw- of ondernemingsnummer
+Manage companies,Bedrijven beheren
+Create\, change and verify companies,Bedrijven aanmaken\, wijzigen en verifiëren
+Delete customers,Klanten verwijderen
+Read customers,Klanten bekijken
+Manage customers,Klanten beheren
+Delete document types,Documenttypes verwijderen
+Delete the document types a company receives,De documenttypes die een bedrijf ontvangt verwijderen
+Read document types,Documenttypes bekijken
+See the document types a company receives,De documenttypes die een bedrijf ontvangt bekijken
+Manage document types,Documenttypes beheren
+Add and change the document types a company receives,De documenttypes die een bedrijf ontvangt toevoegen en wijzigen
+Delete documents,Documenten verwijderen
+Delete documents\, one at a time or all at once,Documenten verwijderen\, een voor een of allemaal tegelijk
+Export documents,Documenten exporteren
+Generate documents,Documenten genereren
+Generate and preview documents without sending them,Documenten genereren en bekijken zonder ze te verzenden
+Mark documents as read,Documenten als gelezen markeren
+Mark documents as read or unread\, which takes them out of or back into the inbox,Documenten als gelezen of ongelezen markeren\, waardoor ze uit de inbox verdwijnen of er weer in komen
+Read documents,Documenten bekijken
+See and download documents\, and read the inbox,Documenten bekijken en downloaden\, en de inbox lezen
+Send documents,Documenten verzenden
+Label documents,Labels aan documenten toekennen
+Assign labels to documents and remove them,Labels aan documenten toekennen en ze weer verwijderen
+Delete identifiers,Identificaties verwijderen
+Delete a company's Peppol identifiers,De Peppol-identificaties van een bedrijf verwijderen
+Migrate identifiers,Identificaties migreren
+Move a Peppol identifier from another access point with its migration key,Een Peppol-identificatie met haar migratiesleutel overzetten van een ander access point
+Read identifiers,Identificaties bekijken
+See a company's Peppol identifiers and their migrations,De Peppol-identificaties van een bedrijf en hun migraties bekijken
+Manage identifiers,Identificaties beheren
+Add and change a company's Peppol identifiers,De Peppol-identificaties van een bedrijf toevoegen en wijzigen
+Delete integrations,Integraties verwijderen
+Read integrations,Integraties bekijken
+See integrations and their task logs,Integraties en hun takenlogboeken bekijken
+Manage integrations,Integraties beheren
+Set up and change integrations\, and reset their state,Integraties instellen en wijzigen\, en hun status resetten
+Delete labels,Labels verwijderen
+Read labels,Labels bekijken
+Manage labels,Labels beheren
+Create and change labels,Labels aanmaken en wijzigen
+Delete notification email addresses,E-mailadressen voor meldingen verwijderen
+Delete the addresses a company's notifications go to,De adressen waarnaar de meldingen van een bedrijf gaan verwijderen
+Read notification email addresses,E-mailadressen voor meldingen bekijken
+See the addresses a company's notifications go to,De adressen waarnaar de meldingen van een bedrijf gaan bekijken
+Manage notification email addresses,E-mailadressen voor meldingen beheren
+Add and change the addresses a company's notifications go to,De adressen waarnaar de meldingen van een bedrijf gaan toevoegen en wijzigen
+Read e-reporting,E-reporting bekijken
+See a company's French e-reporting declarant,De declarant voor Frans e-reporting van een bedrijf bekijken
+Submit e-reporting,E-reporting indienen
+Submit French e-reporting to the tax authority,Frans e-reporting indienen bij de belastingdienst
+Manage e-reporting,E-reporting beheren
+Change a company's French e-reporting declarant,De declarant voor Frans e-reporting van een bedrijf wijzigen
+Delete suppliers,Leveranciers verwijderen
+Read suppliers,Leveranciers bekijken
+Manage suppliers,Leveranciers beheren
+Create and change suppliers\, and label them,Leveranciers aanmaken en wijzigen\, en er labels aan toekennen
+Delete webhooks,Webhooks verwijderen
+Read webhooks,Webhooks bekijken
+Manage webhooks,Webhooks beheren
+Create and change webhooks,Webhooks aanmaken en wijzigen
+Delete companies\, and take them off the Peppol network,Bedrijven verwijderen en van het Peppol-netwerk halen
+Remove customers the team sends documents to,Klanten verwijderen naar wie het team documenten verzendt
+See the customers the team sends documents to,De klanten bekijken naar wie het team documenten verzendt
+Create and change customers the team sends documents to,Klanten aanmaken en wijzigen naar wie het team documenten verzendt
+Download many documents at once,Veel documenten tegelijk downloaden
+Send documents over Peppol\, or by email to recipients who aren't on Peppol,Documenten verzenden via Peppol\, of per e-mail naar ontvangers die niet op Peppol zitten
+Delete integrations\, which stops them syncing,Integraties verwijderen\, waardoor ze stoppen met synchroniseren
+Delete labels\, which removes them from documents and suppliers,Labels verwijderen\, waardoor ze van documenten en leveranciers verdwijnen
+See the labels used to sort documents and suppliers,De labels bekijken waarmee documenten en leveranciers worden ingedeeld
+Remove suppliers the team receives documents from,Leveranciers verwijderen van wie het team documenten ontvangt
+See the suppliers the team receives documents from,De leveranciers bekijken van wie het team documenten ontvangt
+Delete webhooks\, so their events are no longer delivered,Webhooks verwijderen\, zodat hun events niet meer worden afgeleverd
+See webhooks and the addresses their events go to,Webhooks bekijken en de adressen waarnaar hun events gaan
+Document types,Documenttypes
+Identifiers,Identificaties
+Notification email addresses,E-mailadressen voor meldingen
+E-reporting,E-reporting
+Webhooks,Webhooks

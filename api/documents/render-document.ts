@@ -1,4 +1,4 @@
-import { requireDocumentAccess } from "@peppol/utils/auth-middleware";
+import { requireDocumentAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { Server, type Context } from "@recommand/lib/api";
 import { z } from "zod";
 import "zod-openapi/extend";
@@ -88,6 +88,7 @@ const _renderDocumentMinimal = server.get(
   "/documents/:documentId/render/:type",
   requireTeamAccess(),
   requireDocumentAccess(),
+  requirePermission("peppol.documents.read"),
   renderDocumentRouteDescription,
   zodValidator("param", renderDocumentParamSchema),
   _renderDocumentImplementation,
@@ -97,6 +98,7 @@ const _renderDocument = server.get(
   "/:teamId/documents/:documentId/render/:type",
   requireTeamAccess(),
   requireDocumentAccess(),
+  requirePermission("peppol.documents.read"),
   describeRoute({ hide: true }),
   zodValidator("param", renderDocumentParamSchemaWithTeamId),
   _renderDocumentImplementation,

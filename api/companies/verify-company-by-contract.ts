@@ -12,6 +12,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
+import { requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -65,6 +66,7 @@ type VerifyCompanyByContractContext = Context<AuthenticatedUserContext & Authent
 const _verifyCompanyByContractMinimal = server.post(
     "/companies/:companyId/verify-by-contract",
     requireTeamAccess(),
+    requirePermission("peppol.companies.write"),
     verifyCompanyByContractRouteDescription,
     zodValidator("param", verifyCompanyByContractParamSchema),
     _verifyCompanyByContractImplementation,
@@ -73,6 +75,7 @@ const _verifyCompanyByContractMinimal = server.post(
 const _verifyCompanyByContract = server.post(
     "/:teamId/companies/:companyId/verify-by-contract",
     requireTeamAccess(),
+    requirePermission("peppol.companies.write"),
     describeRoute({ hide: true }),
     zodValidator("param", verifyCompanyByContractParamSchemaWithTeamId),
     _verifyCompanyByContractImplementation,
