@@ -39,7 +39,7 @@ type GetDocumentTypesContext = Context<AuthenticatedUserContext & AuthenticatedT
 const _getDocumentTypesMinimal = server.get(
     "/companies/:companyId/document-types",
     requireCompanyAccess(),
-    requirePermission("peppol.document_types.read"),
+    requirePermission("exchange.document_types.read"),
     getDocumentTypesRouteDescription,
     zodValidator("param", getDocumentTypesParamSchema),
     _getDocumentTypesImplementation,
@@ -48,7 +48,7 @@ const _getDocumentTypesMinimal = server.get(
 const _getDocumentTypes = server.get(
     "/:teamId/companies/:companyId/documentTypes",
     requireCompanyAccess(),
-    requirePermission("peppol.document_types.read"),
+    requirePermission("exchange.document_types.read"),
     describeRoute({hide: true}),
     zodValidator("param", getDocumentTypesParamSchemaWithTeamId),
     _getDocumentTypesImplementation,

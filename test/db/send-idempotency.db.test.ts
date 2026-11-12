@@ -94,9 +94,9 @@ const seedSender = async ({ companyId, teamId }: { companyId: string; teamId: st
     [`key_${teamId}`, teamId, `usr_${teamId}`, await Bun.password.hash("secret", { algorithm: "bcrypt", cost: 4 })]
   );
   // The send routes require the permission, held by the key and by its owner
-  await pool.query(`INSERT INTO user_permissions (user_id, team_id, permission_id) VALUES ($1, $2, 'peppol.documents.send')`, [`usr_${teamId}`, teamId]);
+  await pool.query(`INSERT INTO user_permissions (user_id, team_id, permission_id) VALUES ($1, $2, 'exchange.documents.send')`, [`usr_${teamId}`, teamId]);
   await pool.query(
-    `INSERT INTO principal_permissions (principal_type, principal_id, team_id, permission_id) VALUES ('api_key', $1, $2, 'peppol.documents.send')`,
+    `INSERT INTO principal_permissions (principal_type, principal_id, team_id, permission_id) VALUES ('api_key', $1, $2, 'exchange.documents.send')`,
     [`key_${teamId}`, teamId]
   );
 

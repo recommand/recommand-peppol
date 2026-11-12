@@ -42,7 +42,7 @@ type VerifyCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _verifyCompanyMinimal = server.post(
     "/companies/:companyId/verify",
     requireTeamAccess(),
-    requirePermission("peppol.companies.write"),
+    requirePermission("exchange.companies.write"),
     verifyCompanyRouteDescription,
     zodValidator("param", verifyCompanyParamSchema),
     _verifyCompanyImplementation,
@@ -51,7 +51,7 @@ const _verifyCompanyMinimal = server.post(
 const _verifyCompany = server.post(
     "/:teamId/companies/:companyId/verify",
     requireTeamAccess(),
-    requirePermission("peppol.companies.write"),
+    requirePermission("exchange.companies.write"),
     describeRoute({ hide: true }),
     zodValidator("param", verifyCompanyParamSchemaWithTeamId),
     _verifyCompanyImplementation,

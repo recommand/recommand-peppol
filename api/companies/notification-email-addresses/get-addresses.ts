@@ -37,7 +37,7 @@ type GetAddressesContext = Context<AuthenticatedUserContext & AuthenticatedTeamC
 const _getAddressesMinimal = server.get(
     "/companies/:companyId/notification-email-addresses",
     requireCompanyAccess(),
-    requirePermission("peppol.notification_email_addresses.read"),
+    requirePermission("exchange.notification_email_addresses.read"),
     getAddressesRouteDescription,
     zodValidator("param", getAddressesParamSchema),
     _getAddressesImplementation,
@@ -46,7 +46,7 @@ const _getAddressesMinimal = server.get(
 const _getAddresses = server.get(
     "/:teamId/companies/:companyId/notification-email-addresses",
     requireCompanyAccess(),
-    requirePermission("peppol.notification_email_addresses.read"),
+    requirePermission("exchange.notification_email_addresses.read"),
     describeRoute({hide: true}),
     zodValidator("param", getAddressesParamSchemaWithTeamId),
     _getAddressesImplementation,

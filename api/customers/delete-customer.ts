@@ -48,7 +48,7 @@ type DeleteCustomerContext = Context<
 const _deleteCustomerMinimal = server.delete(
   "/customers/:customerId",
   requireIntegrationSupportedTeamAccess(),
-  requirePermission("peppol.customers.delete"),
+  requirePermission("exchange.customers.delete"),
   deleteCustomerRouteDescription,
   zodValidator("param", customerIdParamSchema),
   _deleteCustomerImplementation
@@ -57,7 +57,7 @@ const _deleteCustomerMinimal = server.delete(
 const _deleteCustomer = server.delete(
   "/:teamId/customers/:customerId",
   requireIntegrationSupportedTeamAccess(),
-  requirePermission("peppol.customers.delete"),
+  requirePermission("exchange.customers.delete"),
   describeRoute({ hide: true }),
   zodValidator("param", deleteCustomerParamSchemaWithTeamId),
   _deleteCustomerImplementation

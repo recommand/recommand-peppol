@@ -67,7 +67,7 @@ type UpdateAddressContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _updateAddressMinimal = server.put(
     "/companies/:companyId/notification-email-addresses/:notificationEmailAddressId",
     requireCompanyAccess(),
-    requirePermission("peppol.notification_email_addresses.write"),
+    requirePermission("exchange.notification_email_addresses.write"),
     updateAddressRouteDescription,
     zodValidator("param", updateAddressParamSchema),
     zodValidator("json", updateAddressJsonBodySchema),
@@ -77,7 +77,7 @@ const _updateAddressMinimal = server.put(
 const _updateAddress = server.put(
     "/:teamId/companies/:companyId/notification-email-addresses/:notificationEmailAddressId",
     requireCompanyAccess(),
-    requirePermission("peppol.notification_email_addresses.write"),
+    requirePermission("exchange.notification_email_addresses.write"),
     describeRoute({hide: true}),
     zodValidator("param", updateAddressParamSchemaWithTeamId),
     zodValidator("json", updateAddressJsonBodySchema),

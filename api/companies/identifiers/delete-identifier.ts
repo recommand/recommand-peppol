@@ -45,7 +45,7 @@ type DeleteIdentifierContext = Context<AuthenticatedUserContext & AuthenticatedT
 const _deleteIdentifierMinimal = server.delete(
     "/companies/:companyId/identifiers/:identifierId",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.delete"),
+    requirePermission("exchange.identifiers.delete"),
     deleteIdentifierRouteDescription,
     zodValidator("param", deleteIdentifierParamSchema),
     _deleteIdentifierImplementation,
@@ -54,7 +54,7 @@ const _deleteIdentifierMinimal = server.delete(
 const _deleteIdentifier = server.delete(
     "/:teamId/companies/:companyId/identifiers/:identifierId",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.delete"),
+    requirePermission("exchange.identifiers.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteIdentifierParamSchemaWithTeamId),
     _deleteIdentifierImplementation,
