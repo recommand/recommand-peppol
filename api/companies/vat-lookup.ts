@@ -26,7 +26,7 @@ type VatLookupContext = Context<AuthenticatedUserContext & AuthenticatedTeamCont
 const _vatLookup = server.get(
     "/:teamId/vat-lookup",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.companies.read"),
+    requirePermission("exchange.companies.read"),
     describeRoute({ hide: true }),
     zodValidator("param", vatLookupParamSchema),
     zodValidator("query", vatLookupQuerySchema),

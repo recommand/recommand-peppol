@@ -50,7 +50,7 @@ type PreviewDocumentContext = Context<
 const _previewDocument = server.post(
   "/:companyId/previewDocument/render/:type",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("peppol.documents.generate"),
+  requirePermission("exchange.documents.generate"),
   requireTransactionEntitlement(),
   describeRoute({ hide: true }),
   zodValidator("param", previewDocumentParamSchema),

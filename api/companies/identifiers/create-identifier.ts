@@ -56,7 +56,7 @@ type CreateIdentifierContext = Context<AuthenticatedUserContext & AuthenticatedT
 const _createIdentifierMinimal = server.post(
     "/companies/:companyId/identifiers",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.write"),
+    requirePermission("exchange.identifiers.write"),
     createIdentifierRouteDescription,
     zodValidator("param", createIdentifierParamSchema),
     zodValidator("json", createIdentifierJsonBodySchema),
@@ -66,7 +66,7 @@ const _createIdentifierMinimal = server.post(
 const _createIdentifier = server.post(
     "/:teamId/companies/:companyId/identifiers",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.write"),
+    requirePermission("exchange.identifiers.write"),
     describeRoute({ hide: true }),
     zodValidator("param", createIdentifierParamSchemaWithTeamId),
     zodValidator("json", createIdentifierJsonBodySchema),

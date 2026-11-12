@@ -25,7 +25,7 @@ type EnterpriseDataContext = Context<AuthenticatedUserContext & AuthenticatedTea
 const _getCompanyEnterpriseData = server.get(
     "/:teamId/companies/:companyId/enterprise-data",
     requireTeamAccess(),
-    requirePermission("peppol.companies.read"),
+    requirePermission("exchange.companies.read"),
     describeRoute({ hide: true }),
     zodValidator("param", enterpriseDataParamSchema),
     _getCompanyEnterpriseDataImplementation,

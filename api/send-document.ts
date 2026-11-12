@@ -146,7 +146,7 @@ server.use("/:companyId/send", trackSendDocument);
 const sendDocument = server.post(
   "/:companyId/sendDocument",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("peppol.documents.send"),
+  requirePermission("exchange.documents.send"),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   describeRoute({ hide: true }),
@@ -160,7 +160,7 @@ const sendDocument = server.post(
 const sendDocumentMinimal = server.post(
   "/:companyId/send",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("peppol.documents.send"),
+  requirePermission("exchange.documents.send"),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),
   routeDescription,

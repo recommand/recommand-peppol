@@ -51,7 +51,7 @@ const _getInboxMinimal = server.get(
     "/inbox",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
-    requirePermission("peppol.documents.read"),
+    requirePermission("exchange.documents.read"),
     getInboxRouteDescription,
     zodValidator("query", getInboxQuerySchema),
     _getInboxImplementation,
@@ -61,7 +61,7 @@ const _getInbox = server.get(
     "/:teamId/inbox",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
-    requirePermission("peppol.documents.read"),
+    requirePermission("exchange.documents.read"),
     describeRoute({hide: true}),
     zodValidator("query", getInboxQuerySchema),
     zodValidator("param", z.object({

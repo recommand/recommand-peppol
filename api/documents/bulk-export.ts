@@ -40,7 +40,7 @@ const _bulkExport = server.post(
   "/:teamId/documents/bulk-export",
   requireIntegrationSupportedTeamAccess(),
   requireDocumentAccess(),
-  requirePermission("peppol.documents.export"),
+  requirePermission("exchange.documents.export"),
   describeRoute({ hide: true }),
   zodValidator("param", bulkExportParamSchema),
   zodValidator("json", bulkExportJsonBodySchema),

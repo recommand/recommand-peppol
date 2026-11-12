@@ -51,7 +51,7 @@ type RequestMigrationContext = Context<AuthenticatedUserContext & AuthenticatedT
 const _requestMigrationMinimal = server.post(
     "/companies/:companyId/identifiers/:identifierId/migration",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.migrate"),
+    requirePermission("exchange.identifiers.migrate"),
     requestMigrationRouteDescription,
     zodValidator("param", requestMigrationParamSchema),
     zodValidator("json", requestMigrationJsonBodySchema),
@@ -61,7 +61,7 @@ const _requestMigrationMinimal = server.post(
 const _requestMigration = server.post(
     "/:teamId/companies/:companyId/identifiers/:identifierId/migration",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.migrate"),
+    requirePermission("exchange.identifiers.migrate"),
     describeRoute({ hide: true }),
     zodValidator("param", requestMigrationParamSchemaWithTeamId),
     zodValidator("json", requestMigrationJsonBodySchema),

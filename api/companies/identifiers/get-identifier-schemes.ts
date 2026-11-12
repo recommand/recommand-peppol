@@ -41,7 +41,7 @@ type GetIdentifierSchemesContext = Context<AuthenticatedUserContext & Authentica
 const _getIdentifierSchemesMinimal = server.get(
   "/companies/:companyId/identifiers/schemes",
   requireCompanyAccess(),
-  requirePermission("peppol.identifiers.read"),
+  requirePermission("exchange.identifiers.read"),
   getIdentifierSchemesRouteDescription,
   zodValidator("param", getIdentifierSchemesParamSchema),
   _getIdentifierSchemesImplementation,
@@ -50,7 +50,7 @@ const _getIdentifierSchemesMinimal = server.get(
 const _getIdentifierSchemes = server.get(
   "/:teamId/companies/:companyId/identifiers/schemes",
   requireCompanyAccess(),
-  requirePermission("peppol.identifiers.read"),
+  requirePermission("exchange.identifiers.read"),
   describeRoute({ hide: true }),
   zodValidator("param", getIdentifierSchemesParamSchemaWithTeamId),
   _getIdentifierSchemesImplementation,
