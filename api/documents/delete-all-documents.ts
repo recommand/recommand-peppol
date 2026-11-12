@@ -22,7 +22,7 @@ const _deleteAllTransmittedDocuments = server.delete(
     "/:teamId/documents/all",
     requireTeamAccess(),
     requireDocumentAccess(),
-    requirePermission("peppol.documents.delete"),
+    requirePermission("exchange.documents.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteAllTransmittedDocumentsParamSchemaWithTeamId),
     _deleteAllTransmittedDocumentsImplementation,
@@ -32,7 +32,7 @@ const _deleteAllTransmittedDocumentsMinimal = server.delete(
     "/documents/all",
     requireTeamAccess(),
     requireDocumentAccess(),
-    requirePermission("peppol.documents.delete"),
+    requirePermission("exchange.documents.delete"),
     describeRoute({hide: true}),
     _deleteAllTransmittedDocumentsImplementation,
 );

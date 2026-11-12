@@ -37,7 +37,7 @@ const _bulkDelete = server.delete(
   "/:teamId/documents/bulk-delete",
   requireTeamAccess(),
   requireDocumentAccess(),
-  requirePermission("peppol.documents.delete"),
+  requirePermission("exchange.documents.delete"),
   describeRoute({ hide: true }),
   zodValidator("param", bulkDeleteParamSchema),
   zodValidator("json", bulkDeleteJsonBodySchema),

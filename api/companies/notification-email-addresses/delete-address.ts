@@ -41,7 +41,7 @@ type DeleteAddressContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _deleteAddressMinimal = server.delete(
     "/companies/:companyId/notification-email-addresses/:notificationEmailAddressId",
     requireCompanyAccess(),
-    requirePermission("peppol.notification_email_addresses.delete"),
+    requirePermission("exchange.notification_email_addresses.delete"),
     deleteAddressRouteDescription,
     zodValidator("param", deleteAddressParamSchema),
     _deleteAddressImplementation,
@@ -50,7 +50,7 @@ const _deleteAddressMinimal = server.delete(
 const _deleteAddress = server.delete(
     "/:teamId/companies/:companyId/notification-email-addresses/:notificationEmailAddressId",
     requireCompanyAccess(),
-    requirePermission("peppol.notification_email_addresses.delete"),
+    requirePermission("exchange.notification_email_addresses.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteAddressParamSchemaWithTeamId),
     _deleteAddressImplementation,

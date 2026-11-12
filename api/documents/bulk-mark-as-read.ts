@@ -37,7 +37,7 @@ const _bulkMarkAsRead = server.post(
   "/:teamId/documents/bulk-mark-as-read",
   requireIntegrationSupportedTeamAccess(),
   requireDocumentAccess(),
-  requirePermission("peppol.documents.mark_as_read"),
+  requirePermission("exchange.documents.mark_as_read"),
   describeRoute({ hide: true }),
   zodValidator("param", bulkMarkAsReadParamSchema),
   zodValidator("json", bulkMarkAsReadJsonBodySchema),

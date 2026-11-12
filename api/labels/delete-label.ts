@@ -43,7 +43,7 @@ type DeleteLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 const _deleteLabelMinimal = server.delete(
     "/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.labels.delete"),
+    requirePermission("exchange.labels.delete"),
     deleteLabelRouteDescription,
     zodValidator("param", deleteLabelParamSchema),
     _deleteLabelImplementation,
@@ -52,7 +52,7 @@ const _deleteLabelMinimal = server.delete(
 const _deleteLabel = server.delete(
     "/:teamId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.labels.delete"),
+    requirePermission("exchange.labels.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteLabelParamSchemaWithTeamId),
     _deleteLabelImplementation,

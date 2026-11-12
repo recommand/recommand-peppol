@@ -50,7 +50,7 @@ type GetSuppliersContext = Context<AuthenticatedUserContext & AuthenticatedTeamC
 const _getSuppliersMinimal = server.get(
     "/suppliers",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.suppliers.read"),
+    requirePermission("exchange.suppliers.read"),
     getSuppliersRouteDescription,
     zodValidator("query", getSuppliersQuerySchema),
     _getSuppliersImplementation,
@@ -59,7 +59,7 @@ const _getSuppliersMinimal = server.get(
 const _getSuppliers = server.get(
     "/:teamId/suppliers",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.suppliers.read"),
+    requirePermission("exchange.suppliers.read"),
     describeRoute({hide: true}),
     zodValidator("query", getSuppliersQuerySchema),
     zodValidator("param", getSuppliersParamSchema),

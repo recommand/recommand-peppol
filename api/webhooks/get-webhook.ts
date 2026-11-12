@@ -40,7 +40,7 @@ type GetWebhookContext = Context<AuthenticatedUserContext & AuthenticatedTeamCon
 const _getWebhookMinimal = server.get(
     "/webhooks/:webhookId",
     requireTeamAccess(),
-    requirePermission("peppol.webhooks.read"),
+    requirePermission("exchange.webhooks.read"),
     getWebhookRouteDescription,
     zodValidator("param", getWebhookParamSchema),
     _getWebhookImplementation,
@@ -49,7 +49,7 @@ const _getWebhookMinimal = server.get(
 const _getWebhook = server.get(
     "/:teamId/webhooks/:webhookId",
     requireTeamAccess(),
-    requirePermission("peppol.webhooks.read"),
+    requirePermission("exchange.webhooks.read"),
     describeRoute({hide: true}),
     zodValidator("param", getWebhookParamSchemaWithTeamId),
     _getWebhookImplementation,

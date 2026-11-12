@@ -100,7 +100,7 @@ type UpsertCustomerContext = Context<
 const _upsertCustomerMinimal = server.post(
   "/customers",
   requireIntegrationSupportedTeamAccess(),
-  requirePermission("peppol.customers.write"),
+  requirePermission("exchange.customers.write"),
   upsertCustomerRouteDescription,
   zodValidator("json", upsertCustomerJsonBodySchema),
   _upsertCustomerImplementation
@@ -109,7 +109,7 @@ const _upsertCustomerMinimal = server.post(
 const _upsertCustomer = server.post(
   "/:teamId/customers",
   requireIntegrationSupportedTeamAccess(),
-  requirePermission("peppol.customers.write"),
+  requirePermission("exchange.customers.write"),
   describeRoute({ hide: true }),
   zodValidator("param", upsertCustomerParamSchema),
   zodValidator("json", upsertCustomerJsonBodySchema),
