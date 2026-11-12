@@ -4,6 +4,7 @@ import "zod-openapi/extend";
 import { zodResolver } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse } from "@core/lib/api-docs";
+import { getPublicKeySet } from "@core/lib/signing-keys";
 
 const server = new Server();
 
@@ -15,6 +16,9 @@ const jsonWebKey = z
         e: z.string().openapi({
             description: "The RSA public exponent, base64url-encoded.",
             examples: ["AQAB"],
+        }),
+        kid: z.string().openapi({
+            description: "The key's ID, which the header of every token it verifies names.",
         }),
         kty: z.literal("RSA").openapi({
             description: "The key type.",
@@ -63,15 +67,9 @@ const _jwks = server.get(
     jwksRouteDescription,
     async (c) => {
         try {
-            const jwksEnv = process.env.INTEGRATIONS_JWKS;
-            if (!jwksEnv) {
-                return c.json({ keys: [] }, 200);
-            }
-
-            const jwks = JSON.parse(jwksEnv);
-            return c.json(jwks, 200);
+            return c.json(await getPublicKeySet(), 200);
         } catch (error) {
-            console.error("Failed to parse JWKS from environment variable:", error);
+            console.error("Failed to load the signing keys:", error);
             return c.json({ error: "Failed to retrieve JWKS" }, 500);
         }
     }
