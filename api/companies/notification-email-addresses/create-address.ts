@@ -64,7 +64,7 @@ type CreateAddressContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _createAddressMinimal = server.post(
     "/companies/:companyId/notification-email-addresses",
     requireCompanyAccess(),
-    requirePermission("peppol.notification_email_addresses.write"),
+    requirePermission("exchange.notification_email_addresses.write"),
     createAddressRouteDescription,
     zodValidator("param", createAddressParamSchema),
     zodValidator("json", createAddressJsonBodySchema),
@@ -74,7 +74,7 @@ const _createAddressMinimal = server.post(
 const _createAddress = server.post(
     "/:teamId/companies/:companyId/notification-email-addresses",
     requireCompanyAccess(),
-    requirePermission("peppol.notification_email_addresses.write"),
+    requirePermission("exchange.notification_email_addresses.write"),
     describeRoute({hide: true}),
     zodValidator("param", createAddressParamSchemaWithTeamId),
     zodValidator("json", createAddressJsonBodySchema),

@@ -42,7 +42,7 @@ type GetCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeamCon
 const _getCompanyMinimal = server.get(
     "/companies/:companyId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.companies.read"),
+    requirePermission("exchange.companies.read"),
     getCompanyRouteDescription,
     zodValidator("param", getCompanyParamSchema),
     _getCompanyImplementation,
@@ -51,7 +51,7 @@ const _getCompanyMinimal = server.get(
 const _getCompany = server.get(
     "/:teamId/companies/:companyId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.companies.read"),
+    requirePermission("exchange.companies.read"),
     describeRoute({hide: true}),
     zodValidator("param", getCompanyParamSchemaWithTeamId),
     _getCompanyImplementation,

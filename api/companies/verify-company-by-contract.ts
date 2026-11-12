@@ -66,7 +66,7 @@ type VerifyCompanyByContractContext = Context<AuthenticatedUserContext & Authent
 const _verifyCompanyByContractMinimal = server.post(
     "/companies/:companyId/verify-by-contract",
     requireTeamAccess(),
-    requirePermission("peppol.companies.write"),
+    requirePermission("exchange.companies.write"),
     verifyCompanyByContractRouteDescription,
     zodValidator("param", verifyCompanyByContractParamSchema),
     _verifyCompanyByContractImplementation,
@@ -75,7 +75,7 @@ const _verifyCompanyByContractMinimal = server.post(
 const _verifyCompanyByContract = server.post(
     "/:teamId/companies/:companyId/verify-by-contract",
     requireTeamAccess(),
-    requirePermission("peppol.companies.write"),
+    requirePermission("exchange.companies.write"),
     describeRoute({ hide: true }),
     zodValidator("param", verifyCompanyByContractParamSchemaWithTeamId),
     _verifyCompanyByContractImplementation,

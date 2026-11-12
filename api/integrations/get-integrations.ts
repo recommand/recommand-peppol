@@ -38,7 +38,7 @@ type GetIntegrationsContext = Context<AuthenticatedUserContext & AuthenticatedTe
 const _getIntegrationsMinimal = server.get(
     "/integrations",
     requireTeamAccess(),
-    requirePermission("peppol.integrations.read"),
+    requirePermission("exchange.integrations.read"),
     requireIntegrationAccess(),
     getIntegrationsRouteDescription,
     zodValidator("query", getIntegrationsQuerySchema),
@@ -48,7 +48,7 @@ const _getIntegrationsMinimal = server.get(
 const _getIntegrations = server.get(
     "/:teamId/integrations",
     requireTeamAccess(),
-    requirePermission("peppol.integrations.read"),
+    requirePermission("exchange.integrations.read"),
     requireIntegrationAccess(),
     describeRoute({hide: true}),
     zodValidator("param", getIntegrationsParamSchemaWithTeamId),

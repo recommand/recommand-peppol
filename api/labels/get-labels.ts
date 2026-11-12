@@ -32,7 +32,7 @@ type GetLabelsContext = Context<AuthenticatedUserContext & AuthenticatedTeamCont
 const _getLabelsMinimal = server.get(
     "/labels",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.labels.read"),
+    requirePermission("exchange.labels.read"),
     getLabelsRouteDescription,
     _getLabelsImplementation,
 );
@@ -40,7 +40,7 @@ const _getLabelsMinimal = server.get(
 const _getLabels = server.get(
     "/:teamId/labels",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.labels.read"),
+    requirePermission("exchange.labels.read"),
     describeRoute({hide: true}),
     zodValidator("param", z.object({
         teamId: z.string(),

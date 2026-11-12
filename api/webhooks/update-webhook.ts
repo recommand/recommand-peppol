@@ -59,7 +59,7 @@ type UpdateWebhookContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _updateWebhookMinimal = server.put(
     "/webhooks/:webhookId",
     requireTeamAccess(),
-    requirePermission("peppol.webhooks.write"),
+    requirePermission("exchange.webhooks.write"),
     updateWebhookRouteDescription,
     zodValidator("param", updateWebhookParamSchema),
     zodValidator("json", updateWebhookJsonBodySchema),
@@ -69,7 +69,7 @@ const _updateWebhookMinimal = server.put(
 const _updateWebhook = server.put(
     "/:teamId/webhooks/:webhookId",
     requireTeamAccess(),
-    requirePermission("peppol.webhooks.write"),
+    requirePermission("exchange.webhooks.write"),
     describeRoute({hide: true}),
     zodValidator("param", updateWebhookParamSchema.extend({ teamId: z.string() })),
     zodValidator("json", updateWebhookJsonBodySchema),

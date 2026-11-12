@@ -62,7 +62,7 @@ type UpdateLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 const _updateLabelMinimal = server.put(
     "/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.labels.write"),
+    requirePermission("exchange.labels.write"),
     updateLabelRouteDescription,
     zodValidator("param", updateLabelParamSchema),
     zodValidator("json", updateLabelJsonBodySchema),
@@ -72,7 +72,7 @@ const _updateLabelMinimal = server.put(
 const _updateLabel = server.put(
     "/:teamId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.labels.write"),
+    requirePermission("exchange.labels.write"),
     describeRoute({hide: true}),
     zodValidator("param", updateLabelParamSchemaWithTeamId),
     zodValidator("json", updateLabelJsonBodySchema),

@@ -44,7 +44,7 @@ type AssignLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 const _assignLabelMinimal = server.post(
     "/documents/:documentId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.documents.write"),
+    requirePermission("exchange.documents.write"),
     assignLabelRouteDescription,
     zodValidator("param", assignLabelParamSchema),
     _assignLabelImplementation,
@@ -53,7 +53,7 @@ const _assignLabelMinimal = server.post(
 const _assignLabel = server.post(
     "/:teamId/documents/:documentId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.documents.write"),
+    requirePermission("exchange.documents.write"),
     describeRoute({hide: true}),
     zodValidator("param", assignLabelParamSchemaWithTeamId),
     _assignLabelImplementation,

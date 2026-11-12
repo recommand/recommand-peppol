@@ -64,7 +64,7 @@ type CreateCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _createCompanyMinimal = server.post(
     "/companies",
     requireTeamAccess(),
-    requirePermission("peppol.companies.write"),
+    requirePermission("exchange.companies.write"),
     createCompanyRouteDescription,
     zodValidator("json", createCompanyJsonBodySchema),
     _createCompanyImplementation,
@@ -73,7 +73,7 @@ const _createCompanyMinimal = server.post(
 const _createCompany = server.post(
     "/:teamId/companies",
     requireTeamAccess(),
-    requirePermission("peppol.companies.write"),
+    requirePermission("exchange.companies.write"),
     describeRoute({ hide: true }),
     zodValidator("param", createCompanyParamSchemaWithTeamId),
     zodValidator("json", createCompanyJsonBodySchema),

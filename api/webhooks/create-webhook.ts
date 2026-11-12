@@ -52,7 +52,7 @@ type CreateWebhookContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _createWebhookMinimal = server.post(
     "/webhooks",
     requireTeamAccess(),
-    requirePermission("peppol.webhooks.write"),
+    requirePermission("exchange.webhooks.write"),
     createWebhookRouteDescription,
     zodValidator("json", createWebhookJsonBodySchema),
     _createWebhookImplementation,
@@ -61,7 +61,7 @@ const _createWebhookMinimal = server.post(
 const _createWebhook = server.post(
     "/:teamId/webhooks",
     requireTeamAccess(),
-    requirePermission("peppol.webhooks.write"),
+    requirePermission("exchange.webhooks.write"),
     describeRoute({hide: true}),
     zodValidator("param", createWebhookParamSchemaWithTeamId),
     zodValidator("json", createWebhookJsonBodySchema),

@@ -183,7 +183,7 @@ const getFrenchReportingDeclarantParamSchema = z.object({
 const _getFrenchReportingDeclarant = server.get(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("peppol.reporting.read"),
+  requirePermission("exchange.reporting.read"),
   zodValidator("param", getFrenchReportingDeclarantParamSchema),
   getRouteDescription,
   async (c: FrenchReportingDeclarantContext) => {
@@ -219,7 +219,7 @@ const registerFrenchReportingDeclarantParamSchema = z.object({
 const _registerFrenchReportingDeclarant = server.put(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("peppol.reporting.write"),
+  requirePermission("exchange.reporting.write"),
   zodValidator("param", registerFrenchReportingDeclarantParamSchema),
   requireTransactionEntitlement(),
   requireCompanyVerificationForStrictTeams(),

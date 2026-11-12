@@ -53,7 +53,7 @@ type GetDocumentDefaultsContext = Context<
 const _getDocumentDefaults = server.get(
   "/:companyId/documentDefaults",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("peppol.documents.generate"),
+  requirePermission("exchange.documents.generate"),
   describeRoute({ hide: true }),
   zodValidator("param", getDocumentDefaultsParamSchema),
   zodValidator("query", getDocumentDefaultsQuerySchema),

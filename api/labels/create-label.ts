@@ -51,7 +51,7 @@ type CreateLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 const _createLabelMinimal = server.post(
     "/labels",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.labels.write"),
+    requirePermission("exchange.labels.write"),
     createLabelRouteDescription,
     zodValidator("json", createLabelJsonBodySchema),
     _createLabelImplementation,
@@ -60,7 +60,7 @@ const _createLabelMinimal = server.post(
 const _createLabel = server.post(
     "/:teamId/labels",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.labels.write"),
+    requirePermission("exchange.labels.write"),
     describeRoute({hide: true}),
     zodValidator("param", z.object({ teamId: z.string() })),
     zodValidator("json", createLabelJsonBodySchema),

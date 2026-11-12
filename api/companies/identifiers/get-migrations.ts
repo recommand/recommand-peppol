@@ -42,7 +42,7 @@ type GetMigrationsContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _getMigrationsMinimal = server.get(
     "/companies/:companyId/identifiers/:identifierId/migrations",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.read"),
+    requirePermission("exchange.identifiers.read"),
     getMigrationsRouteDescription,
     zodValidator("param", getMigrationsParamSchema),
     _getMigrationsImplementation,
@@ -51,7 +51,7 @@ const _getMigrationsMinimal = server.get(
 const _getMigrations = server.get(
     "/:teamId/companies/:companyId/identifiers/:identifierId/migrations",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.read"),
+    requirePermission("exchange.identifiers.read"),
     describeRoute({ hide: true }),
     zodValidator("param", getMigrationsParamSchemaWithTeamId),
     _getMigrationsImplementation,

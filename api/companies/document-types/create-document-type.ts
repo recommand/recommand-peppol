@@ -49,7 +49,7 @@ type CreateDocumentTypeContext = Context<AuthenticatedUserContext & Authenticate
 const _createDocumentTypeMinimal = server.post(
     "/companies/:companyId/document-types",
     requireCompanyAccess(),
-    requirePermission("peppol.document_types.write"),
+    requirePermission("exchange.document_types.write"),
     createDocumentTypeRouteDescription,
     zodValidator("param", createDocumentTypeParamSchema),
     zodValidator("json", createDocumentTypeJsonBodySchema),
@@ -59,7 +59,7 @@ const _createDocumentTypeMinimal = server.post(
 const _createDocumentType = server.post(
     "/:teamId/companies/:companyId/documentTypes",
     requireCompanyAccess(),
-    requirePermission("peppol.document_types.write"),
+    requirePermission("exchange.document_types.write"),
     describeRoute({ hide: true }),
     zodValidator("param", createDocumentTypeParamSchemaWithTeamId),
     zodValidator("json", createDocumentTypeJsonBodySchema),

@@ -55,7 +55,7 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
     app.get(
       "/:teamId/companies",
       requireIntegrationSupportedTeamAccess() as never,
-      requirePermission("peppol.companies.read") as never,
+      requirePermission("exchange.companies.read") as never,
       (c) => c.json({ success: true })
     );
     await seedTeamAndCompany(pool);
@@ -70,13 +70,13 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
     await pool.query(`INSERT INTO users (id, email, password_hash) VALUES ('usr_owner', 'owner@example.com', 'unused')`);
     await pool.query(`INSERT INTO team_members (team_id, user_id) VALUES ($1, 'usr_owner')`, [TEAM_ID]);
     await pool.query(
-      `INSERT INTO user_permissions (user_id, team_id, permission_id) VALUES ('usr_owner', $1, 'peppol.companies.read')`,
+      `INSERT INTO user_permissions (user_id, team_id, permission_id) VALUES ('usr_owner', $1, 'exchange.companies.read')`,
       [TEAM_ID]
     );
   });
 
   it("lets a key with the route's permission through", async () => {
-    await seedKey("key_read", ["peppol.companies.read"]);
+    await seedKey("key_read", ["exchange.companies.read"]);
     const response = await app.request(`/${TEAM_ID}/companies`, { headers: basic("key_read", "secret_key_read") });
     expect(response.status).toBe(200);
   });
@@ -87,7 +87,7 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({
       code: "insufficient_permission",
-      errors: { root: ["This operation needs the peppol.companies.read permission."] },
+      errors: { root: ["This operation needs the exchange.companies.read permission."] },
       success: false,
     });
   });
@@ -111,12 +111,12 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
     const members = await pool.query(`SELECT permission_id FROM user_permissions WHERE user_id = 'usr_owner' ORDER BY 1`);
     const keys = await pool.query(`SELECT permission_id FROM principal_permissions WHERE principal_id = 'key_existing' ORDER BY 1`);
     const { getRegisteredPermissionsByScope } = await import("@core/lib/permissions");
-    const peppolPermissions = getRegisteredPermissionsByScope("team")
+    const exchangePermissions = getRegisteredPermissionsByScope("team")
       .map((permission) => permission.id)
-      .filter((id) => id.startsWith("peppol."))
+      .filter((id) => id.startsWith("exchange."))
       .toSorted();
-    expect(peppolPermissions).toHaveLength(38);
-    expect(members.rows.map((row) => row.permission_id)).toEqual(peppolPermissions);
-    expect(keys.rows.map((row) => row.permission_id)).toEqual(peppolPermissions);
+    expect(exchangePermissions).toHaveLength(38);
+    expect(members.rows.map((row) => row.permission_id)).toEqual(exchangePermissions);
+    expect(keys.rows.map((row) => row.permission_id)).toEqual(exchangePermissions);
   });
 });

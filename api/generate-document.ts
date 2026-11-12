@@ -218,7 +218,7 @@ async function generateImplementation(c: GenerateContext) {
 const generateDocument = server.post(
   "/:companyId/generate",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("peppol.documents.generate"),
+  requirePermission("exchange.documents.generate"),
   requireTransactionEntitlement(),
   routeDescription,
   zodValidator("param", generateParamSchema),

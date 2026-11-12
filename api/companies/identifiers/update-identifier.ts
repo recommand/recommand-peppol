@@ -55,7 +55,7 @@ type UpdateIdentifierContext = Context<AuthenticatedUserContext & AuthenticatedT
 const _updateIdentifierMinimal = server.put(
     "/companies/:companyId/identifiers/:identifierId",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.write"),
+    requirePermission("exchange.identifiers.write"),
     updateIdentifierRouteDescription,
     zodValidator("param", updateIdentifierParamSchema),
     zodValidator("json", updateIdentifierJsonBodySchema),
@@ -65,7 +65,7 @@ const _updateIdentifierMinimal = server.put(
 const _updateIdentifier = server.put(
     "/:teamId/companies/:companyId/identifiers/:identifierId",
     requireCompanyAccess(),
-    requirePermission("peppol.identifiers.write"),
+    requirePermission("exchange.identifiers.write"),
     describeRoute({ hide: true }),
     zodValidator("param", updateIdentifierParamSchemaWithTeamId),
     zodValidator("json", updateIdentifierJsonBodySchema),

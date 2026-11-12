@@ -39,7 +39,7 @@ type GetIdentifiersContext = Context<AuthenticatedUserContext & AuthenticatedTea
 const _getIdentifiersMinimal = server.get(
   "/companies/:companyId/identifiers",
   requireCompanyAccess(),
-  requirePermission("peppol.identifiers.read"),
+  requirePermission("exchange.identifiers.read"),
   getIdentifiersRouteDescription,
   zodValidator("param", getIdentifiersParamSchema),
   _getIdentifiersImplementation,
@@ -48,7 +48,7 @@ const _getIdentifiersMinimal = server.get(
 const _getIdentifiers = server.get(
   "/:teamId/companies/:companyId/identifiers",
   requireCompanyAccess(),
-  requirePermission("peppol.identifiers.read"),
+  requirePermission("exchange.identifiers.read"),
   describeRoute({hide: true}),
   zodValidator("param", getIdentifiersParamSchemaWithTeamId),
   _getIdentifiersImplementation,

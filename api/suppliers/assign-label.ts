@@ -42,7 +42,7 @@ type AssignLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 const _assignLabelMinimal = server.post(
     "/suppliers/:supplierId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.suppliers.write"),
+    requirePermission("exchange.suppliers.write"),
     assignLabelRouteDescription,
     zodValidator("param", assignLabelParamSchema),
     _assignLabelImplementation,
@@ -51,7 +51,7 @@ const _assignLabelMinimal = server.post(
 const _assignLabel = server.post(
     "/:teamId/suppliers/:supplierId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.suppliers.write"),
+    requirePermission("exchange.suppliers.write"),
     describeRoute({hide: true}),
     zodValidator("param", assignLabelParamSchemaWithTeamId),
     _assignLabelImplementation,

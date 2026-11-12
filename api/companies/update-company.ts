@@ -67,7 +67,7 @@ type UpdateCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _updateCompanyMinimal = server.put(
     "/companies/:companyId",
     requireTeamAccess(),
-    requirePermission("peppol.companies.write"),
+    requirePermission("exchange.companies.write"),
     updateCompanyRouteDescription,
     zodValidator("param", updateCompanyParamSchema),
     zodValidator("json", updateCompanyJsonBodySchema),
@@ -77,7 +77,7 @@ const _updateCompanyMinimal = server.put(
 const _updateCompany = server.put(
     "/:teamId/companies/:companyId",
     requireTeamAccess(),
-    requirePermission("peppol.companies.write"),
+    requirePermission("exchange.companies.write"),
     describeRoute({ hide: true }),
     zodValidator("param", updateCompanyParamSchemaWithTeamId),
     zodValidator("json", updateCompanyJsonBodySchema),

@@ -42,7 +42,7 @@ type DeleteCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _deleteCompanyMinimal = server.delete(
     "/companies/:companyId",
     requireTeamAccess(),
-    requirePermission("peppol.companies.delete"),
+    requirePermission("exchange.companies.delete"),
     deleteCompanyRouteDescription,
     zodValidator("param", deleteCompanyParamSchema),
     _deleteCompanyImplementation,
@@ -51,7 +51,7 @@ const _deleteCompanyMinimal = server.delete(
 const _deleteCompany = server.delete(
     "/:teamId/companies/:companyId",
     requireTeamAccess(),
-    requirePermission("peppol.companies.delete"),
+    requirePermission("exchange.companies.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteCompanyParamSchemaWithTeamId),
     _deleteCompanyImplementation,

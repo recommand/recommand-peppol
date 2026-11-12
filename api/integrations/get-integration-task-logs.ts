@@ -44,7 +44,7 @@ type GetIntegrationTaskLogsContext = Context<AuthenticatedUserContext & Authenti
 const _getIntegrationTaskLogsMinimal = server.get(
     "/integrations/:integrationId/task-logs",
     requireTeamAccess(),
-    requirePermission("peppol.integrations.read"),
+    requirePermission("exchange.integrations.read"),
     requireIntegrationAccess(),
     getIntegrationTaskLogsRouteDescription,
     zodValidator("param", getIntegrationTaskLogsParamSchema),
@@ -55,7 +55,7 @@ const _getIntegrationTaskLogsMinimal = server.get(
 const _getIntegrationTaskLogs = server.get(
     "/:teamId/integrations/:integrationId/task-logs",
     requireTeamAccess(),
-    requirePermission("peppol.integrations.read"),
+    requirePermission("exchange.integrations.read"),
     requireIntegrationAccess(),
     describeRoute({hide: true}),
     zodValidator("param", getIntegrationTaskLogsParamSchemaWithTeamId),

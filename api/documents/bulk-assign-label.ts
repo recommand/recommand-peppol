@@ -37,7 +37,7 @@ type BulkAssignLabelContext = Context<
 const _bulkAssignLabel = server.post(
   "/:teamId/documents/bulk-assign-label/:labelId",
   requireIntegrationSupportedTeamAccess(),
-  requirePermission("peppol.documents.write"),
+  requirePermission("exchange.documents.write"),
   describeRoute({ hide: true }),
   zodValidator("param", bulkAssignLabelParamSchema),
   zodValidator("json", bulkAssignLabelJsonBodySchema),

@@ -41,7 +41,7 @@ type UnassignLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _unassignLabelMinimal = server.delete(
     "/suppliers/:supplierId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.suppliers.write"),
+    requirePermission("exchange.suppliers.write"),
     unassignLabelRouteDescription,
     zodValidator("param", unassignLabelParamSchema),
     _unassignLabelImplementation,
@@ -50,7 +50,7 @@ const _unassignLabelMinimal = server.delete(
 const _unassignLabel = server.delete(
     "/:teamId/suppliers/:supplierId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
-    requirePermission("peppol.suppliers.write"),
+    requirePermission("exchange.suppliers.write"),
     describeRoute({hide: true}),
     zodValidator("param", unassignLabelParamSchemaWithTeamId),
     _unassignLabelImplementation,

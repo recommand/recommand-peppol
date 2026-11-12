@@ -42,7 +42,7 @@ type DeleteDocumentTypeContext = Context<AuthenticatedUserContext & Authenticate
 const _deleteDocumentTypeMinimal = server.delete(
     "/companies/:companyId/document-types/:documentTypeId",
     requireCompanyAccess(),
-    requirePermission("peppol.document_types.delete"),
+    requirePermission("exchange.document_types.delete"),
     deleteDocumentTypeRouteDescription,
     zodValidator("param", deleteDocumentTypeParamSchema),
     _deleteDocumentTypeImplementation,
@@ -51,7 +51,7 @@ const _deleteDocumentTypeMinimal = server.delete(
 const _deleteDocumentType = server.delete(
     "/:teamId/companies/:companyId/documentTypes/:documentTypeId",
     requireCompanyAccess(),
-    requirePermission("peppol.document_types.delete"),
+    requirePermission("exchange.document_types.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteDocumentTypeParamSchemaWithTeamId),
     _deleteDocumentTypeImplementation,

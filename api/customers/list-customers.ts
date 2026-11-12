@@ -67,7 +67,7 @@ type GetCustomersContext = Context<
 const _getCustomersMinimal = server.get(
   "/customers",
   requireIntegrationSupportedTeamAccess(),
-  requirePermission("peppol.customers.read"),
+  requirePermission("exchange.customers.read"),
   getCustomersRouteDescription,
   zodValidator("query", getCustomersQuerySchema),
   _getCustomersImplementation
@@ -76,7 +76,7 @@ const _getCustomersMinimal = server.get(
 const _getCustomers = server.get(
   "/:teamId/customers",
   requireIntegrationSupportedTeamAccess(),
-  requirePermission("peppol.customers.read"),
+  requirePermission("exchange.customers.read"),
   describeRoute({ hide: true }),
   zodValidator("query", getCustomersQuerySchema),
   zodValidator("param", getCustomersParamSchema),
