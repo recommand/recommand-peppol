@@ -15,7 +15,7 @@ import {
 } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { customerResponse } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -100,6 +100,7 @@ type UpsertCustomerContext = Context<
 const _upsertCustomerMinimal = server.post(
   "/customers",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.customers.write"),
   upsertCustomerRouteDescription,
   zodValidator("json", upsertCustomerJsonBodySchema),
   _upsertCustomerImplementation
@@ -108,6 +109,7 @@ const _upsertCustomerMinimal = server.post(
 const _upsertCustomer = server.post(
   "/:teamId/customers",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.customers.write"),
   describeRoute({ hide: true }),
   zodValidator("param", upsertCustomerParamSchema),
   zodValidator("json", upsertCustomerJsonBodySchema),

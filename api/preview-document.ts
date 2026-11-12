@@ -4,9 +4,10 @@ import type {
 } from "@core/lib/auth-middleware";
 import { getSendingCompanyIdentifier } from "@peppol/data/company-identifiers";
 import {
-  requireIntegrationSupportedCompanyAccess,
-  requireTransactionEntitlement,
   type CompanyAccessContext,
+  requireIntegrationSupportedCompanyAccess,
+  requirePermission,
+  requireTransactionEntitlement,
 } from "@peppol/utils/auth-middleware";
 import {
   DocumentType,
@@ -49,6 +50,7 @@ type PreviewDocumentContext = Context<
 const _previewDocument = server.post(
   "/:companyId/previewDocument/render/:type",
   requireIntegrationSupportedCompanyAccess(),
+  requirePermission("exchange.documents.generate"),
   requireTransactionEntitlement(),
   describeRoute({ hide: true }),
   zodValidator("param", previewDocumentParamSchema),

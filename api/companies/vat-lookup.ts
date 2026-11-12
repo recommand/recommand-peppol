@@ -7,7 +7,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { cleanEnterpriseNumber } from "@peppol/utils/util";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -26,6 +26,7 @@ type VatLookupContext = Context<AuthenticatedUserContext & AuthenticatedTeamCont
 const _vatLookup = server.get(
     "/:teamId/vat-lookup",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.companies.read"),
     describeRoute({ hide: true }),
     zodValidator("param", vatLookupParamSchema),
     zodValidator("query", vatLookupQuerySchema),

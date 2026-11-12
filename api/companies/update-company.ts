@@ -14,6 +14,7 @@ import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { audit } from "@core/lib/audit";
+import { requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -66,6 +67,7 @@ type UpdateCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _updateCompanyMinimal = server.put(
     "/companies/:companyId",
     requireTeamAccess(),
+    requirePermission("exchange.companies.write"),
     updateCompanyRouteDescription,
     zodValidator("param", updateCompanyParamSchema),
     zodValidator("json", updateCompanyJsonBodySchema),
@@ -75,6 +77,7 @@ const _updateCompanyMinimal = server.put(
 const _updateCompany = server.put(
     "/:teamId/companies/:companyId",
     requireTeamAccess(),
+    requirePermission("exchange.companies.write"),
     describeRoute({ hide: true }),
     zodValidator("param", updateCompanyParamSchemaWithTeamId),
     zodValidator("json", updateCompanyJsonBodySchema),

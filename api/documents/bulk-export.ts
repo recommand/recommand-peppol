@@ -1,6 +1,6 @@
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { getTransmittedDocumentsByIds } from "@peppol/data/transmitted-documents";
-import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireDocumentAccess, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { Server, type Context } from "@recommand/lib/api";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionFailure } from "@recommand/lib/utils";
@@ -40,6 +40,7 @@ const _bulkExport = server.post(
   "/:teamId/documents/bulk-export",
   requireIntegrationSupportedTeamAccess(),
   requireDocumentAccess(),
+  requirePermission("exchange.documents.export"),
   describeRoute({ hide: true }),
   zodValidator("param", bulkExportParamSchema),
   zodValidator("json", bulkExportJsonBodySchema),

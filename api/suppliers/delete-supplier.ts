@@ -11,7 +11,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierIdParamSchema } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -37,6 +37,7 @@ type DeleteSupplierContext = Context<AuthenticatedUserContext & AuthenticatedTea
 const _deleteSupplierMinimal = server.delete(
   "/suppliers/:supplierId",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.suppliers.delete"),
   deleteSupplierRouteDescription,
   zodValidator("param", supplierIdParamSchema),
   _deleteSupplierImplementation,
@@ -45,6 +46,7 @@ const _deleteSupplierMinimal = server.delete(
 const _deleteSupplier = server.delete(
   "/:teamId/suppliers/:supplierId",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.suppliers.delete"),
   describeRoute({hide: true}),
   zodValidator("param", deleteSupplierParamSchemaWithTeamId),
   _deleteSupplierImplementation,

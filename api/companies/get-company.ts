@@ -10,7 +10,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { companyResponse, toCompanyResponse } from "./shared";
-import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -42,6 +42,7 @@ type GetCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeamCon
 const _getCompanyMinimal = server.get(
     "/companies/:companyId",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.companies.read"),
     getCompanyRouteDescription,
     zodValidator("param", getCompanyParamSchema),
     _getCompanyImplementation,
@@ -50,6 +51,7 @@ const _getCompanyMinimal = server.get(
 const _getCompany = server.get(
     "/:teamId/companies/:companyId",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.companies.read"),
     describeRoute({hide: true}),
     zodValidator("param", getCompanyParamSchemaWithTeamId),
     _getCompanyImplementation,

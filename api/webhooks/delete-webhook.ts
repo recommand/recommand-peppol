@@ -4,7 +4,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requirePermission } from "@peppol/utils/auth-middleware";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { deleteWebhook } from "@peppol/data/webhooks";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -39,6 +39,7 @@ type DeleteWebhookContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _deleteWebhookMinimal = server.delete(
     "/webhooks/:webhookId",
     requireTeamAccess(),
+    requirePermission("exchange.webhooks.delete"),
     deleteWebhookRouteDescription,
     zodValidator("param", deleteWebhookParamSchema),
     _deleteWebhookImplementation,
@@ -47,6 +48,7 @@ const _deleteWebhookMinimal = server.delete(
 const _deleteWebhook = server.delete(
     "/:teamId/webhooks/:webhookId",
     requireTeamAccess(),
+    requirePermission("exchange.webhooks.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteWebhookParamSchemaWithTeamId),
     _deleteWebhookImplementation,

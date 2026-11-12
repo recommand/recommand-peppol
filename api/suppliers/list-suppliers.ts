@@ -15,7 +15,7 @@ import {
   paginationResponse,
 } from "@core/lib/api-docs";
 import { supplierResponse } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -50,6 +50,7 @@ type GetSuppliersContext = Context<AuthenticatedUserContext & AuthenticatedTeamC
 const _getSuppliersMinimal = server.get(
     "/suppliers",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.suppliers.read"),
     getSuppliersRouteDescription,
     zodValidator("query", getSuppliersQuerySchema),
     _getSuppliersImplementation,
@@ -58,6 +59,7 @@ const _getSuppliersMinimal = server.get(
 const _getSuppliers = server.get(
     "/:teamId/suppliers",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.suppliers.read"),
     describeRoute({hide: true}),
     zodValidator("query", getSuppliersQuerySchema),
     zodValidator("param", getSuppliersParamSchema),

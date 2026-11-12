@@ -999,3 +999,84 @@ Peppol registration removed for {0},Enregistrement Peppol supprimé pour {0}
 Is your name not on the list? Contact,Votre nom ne figure pas dans la liste ? Contactez
 For Luxembourg businesses\, enter the 11 digit matricule rather than the RCS number. The matricule becomes your Peppol address under scheme 9938\, next to your VAT number.,Pour les entreprises luxembourgeoises\, saisissez le matricule à 11 chiffres plutôt que le numéro RCS. Le matricule devient votre adresse Peppol sous le schéma 9938\, en plus de votre numéro de TVA.
 The company register cannot be reached right now\, so we cannot check who represents this company. Please try again in a few minutes.,Le registre des entreprises est actuellement inaccessible\, nous ne pouvons donc pas vérifier qui représente cette entreprise. Veuillez réessayer dans quelques minutes.
+Delete companies,Supprimer des entreprises
+Read companies,Consulter les entreprises
+See companies\, and look up company data by VAT or enterprise number,Voir les entreprises et rechercher des données d'entreprise par numéro de TVA ou d'entreprise
+Manage companies,Gérer les entreprises
+Create\, change and verify companies,Créer\, modifier et vérifier des entreprises
+Delete customers,Supprimer des clients
+Read customers,Consulter les clients
+Manage customers,Gérer les clients
+Delete document types,Supprimer des types de document
+Delete the document types a company receives,Supprimer les types de document qu'une entreprise reçoit
+Read document types,Consulter les types de document
+See the document types a company receives,Voir les types de document qu'une entreprise reçoit
+Manage document types,Gérer les types de document
+Add and change the document types a company receives,Ajouter et modifier les types de document qu'une entreprise reçoit
+Delete documents,Supprimer des documents
+Delete documents\, one at a time or all at once,Supprimer des documents\, un par un ou tous à la fois
+Export documents,Exporter des documents
+Generate documents,Générer des documents
+Generate and preview documents without sending them,Générer et prévisualiser des documents sans les envoyer
+Mark documents as read,Marquer des documents comme lus
+Mark documents as read or unread\, which takes them out of or back into the inbox,Marquer des documents comme lus ou non lus\, ce qui les retire de la boîte de réception ou les y remet
+Read documents,Consulter les documents
+See and download documents\, and read the inbox,Voir et télécharger des documents\, et lire la boîte de réception
+Send documents,Envoyer des documents
+Label documents,Étiqueter des documents
+Assign labels to documents and remove them,Attribuer des libellés aux documents et les retirer
+Delete identifiers,Supprimer des identifiants
+Delete a company's Peppol identifiers,Supprimer les identifiants Peppol d'une entreprise
+Migrate identifiers,Migrer des identifiants
+Move a Peppol identifier from another access point with its migration key,Transférer un identifiant Peppol depuis un autre point d'accès avec sa clé de migration
+Read identifiers,Consulter les identifiants
+See a company's Peppol identifiers and their migrations,Voir les identifiants Peppol d'une entreprise et leurs migrations
+Manage identifiers,Gérer les identifiants
+Add and change a company's Peppol identifiers,Ajouter et modifier les identifiants Peppol d'une entreprise
+Delete integrations,Supprimer des intégrations
+Read integrations,Consulter les intégrations
+See integrations and their task logs,Voir les intégrations et leurs journaux de tâches
+Manage integrations,Gérer les intégrations
+Set up and change integrations\, and reset their state,Configurer et modifier des intégrations\, et réinitialiser leur état
+Delete labels,Supprimer des libellés
+Read labels,Consulter les libellés
+Manage labels,Gérer les libellés
+Create and change labels,Créer et modifier des libellés
+Delete notification email addresses,Supprimer des adresses e-mail de notification
+Delete the addresses a company's notifications go to,Supprimer les adresses auxquelles les notifications d'une entreprise sont envoyées
+Read notification email addresses,Consulter les adresses e-mail de notification
+See the addresses a company's notifications go to,Voir les adresses auxquelles les notifications d'une entreprise sont envoyées
+Manage notification email addresses,Gérer les adresses e-mail de notification
+Add and change the addresses a company's notifications go to,Ajouter et modifier les adresses auxquelles les notifications d'une entreprise sont envoyées
+Read e-reporting,Consulter l'e-reporting
+See a company's French e-reporting declarant,Voir le déclarant e-reporting français d'une entreprise
+Submit e-reporting,Soumettre l'e-reporting
+Submit French e-reporting to the tax authority,Soumettre l'e-reporting français à l'administration fiscale
+Manage e-reporting,Gérer l'e-reporting
+Change a company's French e-reporting declarant,Modifier le déclarant e-reporting français d'une entreprise
+Delete suppliers,Supprimer des fournisseurs
+Read suppliers,Consulter les fournisseurs
+Manage suppliers,Gérer les fournisseurs
+Create and change suppliers\, and label them,Créer et modifier des fournisseurs\, et leur attribuer des libellés
+Delete webhooks,Supprimer des webhooks
+Read webhooks,Consulter les webhooks
+Manage webhooks,Gérer les webhooks
+Create and change webhooks,Créer et modifier des webhooks
+Delete companies\, and take them off the Peppol network,Supprimer des entreprises et les retirer du réseau Peppol
+Remove customers the team sends documents to,Supprimer des clients auxquels l'équipe envoie des documents
+See the customers the team sends documents to,Voir les clients auxquels l'équipe envoie des documents
+Create and change customers the team sends documents to,Créer et modifier des clients auxquels l'équipe envoie des documents
+Download many documents at once,Télécharger de nombreux documents à la fois
+Send documents over Peppol\, or by email to recipients who aren't on Peppol,Envoyer des documents via Peppol\, ou par e-mail aux destinataires qui ne sont pas sur Peppol
+Delete integrations\, which stops them syncing,Supprimer des intégrations\, ce qui arrête leur synchronisation
+Delete labels\, which removes them from documents and suppliers,Supprimer des libellés\, ce qui les retire des documents et des fournisseurs
+See the labels used to sort documents and suppliers,Voir les libellés utilisés pour classer les documents et les fournisseurs
+Remove suppliers the team receives documents from,Supprimer des fournisseurs dont l'équipe reçoit des documents
+See the suppliers the team receives documents from,Voir les fournisseurs dont l'équipe reçoit des documents
+Delete webhooks\, so their events are no longer delivered,Supprimer des webhooks\, pour que leurs événements ne soient plus envoyés
+See webhooks and the addresses their events go to,Voir les webhooks et les adresses auxquelles leurs événements sont envoyés
+Document types,Types de document
+Identifiers,Identifiants
+Notification email addresses,Adresses e-mail de notification
+E-reporting,E-reporting
+Webhooks,Webhooks

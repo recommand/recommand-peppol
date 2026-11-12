@@ -9,6 +9,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
+import { requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -41,6 +42,7 @@ type VerifyCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _verifyCompanyMinimal = server.post(
     "/companies/:companyId/verify",
     requireTeamAccess(),
+    requirePermission("exchange.companies.write"),
     verifyCompanyRouteDescription,
     zodValidator("param", verifyCompanyParamSchema),
     _verifyCompanyImplementation,
@@ -49,6 +51,7 @@ const _verifyCompanyMinimal = server.post(
 const _verifyCompany = server.post(
     "/:teamId/companies/:companyId/verify",
     requireTeamAccess(),
+    requirePermission("exchange.companies.write"),
     describeRoute({ hide: true }),
     zodValidator("param", verifyCompanyParamSchemaWithTeamId),
     _verifyCompanyImplementation,

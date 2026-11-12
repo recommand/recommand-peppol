@@ -4,7 +4,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requirePermission } from "@peppol/utils/auth-middleware";
 import { webhookResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { getWebhooks, getWebhooksByCompany } from "@peppol/data/webhooks";
@@ -40,6 +40,7 @@ type GetWebhooksContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 const _getWebhooksMinimal = server.get(
     "/webhooks",
     requireTeamAccess(),
+    requirePermission("exchange.webhooks.read"),
     getWebhooksRouteDescription,
     zodValidator("query", getWebhooksQuerySchema),
     _getWebhooksImplementation,
@@ -48,6 +49,7 @@ const _getWebhooksMinimal = server.get(
 const _getWebhooks = server.get(
     "/:teamId/webhooks",
     requireTeamAccess(),
+    requirePermission("exchange.webhooks.read"),
     describeRoute({hide: true}),
     zodValidator("param", getWebhooksParamSchemaWithTeamId),
     zodValidator("query", getWebhooksQuerySchema),

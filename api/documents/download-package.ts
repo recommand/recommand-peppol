@@ -17,7 +17,7 @@ import {
     describeErrorResponse,
     parameterSchema,
 } from "@core/lib/api-docs";
-import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireDocumentAccess, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import JSZip from "jszip";
 import { renderDocumentPdf } from "@peppol/utils/document-renderer";
 
@@ -77,6 +77,7 @@ const _downloadPackageMinimal = server.get(
     "/documents/:documentId/download-package",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("exchange.documents.read"),
     downloadPackageRouteDescription,
     zodValidator("param", downloadPackageParamSchema),
     zodValidator("query", downloadPackageQuerySchema),
@@ -87,6 +88,7 @@ const _downloadPackage = server.get(
     "/:teamId/documents/:documentId/downloadPackage",
     requireIntegrationSupportedTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("exchange.documents.read"),
     describeRoute({hide: true}),
     zodValidator("param", downloadPackageParamSchemaWithTeamId),
     zodValidator("query", downloadPackageQuerySchema),

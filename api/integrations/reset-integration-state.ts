@@ -4,7 +4,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireIntegrationAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { updateIntegrationState } from "@peppol/data/integrations";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -37,6 +37,7 @@ type ResetIntegrationStateContext = Context<AuthenticatedUserContext & Authentic
 const _resetIntegrationStateMinimal = server.post(
     "/integrations/:integrationId/reset-state",
     requireTeamAccess(),
+    requirePermission("exchange.integrations.write"),
     requireIntegrationAccess(),
     resetIntegrationStateRouteDescription,
     zodValidator("param", resetIntegrationStateParamSchema),
@@ -46,6 +47,7 @@ const _resetIntegrationStateMinimal = server.post(
 const _resetIntegrationState = server.post(
     "/:teamId/integrations/:integrationId/reset-state",
     requireTeamAccess(),
+    requirePermission("exchange.integrations.write"),
     requireIntegrationAccess(),
     describeRoute({hide: true}),
     zodValidator("param", resetIntegrationStateParamSchemaWithTeamId),

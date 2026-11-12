@@ -6,6 +6,7 @@ import {
   type AuthenticatedUserContext,
   type TeamAccessOptions,
 } from "@core/lib/auth-middleware";
+import { requirePermission as requireTeamPermission } from "@core/lib/permissions/permission-middleware";
 import { verifySession, type SessionVerificationExtension } from "@core/lib/session";
 import { getCompanyById, type Company } from "@peppol/data/companies";
 import { verifyIntegrationJwt } from "@peppol/data/integrations/auth";
@@ -166,6 +167,23 @@ const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
     }
   }
 ]
+
+/**
+ * Core's `requirePermission`, except that an integration token passes. It carries no user to hold
+ * permissions: it acts for an integration the team set up, and keeps the access it has always had.
+ */
+export const requirePermission = (permissionId: string) => {
+  const check = requireTeamPermission(permissionId);
+  const middleware = createMiddleware<AuthenticatedUserContext>(async (c, next) => {
+    // Only integrationSupportedAuthExtensions authenticate as an extension without a user
+    if (c.get("authenticationMethod") === "extension" && !c.get("user")?.id) {
+      return next();
+    }
+    return check(c, next);
+  });
+  // Keeps the OpenAPI description the check carries
+  return Object.assign(middleware, check);
+};
 
 export function requireIntegrationSupportedAuth() {
   return requireAuth({
