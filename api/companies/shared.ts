@@ -10,7 +10,7 @@ export const companyCountrySchema = zodValidCountryCodes.openapi({
     ref: "SupportedCountry",
 });
 
-/** The company list's filters, shared so another caller validates them the same way. */
+/** The company list's filters, which the MCP server's `list_companies` takes too. */
 export const companyFilters = z.object({
     enterpriseNumber: z.string().optional().openapi({
         description: "Filter companies by enterprise number",

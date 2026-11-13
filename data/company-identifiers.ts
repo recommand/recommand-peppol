@@ -6,7 +6,7 @@ import { sameParticipant, type PeppolParticipant } from "@peppol/utils/parsing/p
 import { UserFacingError } from "@peppol/utils/util";
 import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { db } from "@recommand/db";
-import { eq, and, asc, ne, or, isNull, like } from "drizzle-orm";
+import { eq, and, asc, ne, or, isNull, like, inArray } from "drizzle-orm";
 import { unregisterCompanyIdentifier, upsertCompanyRegistration } from "./smp-providers";
 import { getTeamExtensionAndCompanyByCompanyId } from "./teams";
 import type { Company } from "./companies";
@@ -41,6 +41,16 @@ export async function getCompanyIdentifiers(companyId: string): Promise<CompanyI
     .where(eq(companyIdentifiers.companyId, companyId))
     .orderBy(asc(companyIdentifiers.scheme), asc(companyIdentifiers.identifier));
 }
+
+/** The identifiers of several companies in one query, in the same order as `getCompanyIdentifiers`. */
+export const getCompaniesIdentifiers = async (companyIds: string[]): Promise<CompanyIdentifier[]> =>
+  companyIds.length === 0
+    ? []
+    : await db
+        .select()
+        .from(companyIdentifiers)
+        .where(inArray(companyIdentifiers.companyId, companyIds))
+        .orderBy(asc(companyIdentifiers.scheme), asc(companyIdentifiers.identifier));
 
 /**
  * Refuses to go on when the company holds an identifier its SMP would not register.
