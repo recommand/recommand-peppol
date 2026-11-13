@@ -461,9 +461,9 @@ const submitFrenchB2CReportParamSchema = z.object({
 const _submitFrenchB2CReport = server.post(
   "/:companyId/reporting/fr/b2c",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("exchange.reporting.submit"),
   zodValidator("param", submitFrenchB2CReportParamSchema),
   requireTransactionEntitlement(),
+  requirePermission("exchange.reporting.submit"),
   requireCompanyVerificationForStrictTeams(),
   b2cRouteDescription,
   zodValidator("json", frenchB2CReportSchema),
@@ -521,9 +521,9 @@ const submitFrenchB2BiReportParamSchema = z.object({
 const _submitFrenchB2BiReport = server.post(
   "/:companyId/reporting/fr/b2bi",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("exchange.reporting.submit"),
   zodValidator("param", submitFrenchB2BiReportParamSchema),
   requireTransactionEntitlement(),
+  requirePermission("exchange.reporting.submit"),
   requireCompanyVerificationForStrictTeams(),
   b2biRouteDescription,
   zodValidator("json", frenchB2BiReportSchema),

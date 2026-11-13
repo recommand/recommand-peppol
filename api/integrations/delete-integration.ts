@@ -38,8 +38,8 @@ type DeleteIntegrationContext = Context<AuthenticatedUserContext & Authenticated
 const _deleteIntegrationMinimal = server.delete(
     "/integrations/:integrationId",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.delete"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.delete"),
     deleteIntegrationRouteDescription,
     zodValidator("param", deleteIntegrationParamSchema),
     _deleteIntegrationImplementation,
@@ -48,8 +48,8 @@ const _deleteIntegrationMinimal = server.delete(
 const _deleteIntegration = server.delete(
     "/:teamId/integrations/:integrationId",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.delete"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteIntegrationParamSchemaWithTeamId),
     _deleteIntegrationImplementation,

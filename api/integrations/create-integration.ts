@@ -52,8 +52,8 @@ type CreateIntegrationContext = Context<AuthenticatedUserContext & Authenticated
 const _createIntegrationMinimal = server.post(
     "/integrations",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.write"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.write"),
     createIntegrationRouteDescription,
     zodValidator("json", createIntegrationJsonBodySchema),
     _createIntegrationImplementation,
@@ -62,8 +62,8 @@ const _createIntegrationMinimal = server.post(
 const _createIntegration = server.post(
     "/:teamId/integrations",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.write"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.write"),
     describeRoute({hide: true}),
     zodValidator("param", createIntegrationParamSchemaWithTeamId),
     zodValidator("json", createIntegrationJsonBodySchema),
