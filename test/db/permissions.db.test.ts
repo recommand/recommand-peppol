@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Hono } from "hono";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import type { Pool } from "pg";
-import { TEAM_ID, connectTestDatabase, seedTeamAndCompany, testDatabaseUrl } from "./harness";
+import { COMPANY_ID, TEAM_ID, connectTestDatabase, seedTeamAndCompany, testDatabaseUrl } from "./harness";
 
 // What a Peppol route requires of a credential: an API key needs the route's
 // permission, and an integration token, which carries no user to hold one, keeps
@@ -59,6 +59,8 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
       requirePermission("exchange.companies.read") as never,
       (c) => c.json({ success: true })
     );
+    const { default: identifiers } = await import("../../api/companies/identifiers");
+    app.route("/", identifiers);
     await seedTeamAndCompany(pool);
   }, 60_000);
 
@@ -108,6 +110,23 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
       headers: { Authorization: `Bearer ${await integrationToken("team_other")}` },
     });
     expect(other.status).toBe(401);
+  });
+
+  it("needs `exchange.identifiers.migrate` to create an identifier with a migration key", async () => {
+    await pool.query(
+      `INSERT INTO user_permissions (user_id, team_id, permission_id) VALUES ('usr_owner', $1, 'exchange.identifiers.migrate'), ('usr_owner', $1, 'exchange.identifiers.write')`,
+      [TEAM_ID]
+    );
+    await seedKey("key_write", ["exchange.identifiers.write"]);
+    const create = async (body: Record<string, string>) => app.request(`/${TEAM_ID}/companies/${COMPANY_ID}/identifiers`, {
+      body: JSON.stringify(body),
+      headers: { ...basic("key_write", "secret_key_write"), "Content-Type": "application/json" },
+      method: "POST",
+    });
+    const refused = await create({ identifier: "0123456749", migrationKey: "Ab12$#xyZ9!kLm", scheme: "0208" });
+    expect(refused.status).toBe(403);
+    expect((await refused.json()).errors).toEqual({ root: ["This operation needs the exchange.identifiers.migrate permission."] });
+    expect((await create({ identifier: "0123456749", scheme: "0208" })).status).not.toBe(403);
   });
 
   it("gives every existing member and key the permissions of the routes they could use", async () => {
