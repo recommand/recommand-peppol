@@ -241,7 +241,7 @@ exports[`the MCP tools stay as models know them 1`] = `
       "openWorldHint": false,
       "readOnlyHint": true,
     },
-    "description": "Get the fields of a document type, as JSON Schema: what a send request takes as \`document\` for that \`documentType\`. Call it before writing a document of a type you haven't written yet.",
+    "description": "Get the fields of a document type, as JSON Schema: what prepare_send takes as \`document\` for that \`documentType\`. Call it before preparing a document of a type you haven't written yet.",
     "inputSchema": {
       "properties": {
         "documentType": {
@@ -272,6 +272,147 @@ exports[`the MCP tools stay as models know them 1`] = `
     },
     "name": "describe_document",
     "title": "Describe a document type",
+  },
+  {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false,
+    },
+    "description": "Check a document before sending it, without sending it: it's written, routed to the recipient and validated the way a send would. Call describe_document first for the fields \`document\` takes. Returns a summary to show the user, and a \`handle\` for exactly this document, valid for 15 minutes.",
+    "inputSchema": {
+      "$defs": {
+        "PDFGeneration": {
+          "description": "Optionally generate a PDF of the document and include it as an embedded attachment (also included in email attachments when email sending is enabled). Not supported for message level responses, French Invoicing CDAR messages, or raw XML documents.",
+          "properties": {
+            "enabled": {
+              "default": false,
+              "description": "Whether to generate a PDF of the document and include it as an embedded attachment.",
+              "type": "boolean",
+            },
+            "filename": {
+              "description": "Optional filename to use for the generated PDF attachment. Defaults to a filename derived from the document number (e.g. invoice-001.pdf).",
+              "examples": [
+                "INV-2024-001.pdf",
+              ],
+              "type": "string",
+            },
+          },
+          "type": "object",
+        },
+      },
+      "properties": {
+        "companyId": {
+          "description": "The company sending the document, as list_companies lists it.",
+          "type": "string",
+        },
+        "doctypeId": {
+          "description": "The Peppol document type identifier. Leave it out to send in the best format the recipient receives.",
+          "examples": [
+            "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1",
+          ],
+          "type": "string",
+        },
+        "document": {
+          "anyOf": [
+            {
+              "additionalProperties": {},
+              "type": "object",
+            },
+            {
+              "type": "string",
+            },
+          ],
+          "description": "The document, with the fields describe_document returns for its \`documentType\`; for \`xml\`, the XML itself.",
+        },
+        "documentType": {
+          "description": "The type of document.",
+          "enum": [
+            "invoice",
+            "creditNote",
+            "selfBillingInvoice",
+            "selfBillingCreditNote",
+            "messageLevelResponse",
+            "frenchInvoicingCdar",
+            "xml",
+          ],
+          "examples": [
+            "invoice",
+          ],
+          "type": "string",
+        },
+        "email": {
+          "description": "Send the document by email too. Required, with \`to\`, when \`recipient\` is null.",
+          "properties": {
+            "htmlBody": {
+              "description": "The email's HTML body. Written for the document when left out.",
+              "type": "string",
+            },
+            "replyTo": {
+              "description": "Where replies go. The document's issuer when left out.",
+              "type": "string",
+            },
+            "subject": {
+              "description": "The email's subject. Written for the document when left out.",
+              "type": "string",
+            },
+            "to": {
+              "description": "The addresses to email the document to.",
+              "items": {
+                "type": "string",
+              },
+              "type": "array",
+            },
+            "when": {
+              "description": "\`always\`, or only \`on_peppol_failure\`, the default, when Peppol can't deliver it.",
+              "enum": [
+                "always",
+                "on_peppol_failure",
+              ],
+              "type": "string",
+            },
+          },
+          "required": [
+            "to",
+          ],
+          "type": "object",
+        },
+        "pdfGeneration": {
+          "$ref": "#/$defs/PDFGeneration",
+        },
+        "processId": {
+          "description": "The Peppol process identifier. Leave it out to use the one the document type and recipient call for.",
+          "examples": [
+            "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+          ],
+          "type": "string",
+        },
+        "recipient": {
+          "description": "The recipient's Peppol address, such as \`0208:0123456789\`, as find_recipient checks it. Null to send by email only, which needs \`email.to\`.",
+          "examples": [
+            "0208:987654321",
+          ],
+          "type": [
+            "string",
+            "null",
+          ],
+        },
+        "teamId": {
+          "description": "The team to act in, as list_teams lists it. Leave it out when the connection reaches one team.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "companyId",
+        "document",
+        "documentType",
+        "recipient",
+      ],
+      "type": "object",
+    },
+    "name": "prepare_send",
+    "title": "Prepare a send",
   },
 ]
 `;

@@ -29,6 +29,7 @@ import { initializeIntegrationCronJobs } from "./data/integrations/cron";
 import { initializeOffloadCronJobs } from "./data/offload/cron";
 import { initializeProviderSentCronJobs } from "./data/provider-sent/cron";
 import { initializeS3DeletionCronJobs } from "./data/s3-deletion/cron";
+import { initializePreparedSendCronJobs } from "./data/prepared-sends-cron";
 import { initializeArratechOnboardingCron } from "./data/at/kyc-onboarding";
 import { initializeFrenchReportingDeclarantCron } from "./data/fr-reporting-declarants";
 import { initializeFrenchReportingStatusCron } from "./data/fr-reporting-submissions";
@@ -240,6 +241,7 @@ export function start() {
   initializeOffloadCronJobs(logger);
   initializeProviderSentCronJobs(logger);
   initializeS3DeletionCronJobs(logger);
+  initializePreparedSendCronJobs(logger);
   initializeArratechOnboardingCron(logger);
   initializeFrenchReportingDeclarantCron(logger);
   initializeFrenchReportingStatusCron(logger);
