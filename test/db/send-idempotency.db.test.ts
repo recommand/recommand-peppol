@@ -93,6 +93,15 @@ const seedSender = async ({ companyId, teamId }: { companyId: string; teamId: st
     `INSERT INTO api_keys (id, name, team_id, user_id, secret_hash) VALUES ($1, 'Sender', $2, $3, $4)`,
     [`key_${teamId}`, teamId, `usr_${teamId}`, await Bun.password.hash("secret", { algorithm: "bcrypt", cost: 4 })]
   );
+  // Sending needs a permission, which the key gets from its owner
+  await pool.query(`INSERT INTO user_permissions (user_id, team_id, permission_id) VALUES ($1, $2, 'exchange.documents.send')`, [
+    `usr_${teamId}`,
+    teamId,
+  ]);
+  await pool.query(
+    `INSERT INTO principal_permissions (principal_type, principal_id, team_id, permission_id) VALUES ('api_key', $1, $2, 'exchange.documents.send')`,
+    [`key_${teamId}`, teamId]
+  );
 
   return `Basic ${Buffer.from(`key_${teamId}:secret`).toString("base64")}`;
 };
@@ -140,6 +149,7 @@ describe.skipIf(!testDatabaseUrl)("sending with an Idempotency-Key against Postg
     authorization = await seedSender({ companyId: COMPANY_ID, teamId: TEAM_ID });
 
     (await import("../../lib/event-types")).registerPeppolEventTypes();
+    await import("../../lib/permissions");
     const { default: sendDocument } = await import("../../api/send-document");
     const { createErrorHandler } = await import("@recommand/lib/error-handler");
     app = new Hono();
