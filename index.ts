@@ -38,9 +38,11 @@ import { initializeDeletedNorwegianOrganisationsCron } from "./data/bronnoysund/
 import { createMarkdownFromOpenApi } from "@scalar/openapi-to-markdown";
 import { onTeamCreated, onTeamBeforeDelete } from "./lib/backend-events";
 import { addBackendEventListener, CORE_BACKEND_EVENTS } from "@core/lib/backend-events";
+import { registerOperations } from "@core/lib/mcp/tools";
 import { oauth2SecurityScheme } from "@core/lib/oauth/security-scheme";
 import { registerPeppolEventTypes } from "./lib/event-types";
 import "./lib/permissions";
+import "./mcp";
 import { initializeMetricsServer } from "./utils/metrics";
 
 export let logger: Logger;
@@ -212,7 +214,7 @@ For additional support or questions, don't hesitate to contact our support team.
   // once and serve it from both routes, with every operation's parameters in a
   // fixed order (see withSortedParameters).
   let openApiDocument: ReturnType<typeof generateSpecs> | undefined;
-  const getOpenApiDocument = (c: Context) => {
+  const getOpenApiDocument = (c?: Context) => {
     openApiDocument ??= generateSpecs(server, specsOptions, c).then(
       withSortedParameters,
       (error) => {
@@ -223,6 +225,8 @@ For additional support or questions, don't hesitate to contact our support team.
     return openApiDocument;
   };
   server.get("/openapi", async (c) => c.json(await getOpenApiDocument(c)));
+  // The MCP tools take their permissions from the operations they name in it
+  registerOperations(() => getOpenApiDocument());
   server.get("/llms-full.txt", async (c) => {
     const markdown = await createMarkdownFromOpenApi(
       await getOpenApiDocument(c)

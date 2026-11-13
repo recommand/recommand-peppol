@@ -1,0 +1,51 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`the MCP tools stay as models know them 1`] = `
+[
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+    },
+    "description": "List the companies the team sends and receives documents for, with their Peppol IDs, whether they're verified and whether they're registered to receive over Peppol. Use it to find the company a document is for.",
+    "inputSchema": {
+      "properties": {
+        "enterpriseNumber": {
+          "description": "Only the company with this enterprise number.",
+          "examples": [
+            "1234567894",
+          ],
+          "type": "string",
+        },
+        "limit": {
+          "default": 50,
+          "description": "How many companies per page, at most 100.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "page": {
+          "default": 1,
+          "description": "The page to return, from 1.",
+          "minimum": 1,
+          "type": "integer",
+        },
+        "teamId": {
+          "description": "The team to act in, as list_teams lists it. Leave it out when the connection reaches one team.",
+          "type": "string",
+        },
+        "vatNumber": {
+          "description": "Only the company with this VAT number.",
+          "examples": [
+            "BE1234567894",
+          ],
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "name": "list_companies",
+    "title": "List companies",
+  },
+]
+`;
