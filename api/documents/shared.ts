@@ -71,7 +71,7 @@ export const deliveryStatusResponse = deliveryStatusSchema.nullable().openapi({
     examples: ["delivered"],
 });
 
-/** The document list's filters, shared so another caller validates them the same way. */
+/** The document list's filters, which the MCP server's `search_documents` takes too. */
 export const transmittedDocumentFilters = z.object({
     deliveryStatus: deliveryStatusSchema.optional().openapi({
         description: "Filter outgoing documents by their summarised delivery status: `delivered` (confirmed on at least one channel), `failed` (every delivery failed) or `pending` (still awaiting confirmation). Documents without deliveries never match.",
