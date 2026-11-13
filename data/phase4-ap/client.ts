@@ -27,7 +27,16 @@ export type SendAs4Response = {
     // is the access point's free-text message, which counts as a transport failure.
     category?: DeliveryFailureCategory;
   };
+  // Set when the send failed in a way that leaves it unknown whether the document went
+  // out, such as a lost connection or a server error after it was handed over, rather
+  // than the access point refusing it.
+  outcomeUnknown?: true;
 };
+
+// The statuses that refuse a request before it is handled, so nothing can have gone out.
+// Any other failure, including a 4xx not listed here, may have come after the access
+// point took the document.
+const REFUSED_STATUSES = new Set([400, 401, 403, 404, 405, 413, 415, 422, 429]);
 
 export async function sendAs4(options: {
   senderId: string;
@@ -68,6 +77,7 @@ export async function sendAs4(options: {
         peppolConversationId: null,
         receivedPeppolSignalMessage: null,
         sbdhInstanceIdentifier: null,
+        ...(REFUSED_STATUSES.has(result.status) ? {} : { outcomeUnknown: true as const }),
       }
     }
 
@@ -76,6 +86,10 @@ export async function sendAs4(options: {
     return {
       ok: resultJson.overallSuccess,
       sendingException: resultJson.sendingException,
+      // A failed send it answered is reported the same way whether it was refused or
+      // timed out waiting for the receiving access point's receipt, so it may have
+      // been delivered
+      ...(resultJson.overallSuccess ? {} : { outcomeUnknown: true as const }),
       peppolMessageId: resultJson.as4MessageId ?? null,
       peppolConversationId: resultJson.as4ConversationId ?? null,
       receivedPeppolSignalMessage: resultJson.as4ReceivedSignalMsg ?? null,
@@ -90,6 +104,7 @@ export async function sendAs4(options: {
       peppolConversationId: null,
       receivedPeppolSignalMessage: null,
       sbdhInstanceIdentifier: null,
+      outcomeUnknown: true,
     }
   }
 }
