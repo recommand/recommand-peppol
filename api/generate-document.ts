@@ -218,8 +218,8 @@ async function generateImplementation(c: GenerateContext) {
 const generateDocument = server.post(
   "/:companyId/generate",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("exchange.documents.generate"),
   requireTransactionEntitlement(),
+  requirePermission("exchange.documents.generate"),
   routeDescription,
   zodValidator("param", generateParamSchema),
   zodValidator("json", generateSchema),

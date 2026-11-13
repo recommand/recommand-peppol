@@ -39,8 +39,8 @@ type GetIntegrationContext = Context<AuthenticatedUserContext & AuthenticatedTea
 const _getIntegrationMinimal = server.get(
     "/integrations/:integrationId",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.read"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.read"),
     getIntegrationRouteDescription,
     zodValidator("param", getIntegrationParamSchema),
     _getIntegrationImplementation,
@@ -49,8 +49,8 @@ const _getIntegrationMinimal = server.get(
 const _getIntegration = server.get(
     "/:teamId/integrations/:integrationId",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.read"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.read"),
     describeRoute({hide: true}),
     zodValidator("param", getIntegrationParamSchemaWithTeamId),
     _getIntegrationImplementation,

@@ -50,8 +50,8 @@ type UpdateIntegrationContext = Context<AuthenticatedUserContext & Authenticated
 const _updateIntegrationMinimal = server.put(
     "/integrations/:integrationId",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.write"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.write"),
     updateIntegrationRouteDescription,
     zodValidator("param", updateIntegrationParamSchema),
     zodValidator("json", updateIntegrationJsonBodySchema),
@@ -61,8 +61,8 @@ const _updateIntegrationMinimal = server.put(
 const _updateIntegration = server.put(
     "/:teamId/integrations/:integrationId",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.write"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.write"),
     describeRoute({hide: true}),
     zodValidator("param", updateIntegrationParamSchema.extend({ teamId: z.string() })),
     zodValidator("json", updateIntegrationJsonBodySchema),
