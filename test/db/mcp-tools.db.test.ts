@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, mock, spyOn } from "bun:test";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Hono } from "hono";
 import { exportJWK, generateKeyPair } from "jose";
 import type { Pool } from "pg";
 import { loadMcpTools } from "../utils/mcp";
-import { COMPANY_ID, TEAM_ID, connectTestDatabase, seedTeamAndCompany, testDatabaseUrl } from "./harness";
+import { COMPANY_ID, TEAM_ID, connectTestDatabase, seedDocument, seedTeamAndCompany, testDatabaseUrl } from "./harness";
 
 // The Exchange tools as an MCP client reaches them: through Core's endpoint, with
 // an OAuth grant, acting in the grant's team with the permissions it holds there.
@@ -12,6 +12,7 @@ import { COMPANY_ID, TEAM_ID, connectTestDatabase, seedTeamAndCompany, testDatab
 let pool: Pool;
 let app: Hono;
 let authorization: string;
+let companiesOnlyAuthorization: string;
 
 /** The JSON-RPC response to a request made with a credential, by default the one holding every permission. */
 const send = async (method: string, params: Record<string, unknown> = {}, as = authorization) => {
@@ -77,6 +78,7 @@ describe.skipIf(!testDatabaseUrl)("the Exchange MCP tools against PostgreSQL", (
       return `Bearer ${accessToken}`;
     };
     authorization = await authorize(["exchange.companies.read", "exchange.documents.read", "exchange.identifiers.read"]);
+    companiesOnlyAuthorization = await authorize(["exchange.companies.read"]);
 
     const { default: mcp } = await import("@core/api/mcp");
     app = new Hono();
@@ -92,6 +94,8 @@ describe.skipIf(!testDatabaseUrl)("the Exchange MCP tools against PostgreSQL", (
     expect(tools.map((tool: { name: string }) => tool.name)).toEqual([
       "list_teams",
       "list_companies",
+      "search_documents",
+      "get_document",
     ]);
   });
 
@@ -100,6 +104,17 @@ describe.skipIf(!testDatabaseUrl)("the Exchange MCP tools against PostgreSQL", (
     expect(structuredContent.companies).toEqual([
       expect.objectContaining({ country: "FR", id: COMPANY_ID, name: "Example SARL", peppolIds: [] }),
     ]);
+  });
+
+  it("searches the team's documents, and says when one doesn't exist", async () => {
+    expect((await callTool("search_documents", { unreadOnly: true })).structuredContent).toEqual({
+      documents: [],
+      pagination: { limit: 20, page: 1, total: 0, totalPages: 0 },
+    });
+    expect(await callTool("get_document", { documentId: "doc_missing" })).toMatchObject({
+      isError: true,
+      structuredContent: { code: "not_found" },
+    });
   });
 
   it("pages through the companies, with their Peppol IDs", async () => {
@@ -126,5 +141,105 @@ describe.skipIf(!testDatabaseUrl)("the Exchange MCP tools against PostgreSQL", (
       expect.objectContaining({ id: COMPANY_ID, isRegisteredOnPeppol: false }),
       expect.objectContaining({ id: "cmp_second", isRegisteredOnPeppol: true }),
     ]);
+  });
+
+  it("gives a document's amount in its own currency", async () => {
+    await seedDocument(pool, { id: "doc_usd" });
+    await pool.query(`UPDATE peppol_transmitted_documents SET parsed = $1, search_text = 'INV-USD' WHERE id = 'doc_usd'`, [
+      JSON.stringify({ currency: "USD", invoiceNumber: "INV-USD", totals: { payableAmount: "121.00" } }),
+    ]);
+
+    expect((await callTool("search_documents", { search: "INV-USD" })).structuredContent.documents).toEqual([
+      expect.objectContaining({ amount: "121.00", currency: "USD", id: "doc_usd" }),
+    ]);
+  });
+
+  it("keeps sent documents out of the inbox", async () => {
+    await seedDocument(pool, { direction: "incoming", id: "doc_in" });
+    await seedDocument(pool, { id: "doc_out" });
+
+    expect((await callTool("search_documents", { unreadOnly: true })).structuredContent.documents).toEqual([
+      expect.objectContaining({ direction: "incoming", id: "doc_in" }),
+    ]);
+    expect(await callTool("search_documents", { direction: "outgoing", unreadOnly: true })).toMatchObject({
+      isError: true,
+      structuredContent: { code: "invalid_input" },
+    });
+  });
+
+  it("lists a document's attachments after they moved to storage, without their contents", async () => {
+    await seedDocument(pool, { id: "doc_s3" });
+    await pool.query(
+      `UPDATE peppol_transmitted_documents SET attachments_location = 's3', parsed = $1, s3_key_prefix = 'documents/doc_s3' WHERE id = 'doc_s3'`,
+      [JSON.stringify({ attachments: null, invoiceNumber: "INV-S3" })]
+    );
+    const s3 = await import("@core/lib/s3");
+    const download = spyOn(s3, "downloadTextFile").mockResolvedValue(
+      JSON.stringify([{ embeddedDocument: "JVBERi0=", filename: "terms.pdf", mimeCode: "application/pdf" }])
+    );
+
+    const { structuredContent } = await callTool("get_document", { documentId: "doc_s3" });
+    download.mockRestore();
+
+    expect(structuredContent.parsed.attachments).toEqual([
+      expect.objectContaining({ filename: "terms.pdf", hasContents: true, mimeCode: "application/pdf" }),
+    ]);
+    expect(structuredContent.parsed.attachments[0]).not.toHaveProperty("embeddedDocument");
+  });
+
+  it("doesn't reach another team's document", async () => {
+    await pool.query(`INSERT INTO teams (id, name) VALUES ('team_other', 'Other team')`);
+    await pool.query(
+      `INSERT INTO peppol_companies (id, team_id, name, address, postal_code, city, country, access_point_provider, smp_provider)
+       VALUES ('cmp_other', 'team_other', 'Other BV', 'Kouter 2', '9000', 'Gent', 'BE', 'recommand-ap1', 'recommand-smp1')`
+    );
+    await seedDocument(pool, { id: "doc_other" });
+    await pool.query(
+      `UPDATE peppol_transmitted_documents SET company_id = 'cmp_other', search_text = 'INV-OTHER', team_id = 'team_other' WHERE id = 'doc_other'`
+    );
+
+    expect(await callTool("get_document", { documentId: "doc_other" })).toMatchObject({
+      isError: true,
+      structuredContent: { code: "not_found" },
+    });
+    expect((await callTool("search_documents", { search: "INV-OTHER" })).structuredContent.documents).toEqual([]);
+  });
+
+  it("refuses the documents of a team without document access", async () => {
+    const entitlements = await import("@peppol/lib/entitlements");
+    entitlements.registerEntitlementResolver(async () => ({ allowed: false, message: "Upgrade to read your documents." }));
+    try {
+      for (const [name, args] of [["get_document", { documentId: "doc_usd" }], ["search_documents", {}]] as const) {
+        expect(await callTool(name, args)).toMatchObject({ isError: true, structuredContent: { code: "no_document_access" } });
+      }
+    } finally {
+      entitlements.clearEntitlementResolver();
+    }
+  });
+
+  it("lists companies only for a credential that may read their Peppol IDs too", async () => {
+    const { result } = await send("tools/list", {}, companiesOnlyAuthorization);
+    expect(result.tools.map((tool: { name: string }) => tool.name)).not.toContain("list_companies");
+  });
+
+  it("doesn't hand documents to a credential without the permission to read them", async () => {
+    const { result } = await send("tools/list", {}, companiesOnlyAuthorization);
+    expect(result.tools.map((tool: { name: string }) => tool.name)).not.toContain("get_document");
+
+    const response = await send("tools/call", { arguments: { documentId: "doc_usd" }, name: "get_document" }, companiesOnlyAuthorization);
+    expect(response.error ?? response.result?.isError).toBeTruthy();
+    expect(response.result?.structuredContent?.id).toBeUndefined();
+  });
+
+  it("hands a long document's lines over a page at a time", async () => {
+    await seedDocument(pool, { id: "doc_long" });
+    await pool.query(`UPDATE peppol_transmitted_documents SET parsed = $1 WHERE id = 'doc_long'`, [
+      JSON.stringify({ invoiceNumber: "INV-LONG", lines: [{ name: "Line 1" }, { name: "Line 2" }, { name: "Line 3" }] }),
+    ]);
+
+    const { structuredContent } = await callTool("get_document", { documentId: "doc_long", limit: 2, page: 2 });
+
+    expect(structuredContent.linePagination).toEqual({ limit: 2, page: 2, total: 3, totalPages: 2 });
+    expect(structuredContent.parsed.lines).toEqual([{ name: "Line 3" }]);
   });
 });

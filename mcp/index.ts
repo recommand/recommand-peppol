@@ -1,1 +1,2 @@
 import "./companies";
+import "./documents";

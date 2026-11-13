@@ -47,5 +47,168 @@ exports[`the MCP tools stay as models know them 1`] = `
     "name": "list_companies",
     "title": "List companies",
   },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+    },
+    "description": "Find documents the team's companies sent or received: invoices, credit notes and other Peppol documents. Filter by direction, type, company, date, delivery status or unread ones (the inbox), or search by number, name or Peppol ID. Returns a summary per document; use get_document for one document's full contents and delivery details.",
+    "inputSchema": {
+      "$defs": {
+        "DeliveryStatus": {
+          "description": "\`pending\`: the channel accepted the document and has not confirmed arrival. \`delivered\`: the channel confirmed arrival; for Peppol the recipient's access point acknowledged the document, for email the recipient's mail server accepted the message. \`failed\`: the document did not arrive; for email the message bounced or was refused.",
+          "enum": [
+            "pending",
+            "delivered",
+            "failed",
+          ],
+          "type": "string",
+        },
+        "DocumentDirection": {
+          "description": "Whether a document was received by a company (\`incoming\`) or sent by it (\`outgoing\`).",
+          "enum": [
+            "incoming",
+            "outgoing",
+          ],
+          "examples": [
+            "incoming",
+          ],
+          "type": "string",
+        },
+        "DocumentType": {
+          "description": "The kind of document that was transmitted.",
+          "enum": [
+            "invoice",
+            "creditNote",
+            "selfBillingInvoice",
+            "selfBillingCreditNote",
+            "messageLevelResponse",
+            "frenchInvoicingCdar",
+            "frenchB2CSalesReport",
+            "frenchB2CPaymentReport",
+            "frenchB2BiInvoiceReport",
+            "frenchB2BiPaymentReport",
+            "unknown",
+          ],
+          "type": "string",
+        },
+      },
+      "properties": {
+        "companyId": {
+          "description": "Only documents of this company, as list_companies lists it.",
+          "type": "string",
+        },
+        "deliveryStatus": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/DeliveryStatus",
+            },
+          ],
+          "description": "Only outgoing documents whose delivery is \`delivered\`, \`failed\` or still \`pending\`.",
+          "examples": [
+            "failed",
+          ],
+        },
+        "direction": {
+          "$ref": "#/$defs/DocumentDirection",
+          "description": "Only received (\`incoming\`) or sent (\`outgoing\`) documents.",
+        },
+        "from": {
+          "description": "Only documents sent or received from this moment on, in ISO 8601.",
+          "examples": [
+            "2024-01-01T00:00:00Z",
+          ],
+          "type": "string",
+        },
+        "limit": {
+          "default": 20,
+          "description": "How many documents per page, at most 50.",
+          "maximum": 50,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "page": {
+          "default": 1,
+          "description": "The page to return, from 1.",
+          "minimum": 1,
+          "type": "integer",
+        },
+        "search": {
+          "description": "Words to look for in the document number, the sender's or receiver's name or Peppol ID.",
+          "examples": [
+            "invoice",
+          ],
+          "type": "string",
+        },
+        "teamId": {
+          "description": "The team to act in, as list_teams lists it. Leave it out when the connection reaches one team.",
+          "type": "string",
+        },
+        "to": {
+          "description": "Only documents sent or received before this moment, in ISO 8601.",
+          "examples": [
+            "2024-12-31T23:59:59Z",
+          ],
+          "type": "string",
+        },
+        "type": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/DocumentType",
+            },
+          ],
+          "description": "Only documents of this type.",
+          "examples": [
+            "invoice",
+          ],
+        },
+        "unreadOnly": {
+          "description": "Only received documents not marked as read yet: the inbox.",
+          "type": "boolean",
+        },
+      },
+      "type": "object",
+    },
+    "name": "search_documents",
+    "title": "Search documents",
+  },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+    },
+    "description": "Get one document by ID: its contents (lines, totals, parties, payment details), and for a sent document whether it was delivered, and why not if a delivery failed. A long document's lines come a page at a time: \`linePagination\` says how many there are.",
+    "inputSchema": {
+      "properties": {
+        "documentId": {
+          "description": "The document's ID, as search_documents returns it.",
+          "type": "string",
+        },
+        "limit": {
+          "default": 50,
+          "description": "How many of the document's lines to include, at most 100.",
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer",
+        },
+        "page": {
+          "default": 1,
+          "description": "The page of lines to include, from 1.",
+          "minimum": 1,
+          "type": "integer",
+        },
+        "teamId": {
+          "description": "The team to act in, as list_teams lists it. Leave it out when the connection reaches one team.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "documentId",
+      ],
+      "type": "object",
+    },
+    "name": "get_document",
+    "title": "Get a document",
+  },
 ]
 `;

@@ -22,6 +22,8 @@ test("the MCP tools need the permissions of the API operations they stand for", 
   const permissions = await Promise.all(tools.map(getToolPermissions));
 
   expect(Object.fromEntries(tools.map(({ name }, index) => [name, permissions[index]]))).toEqual({
+    get_document: ["exchange.documents.read"],
     list_companies: ["exchange.companies.read", "exchange.identifiers.read"],
+    search_documents: ["exchange.documents.read"],
   });
 });
