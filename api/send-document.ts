@@ -8,7 +8,6 @@ import {
   describeIdempotentValidationErrorResponse,
   idempotencyKeyParameter,
   idempotencyResponseHeaders,
-  idempotent,
 } from "@core/lib/idempotency";
 import {
   requireCompanyVerificationForStrictTeams,
@@ -17,6 +16,7 @@ import {
   requireTransactionEntitlement,
 } from "@peppol/utils/auth-middleware";
 import { sendingPipeline } from "@peppol/utils/pipelines/sending";
+import { sendOnce } from "@peppol/utils/pipelines/sending/idempotency";
 import { sendDocumentSchema } from "@peppol/utils/parsing/send-document";
 import { Server } from "@recommand/lib/api";
 import { zodValidator } from "@recommand/lib/zod-validator";
@@ -130,12 +130,6 @@ const routeDescription = describeRoute({
       "The send failed on Recommand's side before the document was handed to any channel. Nothing went out, so the same request can be sent again, under the same `Idempotency-Key` too.",
     ),
   },
-});
-
-// Both routes send the same way, so they share a scope: a key used on one can't send again through the other
-const sendOnce = idempotent({
-  documentationUrl: "https://docs.recommand.eu/docs/sending-invoices#retry-safely",
-  scope: (c) => `peppol.send_document:${c.req.param("companyId")}`,
 });
 
 // Mounted ahead of the routes rather than as their first handler, which keeps each route within the

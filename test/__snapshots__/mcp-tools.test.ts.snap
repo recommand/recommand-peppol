@@ -280,7 +280,7 @@ exports[`the MCP tools stay as models know them 1`] = `
       "openWorldHint": true,
       "readOnlyHint": false,
     },
-    "description": "Check a document before sending it, without sending it: it's written, routed to the recipient and validated the way a send would. Call describe_document first for the fields \`document\` takes. Returns a summary to show the user, and a \`handle\` for exactly this document, valid for 15 minutes.",
+    "description": "Check a document before sending it, without sending it: it's written, routed to the recipient and validated the way a send would. Call describe_document first for the fields \`document\` takes. Returns a summary to show the user, and a \`handle\` that send_document sends exactly this document with, for 15 minutes. Ask the user to approve the summary before calling send_document.",
     "inputSchema": {
       "$defs": {
         "PDFGeneration": {
@@ -413,6 +413,33 @@ exports[`the MCP tools stay as models know them 1`] = `
     },
     "name": "prepare_send",
     "title": "Prepare a send",
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": true,
+      "openWorldHint": true,
+      "readOnlyHint": false,
+    },
+    "description": "Send a document prepare_send prepared, exactly as it was prepared, once the user approved its summary, within 15 minutes. A repeat with the same handle doesn't send it again, but returns the first send's answer.",
+    "inputSchema": {
+      "properties": {
+        "handle": {
+          "description": "The handle prepare_send returned for the document.",
+          "type": "string",
+        },
+        "teamId": {
+          "description": "The team to act in, as list_teams lists it. Leave it out when the connection reaches one team.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "handle",
+      ],
+      "type": "object",
+    },
+    "name": "send_document",
+    "title": "Send a document",
   },
 ]
 `;
