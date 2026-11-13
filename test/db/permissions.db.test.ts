@@ -155,15 +155,78 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
     await seedKey("key_existing", []);
     await pool.query(await readFile(MIGRATION, "utf-8"));
 
-    const members = await pool.query(`SELECT permission_id FROM user_permissions WHERE user_id = 'usr_owner' ORDER BY 1`);
-    const keys = await pool.query(`SELECT permission_id FROM principal_permissions WHERE principal_id = 'key_existing' ORDER BY 1`);
+    const members = await pool.query(`SELECT permission_id FROM user_permissions WHERE user_id = 'usr_owner'`);
+    const keys = await pool.query(`SELECT permission_id FROM principal_permissions WHERE principal_id = 'key_existing'`);
     const { getRegisteredPermissionsByScope } = await import("@core/lib/permissions");
     const exchangePermissions = getRegisteredPermissionsByScope("team")
       .map((permission) => permission.id)
       .filter((id) => id.startsWith("exchange."))
       .toSorted();
     expect(exchangePermissions).toHaveLength(38);
-    expect(members.rows.map((row) => row.permission_id)).toEqual(exchangePermissions);
-    expect(keys.rows.map((row) => row.permission_id)).toEqual(exchangePermissions);
+    expect(members.rows.map((row) => row.permission_id).toSorted()).toEqual(exchangePermissions);
+    expect(keys.rows.map((row) => row.permission_id).toSorted()).toEqual(exchangePermissions);
   });
+
+  it("gives the keys of platform admins every permission, and can run again", async () => {
+    await pool.query("DELETE FROM user_permissions");
+    await pool.query(`INSERT INTO users (id, email, password_hash, is_admin) VALUES ('usr_admin', 'admin@example.com', 'unused', true)`);
+    const secretHash = await Bun.password.hash("secret_key_admin", { algorithm: "bcrypt", cost: 4 });
+    await pool.query(
+      `INSERT INTO api_keys (id, name, user_id, team_id, type, secret_hash) VALUES ('key_admin', 'key_admin', 'usr_admin', $1, 'basic', $2)`,
+      [TEAM_ID, secretHash]
+    );
+    const migration = await readFile(MIGRATION, "utf-8");
+    await pool.query(migration);
+    await pool.query(migration);
+
+    const keys = await pool.query(`SELECT permission_id FROM principal_permissions WHERE principal_id = 'key_admin'`);
+    const { getRegisteredPermissionsByScope } = await import("@core/lib/permissions");
+    expect(keys.rows.map((row) => row.permission_id).toSorted()).toEqual(
+      getRegisteredPermissionsByScope("team").map((permission) => permission.id).filter((id) => id.startsWith("exchange.")).toSorted()
+    );
+  });
+
+  it("refuses every route with team data to a key without permissions", async () => {
+    await seedKey("key_none", []);
+    const { default: peppol } = await import("../../index");
+    const routes = [...new Set(peppol.routes.filter((route) => route.method !== "ALL").map((route) => `${route.method} ${route.path}`))];
+    const open = await Promise.all(routes.map(async (route) => {
+      const [method, path] = route.split(" ") as [string, string];
+      const response = await peppol.request(path.replace(":teamId", TEAM_ID).replace(":companyId", COMPANY_ID).replace(/:\w+/g, "unknown"), {
+        body: ["DELETE", "GET"].includes(method) ? undefined : "{}",
+        headers: { ...basic("key_none", "secret_key_none"), "Content-Type": "application/json" },
+        method,
+      });
+      const body = await response.json().catch(() => null);
+
+      return body?.code === "insufficient_permission" ? null : route.replace(/ \/(peppol|v1)\//, " /");
+    }));
+    // Routes without team data: they serve no team, or only what the team may use
+    expect([...new Set(open.filter((route) => route !== null))].toSorted()).toEqual([
+      "GET /:teamId/entitlements",
+      "GET /:teamId/playground",
+      "GET /:teamId/team-extension",
+      "GET /companies/verification/:companyVerificationLogId/context",
+      "GET /companies/verification/:companyVerificationLogId/status",
+      "GET /integrations/jwks",
+      "GET /playgrounds/current",
+      "GET /receivingCapabilities",
+      "POST /companies/verification/:companyVerificationLogId/continue",
+      "POST /companies/verification/:companyVerificationLogId/forward",
+      "POST /companies/verification/:companyVerificationLogId/mandate-draft",
+      "POST /companies/verification/:companyVerificationLogId/restart-id-verification",
+      "POST /companies/verification/:companyVerificationLogId/submit-identity-form",
+      "POST /companies/verification/:companyVerificationLogId/submit-playground-verification",
+      "POST /internal/arratech",
+      "POST /internal/didit",
+      "POST /internal/postmark",
+      "POST /internal/receiveDocument",
+      "POST /playgrounds",
+      "POST /search-peppol-directory",
+      "POST /searchPeppolDirectory",
+      "POST /verify",
+      "POST /verify-document-support",
+      "POST /verifyDocumentSupport",
+    ]);
+  }, 120_000);
 });
