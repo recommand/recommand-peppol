@@ -219,9 +219,9 @@ const registerFrenchReportingDeclarantParamSchema = z.object({
 const _registerFrenchReportingDeclarant = server.put(
   "/:companyId/reporting/fr/declarant",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("exchange.reporting.write"),
   zodValidator("param", registerFrenchReportingDeclarantParamSchema),
   requireTransactionEntitlement(),
+  requirePermission("exchange.reporting.write"),
   requireCompanyVerificationForStrictTeams(),
   registerRouteDescription,
   zodValidator("json", registerFrenchReportingDeclarantBodySchema),

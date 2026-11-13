@@ -37,8 +37,8 @@ type ResetIntegrationStateContext = Context<AuthenticatedUserContext & Authentic
 const _resetIntegrationStateMinimal = server.post(
     "/integrations/:integrationId/reset-state",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.write"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.write"),
     resetIntegrationStateRouteDescription,
     zodValidator("param", resetIntegrationStateParamSchema),
     _resetIntegrationStateImplementation,
@@ -47,8 +47,8 @@ const _resetIntegrationStateMinimal = server.post(
 const _resetIntegrationState = server.post(
     "/:teamId/integrations/:integrationId/reset-state",
     requireTeamAccess(),
-    requirePermission("exchange.integrations.write"),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.write"),
     describeRoute({hide: true}),
     zodValidator("param", resetIntegrationStateParamSchemaWithTeamId),
     _resetIntegrationStateImplementation,

@@ -146,8 +146,8 @@ server.use("/:companyId/send", trackSendDocument);
 const sendDocument = server.post(
   "/:companyId/sendDocument",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("exchange.documents.send"),
   requireTransactionEntitlement(),
+  requirePermission("exchange.documents.send"),
   requireCompanyVerificationForStrictTeams(),
   describeRoute({ hide: true }),
   captureSendDocumentRecording,
@@ -160,8 +160,8 @@ const sendDocument = server.post(
 const sendDocumentMinimal = server.post(
   "/:companyId/send",
   requireIntegrationSupportedCompanyAccess(),
-  requirePermission("exchange.documents.send"),
   requireTransactionEntitlement(),
+  requirePermission("exchange.documents.send"),
   requireCompanyVerificationForStrictTeams(),
   routeDescription,
   captureSendDocumentRecording,
