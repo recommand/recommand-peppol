@@ -8,7 +8,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission, requirePermissionWhen } from "@peppol/utils/auth-middleware";
 import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
@@ -16,6 +16,12 @@ import { shouldRegisterWithSmp } from "@peppol/utils/playground";
 import { audit } from "@core/lib/audit";
 
 const server = new Server();
+
+// A migration key takes the identifier over from another access point, which is what `migrate` is for
+const requiresMigratePermission = requirePermissionWhen(
+    "exchange.identifiers.migrate",
+    async (c) => Boolean(((await c.req.json().catch(() => null)) as { migrationKey?: unknown } | null)?.migrationKey)
+);
 
 const createIdentifierRouteDescription = describeRoute({
     operationId: "createCompanyIdentifier",
@@ -44,7 +50,7 @@ const createIdentifierJsonBodySchema = z.object({
         description: "The value of the identifier",
     }),
     migrationKey: z.string().trim().min(8).max(24).optional().openapi({
-        description: "A Peppol migration key issued by the provider that currently publishes this identifier for receiving. With it, the identifier is taken over from that provider without a gap instead of failing because it is registered elsewhere. Ask the previous provider for the key. When the company is not yet publishable, for example because its identity check is still open or it is not registered as a recipient, the key is kept and used the moment the company is registered.",
+        description: "A Peppol migration key issued by the provider that currently publishes this identifier for receiving. With it, the identifier is taken over from that provider without a gap instead of failing because it is registered elsewhere. Ask the previous provider for the key. When the company is not yet publishable, for example because its identity check is still open or it is not registered as a recipient, the key is kept and used the moment the company is registered. Needs the `exchange.identifiers.migrate` permission too.",
         examples: ["Ab12$#xyZ9!kLm"],
     }),
 });
@@ -57,6 +63,7 @@ const _createIdentifierMinimal = server.post(
     "/companies/:companyId/identifiers",
     requireCompanyAccess(),
     requirePermission("exchange.identifiers.write"),
+    requiresMigratePermission,
     createIdentifierRouteDescription,
     zodValidator("param", createIdentifierParamSchema),
     zodValidator("json", createIdentifierJsonBodySchema),
@@ -67,6 +74,7 @@ const _createIdentifier = server.post(
     "/:teamId/companies/:companyId/identifiers",
     requireCompanyAccess(),
     requirePermission("exchange.identifiers.write"),
+    requiresMigratePermission,
     describeRoute({ hide: true }),
     zodValidator("param", createIdentifierParamSchemaWithTeamId),
     zodValidator("json", createIdentifierJsonBodySchema),

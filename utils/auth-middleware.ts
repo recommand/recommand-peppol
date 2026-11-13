@@ -13,6 +13,7 @@ import { verifyIntegrationJwt } from "@peppol/data/integrations/auth";
 import { getExtendedTeam, type ExtendedTeam } from "@peppol/data/teams";
 import { checkPeppolEntitlement, checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { actionFailure } from "@recommand/lib/utils";
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { requiresCompanyVerification } from "@peppol/utils/playground";
 
@@ -185,6 +186,16 @@ export const requirePermission = (permissionId: string) => {
 
   // Keeps the OpenAPI description the check carries
   return Object.assign(middleware, check);
+};
+
+/**
+ * `requirePermission` for the requests `applies` picks out; the others pass without it. It adds nothing
+ * to the OpenAPI description, so the operation describes when it applies.
+ */
+export const requirePermissionWhen = (permissionId: string, applies: (c: Context) => Promise<boolean>) => {
+  const check = requirePermission(permissionId);
+
+  return createMiddleware<AuthenticatedUserContext>(async (c, next) => (await applies(c)) ? check(c, next) : next());
 };
 
 export function requireIntegrationSupportedAuth() {
