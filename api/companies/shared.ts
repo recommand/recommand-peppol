@@ -10,6 +10,18 @@ export const companyCountrySchema = zodValidCountryCodes.openapi({
     ref: "SupportedCountry",
 });
 
+/** The company list's filters, shared so another caller validates them the same way. */
+export const companyFilters = z.object({
+    enterpriseNumber: z.string().optional().openapi({
+        description: "Filter companies by enterprise number",
+        examples: ["1234567894"],
+    }),
+    vatNumber: z.string().optional().openapi({
+        description: "Filter companies by VAT number",
+        examples: ["BE1234567894"],
+    }),
+});
+
 export const companyResponse = z.object({
     id: z.string().openapi({
         description: "The ID of the company. Use it wherever an endpoint takes a companyId.",
