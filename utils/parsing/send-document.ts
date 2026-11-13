@@ -68,6 +68,9 @@ const documentRequestTypes = {
   { sendSchema: z.ZodTypeAny; translatableTitle: string }
 >;
 
+/** The schema a send request's `document` has for a document type. */
+export const documentSendSchema = (type: DocumentType) => documentRequestTypes[type].sendSchema;
+
 type DocumentRequestVariant<
   Base extends z.ZodRawShape,
   T extends DocumentType,

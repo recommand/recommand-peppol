@@ -236,5 +236,42 @@ exports[`the MCP tools stay as models know them 1`] = `
     "name": "find_recipient",
     "title": "Find a recipient",
   },
+  {
+    "annotations": {
+      "openWorldHint": false,
+      "readOnlyHint": true,
+    },
+    "description": "Get the fields of a document type, as JSON Schema: what a send request takes as \`document\` for that \`documentType\`. Call it before writing a document of a type you haven't written yet.",
+    "inputSchema": {
+      "properties": {
+        "documentType": {
+          "description": "The document type to describe, such as \`invoice\`.",
+          "enum": [
+            "invoice",
+            "creditNote",
+            "selfBillingInvoice",
+            "selfBillingCreditNote",
+            "messageLevelResponse",
+            "frenchInvoicingCdar",
+            "xml",
+          ],
+          "examples": [
+            "invoice",
+          ],
+          "type": "string",
+        },
+        "teamId": {
+          "description": "The team to act in, as list_teams lists it. Leave it out when the connection reaches one team.",
+          "type": "string",
+        },
+      },
+      "required": [
+        "documentType",
+      ],
+      "type": "object",
+    },
+    "name": "describe_document",
+    "title": "Describe a document type",
+  },
 ]
 `;
