@@ -11,13 +11,7 @@ import {
     describeSuccessResponse,
 } from "@core/lib/api-docs";
 import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
-import { verifyRecipient, fetchServiceMetadata, fetchBusinessCard } from "@peppol/data/recipient";
-import { getTeamExtension } from "@peppol/data/teams";
-import {
-    isSimulatedPlayground,
-    resolvePlaygroundAddress,
-} from "@peppol/data/playground/recipients";
-import { getDocumentTypeName } from "@peppol/utils/document-type-lookup";
+import { lookUpRecipient } from "@peppol/data/recipient-lookup";
 
 const server = new Server();
 
@@ -70,72 +64,7 @@ const _verifyRecipient = server.post(
 );
 
 async function _verifyRecipientImplementation(c: VerifyRecipientContext) {
-    try {
-        const { peppolAddress, includeEndpointDetails, includeBusinessCard } = c.req.valid("json");
-        const teamExtension = await getTeamExtension(c.var.team.id);
-        const useTestNetwork = teamExtension?.useTestNetwork ?? false;
-
-        // Answered from the same place a send would be routed from.
-        if (teamExtension && isSimulatedPlayground(teamExtension)) {
-            const playgroundAddress = await resolvePlaygroundAddress({ recipientAddress: peppolAddress, playgroundTeamId: c.var.team.id });
-            if (playgroundAddress?.kind === "unknown") {
-                return c.json(actionSuccess({ isValid: false }));
-            }
-            if (playgroundAddress?.kind === "company") {
-                const playgroundRecipient = playgroundAddress.recipient;
-                const docTypeIds = [...new Set(playgroundRecipient.registrations.map((registration) => registration.docTypeId))];
-                const result: Record<string, unknown> = {
-                    isValid: true,
-                    supportedDocuments: docTypeIds.map((docTypeId) => ({ name: getDocumentTypeName(docTypeId), docTypeId })),
-                };
-                if (includeBusinessCard) {
-                    Object.assign(result, {
-                        companyName: playgroundRecipient.company.name,
-                        countryCode: playgroundRecipient.company.country,
-                    });
-                }
-                return c.json(actionSuccess(result));
-            }
-        }
-
-        const data = await verifyRecipient({ recipientAddress: peppolAddress, useTestNetwork });
-
-        let supportedDocuments = data.supportedDocuments;
-
-        if (includeEndpointDetails) {
-            supportedDocuments = await Promise.all(
-                data.supportedDocuments.map(async (doc) => {
-                    const ref = data.serviceMetadataReferences.find(r =>
-                        r.includes(encodeURIComponent(doc.docTypeId)) || r.includes(doc.docTypeId)
-                    );
-                    if (!ref) return doc;
-
-                    // Endpoint details are extra: an SMP that does not give them leaves the document listed without.
-                    const details = await fetchServiceMetadata(ref).catch(() => null);
-                    return { ...doc, ...details };
-                })
-            );
-        }
-
-        const result: Record<string, unknown> = {
-            isValid: true,
-            smpUrl: data.smpUrl,
-            serviceMetadataReferences: data.serviceMetadataReferences,
-            smpHostnames: data.smpHostnames,
-            supportedDocuments,
-        };
-
-        if (includeBusinessCard) {
-            const businessCard = await fetchBusinessCard({ smpUrl: data.smpUrl, participantId: peppolAddress });
-            if (businessCard) {
-                Object.assign(result, businessCard);
-            }
-        }
-
-        return c.json(actionSuccess(result));
-    } catch (error) {
-        return c.json(actionSuccess({ isValid: false }));
-    }
+    return c.json(actionSuccess(await lookUpRecipient(c.var.team.id, c.req.valid("json"))));
 }
 
 export type VerifyRecipient = typeof _verifyRecipient;
