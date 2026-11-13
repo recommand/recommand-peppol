@@ -129,6 +129,27 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
     expect((await create({ identifier: "0123456749", scheme: "0208" })).status).not.toBe(403);
   });
 
+  it("shows migration keys only to a credential that may migrate", async () => {
+    await pool.query(
+      `INSERT INTO user_permissions (user_id, team_id, permission_id) VALUES ('usr_owner', $1, 'exchange.identifiers.migrate'), ('usr_owner', $1, 'exchange.identifiers.read')`,
+      [TEAM_ID]
+    );
+    await pool.query(`DELETE FROM peppol_company_identifiers WHERE company_id = $1`, [COMPANY_ID]);
+    await pool.query(`INSERT INTO peppol_company_identifiers (id, company_id, scheme, identifier) VALUES ('cid_migrations', $1, '0208', '0123456749')`, [COMPANY_ID]);
+    await pool.query(
+      `INSERT INTO peppol_participant_migrations (id, company_id, scheme, identifier, direction, status, migration_key) VALUES ('pm_test', $1, '0208', '0123456749', 'outbound', 'inProgress', 'Ab12$#xyZ9!kLm')`,
+      [COMPANY_ID]
+    );
+    await seedKey("key_read", ["exchange.identifiers.read"]);
+    await seedKey("key_migrate", ["exchange.identifiers.migrate", "exchange.identifiers.read"]);
+    const keys = await Promise.all(["key_read", "key_migrate"].map(async (id) => {
+      const response = await app.request(`/${TEAM_ID}/companies/${COMPANY_ID}/identifiers/cid_migrations/migrations`, { headers: basic(id, `secret_${id}`) });
+
+      return (await response.json()).migrations.map((migration: { migrationKey?: string }) => migration.migrationKey);
+    }));
+    expect(keys).toEqual([[undefined], ["Ab12$#xyZ9!kLm"]]);
+  });
+
   it("gives every existing member and key the permissions of the routes they could use", async () => {
     await pool.query("DELETE FROM user_permissions");
     await seedKey("key_existing", []);
