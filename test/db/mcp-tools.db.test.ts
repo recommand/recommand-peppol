@@ -9,6 +9,11 @@ import { COMPANY_ID, TEAM_ID, connectTestDatabase, seedDocument, seedTeamAndComp
 // The Exchange tools as an MCP client reaches them: through Core's endpoint, with
 // an OAuth grant, acting in the grant's team with the permissions it holds there.
 
+const PEPPOL_INVOICE =
+  "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1";
+const PEPPOL_CREDIT_NOTE =
+  "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2::CreditNote##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1";
+
 let pool: Pool;
 let app: Hono;
 let authorization: string;
@@ -96,6 +101,7 @@ describe.skipIf(!testDatabaseUrl)("the Exchange MCP tools against PostgreSQL", (
       "list_companies",
       "search_documents",
       "get_document",
+      "find_recipient",
     ]);
   });
 
@@ -185,6 +191,60 @@ describe.skipIf(!testDatabaseUrl)("the Exchange MCP tools against PostgreSQL", (
       expect.objectContaining({ filename: "terms.pdf", hasContents: true, mimeCode: "application/pdf" }),
     ]);
     expect(structuredContent.parsed.attachments[0]).not.toHaveProperty("embeddedDocument");
+  });
+
+  it("names the document types a directory match accepts, and how many companies match in all", async () => {
+    const directory = spyOn(globalThis, "fetch").mockResolvedValue(
+      Response.json({
+        matches: [
+          {
+            docTypes: [{ value: PEPPOL_INVOICE }, { value: PEPPOL_CREDIT_NOTE }],
+            entities: [{ name: [{ name: "Buyer BV" }] }],
+            participantID: { value: "0208:0123456749" },
+          },
+        ],
+        "total-result-count": 57,
+      })
+    );
+
+    const { structuredContent } = await callTool("find_recipient", { name: "Buyer" });
+    directory.mockRestore();
+
+    expect(structuredContent).toEqual({
+      matches: [
+        {
+          name: "Buyer BV",
+          peppolAddress: "0208:0123456749",
+          supportedDocumentTypes: ["Peppol BIS Billing UBL Credit Note V3", "Peppol BIS Billing UBL Invoice V3"],
+        },
+      ],
+      total: 57,
+    });
+  });
+
+  it("checks a Peppol address without the SMP's addresses", async () => {
+    const recipient = await import("@peppol/data/recipient");
+    const verify = spyOn(recipient, "verifyRecipient").mockResolvedValue({
+      serviceMetadataReferences: ["https://smp.example.com/iso6523-actorid-upis%3A%3A0208%3A0123456749/services/invoice"],
+      smpHostnames: ["smp.example.com"],
+      smpUrl: "https://smp.example.com",
+      supportedDocuments: [
+        { docTypeId: PEPPOL_INVOICE, name: "Peppol BIS Billing UBL Invoice V3" },
+        { docTypeId: `${PEPPOL_INVOICE}::other-version`, name: "Peppol BIS Billing UBL Invoice V3" },
+      ],
+    });
+    const businessCard = spyOn(recipient, "fetchBusinessCard").mockResolvedValue({ companyName: "Buyer BV", countryCode: "BE" });
+
+    const { structuredContent } = await callTool("find_recipient", { peppolAddress: "0208:0123456749" });
+    verify.mockRestore();
+    businessCard.mockRestore();
+
+    expect(structuredContent).toEqual({
+      companyName: "Buyer BV",
+      countryCode: "BE",
+      isValid: true,
+      supportedDocumentTypes: ["Peppol BIS Billing UBL Invoice V3"],
+    });
   });
 
   it("doesn't reach another team's document", async () => {

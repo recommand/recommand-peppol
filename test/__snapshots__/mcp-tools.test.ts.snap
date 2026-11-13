@@ -210,5 +210,31 @@ exports[`the MCP tools stay as models know them 1`] = `
     "name": "get_document",
     "title": "Get a document",
   },
+  {
+    "annotations": {
+      "openWorldHint": true,
+      "readOnlyHint": true,
+    },
+    "description": "Find out whether a company can receive documents over Peppol. Give a \`peppolAddress\` (such as \`0208:0123456789\`) to check that it's registered and see the document types it accepts, or a \`name\` to search the Peppol directory for its address first.",
+    "inputSchema": {
+      "properties": {
+        "name": {
+          "description": "A company name, VAT or enterprise number to search the Peppol directory for.",
+          "type": "string",
+        },
+        "peppolAddress": {
+          "description": "A Peppol address as \`scheme:identifier\`, to check directly.",
+          "type": "string",
+        },
+        "teamId": {
+          "description": "The team to act in, as list_teams lists it. Leave it out when the connection reaches one team.",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "name": "find_recipient",
+    "title": "Find a recipient",
+  },
 ]
 `;
