@@ -30,6 +30,7 @@ export async function verifyIntegrationJwt(jwt: string): Promise<JWTPayload | nu
         const { payload, protectedHeader } = await jwtVerify(jwt, await getVerificationKeys(), {
             algorithms: ["RS256"],
             audience: "https://app.recommand.eu",
+            issuer: "https://app.recommand.eu",
         });
 
         // The same keys sign other tokens too, which declare their own type
