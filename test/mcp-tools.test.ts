@@ -26,6 +26,7 @@ test("the MCP tools need the permissions of the API operations they stand for", 
     find_recipient: [],
     get_document: ["exchange.documents.read"],
     list_companies: ["exchange.companies.read", "exchange.identifiers.read"],
+    prepare_send: ["exchange.documents.send"],
     search_documents: ["exchange.documents.read"],
   });
 });

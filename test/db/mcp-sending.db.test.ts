@@ -7,12 +7,38 @@ import { COMPANY_ID, TEAM_ID, connectTestDatabase, seedTeamAndCompany, testDatab
 
 // Sending through the MCP server, as an assistant does.
 
-const SEND_TOOLS = ["describe_document"];
+const PEPPOL_RECIPIENT = "0208:0428643097";
+const SEND_TOOLS = ["describe_document", "prepare_send"];
+const BIS3_INVOICE =
+  "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice##urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0::2.1";
+const BILLING_PROCESS = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 
 let pool: Pool;
 let app: Hono;
 let sender: string;
 let reader: string;
+
+const invoice = (invoiceNumber = "INV-1") => ({
+  document: {
+    buyer: { city: "Gent", country: "BE", name: "Buyer BV", postalZone: "9000", street: "Kouter 1", vatNumber: null },
+    invoiceNumber,
+    issueDate: "2026-11-16",
+    lines: [{ name: "Consulting", netPriceAmount: "100.00", quantity: "1", unitCode: "HUR", vat: { category: "S", percentage: "21.00" } }],
+    paymentMeans: [{ iban: "BE68539007547034", paymentMethod: "credit_transfer", reference: invoiceNumber }],
+  },
+  documentType: "invoice",
+  email: { to: ["accounts@buyer.example"], when: "always" },
+  recipient: null,
+});
+
+/** The same invoice for a buyer on Peppol, in a named format so the recipient isn't looked up. */
+const peppolInvoice = () => ({
+  ...invoice(),
+  doctypeId: BIS3_INVOICE,
+  email: undefined,
+  processId: BILLING_PROCESS,
+  recipient: PEPPOL_RECIPIENT,
+});
 
 /** The JSON-RPC response to a request, by default made with the key that may send. */
 const rpc = async (method: string, params: Record<string, unknown> = {}, as = sender) => {
@@ -36,6 +62,8 @@ const rpc = async (method: string, params: Record<string, unknown> = {}, as = se
 
 const callTool = async (name: string, args: Record<string, unknown>, as = sender) =>
   (await rpc("tools/call", { arguments: args, name }, as)).result as { isError?: boolean; structuredContent: Record<string, any> };
+
+const count = async (table: string) => Number((await pool.query(`SELECT count(*) FROM ${table}`)).rows[0].count);
 
 /** An API key in the team, holding the permissions given, as its owner does. */
 const seedKey = async (id: string, permissionIds: string[]) => {
@@ -109,5 +137,95 @@ describe.skipIf(!testDatabaseUrl)("sending through the MCP server against Postgr
     expect(structuredContent.schema.properties).toHaveProperty("lines");
     expect(structuredContent.schema.$defs).toBeObject();
     expect((await callTool("describe_document", { documentType: "xml" })).structuredContent.schema).toMatchObject({ type: "string" });
+  });
+
+  it("prepares a document without sending it, and sums it up for the user", async () => {
+    const { isError, structuredContent } = await callTool("prepare_send", { companyId: COMPANY_ID, ...peppolInvoice() });
+
+    expect(isError).toBeFalsy();
+    expect(structuredContent).toMatchObject({
+      document: { documentNumber: "INV-1", type: "invoice" },
+      email: null,
+      peppolRoutingFailure: null,
+      recipient: PEPPOL_RECIPIENT,
+      validation: "valid",
+    });
+    expect(structuredContent.handle).toStartWith("prs_");
+    expect(new Date(structuredContent.expiresAt).getTime() - Date.now()).toBeWithin(14 * 60 * 1_000, 15 * 60 * 1_000 + 1);
+    expect(await count("peppol_transmitted_documents")).toBe(0);
+  });
+
+  it("says what's wrong with a document that can't be sent", async () => {
+    const { isError, structuredContent } = await callTool("prepare_send", {
+      companyId: COMPANY_ID,
+      ...invoice(),
+      email: undefined,
+    });
+
+    expect(isError).toBe(true);
+    expect(structuredContent).toEqual({
+      code: "invalid_input",
+      message: "Either recipient (for Peppol) or email.to (for email delivery) must be provided.",
+    });
+  });
+
+  it("names the field of a document that doesn't match its type", async () => {
+    const { document } = invoice();
+    const { isError, structuredContent } = await callTool("prepare_send", {
+      companyId: COMPANY_ID,
+      ...invoice(),
+      document: { ...document, invoiceNumber: undefined },
+    });
+
+    expect(isError).toBe(true);
+    expect(structuredContent.code).toBe("invalid_input");
+    expect(structuredContent.message).toContain("document.invoiceNumber");
+  });
+
+  it("says what a document needs that its format can't do without", async () => {
+    const { document } = invoice();
+    const { isError, structuredContent } = await callTool("prepare_send", {
+      companyId: COMPANY_ID,
+      ...invoice(),
+      document: { ...document, lines: [{ ...document.lines[0], vat: { category: "E", percentage: "0.00" } }] },
+    });
+
+    expect(isError).toBe(true);
+    expect(structuredContent).toEqual({ code: "invalid_input", message: "Exemption reason code or reason is required for tax category E" });
+  });
+
+  it("doesn't prepare for a company of another team", async () => {
+    await pool.query(`INSERT INTO teams (id, name) VALUES ('team_other', 'Other')`);
+    await pool.query(
+      `INSERT INTO peppol_companies (id, team_id, name, address, postal_code, city, country, access_point_provider, smp_provider)
+       VALUES ('c_other', 'team_other', 'Other BV', 'Kouter 2', '9000', 'Gent', 'BE', 'recommand-ap1', 'recommand-smp1')`
+    );
+
+    expect((await callTool("prepare_send", { companyId: "c_other", ...invoice() })).structuredContent.code).toBe("not_found");
+  });
+
+  it("doesn't prepare for a team that can't exchange documents, or for a company it must verify first", async () => {
+    const prepared = await count("peppol_prepared_sends");
+    const entitlements = await import("@peppol/lib/entitlements");
+    entitlements.registerEntitlementResolver(async () => ({ allowed: false, message: "Upgrade to send documents." }));
+    try {
+      expect((await callTool("prepare_send", { companyId: COMPANY_ID, ...invoice() })).structuredContent).toEqual({
+        code: "not_allowed",
+        message: "Upgrade to send documents.",
+      });
+    } finally {
+      entitlements.clearEntitlementResolver();
+    }
+
+    await pool.query(`UPDATE peppol_team_extensions SET verification_requirements = 'strict' WHERE id = $1`, [TEAM_ID]);
+    await pool.query(`UPDATE peppol_companies SET is_verified = false WHERE id = $1`, [COMPANY_ID]);
+    try {
+      expect((await callTool("prepare_send", { companyId: COMPANY_ID, ...invoice() })).structuredContent.code).toBe("not_allowed");
+    } finally {
+      await pool.query(`UPDATE peppol_team_extensions SET verification_requirements = DEFAULT WHERE id = $1`, [TEAM_ID]);
+      await pool.query(`UPDATE peppol_companies SET is_verified = true WHERE id = $1`, [COMPANY_ID]);
+    }
+
+    expect(await count("peppol_prepared_sends")).toBe(prepared);
   });
 });
