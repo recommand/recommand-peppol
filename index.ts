@@ -1,6 +1,7 @@
 import type { RecommandApp } from "@recommand/lib/app";
 import { Server } from "@recommand/lib/api";
 import { Logger } from "@recommand/lib/logger";
+import { withSortedParameters } from "./utils/openapi";
 import reportingServer from "./api/reporting";
 import companiesServer from "./api/companies";
 import labelsServer from "@peppol/api/labels";
@@ -205,10 +206,12 @@ For additional support or questions, don't hesitate to contact our support team.
     },
   };
   // The routes do not change once the server runs, so generate the document
-  // once and serve it from both routes.
+  // once and serve it from both routes, with every operation's parameters in a
+  // fixed order (see withSortedParameters).
   let openApiDocument: ReturnType<typeof generateSpecs> | undefined;
   const getOpenApiDocument = (c: Context) => {
-    openApiDocument ??= generateSpecs(server, specsOptions, c).catch(
+    openApiDocument ??= generateSpecs(server, specsOptions, c).then(
+      withSortedParameters,
       (error) => {
         openApiDocument = undefined;
         throw error;
