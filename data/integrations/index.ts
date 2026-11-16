@@ -1,6 +1,6 @@
 import { activatedIntegrations, integrationTaskLogs } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { eq, and, sql, isNotNull, desc, asc } from "drizzle-orm";
+import { eq, and, sql, isNotNull, desc, asc, count } from "drizzle-orm";
 import { configurationSchema } from "@peppol/types/integration/configuration";
 import { stateSchema } from "@peppol/types/integration/state";
 import { type IntegrationManifest, type IntegrationConfiguration, type IntegrationState, type IntegrationEvent, taskLogSchema } from "@peppol/types/integration";
@@ -365,7 +365,7 @@ export async function getIntegrationTaskLogs(
   }
 
   const total = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: count() })
     .from(integrationTaskLogs)
     .where(eq(integrationTaskLogs.integrationId, integrationId))
     .then((rows) => rows[0].count);

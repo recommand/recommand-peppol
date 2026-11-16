@@ -1,6 +1,6 @@
 import { supportingDataSuppliers, supportingDataSupplierLabels, labels } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { eq, and, sql, desc, inArray, or, ilike, SQL } from "drizzle-orm";
+import { eq, and, sql, desc, inArray, or, ilike, SQL, count } from "drizzle-orm";
 import type { Label } from "@peppol/data/labels";
 import { UserFacingError } from "@peppol/utils/util";
 
@@ -71,7 +71,7 @@ export async function getSuppliers(
   }
 
   const total = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: count() })
     .from(supportingDataSuppliers)
     .where(and(...whereClause))
     .then((rows) => rows[0].count);

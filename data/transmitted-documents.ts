@@ -1,6 +1,6 @@
 import { documentDeliveries, labels, supportedDocumentTypeEnum, transmittedDocuments, transmittedDocumentLabels } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { eq, and, or, sql, desc, isNull, isNotNull, inArray, ilike, gte, lt } from "drizzle-orm";
+import { eq, and, or, sql, desc, isNull, isNotNull, inArray, ilike, gte, lt, count } from "drizzle-orm";
 import type { Label } from "@peppol/data/labels";
 import type { FrenchReportingStatusSummary } from "./fr-reporting-submissions";
 import type { DeliveryStatus, DeliverySummary } from "./deliveries/model";
@@ -248,7 +248,7 @@ export async function getTransmittedDocuments(
 
   // Get total count
   const total = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: count() })
     .from(transmittedDocuments)
     .where(and(...whereClause))
     .then((rows) => rows[0].count);

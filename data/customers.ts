@@ -1,6 +1,6 @@
 import { supportingDataCustomers } from "@peppol/db/schema";
 import { db } from "@recommand/db";
-import { eq, and, sql, desc, or, ilike, SQL } from "drizzle-orm";
+import { eq, and, desc, or, ilike, SQL, count } from "drizzle-orm";
 import { UserFacingError } from "@peppol/utils/util";
 
 export type Customer = typeof supportingDataCustomers.$inferSelect;
@@ -36,7 +36,7 @@ export async function getCustomers(
   }
 
   const total = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({ count: count() })
     .from(supportingDataCustomers)
     .where(and(...whereClause))
     .then((rows) => rows[0].count);
