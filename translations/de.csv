@@ -1037,7 +1037,7 @@ Delete integrations,Integrationen löschen
 Read integrations,Integrationen anzeigen
 See integrations and their task logs,Integrationen und ihre Aufgabenprotokolle anzeigen
 Manage integrations,Integrationen verwalten
-Set up and change integrations\, and reset their state,Integrationen einrichten und ändern und ihren Status zurücksetzen
+Set up and change integrations\, and reset their state; an integration can do everything integrations may\, such as sending documents\, changing customers and suppliers\, and submitting e-reporting,Integrationen einrichten und ändern und ihren Status zurücksetzen; eine Integration kann alles\, was Integrationen dürfen\, etwa Dokumente senden\, Kunden und Lieferanten ändern und E-Reporting einreichen
 Delete labels,Labels löschen
 Read labels,Labels anzeigen
 Manage labels,Labels verwalten
