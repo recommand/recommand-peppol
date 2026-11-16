@@ -284,7 +284,10 @@ export async function sendingPipeline(c: SendingContext) {
         throw new SendingFailure(
           `Failed to send document over Peppol network. ${peppolFailure}`,
           422,
-          { deliveryFailure: { channel: "peppol", category: peppolFailureCategory ?? "other" } },
+          {
+            deliveryFailure: { channel: "peppol", category: peppolFailureCategory ?? "other" },
+            outcomeUnknown,
+          },
         );
       }
     }
@@ -322,9 +325,12 @@ export async function sendingPipeline(c: SendingContext) {
       throw new SendingFailure(
         `Failed to send document over Peppol network and email. ${peppolFailure} ${emailFailure}`,
         422,
-        peppolFailureCategory
-          ? { deliveryFailure: { channel: "peppol", category: peppolFailureCategory } }
-          : {},
+        {
+          ...(peppolFailureCategory
+            ? { deliveryFailure: { channel: "peppol", category: peppolFailureCategory } }
+            : {}),
+          outcomeUnknown,
+        },
       );
     }
 
@@ -431,6 +437,13 @@ export async function sendingPipeline(c: SendingContext) {
       `Failed to send document over Peppol network. Error: \`\`\`\n${error}\n\`\`\``,
       "error",
     );
+
+    // After a channel was tried, it may have delivered the document, as for a failed
+    // channel whose outcome is unknown
+    if (channelAttempted) {
+      return c.json({ ...actionFailure("Failed to send document"), outcomeUnknown: true }, 422);
+    }
+
     return c.json(
       actionFailure(
         error instanceof Error ? error.message : "Failed to send document",
