@@ -24,7 +24,7 @@ import { memberPermission, registerPermission } from "@core/lib/permissions";
   { description: "Add and change a company's Peppol identifiers", id: "exchange.identifiers.write", name: "Manage identifiers", resource: "Identifiers" },
   { description: "Delete integrations, which stops them syncing", id: "exchange.integrations.delete", name: "Delete integrations", resource: "Integrations" },
   { description: "See integrations and their task logs", id: "exchange.integrations.read", name: "Read integrations", resource: "Integrations" },
-  { description: "Set up and change integrations, and reset their state", id: "exchange.integrations.write", name: "Manage integrations", resource: "Integrations" },
+  { description: "Set up and change integrations, and reset their state; an integration can do everything integrations may, such as sending documents, changing customers and suppliers, and submitting e-reporting", id: "exchange.integrations.write", name: "Manage integrations", resource: "Integrations" },
   { description: "Delete labels, which removes them from documents and suppliers", id: "exchange.labels.delete", name: "Delete labels", resource: "Labels" },
   { description: "See the labels used to sort documents and suppliers", id: "exchange.labels.read", name: "Read labels", resource: "Labels" },
   { description: "Create and change labels", id: "exchange.labels.write", name: "Manage labels", resource: "Labels" },
