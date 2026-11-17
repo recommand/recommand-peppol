@@ -95,12 +95,12 @@ describe("a send that fails", () => {
     expect("deliveryFailure" in response.body).toBe(false);
   });
 
-  it("answers as before when the send fails unexpectedly before any channel was tried", async () => {
+  it("answers 500 when the send fails unexpectedly before any channel was tried", async () => {
     failUnexpectedly(companyIdentifiers, "getSendingCompanyIdentifier");
 
     const response = await send(peppolInvoice());
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(500);
     expect("outcomeUnknown" in response.body).toBe(false);
     expect(sendAs4).not.toHaveBeenCalled();
   });
