@@ -4,6 +4,7 @@ import {
 } from "@core/lib/api-docs";
 import {
   describeIdempotencyConflictResponse,
+  describeIdempotentUnprocessableResponse,
   describeIdempotentValidationErrorResponse,
   idempotencyKeyParameter,
   idempotencyResponseHeaders,
@@ -97,9 +98,8 @@ const routeDescription = describeRoute({
     ...describeIdempotentValidationErrorResponse("Invalid document data provided, or an invalid `Idempotency-Key` (code `invalid_idempotency_key`)"),
     ...describeErrorResponse(401, "Unauthorized"),
     ...describeIdempotencyConflictResponse(),
-    ...describeErrorResponse(
-      422,
-      "Recipient could not be reached and no email fallback was configured or possible. The body carries `deliveryFailure` with the channel and the failure category, the same category a later `document.delivery_status_changed` event would carry.",
+    ...describeIdempotentUnprocessableResponse(
+      "Recipient could not be reached and no email fallback was configured or possible. The body carries `deliveryFailure` with the channel and the failure category, the same category a later `document.delivery_status_changed` event would carry. Also answered, with code `idempotency_conflict`, when the `Idempotency-Key` was already used for a different request.",
     ),
   },
 });

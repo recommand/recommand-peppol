@@ -223,8 +223,9 @@ describe.skipIf(!testDatabaseUrl)("sending with an Idempotency-Key against Postg
     await send(invoice("INV-1"), "one-key");
     const other = await send(invoice("INV-2"), "one-key");
 
-    expect(other.status).toBe(409);
+    expect(other.status).toBe(422);
     expect(other.body.code).toBe("idempotency_conflict");
+    expect(other.headers.get("Link")).toBe('<https://docs.recommand.eu/docs/sending-invoices#retry-safely>; rel="describedby"');
     expect(await count("peppol_transmitted_documents")).toBe(1);
   });
 
@@ -399,7 +400,7 @@ describe.skipIf(!testDatabaseUrl)("sending with an Idempotency-Key against Postg
     await send(invoice(), "one-route");
     const other = await send(invoice(), "one-route", { path: "sendDocument" });
 
-    expect(other.status).toBe(409);
+    expect(other.status).toBe(422);
     expect(other.body.code).toBe("idempotency_conflict");
     expect(await count("peppol_transmitted_documents")).toBe(1);
   });
