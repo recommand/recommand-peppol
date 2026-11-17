@@ -125,6 +125,10 @@ const routeDescription = describeRoute({
       "Recipient could not be reached and no email fallback was configured or possible, or the send failed after a channel was tried. The body carries `deliveryFailure` with the channel and the failure category, the same category a later `document.delivery_status_changed` event would carry, and `outcomeUnknown`, which says whether the document may have been delivered all the same. Also answered, with code `idempotency_conflict`, when the `Idempotency-Key` was already used for a different request.",
       sendDocumentFailureResponse,
     ),
+    ...describeErrorResponse(
+      500,
+      "The send failed on Recommand's side before the document was handed to any channel. Nothing went out, so the same request can be sent again, under the same `Idempotency-Key` too.",
+    ),
   },
 });
 

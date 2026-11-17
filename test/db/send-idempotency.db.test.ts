@@ -287,10 +287,13 @@ describe.skipIf(!testDatabaseUrl)("sending with an Idempotency-Key against Postg
     expect(await count("peppol_transmitted_documents")).toBe(1);
   });
 
-  it("frees a key after an unexpected error before any channel was tried, since nothing went out", async () => {
+  it("frees a key after a refusal before any channel, with the error's instruction", async () => {
     await pool.query("DELETE FROM peppol_company_identifiers WHERE company_id = $1", [COMPANY_ID]);
     try {
-      expect((await send(peppolInvoice(), "before-any-channel")).status).toBe(400);
+      // The company can fix this itself, so the answer says how
+      const refused = await send(peppolInvoice(), "before-any-channel");
+      expect(refused.status).toBe(400);
+      expect(refused.body.errors.root[0]).toContain("No sending company identifier found");
     } finally {
       await pool.query(
         `INSERT INTO peppol_company_identifiers (id, company_id, scheme, identifier) VALUES ($1, $2, '0208', '0123456749')`,
@@ -299,6 +302,20 @@ describe.skipIf(!testDatabaseUrl)("sending with an Idempotency-Key against Postg
     }
 
     expect((await send(peppolInvoice(), "before-any-channel")).status).toBe(200);
+    expect(handedToAccessPoint).toBe(1);
+  });
+
+  it("answers a failure on Recommand's side before any channel with a 500 and frees the key, since nothing went out", async () => {
+    await pool.query("ALTER TABLE peppol_company_identifiers RENAME TO peppol_company_identifiers_away");
+    try {
+      const failed = await send(peppolInvoice(), "server-side-failure");
+      expect(failed.status).toBe(500);
+      expect(JSON.stringify(failed.body)).not.toContain("peppol_company_identifiers");
+    } finally {
+      await pool.query("ALTER TABLE peppol_company_identifiers_away RENAME TO peppol_company_identifiers");
+    }
+
+    expect((await send(peppolInvoice(), "server-side-failure")).status).toBe(200);
     expect(handedToAccessPoint).toBe(1);
   });
 
