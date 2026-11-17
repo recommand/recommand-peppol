@@ -91,9 +91,9 @@ const sendDocumentFailureResponse = z.object({
     description:
       "Why the Peppol delivery failed. Absent when the document was only to be sent by email, or when the send failed for another reason after a channel was tried.",
   }),
-  outcomeUnknown: z.boolean().openapi({
+  outcomeUnknown: z.boolean().optional().openapi({
     description:
-      "Whether a channel may have delivered the document although the request failed: the connection to the access point was lost or it didn't say how the transmission went, the mail service didn't confirm an email, or the send failed on Recommand's side after a channel was tried. When true, the document may have been delivered, and after a failure on Recommand's side it may have been stored as well: check the company's documents and with the recipient before sending it again.",
+      "Set on every `422` of a failed send, and absent on the `422` with code `idempotency_conflict`, which is about the `Idempotency-Key` rather than the send. Whether a channel may have delivered the document although the request failed: the connection to the access point was lost or it didn't say how the transmission went, the mail service didn't confirm an email, or the send failed on Recommand's side after a channel was tried. When true, the document may have been delivered, and after a failure on Recommand's side it may have been stored as well: check the company's documents and with the recipient before sending it again.",
     examples: [false],
   }),
 });
