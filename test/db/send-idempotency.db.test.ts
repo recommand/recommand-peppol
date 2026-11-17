@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Hono } from "hono";
 import type { Pool } from "pg";
@@ -317,6 +317,104 @@ describe.skipIf(!testDatabaseUrl)("sending with an Idempotency-Key against Postg
 
     expect((await send(peppolInvoice(), "server-side-failure")).status).toBe(200);
     expect(handedToAccessPoint).toBe(1);
+  });
+
+  describe("alerting", () => {
+    /** Waits until `condition` holds, and fails when it doesn't within a second. */
+    const waitUntil = async (condition: () => boolean, attempts = 100): Promise<void> => {
+      if (condition()) {
+        return;
+      }
+
+      if (attempts === 0) {
+        throw new Error("Timed out waiting for an alert");
+      }
+
+      await Bun.sleep(10);
+
+      return waitUntil(condition, attempts - 1);
+    };
+
+    /**
+     * Sends a request while Telegram, where system alerts go, takes note of each alert
+     * it's handed, and returns the alerts the request raised. The send doesn't wait for
+     * its alert, so a marker alert is raised after it and waited for: the request's
+     * alert, raised before the marker, is in by then.
+     */
+    const sendNotingAlerts = async (body: unknown, idempotencyKey: string) => {
+      const alerts: string[] = [];
+      const environment = { TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS: process.env.TELEGRAM_CHAT_IDS };
+      process.env.TELEGRAM_BOT_TOKEN = "test-token";
+      process.env.TELEGRAM_CHAT_IDS = "1";
+      const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (input: RequestInfo | URL, init?: RequestInit) => {
+        alerts.push(String(init?.body ?? input));
+
+        return Response.json({ ok: true, result: { date: 0, message_id: 1, text: "" } });
+      }) as typeof fetch);
+      try {
+        const response = await send(body, idempotencyKey);
+        const { sendSystemAlert } = await import("../../utils/system-notifications/telegram");
+        sendSystemAlert("Marker", "Raised after the request", "info");
+        await waitUntil(() => alerts.some((alert) => alert.includes("Marker")));
+
+        return { alerts: alerts.filter((alert) => !alert.includes("Marker")), response };
+      } finally {
+        fetchSpy.mockRestore();
+        // Assigning `undefined` would store the string "undefined", so an unset variable is deleted again
+        Object.entries(environment).forEach(([name, value]) => {
+          if (value === undefined) {
+            delete process.env[name];
+          } else {
+            process.env[name] = value;
+          }
+        });
+      }
+    };
+
+    const lastSendAudit = async () =>
+      (await pool.query("SELECT reason_code FROM audit_events WHERE subsystem = 'peppol.documents' ORDER BY occurred_at DESC LIMIT 1")).rows[0]?.reason_code;
+
+    it("doesn't alert on an error the company can fix, and audits it as a refusal", async () => {
+      await pool.query("DELETE FROM peppol_company_identifiers WHERE company_id = $1", [COMPANY_ID]);
+      try {
+        const { alerts, response } = await sendNotingAlerts(peppolInvoice(), "fixable-refusal");
+        expect(response.status).toBe(400);
+        expect(alerts).toEqual([]);
+        expect(await lastSendAudit()).toBe("send_document_refused");
+      } finally {
+        await pool.query(
+          `INSERT INTO peppol_company_identifiers (id, company_id, scheme, identifier) VALUES ($1, $2, '0208', '0123456749')`,
+          [`ci_${COMPANY_ID}`, COMPANY_ID]
+        );
+      }
+    });
+
+    it("still alerts on an error that says what to correct once a channel was tried, since the document may have gone out", async () => {
+      const { UserFacingError } = await import("../../utils/util");
+      accessPointAnswer = () => {
+        throw new UserFacingError("The access point asks for a correction");
+      };
+
+      const { alerts, response } = await sendNotingAlerts(peppolInvoice(), "fixable-after-channel");
+      expect(response.status).toBe(422);
+      expect(response.body.outcomeUnknown).toBe(true);
+      expect(alerts).toHaveLength(1);
+      expect(alerts[0]).toContain("Document Sending Failed");
+      expect(await lastSendAudit()).toBe("send_document_failed");
+    });
+
+    it("still alerts on a failure on Recommand's side", async () => {
+      await pool.query("ALTER TABLE peppol_company_identifiers RENAME TO peppol_company_identifiers_away");
+      try {
+        const { alerts, response } = await sendNotingAlerts(peppolInvoice(), "server-side-alert");
+        expect(response.status).toBe(500);
+        expect(alerts).toHaveLength(1);
+        expect(alerts[0]).toContain("Document Sending Failed");
+        expect(await lastSendAudit()).toBe("send_document_failed");
+      } finally {
+        await pool.query("ALTER TABLE peppol_company_identifiers_away RENAME TO peppol_company_identifiers");
+      }
+    });
   });
 
   it("repeats the failure when no email was confirmed by the mail service, since it may have sent one", async () => {
