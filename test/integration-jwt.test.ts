@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { calculateJwkThumbprint, decodeProtectedHeader, exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
+import { calculateJwkThumbprint, decodeProtectedHeader, exportJWK, generateKeyPair, SignJWT } from "jose";
 import jwks from "../api/integrations/jwks";
 import type { ActivatedIntegration } from "../data/integrations";
 import { generateIntegrationJwt, verifyIntegrationJwt } from "../data/integrations/auth";
@@ -11,8 +11,7 @@ const integration = {
   teamId: "team",
 } as ActivatedIntegration;
 
-const SETTINGS = ["INTEGRATIONS_JWKS", "INTEGRATIONS_PRIVATE_KEY", "SIGNING_KEYS"] as const;
-const previous = Object.fromEntries(SETTINGS.map((name) => [name, process.env[name]]));
+const previous = process.env.SIGNING_KEYS;
 
 let kid: string;
 let privateKey: CryptoKey;
@@ -27,26 +26,21 @@ const otherToken = async (header: { kid?: string; typ?: string }, issuer = "http
     .sign(privateKey);
 
 beforeAll(async () => {
-  // The key set from `SIGNING_KEYS` would take the place of the keys this test sets
-  delete process.env.SIGNING_KEYS;
   const keys = await generateKeyPair("RS256", { extractable: true });
   privateKey = keys.privateKey;
   const { publicKey } = keys;
   const { e, kty, n } = await exportJWK(publicKey);
   publicJwk = { e, kty, n };
-  process.env.INTEGRATIONS_PRIVATE_KEY = await exportPKCS8(privateKey);
-  process.env.INTEGRATIONS_JWKS = JSON.stringify({ keys: [{ alg: "RS256", e, kty, n, use: "sig" }] });
+  process.env.SIGNING_KEYS = JSON.stringify({ keys: [await exportJWK(privateKey)] });
   kid = await calculateJwkThumbprint({ e, kty, n });
 });
 
 afterAll(() => {
-  SETTINGS.forEach((name) => {
-    if (previous[name] === undefined) {
-      delete process.env[name];
-    } else {
-      process.env[name] = previous[name];
-    }
-  });
+  if (previous === undefined) {
+    delete process.env.SIGNING_KEYS;
+  } else {
+    process.env.SIGNING_KEYS = previous;
+  }
 });
 
 describe("integration tokens", () => {
