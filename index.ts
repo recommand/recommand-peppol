@@ -116,6 +116,7 @@ For additional support or questions, don't hesitate to contact our support team.
           jwt: {
             type: "http",
             scheme: "bearer",
+            bearerFormat: "JWT",
             description:
               "JWT authentication. Create a new JWT token in the Recommand dashboard.",
           },
