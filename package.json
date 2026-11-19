@@ -39,7 +39,7 @@
     "drizzle-orm": "0.45.4",
     "fast-xml-parser": "^5.11.2",
     "hono": "^4.13.13",
-    "hono-openapi": "^0.4.8",
+    "hono-openapi": "^1.6.0",
     "jose": "^6.2.12",
     "jszip": "^3.10.2",
     "lucide-react": "^0.577.0",

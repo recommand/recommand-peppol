@@ -13,10 +13,7 @@ import {
     resolveDocumentOriginalPayload,
     resolveDocumentXmlAndAttachments,
 } from "@peppol/data/offload/storage";
-import {
-    describeErrorResponse,
-    parameterSchema,
-} from "@core/lib/api-docs";
+import { describeErrorResponse } from "@core/lib/api-docs";
 import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import JSZip from "jszip";
 import { renderDocumentPdf } from "@peppol/utils/document-renderer";
@@ -42,10 +39,10 @@ const downloadPackageRouteDescription = describeRoute({
             headers: {
                 "Content-Disposition": {
                     description: "Offers the zip as a download named after the document.",
-                    schema: parameterSchema({
+                    schema: {
                         examples: ["attachment; filename=\"doc_01JQZ8X0M4T7RB6K9V2NDHW3PA.zip\""],
                         type: "string",
-                    }),
+                    },
                 },
             },
         },
