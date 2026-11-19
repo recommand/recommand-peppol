@@ -51,7 +51,7 @@ type CreateIntegrationContext = Context<AuthenticatedUserContext & Authenticated
 
 const _createIntegrationMinimal = server.post(
     "/integrations",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requireIntegrationAccess(),
     requirePermission("exchange.integrations.write"),
     createIntegrationRouteDescription,

@@ -41,7 +41,7 @@ type AssignLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 
 const _assignLabelMinimal = server.post(
     "/suppliers/:supplierId/labels/:labelId",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.suppliers.write"),
     assignLabelRouteDescription,
     zodValidator("param", assignLabelParamSchema),

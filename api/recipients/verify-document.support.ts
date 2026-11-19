@@ -49,7 +49,7 @@ type VerifyDocumentSupportContext = Context<AuthenticatedUserContext & Authentic
 
 const _verifyDocumentSupportMinimal = server.post(
     "/verify-document-support",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     verifyDocumentSupportRouteDescription,
     zodValidator("json", verifyDocumentSupportJsonBodySchema),
     _verifyDocumentSupportImplementation,
@@ -57,7 +57,7 @@ const _verifyDocumentSupportMinimal = server.post(
 
 const _verifyDocumentSupport = server.post(
     "/verifyDocumentSupport",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     describeRoute({hide: true}),
     zodValidator("json", verifyDocumentSupportJsonBodySchema),
     _verifyDocumentSupportImplementation,

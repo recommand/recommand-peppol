@@ -1,8 +1,12 @@
 import { audit } from "@core/lib/audit";
 import {
   checkTeamAccess,
+  getTeamHeader,
+  refuseTeamMismatch,
   requireAuth,
   requireTeamAccess as requireCoreTeamAccess,
+  TEAM_HEADER,
+  withTeamHeader,
   type AuthenticatedTeamContext,
   type AuthenticatedUserContext,
   type TeamAccessOptions,
@@ -70,6 +74,8 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
       return c.json(actionFailure("Company not found"), 404);
     }
 
+    // The answer can depend on `Recommand-Team`, so caches keep the answers apart
+    c.header("Vary", TEAM_HEADER, { append: true });
     const access = await checkTeamAccess(c, company.teamId);
     // Answered as Core's `requireTeamAccess` answers an OAuth grant: the user can grant
     // the client a team they're a member of on the consent screen, but not another team
@@ -89,6 +95,13 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
 
     if (!access.allowed) {
       return c.json(actionFailure("Unauthorized"), 401);
+    }
+
+    // The company decides the team, so a header naming another one is refused, never applied.
+    // Only once the request may act in the company's team, so no one else learns which team it's in.
+    const headerTeamId = getTeamHeader(c);
+    if (headerTeamId && headerTeamId !== company.teamId) {
+      return refuseTeamMismatch(c);
     }
 
     // Get team based on company
@@ -248,7 +261,7 @@ const findCompanyTeamId = async (c: Context): Promise<string | null> => {
 export const requireTeamAccess = (options: TeamAccessOptions = {}) => {
   const check = requireCoreTeamAccess({ findTeamId: findCompanyTeamId, ...options });
 
-  return createMiddleware<AuthenticatedUserContext & AuthenticatedTeamContext>(async (c, next) => {
+  const middleware = createMiddleware<AuthenticatedUserContext & AuthenticatedTeamContext>(async (c, next) => {
     const response = await check(c, next);
     // With a company in the path, `team_required` means findCompanyTeamId found no such company
     if (response?.status === 400 && c.req.param("companyId") && (await response.clone().json()).code === "team_required") {
@@ -257,6 +270,8 @@ export const requireTeamAccess = (options: TeamAccessOptions = {}) => {
 
     return response;
   });
+
+  return options.documentTeamHeader ? withTeamHeader(middleware) : middleware;
 };
 
 export function requireIntegrationSupportedTeamAccess(options: TeamAccessOptions = {}) {

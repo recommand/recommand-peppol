@@ -61,7 +61,7 @@ type UpdateLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 
 const _updateLabelMinimal = server.put(
     "/labels/:labelId",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.labels.write"),
     updateLabelRouteDescription,
     zodValidator("param", updateLabelParamSchema),

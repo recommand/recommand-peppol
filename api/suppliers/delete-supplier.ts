@@ -36,7 +36,7 @@ type DeleteSupplierContext = Context<AuthenticatedUserContext & AuthenticatedTea
 
 const _deleteSupplierMinimal = server.delete(
   "/suppliers/:supplierId",
-  requireIntegrationSupportedTeamAccess(),
+  requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
   requirePermission("exchange.suppliers.delete"),
   deleteSupplierRouteDescription,
   zodValidator("param", supplierIdParamSchema),

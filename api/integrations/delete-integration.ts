@@ -37,7 +37,7 @@ type DeleteIntegrationContext = Context<AuthenticatedUserContext & Authenticated
 
 const _deleteIntegrationMinimal = server.delete(
     "/integrations/:integrationId",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requireIntegrationAccess(),
     requirePermission("exchange.integrations.delete"),
     deleteIntegrationRouteDescription,

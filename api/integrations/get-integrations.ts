@@ -37,7 +37,7 @@ type GetIntegrationsContext = Context<AuthenticatedUserContext & AuthenticatedTe
 
 const _getIntegrationsMinimal = server.get(
     "/integrations",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requireIntegrationAccess(),
     requirePermission("exchange.integrations.read"),
     getIntegrationsRouteDescription,

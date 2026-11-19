@@ -39,7 +39,7 @@ type GetWebhookContext = Context<AuthenticatedUserContext & AuthenticatedTeamCon
 
 const _getWebhookMinimal = server.get(
     "/webhooks/:webhookId",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.webhooks.read"),
     getWebhookRouteDescription,
     zodValidator("param", getWebhookParamSchema),

@@ -30,7 +30,7 @@ const _deleteAllTransmittedDocuments = server.delete(
 
 const _deleteAllTransmittedDocumentsMinimal = server.delete(
     "/documents/all",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requireDocumentAccess(),
     requirePermission("exchange.documents.delete"),
     describeRoute({hide: true}),

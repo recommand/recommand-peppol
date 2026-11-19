@@ -36,7 +36,7 @@ type ResetIntegrationStateContext = Context<AuthenticatedUserContext & Authentic
 
 const _resetIntegrationStateMinimal = server.post(
     "/integrations/:integrationId/reset-state",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requireIntegrationAccess(),
     requirePermission("exchange.integrations.write"),
     resetIntegrationStateRouteDescription,

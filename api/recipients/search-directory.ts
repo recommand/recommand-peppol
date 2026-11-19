@@ -54,7 +54,7 @@ type SearchDirectoryContext = Context<AuthenticatedUserContext & AuthenticatedTe
 
 const _searchDirectoryMinimal = server.post(
     "/search-peppol-directory",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     searchDirectoryRouteDescription,
     zodValidator("json", searchDirectoryJsonBodySchema),
     _searchDirectoryImplementation,
@@ -62,7 +62,7 @@ const _searchDirectoryMinimal = server.post(
 
 const _searchDirectory = server.post(
     "/searchPeppolDirectory",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     describeRoute({hide: true}),
     zodValidator("json", searchDirectoryJsonBodySchema),
     _searchDirectoryImplementation,

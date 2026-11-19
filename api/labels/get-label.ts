@@ -38,7 +38,7 @@ type GetLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamConte
 
 const _getLabelMinimal = server.get(
     "/labels/:labelId",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.labels.read"),
     getLabelRouteDescription,
     zodValidator("param", getLabelParamSchema),

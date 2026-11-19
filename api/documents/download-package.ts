@@ -72,7 +72,7 @@ type DownloadPackageContext = Context<AuthenticatedUserContext & AuthenticatedTe
 
 const _downloadPackageMinimal = server.get(
     "/documents/:documentId/download-package",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requireDocumentAccess(),
     requirePermission("exchange.documents.read"),
     downloadPackageRouteDescription,

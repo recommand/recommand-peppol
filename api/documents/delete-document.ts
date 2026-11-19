@@ -44,7 +44,7 @@ type DeleteTransmittedDocumentContext = Context<AuthenticatedUserContext & Authe
 
 const _deleteTransmittedDocumentMinimal = server.delete(
     "/documents/:documentId",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requireDocumentAccess(),
     requirePermission("exchange.documents.delete"),
     deleteTransmittedDocumentRouteDescription,

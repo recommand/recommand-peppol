@@ -40,7 +40,7 @@ type UnassignLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 
 const _unassignLabelMinimal = server.delete(
     "/suppliers/:supplierId/labels/:labelId",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.suppliers.write"),
     unassignLabelRouteDescription,
     zodValidator("param", unassignLabelParamSchema),

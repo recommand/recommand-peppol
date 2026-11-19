@@ -66,7 +66,7 @@ type GetCustomersContext = Context<
 
 const _getCustomersMinimal = server.get(
   "/customers",
-  requireIntegrationSupportedTeamAccess(),
+  requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
   requirePermission("exchange.customers.read"),
   getCustomersRouteDescription,
   zodValidator("query", getCustomersQuerySchema),

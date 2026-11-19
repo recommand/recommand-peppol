@@ -43,7 +43,7 @@ type GetIntegrationTaskLogsContext = Context<AuthenticatedUserContext & Authenti
 
 const _getIntegrationTaskLogsMinimal = server.get(
     "/integrations/:integrationId/task-logs",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requireIntegrationAccess(),
     requirePermission("exchange.integrations.read"),
     getIntegrationTaskLogsRouteDescription,

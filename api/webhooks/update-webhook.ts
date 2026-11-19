@@ -58,7 +58,7 @@ type UpdateWebhookContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 
 const _updateWebhookMinimal = server.put(
     "/webhooks/:webhookId",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.webhooks.write"),
     updateWebhookRouteDescription,
     zodValidator("param", updateWebhookParamSchema),

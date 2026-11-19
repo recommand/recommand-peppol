@@ -34,7 +34,7 @@ type GetSupplierContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 
 const _getSupplierMinimal = server.get(
     "/suppliers/:supplierId",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.suppliers.read"),
     getSupplierRouteDescription,
     zodValidator("param", supplierIdParamSchema),

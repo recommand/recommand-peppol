@@ -38,7 +38,7 @@ type DeleteWebhookContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 
 const _deleteWebhookMinimal = server.delete(
     "/webhooks/:webhookId",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.webhooks.delete"),
     deleteWebhookRouteDescription,
     zodValidator("param", deleteWebhookParamSchema),

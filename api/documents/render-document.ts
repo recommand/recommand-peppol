@@ -86,7 +86,7 @@ type RenderDocumentContext = Context<
 
 const _renderDocumentMinimal = server.get(
   "/documents/:documentId/render/:type",
-  requireTeamAccess(),
+  requireTeamAccess({ documentTeamHeader: true }),
   requireDocumentAccess(),
   requirePermission("exchange.documents.read"),
   renderDocumentRouteDescription,

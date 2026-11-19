@@ -49,7 +49,7 @@ type UpdateIntegrationContext = Context<AuthenticatedUserContext & Authenticated
 
 const _updateIntegrationMinimal = server.put(
     "/integrations/:integrationId",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requireIntegrationAccess(),
     requirePermission("exchange.integrations.write"),
     updateIntegrationRouteDescription,

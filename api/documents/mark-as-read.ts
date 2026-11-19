@@ -50,7 +50,7 @@ type MarkAsReadContext = Context<AuthenticatedUserContext & AuthenticatedTeamCon
 
 const _markAsReadMinimal = server.post(
     "/documents/:documentId/mark-as-read",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requireDocumentAccess(),
     requirePermission("exchange.documents.mark_as_read"),
     markAsReadRouteDescription,

@@ -49,7 +49,7 @@ type GetInboxContext = Context<AuthenticatedUserContext & AuthenticatedTeamConte
 
 const _getInboxMinimal = server.get(
     "/inbox",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requireDocumentAccess(),
     requirePermission("exchange.documents.read"),
     getInboxRouteDescription,
