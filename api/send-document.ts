@@ -20,6 +20,7 @@ import { sendDocumentSchema } from "@peppol/utils/parsing/send-document";
 import { Server } from "@recommand/lib/api";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import { z } from "zod";
 import { captureSendDocumentRecording } from "@peppol/data/send-document-recording";
 import { trackSendDocument } from "@peppol/utils/metrics";
@@ -110,6 +111,7 @@ const sendDocumentSuccess = describeSuccessResponse("Successfully sent document"
 
 const routeDescription = describeRoute({
   operationId: "sendDocument",
+  ...irreversible,
   description:
     "Send a document to a customer over the Peppol network, by email, or both. The document type identifier and process are resolved against the recipient unless you name both yourself. The document is stored under the company and returned document ID, and it counts towards your subscription usage. When Peppol delivery fails and no email fallback applies, the request fails with a 422.",
   summary: "Send Document",

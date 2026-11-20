@@ -88,3 +88,12 @@ export const withSortedParameters = <
 
   return { ...specs, paths };
 };
+
+/**
+ * Marks an operation whose effect can't be undone, as the `x-irreversible`
+ * extension: a sent document or a filed report can't be called back, and a
+ * deleted resource can't be restored. The HTTP method doesn't tell a client
+ * this, since a `POST` can be as harmless as a lookup (verifying a recipient is
+ * one), so a client or an agent reads the extension to ask before calling.
+ */
+export const irreversible = { "x-irreversible": true };

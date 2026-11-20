@@ -4,6 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -15,6 +16,7 @@ const server = new Server();
 
 const deleteDocumentTypeRouteDescription = describeRoute({
     operationId: "deleteCompanyDocumentType",
+    ...irreversible,
     description: "Stop accepting a document type. It is withdrawn from the SMP, so senders can no longer address the company for it and their transmissions will fail. Documents already received under it are kept.",
     summary: "Delete Company Document Type",
     tags: ["Company Document Types"],

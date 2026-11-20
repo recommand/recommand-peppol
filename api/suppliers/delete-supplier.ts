@@ -8,6 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierIdParamSchema } from "./shared";
@@ -17,6 +18,7 @@ const server = new Server();
 
 const deleteSupplierRouteDescription = describeRoute({
   operationId: "deleteSupplier",
+  ...irreversible,
   description: "Delete a supplier",
   summary: "Delete Supplier",
   tags: ["Suppliers"],

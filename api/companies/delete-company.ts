@@ -8,6 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { audit } from "@core/lib/audit";
@@ -16,6 +17,7 @@ const server = new Server();
 
 const deleteCompanyRouteDescription = describeRoute({
     operationId: "deleteCompany",
+    ...irreversible,
     description: "Permanently delete a company. If the company was registered in the SMP, its registration is removed first, so the Peppol network stops routing documents to it. Every document sent or received for the company is deleted with it, along with the stored XML, attachments and payloads; this cannot be undone. Set `isSmpRecipient` to false with the update company endpoint instead if you only want to stop receiving documents while keeping the history.",
     summary: "Delete Company",
     tags: ["Companies"],
