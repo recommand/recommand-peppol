@@ -19,6 +19,7 @@ import { FRANCE_B2BI_REPORT_TEMPLATE } from "@peppol/templates/france-b2bi-repor
 import { FRANCE_B2C_REPORT_TEMPLATE } from "@peppol/templates/france-b2c-report";
 import { renderTailwindTemplate } from "@peppol/utils/tailwind-pdf";
 import { Decimal } from "decimal.js";
+import type { Context } from "hono";
 
 export type ParsedBillingDocument =
   | import("@peppol/utils/parsing/invoice/schemas").Invoice
@@ -857,6 +858,21 @@ export async function renderDocumentHtml(
 ): Promise<string> {
   return renderStoredDocument(document, { format: "html" });
 }
+
+/**
+ * Sends a rendered document as HTML that can't act in the app's origin. Its text comes from
+ * whoever sent the document, so besides the template's escaping, the policy allows only the inline
+ * styles the render carries, and `sandbox` gives it an opaque origin in which no script runs
+ * (Content Security Policy Level 3, section 6.3.2).
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/sandbox
+ * @see https://www.w3.org/TR/CSP3/#directive-sandbox
+ */
+export const documentHtmlResponse = (c: Context, html: string) => {
+  c.header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+
+  return c.html(html);
+};
 
 export async function renderDocumentPdf(
   document: PublicTransmittedDocument,

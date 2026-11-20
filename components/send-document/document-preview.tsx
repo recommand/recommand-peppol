@@ -31,6 +31,7 @@ export function DocumentPreview({
           <div className="border rounded-md overflow-hidden bg-background">
             <iframe
               title={t`Document preview`}
+              sandbox=""
               srcDoc={html}
               className="w-full h-[800px] border-0"
             />

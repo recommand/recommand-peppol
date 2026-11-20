@@ -12,6 +12,7 @@ import {
   DocumentType,
   sendDocumentSchema,
 } from "@peppol/utils/parsing/send-document";
+import { documentHtmlResponse } from "@peppol/utils/document-renderer";
 import { prepareJsonDocument } from "@peppol/utils/pipelines/sending/prepare-json-document";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import { Server, type Context } from "@recommand/lib/api";
@@ -95,7 +96,8 @@ async function _previewDocumentImplementation(c: PreviewDocumentContext) {
       );
     }
 
-    return c.html(
+    return documentHtmlResponse(
+      c,
       await documentType.render(
         prepared.parsed,
         { format: "html" },
