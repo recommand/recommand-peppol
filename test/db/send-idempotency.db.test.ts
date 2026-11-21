@@ -257,14 +257,34 @@ describe.skipIf(!testDatabaseUrl)("sending with an Idempotency-Key against Postg
     const failed = await send(invoice(), "unknown-outcome").finally(() =>
       pool.query("DROP TRIGGER refuse_documents ON peppol_transmitted_documents; DROP FUNCTION refuse_documents()")
     );
-    // The route answers an unexpected error with a 400, as it always has
-    expect(failed.status).toBe(400);
+    // The route says the document may have been delivered
+    expect(failed.status).toBe(422);
+    expect(failed.body.outcomeUnknown).toBe(true);
 
     const retry = await send(invoice(), "unknown-outcome");
-    expect(retry.status).toBe(400);
+    expect(retry.status).toBe(422);
     expect(retry.body).toEqual(failed.body);
     expect(retry.headers.get("Idempotency-Replayed")).toBe("true");
     expect(await count("peppol_transmitted_documents")).toBe(0);
+  });
+
+  it("says a send that failed after its document was stored may have gone out, and repeats that failure", async () => {
+    // The email goes out and the document is stored, and then recording its usage fails
+    await pool.query(`CREATE FUNCTION refuse_usage() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'usage storage unavailable'; END $$`);
+    await pool.query(`CREATE TRIGGER refuse_usage BEFORE INSERT ON peppol_transfer_events
+      FOR EACH ROW EXECUTE FUNCTION refuse_usage()`);
+    const failed = await send(invoice(), "failed-after-storing").finally(() =>
+      pool.query("DROP TRIGGER refuse_usage ON peppol_transfer_events; DROP FUNCTION refuse_usage()")
+    );
+    expect(failed.status).toBe(422);
+    expect(failed.body.outcomeUnknown).toBe(true);
+    expect(await count("peppol_transmitted_documents")).toBe(1);
+
+    const retry = await send(invoice(), "failed-after-storing");
+    expect(retry.status).toBe(422);
+    expect(retry.body).toEqual(failed.body);
+    expect(await count("peppol_transmitted_documents")).toBe(1);
   });
 
   it("frees a key after an unexpected error before any channel was tried, since nothing went out", async () => {

@@ -71,9 +71,18 @@ export const deliveryStatusResponse = deliveryStatusSchema.nullable().openapi({
     examples: ["delivered"],
 });
 
+export const deliveryChannelSchema = z.enum(deliveryChannels).openapi({
+    description: "The channel a delivery went over.",
+    ref: "DeliveryChannel",
+});
+
+export const deliveryFailureCategorySchema = z.enum(deliveryFailureCategories).openapi({
+    description: "Why the delivery failed, in the same terms for every channel and access point: `recipient_not_found` (the address is not registered on the network, or the mailbox does not exist), `document_not_supported` (the recipient does not receive this document type), `validation` (the document was refused by a rule), `transport` (it could not be transmitted, or the mail server did not take the message), `recipient_rejected` (the recipient or their server refused it, for email a block or spam complaint), `duplicate` or `other`.",
+    ref: "DeliveryFailureCategory",
+});
+
 export const deliveryFailureResponse = z.object({
-    category: z.enum(deliveryFailureCategories).openapi({
-        description: "Why the delivery failed, in the same terms for every channel and access point: `recipient_not_found` (the address is not registered on the network, or the mailbox does not exist), `document_not_supported` (the recipient does not receive this document type), `validation` (the document was refused by a rule), `transport` (it could not be transmitted, or the mail server did not take the message), `recipient_rejected` (the recipient or their server refused it, for email a block or spam complaint), `duplicate` or `other`.",
+    category: deliveryFailureCategorySchema.openapi({
         examples: ["validation"],
     }),
     message: z.string().nullable().openapi({
@@ -90,7 +99,7 @@ export const deliveryResponse = z.object({
         description: "The delivery ID. It identifies this delivery in `document.delivery_status_changed` webhook events.",
         examples: ["dlv_01JQZ8X0M4T7RB6K9V2NDHW3PA"],
     }),
-    channel: z.enum(deliveryChannels).openapi({
+    channel: deliveryChannelSchema.openapi({
         description: "How the document was sent to this address.",
         examples: ["peppol"],
     }),
