@@ -42,6 +42,8 @@ const requestMigrationJsonBodySchema = z.object({
         description: "The migration key issued by the provider that currently publishes the identifier. 8 to 24 characters with at least two upper case letters, two lower case letters, two digits and two special characters.",
         examples: ["Ab12$#xyZ9!kLm"],
     }),
+}).openapi({
+    description: "The migration key the identifier's current provider issued.",
 });
 
 const requestMigrationParamSchemaWithTeamId = requestMigrationParamSchema.extend({ teamId: z.string() });

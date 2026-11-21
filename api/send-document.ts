@@ -98,6 +98,11 @@ const sendDocumentFailureResponse = z.object({
   }),
 });
 
+const sendDocumentBodySchema = sendDocumentSchema.openapi({
+  description:
+    "The document to send: its type and content and who it goes to, with optional email delivery and PDF generation settings.",
+});
+
 const sendDocumentParamSchema = z.object({
   companyId: z.string().openapi({
     description:
@@ -150,7 +155,7 @@ const sendDocument = server.post(
   describeRoute({ hide: true }),
   captureSendDocumentRecording,
   zodValidator("param", sendDocumentParamSchema),
-  zodValidator("json", sendDocumentSchema),
+  zodValidator("json", sendDocumentBodySchema),
   sendOnce,
   sendingPipeline,
 );
@@ -163,7 +168,7 @@ const sendDocumentMinimal = server.post(
   routeDescription,
   captureSendDocumentRecording,
   zodValidator("param", sendDocumentParamSchema),
-  zodValidator("json", sendDocumentSchema),
+  zodValidator("json", sendDocumentBodySchema),
   sendOnce,
   sendingPipeline,
 );

@@ -128,7 +128,10 @@ const registerFrenchReportingDeclarantBodySchema = z
         "When VAT becomes due: `ENCAISSEMENTS` (on payment, typical for services) or `DEBITS` (on invoicing, typical for goods). Payment reports can only be submitted under `ENCAISSEMENTS`.",
     }),
   })
-  .openapi({ ref: "RegisterFrenchReportingDeclarant" });
+  .openapi({
+    description: "The company's French VAT regime, and when its VAT becomes due.",
+    ref: "RegisterFrenchReportingDeclarant",
+  });
 
 type FrenchReportingDeclarantContext = Context<
   AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext

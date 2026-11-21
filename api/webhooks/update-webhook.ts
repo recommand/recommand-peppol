@@ -48,6 +48,8 @@ const updateWebhookJsonBodySchema = z.object({
     ).openapi({
         description: "New secret for the HMAC-SHA256 X-Signature header. Omit to preserve it or use null to disable signing.",
     }),
+}).openapi({
+    description: "The webhook's configuration, which replaces its current one. Leave `secret` out to keep the current secret, or send `null` to stop signing deliveries.",
 });
 
 const updateWebhookParamSchemaWithTeamId = updateWebhookParamSchema.extend({

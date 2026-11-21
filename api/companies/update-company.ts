@@ -59,6 +59,8 @@ const updateCompanyJsonBodySchema = z.object({
     email: z.string().email().or(z.literal("")).nullish().transform((val) => val?.trim() === "" ? null : val),
     phone: z.string().nullish().transform((val) => val?.trim() === "" ? null : val),
     isSmpRecipient: z.boolean().optional(),
+}).openapi({
+    description: "The company details to change. Fields you leave out keep their current value.",
 });
 
 type UpdateCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { param: z.input<typeof updateCompanyParamSchemaWithTeamId>, json: z.input<typeof updateCompanyJsonBodySchema> }, out: { param: z.infer<typeof updateCompanyParamSchemaWithTeamId>, json: z.infer<typeof updateCompanyJsonBodySchema> } }>;

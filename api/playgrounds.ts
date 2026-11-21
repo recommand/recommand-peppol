@@ -87,6 +87,8 @@ const createPlaygroundRouteDescription = describeRoute({
 const createPlaygroundJsonBodySchema = z.object({
   name: z.string().min(1).openapi({ description: "Playground name" }),
   useTestNetwork: z.boolean().default(false).openapi({ description: "Whether to use the Peppol Test Network" }),
+}).openapi({
+  description: "The playground's name, and whether it sends over the Peppol Test Network instead of simulating.",
 });
 
 type CreatePlaygroundContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { json: z.input<typeof createPlaygroundJsonBodySchema> }, out: { json: z.infer<typeof createPlaygroundJsonBodySchema> } }>;

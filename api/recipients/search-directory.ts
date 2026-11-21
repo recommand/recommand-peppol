@@ -48,6 +48,8 @@ const searchDirectoryRouteDescription = describeRoute({
 
 const searchDirectoryJsonBodySchema = z.object({
     query: z.string().openapi({ description: "The search query to find recipients.", examples: ["Company Name"] }),
+}).openapi({
+    description: "The text to search the Peppol Directory for.",
 });
 
 type SearchDirectoryContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { json: z.input<typeof searchDirectoryJsonBodySchema> }, out: { json: z.infer<typeof searchDirectoryJsonBodySchema> } }>;

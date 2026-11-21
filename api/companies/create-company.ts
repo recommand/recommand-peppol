@@ -52,6 +52,8 @@ const createCompanyJsonBodySchema = z.object({
     phone: z.string().nullish().transform((val) => val?.trim() === "" ? null : val),
     isSmpRecipient: z.boolean().default(true),
     skipDefaultCompanySetup: z.boolean().default(false).openapi({ description: "If true, the automatic creation of company identifiers and document types will be skipped. You will need to create them afterwards using the company identifier creation endpoint and company document type creation endpoint." }),
+}).openapi({
+    description: "The company to create: its name and address, and optionally its enterprise and VAT numbers, contact details and whether it receives documents.",
 });
 
 const createCompanyParamSchemaWithTeamId = z.object({

@@ -60,6 +60,8 @@ const updateAddressJsonBodySchema = z.object({
     includeDocumentJsonOutgoing: z.boolean().optional().openapi({
         description: "Whether to include the document.json attachment for outgoing document notifications",
     }),
+}).openapi({
+    description: "The address's settings, which replace its current ones. An attachment you leave out is turned off.",
 });
 
 type UpdateAddressContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { param: z.input<typeof updateAddressParamSchemaWithTeamId>, json: z.input<typeof updateAddressJsonBodySchema> }, out: { param: z.infer<typeof updateAddressParamSchemaWithTeamId>, json: z.infer<typeof updateAddressJsonBodySchema> } }>;

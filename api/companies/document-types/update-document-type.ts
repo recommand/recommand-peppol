@@ -44,6 +44,8 @@ const updateDocumentTypeJsonBodySchema = z.object({
     processId: z.string().min(1, "Process ID is required").openapi({
         description: "The ID of the process to update",
     }),
+}).openapi({
+    description: "The document type and process that replace the current ones.",
 });
 
 const updateDocumentTypeParamSchemaWithTeamId = updateDocumentTypeParamSchema.extend({ teamId: z.string() });

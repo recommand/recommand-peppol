@@ -41,6 +41,8 @@ const createWebhookJsonBodySchema = z.object({
     ).openapi({
         description: "Optional secret used to send X-Signature: sha256=<hex>, computed with HMAC-SHA256 over the raw request body. Leave it out to have deliveries sent unsigned.",
     }),
+}).openapi({
+    description: "Where to post events, optionally only one company's, and the secret to sign deliveries with.",
 });
 
 const createWebhookParamSchemaWithTeamId = z.object({

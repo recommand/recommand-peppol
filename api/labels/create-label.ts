@@ -44,6 +44,8 @@ const createLabelJsonBodySchema = z.object({
         examples: ["erp-routing-inbox"],
         description: "Your own identifier for the label. It must be unique within the team.",
     }),
+}).openapi({
+    description: "The label's name and colour, and optionally the ID your own system knows it by.",
 });
 
 type CreateLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext, string, { in: { json: z.input<typeof createLabelJsonBodySchema> }, out: { json: z.infer<typeof createLabelJsonBodySchema> } }>;

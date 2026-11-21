@@ -58,7 +58,9 @@ const { email: _email, ...generateBaseShape } = {
 const generateSchema = documentRequestSchema(
   generateBaseShape,
   generateDocumentTypes,
-);
+).openapi({
+  description: "The document to generate, as for sending it, without the email delivery options or a raw XML document.",
+});
 
 const generateParamSchema = z.object({
   companyId: z.string().openapi({

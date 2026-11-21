@@ -55,6 +55,8 @@ const verifyRecipientJsonBodySchema = z.object({
     peppolAddress: z.string().openapi({ description: "The Peppol address of the recipient to verify." }),
     includeEndpointDetails: z.boolean().optional().openapi({ description: "If true, fetches endpoint details for all supported document types." }),
     includeBusinessCard: z.boolean().optional().openapi({ description: "If true, fetches the business card from the SMP for company name and country." }),
+}).openapi({
+    description: "The Peppol address to look up, and which details of its registration to include.",
 });
 
 type VerifyRecipientContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { json: z.input<typeof verifyRecipientJsonBodySchema> }, out: { json: z.infer<typeof verifyRecipientJsonBodySchema> } }>;

@@ -48,6 +48,8 @@ const updateIdentifierJsonBodySchema = z.object({
     identifier: z.string().min(1, "Identifier is required").openapi({
         description: "The value of the identifier",
     }),
+}).openapi({
+    description: "The scheme and value that replace the identifier's current ones.",
 });
 
 type UpdateIdentifierContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { param: z.input<typeof updateIdentifierParamSchemaWithTeamId>, json: z.input<typeof updateIdentifierJsonBodySchema> }, out: { param: z.infer<typeof updateIdentifierParamSchemaWithTeamId>, json: z.infer<typeof updateIdentifierJsonBodySchema> } }>;

@@ -44,6 +44,8 @@ const upsertSupplierJsonBodySchema = z.object({
   peppolAddresses: z.array(z.string()).optional().default([]).openapi({
     description: "The supplier's Peppol addresses, each as `scheme:identifier`. An incoming invoice or credit note sent from one of these addresses is matched to the supplier. Leaving them out on an update clears them.",
   }),
+}).openapi({
+  description: "The supplier to create or update. With an `id`, that supplier is updated; with an `externalId`, the supplier with that external ID, which is created when there is none; with neither, a new supplier is created.",
 });
 
 const upsertSupplierParamSchema = z.object({
