@@ -93,6 +93,9 @@ export async function sendAs4(options: {
       ? options.processId
       : options.processId.substring(processSchemeSeparator + 2);
 
+  // Once the transaction is posted, a failure can't tell whether Arratech took the
+  // document, so the send's outcome is unknown rather than refused
+  let posted = false;
   try {
     await checkReceiverSupportsDocumentType({
       receiverId: options.receiverId,
@@ -120,6 +123,7 @@ export async function sendAs4(options: {
     await claimOutgoingEnvelope(standardBusinessDocument.instanceIdentifier);
 
     const searchParams = new URLSearchParams({ ap: config.apRef });
+    posted = true;
     const { transactionId } = await fetchArratechJson<{ transactionId: string }>(
       `/orgs/${config.orgId}/transactions?${searchParams.toString()}`,
       {
@@ -157,6 +161,7 @@ export async function sendAs4(options: {
         category:
           error instanceof RecipientLookupError ? "recipient_not_found" : "transport",
       },
+      ...(posted ? { outcomeUnknown: true as const } : {}),
     };
   }
 }

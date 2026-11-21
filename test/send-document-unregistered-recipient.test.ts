@@ -85,6 +85,7 @@ describe("a JSON send that leaves the format open", () => {
       success: false,
       errors: { root: [`Failed to send document over Peppol network. ${NOT_REGISTERED}`] },
       deliveryFailure: { channel: "peppol", category: "recipient_not_found" },
+      outcomeUnknown: false,
     });
     expect(sendAs4).not.toHaveBeenCalled();
     expect(recorded).toHaveLength(0);
