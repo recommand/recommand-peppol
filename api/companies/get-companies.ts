@@ -9,7 +9,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { companyResponse, toCompanyResponse } from "./shared";
+import { companyFilters, companyResponse, toCompanyResponse } from "./shared";
 import { type CompanyAccessContext, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
@@ -26,16 +26,7 @@ const getCompaniesRouteDescription = describeRoute({
     },
 });
 
-const getCompaniesQuerySchema = z.object({
-    enterpriseNumber: z.string().optional().openapi({
-        description: "Filter companies by enterprise number",
-        examples: ["1234567894"],
-    }),
-    vatNumber: z.string().optional().openapi({
-        description: "Filter companies by VAT number",
-        examples: ["BE1234567894"],
-    }),
-});
+const getCompaniesQuerySchema = companyFilters;
 
 const getCompaniesParamSchemaWithTeamId = z.object({
     teamId: z.string(),

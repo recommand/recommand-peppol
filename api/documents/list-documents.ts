@@ -17,10 +17,8 @@ import {
 } from "@core/lib/api-docs";
 import { type CompanyAccessContext, requireDocumentAccess, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import {
-  deliveryStatusSchema,
-  documentDirectionSchema,
+  transmittedDocumentFilters,
   transmittedDocumentResponse,
-  transmittedDocumentTypeSchema,
 } from "./shared";
 import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions";
 import { withDocumentDeliveries } from "@peppol/data/deliveries";
@@ -47,7 +45,7 @@ const getTransmittedDocumentsRouteDescription = describeRoute({
   },
 });
 
-const getTransmittedDocumentsQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 200 }).extend({
+const getTransmittedDocumentsQuerySchema = paginationQuery({ defaultLimit: 10, maxLimit: 200 }).merge(transmittedDocumentFilters).extend({
   companyId: z
     .union([z.string(), z.array(z.string())])
     .optional()
@@ -60,34 +58,11 @@ const getTransmittedDocumentsQuerySchema = paginationQuery({ defaultLimit: 10, m
     .openapi({
       description: "Filter documents by label ID",
     }),
-  direction: documentDirectionSchema.optional().openapi({
-    description: "Filter documents by direction (incoming or outgoing)",
-  }),
-  search: z.string().optional().openapi({
-    description: "Search term to filter documents",
-    examples: ["invoice"],
-  }),
-  type: transmittedDocumentTypeSchema.optional().openapi({
-    description: "Filter documents by type",
-    examples: ["invoice"],
-  }),
-  from: z.coerce.date().optional().openapi({
-    description: "Filter documents created from this timestamp (inclusive). ISO 8601 format.",
-    examples: ["2024-01-01T00:00:00Z"],
-  }),
-  to: z.coerce.date().optional().openapi({
-    description: "Filter documents created until this timestamp (exclusive). ISO 8601 format.",
-    examples: ["2024-12-31T23:59:59Z"],
-  }),
   isUnread: booleanQuerySchema.optional().openapi({
     description: "Filter documents by read status: true for unread documents (readAt is null), false for read documents.",
   }),
   envelopeId: z.string().optional().openapi({
     description: "Filter documents by envelope ID (Standard Business Document Header Instance Identifier)",
-  }),
-  deliveryStatus: deliveryStatusSchema.optional().openapi({
-    description: "Filter outgoing documents by their summarised delivery status: `delivered` (confirmed on at least one channel), `failed` (every delivery failed) or `pending` (still awaiting confirmation). Documents without deliveries never match.",
-    examples: ["failed"],
   }),
   deliveryFailed: booleanQuerySchema.optional().openapi({
     description: "When true, only documents with at least one failed delivery, whatever their other deliveries did. Use it to find the sends that need attention.",
