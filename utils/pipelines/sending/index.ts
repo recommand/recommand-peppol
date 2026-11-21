@@ -32,6 +32,7 @@ import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { recordSendDocumentDelivery } from "@peppol/utils/metrics";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
+import { UserFacingError } from "@peppol/utils/util";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { ulid } from "ulid";
 import {
@@ -444,12 +445,14 @@ export async function sendingPipeline(c: SendingContext) {
       return c.json({ ...actionFailure("Failed to send document"), outcomeUnknown: true }, 422);
     }
 
-    return c.json(
-      actionFailure(
-        error instanceof Error ? error.message : "Failed to send document",
-      ),
-      400,
-    );
+    // A user-facing error says what to correct in the request
+    if (error instanceof UserFacingError) {
+      return c.json(actionFailure(error.message), 400);
+    }
+
+    // Anything else is a fault on Recommand's side. Nothing went out, so sending the
+    // document again is safe.
+    return c.json(actionFailure("Failed to send document"), 500);
   }
 }
 
