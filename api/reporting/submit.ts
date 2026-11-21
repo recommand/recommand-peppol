@@ -38,6 +38,7 @@ import {
   requireTransactionEntitlement,
   type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
+import { idempotentOperation } from "@peppol/utils/openapi";
 import {
   frenchB2BiReportSchema,
   getFrenchB2BiReportDocumentProfile,
@@ -93,6 +94,7 @@ const registrationGuidance = `The company must be registered for French e-report
 
 const b2cRouteDescription = describeRoute({
   operationId: "submitFrenchB2CReport",
+  ...idempotentOperation,
   summary: "Submit a French B2C report",
   tags: ["Reporting"],
   description: `Submit French daily sales or payment totals for transactions with private individuals. You do not need to create or submit a regulatory file yourself.
@@ -128,6 +130,7 @@ A submitted report is recorded alongside your sent documents and counts towards 
 
 const b2biRouteDescription = describeRoute({
   operationId: "submitFrenchB2BiReport",
+  ...idempotentOperation,
   summary: "Submit a French cross-border report",
   tags: ["Reporting"],
   description: `Submit a French e-reporting declaration for an operation with a business established outside France. These invoices are not exchanged over the French e-invoicing network, so their data is reported to the French tax administration instead. You do not need to create or submit a regulatory file yourself.
