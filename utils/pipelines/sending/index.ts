@@ -1,4 +1,5 @@
 import { audit } from "@core/lib/audit";
+import { markRefused } from "@core/lib/idempotency";
 import {
   getAccessPointProvider,
   type SendAs4Response,
@@ -49,6 +50,11 @@ import { validateDocument } from "./validate-document";
 
 export async function sendingPipeline(c: SendingContext) {
   let inputFormat = "unknown";
+  // Whether any channel was tried, so a failure before then can't have sent anything
+  let channelAttempted = false;
+  // Whether a channel may have delivered the document although the send failed: a
+  // lost connection to the access point, or an email the mail service didn't confirm
+  let outcomeUnknown = false;
 
   try {
     const input = c.req.valid("json");
@@ -221,6 +227,7 @@ export async function sendingPipeline(c: SendingContext) {
         peppolFailure = `Recipient ${recipientAddress} is not registered on the Peppol ${useTestNetwork ? "test network" : "network"}.`;
         peppolFailureCategory = "recipient_not_found";
       } else if (isPlayground && !useTestNetwork) {
+        channelAttempted = true;
         try {
           await simulateSendAs4({
             senderId: senderAddress,
@@ -245,8 +252,11 @@ export async function sendingPipeline(c: SendingContext) {
               : error instanceof PlaygroundDocumentNotSupportedError
                 ? "document_not_supported"
                 : "transport";
+          // Any other failure may come after the simulation delivered the document
+          outcomeUnknown ||= peppolFailureCategory === "transport";
         }
       } else {
+        channelAttempted = true;
         as4Response = await getAccessPointProvider(
           company.accessPointProvider,
         ).sendAs4({
@@ -260,6 +270,7 @@ export async function sendingPipeline(c: SendingContext) {
           useTestNetwork,
         });
         sentPeppol = as4Response.ok;
+        outcomeUnknown ||= !sentPeppol && !!as4Response.outcomeUnknown;
         if (!sentPeppol) {
           peppolFailure =
             as4Response.sendingException?.message ??
@@ -295,15 +306,14 @@ export async function sendingPipeline(c: SendingContext) {
           isPlayground,
           metadata,
         });
-      const outcome = await sendDocumentEmails({
-        documentId,
-        recipients: email.to,
-        send: isPlayground
-          ? playgroundEmailSender(await getPlaygroundMemberAddresses(team.id), mail)
-          : mail,
-      });
+      const send = isPlayground
+        ? playgroundEmailSender(await getPlaygroundMemberAddresses(team.id), mail)
+        : mail;
+      channelAttempted = true;
+      const outcome = await sendDocumentEmails({ documentId, recipients: email.to, send });
       emailMessages = outcome.sent;
       emailFailures = outcome.failed;
+      outcomeUnknown ||= emailFailures.length > 0;
       emailFailure = outcome.failed.at(-1)?.message ?? "";
     }
     const emailRecipients = emailMessages.map((message) => message.address);
@@ -385,11 +395,23 @@ export async function sendingPipeline(c: SendingContext) {
     );
   } catch (error) {
     if (error instanceof SendingFailure) {
+      // A refusal frees the Idempotency-Key for a corrected retry, unless a channel may
+      // already have delivered the document
+      if (!outcomeUnknown) {
+        markRefused(c);
+      }
+
       const failure =
         typeof error.payload === "string"
           ? actionFailure(error.payload)
           : actionFailure(error.payload);
       return c.json({ ...failure, ...error.details }, error.status);
+    }
+
+    // Before any channel was tried, nothing went out, so the key is freed as for a
+    // refusal. After that, a channel may have delivered the document.
+    if (!channelAttempted) {
+      markRefused(c);
     }
 
     console.error(error);
