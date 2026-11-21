@@ -421,18 +421,27 @@ export async function sendingPipeline(c: SendingContext) {
       markRefused(c);
     }
 
+    // An error that says what to correct before anything went out is a refusal the
+    // company can fix itself, so it's audited as one and nobody is alerted
+    const refusal = !channelAttempted && error instanceof UserFacingError ? error : null;
+
     console.error(error);
     await audit(c, {
       action: "create",
       subsystem: "peppol.documents",
       outcome: "failed",
       objectType: "peppol.document",
-      reasonCode: "send_document_failed",
+      reasonCode: refusal ? "send_document_refused" : "send_document_failed",
       metadata: {
         inputFormat,
         error: error instanceof Error ? error.message : String(error),
       },
     });
+
+    if (refusal) {
+      return c.json(actionFailure(refusal.message), 400);
+    }
+
     sendSystemAlert(
       "Document Sending Failed",
       `Failed to send document over Peppol network. Error: \`\`\`\n${error}\n\`\`\``,
@@ -443,11 +452,6 @@ export async function sendingPipeline(c: SendingContext) {
     // channel whose outcome is unknown
     if (channelAttempted) {
       return c.json({ ...actionFailure("Failed to send document"), outcomeUnknown: true }, 422);
-    }
-
-    // A user-facing error says what to correct in the request
-    if (error instanceof UserFacingError) {
-      return c.json(actionFailure(error.message), 400);
     }
 
     // Anything else is a fault on Recommand's side. Nothing went out, so sending the
