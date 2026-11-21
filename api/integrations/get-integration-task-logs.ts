@@ -4,7 +4,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse, paginationQuery, paginationResponse } from "@core/lib/api-docs";
-import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireIntegrationAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { integrationTaskLogResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { getIntegrationTaskLogs } from "@peppol/data/integrations";
@@ -45,6 +45,7 @@ const _getIntegrationTaskLogsMinimal = server.get(
     "/integrations/:integrationId/task-logs",
     requireTeamAccess(),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.read"),
     getIntegrationTaskLogsRouteDescription,
     zodValidator("param", getIntegrationTaskLogsParamSchema),
     zodValidator("query", getIntegrationTaskLogsQuerySchema),
@@ -55,6 +56,7 @@ const _getIntegrationTaskLogs = server.get(
     "/:teamId/integrations/:integrationId/task-logs",
     requireTeamAccess(),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.read"),
     describeRoute({hide: true}),
     zodValidator("param", getIntegrationTaskLogsParamSchemaWithTeamId),
     zodValidator("query", getIntegrationTaskLogsQuerySchema),

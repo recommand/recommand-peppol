@@ -11,6 +11,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { audit } from "@core/lib/audit";
+import { requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -41,6 +42,7 @@ type DeleteCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _deleteCompanyMinimal = server.delete(
     "/companies/:companyId",
     requireTeamAccess(),
+    requirePermission("exchange.companies.delete"),
     deleteCompanyRouteDescription,
     zodValidator("param", deleteCompanyParamSchema),
     _deleteCompanyImplementation,
@@ -49,6 +51,7 @@ const _deleteCompanyMinimal = server.delete(
 const _deleteCompany = server.delete(
     "/:teamId/companies/:companyId",
     requireTeamAccess(),
+    requirePermission("exchange.companies.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteCompanyParamSchemaWithTeamId),
     _deleteCompanyImplementation,

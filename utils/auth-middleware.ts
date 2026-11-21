@@ -6,12 +6,14 @@ import {
   type AuthenticatedUserContext,
   type TeamAccessOptions,
 } from "@core/lib/auth-middleware";
+import { hasRequestPermission, requirePermission as requireTeamPermission } from "@core/lib/permissions/permission-middleware";
 import { verifySession, type SessionVerificationExtension } from "@core/lib/session";
 import { getCompanyById, type Company } from "@peppol/data/companies";
 import { verifyIntegrationJwt } from "@peppol/data/integrations/auth";
 import { getExtendedTeam, type ExtendedTeam } from "@peppol/data/teams";
 import { checkPeppolEntitlement, checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { actionFailure } from "@recommand/lib/utils";
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { requiresCompanyVerification } from "@peppol/utils/playground";
 
@@ -166,6 +168,41 @@ const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
     }
   }
 ]
+
+// Only integrationSupportedAuthExtensions authenticate as an extension without a user
+const isIntegrationToken = (c: Context) => c.get("authenticationMethod") === "extension" && !c.get("user")?.id;
+
+/**
+ * Core's `requirePermission`, except that an integration token passes. It carries no user to hold
+ * permissions: it acts for an integration the team set up, and keeps the access it has always had.
+ */
+export const requirePermission = (permissionId: string) => {
+  const check = requireTeamPermission(permissionId);
+  const middleware = createMiddleware<AuthenticatedUserContext>(async (c, next) => {
+    if (isIntegrationToken(c)) {
+      return next();
+    }
+
+    return check(c, next);
+  });
+
+  // Keeps the OpenAPI description the check carries
+  return Object.assign(middleware, check);
+};
+
+/** Whether the request holds the team permission. An integration token holds them all, as `requirePermission` lets it through. */
+export const holdsPermission = async <E extends AuthenticatedUserContext>(c: Context<E>, permissionId: string) =>
+  isIntegrationToken(c) || hasRequestPermission(c, permissionId);
+
+/**
+ * `requirePermission` for the requests `applies` picks out; the others pass without it. It adds nothing
+ * to the OpenAPI description, so the operation describes when it applies.
+ */
+export const requirePermissionWhen = (permissionId: string, applies: (c: Context) => Promise<boolean>) => {
+  const check = requirePermission(permissionId);
+
+  return createMiddleware<AuthenticatedUserContext>(async (c, next) => (await applies(c)) ? check(c, next) : next());
+};
 
 export function requireIntegrationSupportedAuth() {
   return requireAuth({

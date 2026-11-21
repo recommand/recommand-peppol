@@ -15,7 +15,7 @@ import {
 } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { customerResponse, customerIdParamSchema } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -52,6 +52,7 @@ type GetCustomerContext = Context<
 const _getCustomerMinimal = server.get(
   "/customers/:customerId",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.customers.read"),
   getCustomerRouteDescription,
   zodValidator("param", customerIdParamSchema),
   _getCustomerImplementation
@@ -60,6 +61,7 @@ const _getCustomerMinimal = server.get(
 const _getCustomer = server.get(
   "/:teamId/customers/:customerId",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.customers.read"),
   describeRoute({ hide: true }),
   zodValidator("param", getCustomerParamSchemaWithTeamId),
   _getCustomerImplementation

@@ -6,7 +6,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { participantMigrationResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
@@ -51,6 +51,7 @@ type RequestMigrationContext = Context<AuthenticatedUserContext & AuthenticatedT
 const _requestMigrationMinimal = server.post(
     "/companies/:companyId/identifiers/:identifierId/migration",
     requireCompanyAccess(),
+    requirePermission("exchange.identifiers.migrate"),
     requestMigrationRouteDescription,
     zodValidator("param", requestMigrationParamSchema),
     zodValidator("json", requestMigrationJsonBodySchema),
@@ -60,6 +61,7 @@ const _requestMigrationMinimal = server.post(
 const _requestMigration = server.post(
     "/:teamId/companies/:companyId/identifiers/:identifierId/migration",
     requireCompanyAccess(),
+    requirePermission("exchange.identifiers.migrate"),
     describeRoute({ hide: true }),
     zodValidator("param", requestMigrationParamSchemaWithTeamId),
     zodValidator("json", requestMigrationJsonBodySchema),

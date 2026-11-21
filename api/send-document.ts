@@ -6,6 +6,7 @@ import {
 import {
   requireCompanyVerificationForStrictTeams,
   requireIntegrationSupportedCompanyAccess,
+  requirePermission,
   requireTransactionEntitlement,
 } from "@peppol/utils/auth-middleware";
 import { sendingPipeline } from "@peppol/utils/pipelines/sending";
@@ -101,6 +102,7 @@ const sendDocument = server.post(
   trackSendDocument,
   requireIntegrationSupportedCompanyAccess(),
   requireTransactionEntitlement(),
+  requirePermission("exchange.documents.send"),
   requireCompanyVerificationForStrictTeams(),
   describeRoute({ hide: true }),
   captureSendDocumentRecording,
@@ -114,6 +116,7 @@ const sendDocumentMinimal = server.post(
   trackSendDocument,
   requireIntegrationSupportedCompanyAccess(),
   requireTransactionEntitlement(),
+  requirePermission("exchange.documents.send"),
   requireCompanyVerificationForStrictTeams(),
   routeDescription,
   captureSendDocumentRecording,

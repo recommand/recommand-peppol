@@ -1,6 +1,6 @@
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { assignLabelToDocuments } from "@peppol/data/document-labels";
-import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
 import { Server, type Context } from "@recommand/lib/api";
 import { zodValidator } from "@recommand/lib/zod-validator";
@@ -37,6 +37,7 @@ type BulkAssignLabelContext = Context<
 const _bulkAssignLabel = server.post(
   "/:teamId/documents/bulk-assign-label/:labelId",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.documents.write"),
   describeRoute({ hide: true }),
   zodValidator("param", bulkAssignLabelParamSchema),
   zodValidator("json", bulkAssignLabelJsonBodySchema),

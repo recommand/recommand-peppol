@@ -33,10 +33,11 @@ import {
 import { recordOutgoingDocument } from "@peppol/data/record-outgoing-document";
 import { findOutgoingDocumentByExternalReference } from "@peppol/data/transmitted-documents";
 import {
+  type CompanyAccessContext,
   requireCompanyVerificationForStrictTeams,
   requireIntegrationSupportedCompanyAccess,
+  requirePermission,
   requireTransactionEntitlement,
-  type CompanyAccessContext,
 } from "@peppol/utils/auth-middleware";
 import {
   frenchB2BiReportSchema,
@@ -462,6 +463,7 @@ const _submitFrenchB2CReport = server.post(
   requireIntegrationSupportedCompanyAccess(),
   zodValidator("param", submitFrenchB2CReportParamSchema),
   requireTransactionEntitlement(),
+  requirePermission("exchange.reporting.submit"),
   requireCompanyVerificationForStrictTeams(),
   b2cRouteDescription,
   zodValidator("json", frenchB2CReportSchema),
@@ -521,6 +523,7 @@ const _submitFrenchB2BiReport = server.post(
   requireIntegrationSupportedCompanyAccess(),
   zodValidator("param", submitFrenchB2BiReportParamSchema),
   requireTransactionEntitlement(),
+  requirePermission("exchange.reporting.submit"),
   requireCompanyVerificationForStrictTeams(),
   b2biRouteDescription,
   zodValidator("json", frenchB2BiReportSchema),

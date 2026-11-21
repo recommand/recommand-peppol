@@ -11,7 +11,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { supplierResponse } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -55,6 +55,7 @@ type UpsertSupplierContext = Context<AuthenticatedUserContext & AuthenticatedTea
 const _upsertSupplierMinimal = server.post(
   "/suppliers",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.suppliers.write"),
   upsertSupplierRouteDescription,
   zodValidator("json", upsertSupplierJsonBodySchema),
   _upsertSupplierImplementation,
@@ -63,6 +64,7 @@ const _upsertSupplierMinimal = server.post(
 const _upsertSupplier = server.post(
   "/:teamId/suppliers",
   requireIntegrationSupportedTeamAccess(),
+  requirePermission("exchange.suppliers.write"),
   describeRoute({hide: true}),
   zodValidator("param", upsertSupplierParamSchema),
   zodValidator("json", upsertSupplierJsonBodySchema),

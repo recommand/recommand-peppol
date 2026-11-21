@@ -8,7 +8,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { companyIdentifierResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
@@ -55,6 +55,7 @@ type UpdateIdentifierContext = Context<AuthenticatedUserContext & AuthenticatedT
 const _updateIdentifierMinimal = server.put(
     "/companies/:companyId/identifiers/:identifierId",
     requireCompanyAccess(),
+    requirePermission("exchange.identifiers.write"),
     updateIdentifierRouteDescription,
     zodValidator("param", updateIdentifierParamSchema),
     zodValidator("json", updateIdentifierJsonBodySchema),
@@ -64,6 +65,7 @@ const _updateIdentifierMinimal = server.put(
 const _updateIdentifier = server.put(
     "/:teamId/companies/:companyId/identifiers/:identifierId",
     requireCompanyAccess(),
+    requirePermission("exchange.identifiers.write"),
     describeRoute({ hide: true }),
     zodValidator("param", updateIdentifierParamSchemaWithTeamId),
     zodValidator("json", updateIdentifierJsonBodySchema),

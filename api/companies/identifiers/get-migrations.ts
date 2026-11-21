@@ -7,7 +7,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, holdsPermission, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { participantMigrationResponse } from "./shared";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 
@@ -42,6 +42,7 @@ type GetMigrationsContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _getMigrationsMinimal = server.get(
     "/companies/:companyId/identifiers/:identifierId/migrations",
     requireCompanyAccess(),
+    requirePermission("exchange.identifiers.read"),
     getMigrationsRouteDescription,
     zodValidator("param", getMigrationsParamSchema),
     _getMigrationsImplementation,
@@ -50,6 +51,7 @@ const _getMigrationsMinimal = server.get(
 const _getMigrations = server.get(
     "/:teamId/companies/:companyId/identifiers/:identifierId/migrations",
     requireCompanyAccess(),
+    requirePermission("exchange.identifiers.read"),
     describeRoute({ hide: true }),
     zodValidator("param", getMigrationsParamSchemaWithTeamId),
     _getMigrationsImplementation,
@@ -63,7 +65,12 @@ async function _getMigrationsImplementation(c: GetMigrationsContext) {
             return c.json(actionFailure("Company identifier not found"), 404);
         }
         const migrations = await getParticipantMigrations(companyId, identifier);
-        return c.json(actionSuccess({ migrations }));
+        // A migration key hands the identifier to another provider, so only a caller who may migrate sees it
+        if (await holdsPermission(c, "exchange.identifiers.migrate")) {
+            return c.json(actionSuccess({ migrations }));
+        }
+
+        return c.json(actionSuccess({ migrations: migrations.map(({ migrationKey: _migrationKey, ...migration }) => migration) }));
     } catch (error) {
         console.error(error);
         return c.json(actionFailure("Could not fetch company identifier migrations"), 500);
