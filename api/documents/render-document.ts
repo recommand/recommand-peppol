@@ -14,7 +14,7 @@ import {
   getTransmittedDocument,
 } from "@peppol/data/transmitted-documents";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
-import { renderDocumentHtml, renderDocumentPdf } from "@peppol/utils/document-renderer";
+import { documentHtmlResponse, renderDocumentHtml, renderDocumentPdf } from "@peppol/utils/document-renderer";
 import { describeErrorResponse } from "@core/lib/api-docs";
 
 const server = new Server();
@@ -113,7 +113,7 @@ async function _renderDocumentImplementation(c: RenderDocumentContext) {
 
     if (type === "html") {
       const html = await renderDocumentHtml(document);
-      return c.html(html);
+      return documentHtmlResponse(c, html);
     } else if (type === "pdf") {
       const pdf = await renderDocumentPdf(document);
       c.header("Content-Type", "application/pdf");

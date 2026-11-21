@@ -625,6 +625,7 @@ export default function TransmittedDocumentDetailPage() {
                     <div className="border rounded-md overflow-hidden bg-background">
                       <iframe
                         title={t`Document preview`}
+                        sandbox=""
                         srcDoc={previewHtml}
                         className="w-full h-[800px] border-0"
                       />
