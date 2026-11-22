@@ -1,3 +1,4 @@
+import { answeredByIdempotency } from "@core/lib/idempotency";
 import { createMiddleware } from "hono/factory";
 import { ulid } from "ulid";
 
@@ -92,6 +93,11 @@ export const captureSendDocumentRecording =
       return;
     }
     await next();
+
+    // A replay or a refused Idempotency-Key didn't send anything to record
+    if (answeredByIdempotency(c)) {
+      return;
+    }
 
     const response = c.res.clone();
     const routing = c.get("sendDocumentRecordingRouting");
