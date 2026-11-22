@@ -220,11 +220,11 @@ export const periodSchema = z
   .object({
     startDate: z.string().date().nullish().openapi({
       examples: ["2025-03-01"],
-      description: "The first day of the period, as YYYY-MM-DD.",
+      description: "The first day of the period.",
     }),
     endDate: z.string().date().nullish().openapi({
       examples: ["2025-03-31"],
-      description: "The last day of the period, as YYYY-MM-DD.",
+      description: "The last day of the period.",
     }),
   })
   .refine((period) => period.startDate || period.endDate, {
@@ -632,11 +632,11 @@ export const baseInvoiceSchema = z.object({
   }),
   issueDate: z.string().date().openapi({
     examples: ["2024-03-20"],
-    description: "The date the invoice was issued, as YYYY-MM-DD.",
+    description: "The date the invoice was issued.",
   }),
   dueDate: z.string().date().nullish().openapi({
     examples: ["2024-04-20"],
-    description: "The date the payment is due, as YYYY-MM-DD.",
+    description: "The date the payment is due.",
   }),
   note: z.string().nullish().openapi({
     examples: ["Thank you for your business"],

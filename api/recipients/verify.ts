@@ -23,7 +23,7 @@ const server = new Server();
 /** A document type a participant is registered to receive, with endpoint details when they were requested. */
 const supportedDocumentTypeResponse = z
     .object({
-        certificateExpiry: z.string().nullable().optional().openapi({ description: "Certificate expiry date (ISO 8601)." }),
+        certificateExpiry: z.string().datetime().nullable().optional().openapi({ description: "When the access point's certificate expires." }),
         docTypeId: z.string().openapi({ description: "Full Peppol document type identifier." }),
         name: z.string().openapi({ description: "Human-readable document type name." }),
         serviceEndpoint: z.string().nullable().optional().openapi({ description: "The endpoint URL." }),
