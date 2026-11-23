@@ -100,6 +100,7 @@ describe.skipIf(!testDatabaseUrl)("Finnish company identifiers against PostgreSQ
   beforeAll(async () => {
     pool = await connectTestDatabase();
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
+    (await import("../../lib/event-types")).registerPeppolEventTypes();
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
     mock.module("@peppol/utils/naptr", () => ({
       resolveNaptr: async () =>

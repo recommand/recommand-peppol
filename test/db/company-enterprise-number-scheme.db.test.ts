@@ -41,6 +41,7 @@ describe.skipIf(!testDatabaseUrl)("Enterprise number scheme of a new company aga
   beforeAll(async () => {
     pool = await connectTestDatabase();
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
+    (await import("../../lib/event-types")).registerPeppolEventTypes();
     mock.module("@peppol/data/smp-providers", () => ({
       upsertCompanyRegistrations: async () => {},
       unregisterCompanyRegistrations: async () => {},

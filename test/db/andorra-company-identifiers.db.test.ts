@@ -52,6 +52,7 @@ describe.skipIf(!testDatabaseUrl)("Andorran company identifiers against PostgreS
     pool = await connectTestDatabase();
     process.env.AP_CERT = "test certificate";
     mock.module("@recommand/db", () => ({ db: drizzle(pool) }));
+    (await import("../../lib/event-types")).registerPeppolEventTypes();
     mock.module("@peppol/utils/system-notifications/telegram", () => ({ sendSystemAlert: async () => {} }));
     mock.module("@peppol/utils/naptr", () => ({
       resolveNaptr: async () => ({ status: "absent" }),
