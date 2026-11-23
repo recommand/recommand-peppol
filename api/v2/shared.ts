@@ -9,7 +9,7 @@ import type { Issue } from "@peppol/types/intake";
 import { zodResolver } from "@recommand/lib/zod-validator";
 import type { Context, MiddlewareHandler, ValidationTargets } from "hono";
 import { createMiddleware } from "hono/factory";
-import { validator } from "hono-openapi/zod";
+import { validator } from "hono-openapi";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { ulid } from "ulid";
 import type { z } from "zod";
@@ -104,8 +104,8 @@ export function handle<C extends Context>(handler: (c: C) => Promise<Response>) 
   };
 }
 
-export function zodIssues(error: z.ZodError, base = ""): Issue[] {
-  return error.issues.map((issue) => ({
+export function zodIssues(issues: readonly z.ZodIssue[], base = ""): Issue[] {
+  return issues.map((issue) => ({
     code: issue.code,
     message: issue.message,
     pointer: `${base}/${issue.path.join("/")}`,
@@ -115,11 +115,12 @@ export function zodIssues(error: z.ZodError, base = ""): Issue[] {
 /** Validate part of the request, documented in the OpenAPI document; invalid input is a 400 problem. */
 export function v2Validator<T extends z.ZodTypeAny, Target extends keyof ValidationTargets>(target: Target, schema: T) {
   return validator(target, schema, (result, c) => {
+    // The validator reports Standard Schema issues, which for Zod are its own issues.
     if (!result.success) {
       return problemResponse(
         c,
         new ApiProblem(400, "invalid_request", "The request is not valid.", {
-          issues: zodIssues(result.error as z.ZodError),
+          issues: zodIssues(result.error as readonly z.ZodIssue[]),
         }),
       );
     }

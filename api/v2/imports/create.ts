@@ -99,7 +99,7 @@ async function readUpload(c: Context) {
   }
   const parsed = importRequestSchema.safeParse(json);
   if (!parsed.success) {
-    throw new ApiProblem(400, "invalid_request", "The request part is not valid.", { issues: zodIssues(parsed.error) });
+    throw new ApiProblem(400, "invalid_request", "The request part is not valid.", { issues: zodIssues(parsed.error.issues) });
   }
   const file = body.file;
   if (!(file instanceof File)) {
