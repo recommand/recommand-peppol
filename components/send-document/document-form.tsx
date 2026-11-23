@@ -366,7 +366,7 @@ export function DocumentForm({
         recipient: formData.recipient?.trim() || null,
       } as SendDocument;
 
-      const response = await client[":companyId"]["sendDocument"].$post({
+      const response = await client[":companyId"]["send"].$post({
         param: { companyId: selectedCompanyId },
         json: payload,
       });
