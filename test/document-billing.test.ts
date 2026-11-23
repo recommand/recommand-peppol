@@ -48,6 +48,12 @@ describe("Document billing", () => {
     }
   });
 
+  it("charges orders, order responses and despatch advices", () => {
+    for (const type of ["order", "orderResponse", "despatchAdvice"] as const) {
+      expect(isBillableDocument(type, null)).toBe(true);
+    }
+  });
+
   it("never charges a message level response", () => {
     expect(isBillableDocument("messageLevelResponse", null)).toBe(false);
   });

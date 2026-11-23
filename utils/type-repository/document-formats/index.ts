@@ -24,6 +24,9 @@ import { ublFranceExtendedInvoiceFormat } from "./ubl-france-extended-invoice";
 import { ublFranceExtendedCreditnoteFormat } from "./ubl-france-extended-creditnote";
 import { facturxFranceFormat } from "./facturx-france";
 import { franceCdarFormat } from "./france-cdar";
+import { peppolUblOrderFormat } from "./peppol-ubl-order";
+import { peppolUblOrderResponseFormat } from "./peppol-ubl-order-response";
+import { peppolUblDespatchAdviceFormat } from "./peppol-ubl-despatch-advice";
 
 /** Every document format the platform can write and read, ordered by preference. */
 export const documentFormats: readonly AnyDocumentFormat[] = [
@@ -46,6 +49,9 @@ export const documentFormats: readonly AnyDocumentFormat[] = [
   ciiD22bFranceExtendedFormat,
   facturxFranceFormat,
   franceCdarFormat,
+  peppolUblOrderFormat,
+  peppolUblOrderResponseFormat,
+  peppolUblDespatchAdviceFormat,
 ];
 
 export function getDocumentFormat(key: string): AnyDocumentFormat | undefined {

@@ -86,6 +86,8 @@ export const selfBillingInvoiceDocumentType: DocumentType<
         senderName: senderName ?? undefined,
         senderEmail: normalize(document.buyer?.email) ?? undefined,
         receiverName: receiverName ?? undefined,
+        receiverRole: "seller",
+        receiverAddressable: document.seller,
       };
     },
   },

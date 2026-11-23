@@ -69,7 +69,7 @@ export async function sendingPipeline(c: SendingContext) {
 
     // Raw XML only says what it is once it is read, so its type is checked below.
     if (recipientAddress === null && input.documentType !== "xml") {
-      assertEmailOnlyDocumentType(input.documentType, BILLING_ONLY_WITHOUT_RECIPIENT);
+      assertEmailOnlyDocumentType(input.documentType, NOT_DELIVERABLE_BY_EMAIL);
     }
     if (recipientAddress === null && !input.email?.to.length) {
       throw new SendingFailure(
@@ -198,7 +198,7 @@ export async function sendingPipeline(c: SendingContext) {
     // After validation, so XML in a known format that could not be read is refused with
     // the rules it breaks rather than only for its unknown type.
     if (recipientAddress === null && input.documentType === "xml") {
-      assertEmailOnlyDocumentType(prepared.type, RAW_XML_BILLING_ONLY_WITHOUT_RECIPIENT);
+      assertEmailOnlyDocumentType(prepared.type, RAW_XML_NOT_DELIVERABLE_BY_EMAIL);
     }
 
     let sentPeppol = false;
@@ -490,15 +490,15 @@ async function isRecipientUnregistered(options: {
   });
 }
 
-const BILLING_ONLY_WITHOUT_RECIPIENT =
-  "Only billing document types (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote) are supported when recipient is null.";
-const RAW_XML_BILLING_ONLY_WITHOUT_RECIPIENT =
-  "A raw XML document can only be sent without a Peppol recipient when it is an invoice, credit note, self-billing invoice or self-billing credit note in a supported format.";
+const NOT_DELIVERABLE_BY_EMAIL =
+  "Only business documents (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote, order, orderResponse, despatchAdvice) are supported when recipient is null.";
+const RAW_XML_NOT_DELIVERABLE_BY_EMAIL =
+  "A raw XML document can only be sent without a Peppol recipient when it is an invoice, credit note, self-billing invoice, self-billing credit note, order, order response or despatch advice in a supported format.";
 
 /**
  * Only document types that say they can be delivered by email may go without a Peppol
- * recipient: the billing documents. A message level response or a report goes to a
- * Peppol participant or nowhere. A raw XML document that could not be read as one of
+ * recipient: the billing and the operational documents. A message level response or a
+ * report goes to a Peppol participant or nowhere. A raw XML document that could not be read as one of
  * the supported formats has no known type, and is refused as well.
  */
 function assertEmailOnlyDocumentType(type: string, message: string): void {

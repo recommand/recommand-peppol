@@ -16,6 +16,7 @@ You should be in total control of your business' data and operations. Before Pep
 - **User-Friendly REST API**: Integrate Peppol into your software in minutes with clear documentation and intuitive design.
 - **Intuitive Dashboard**: Track sent/received invoices, manage API keys, and view billing info in a simple dashboard.
 - **Secure Document Handling**: Encryption and digital signatures for UBL invoices, credit notes, and more.
+- **Ordering and Delivery**: Send and receive Peppol BIS orders, order responses and despatch advices next to your invoices.
 - **Certified Peppol Provider**: Official, secure Peppol connection for sending and receiving e-invoices and other documents.
 - **Open Source Implementation**: Full transparency and flexibility—see how your data is processed.
 - **Transparent Pricing**: Clear, volume-based pricing with no hidden costs or lock-in.

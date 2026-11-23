@@ -18,7 +18,7 @@ const { DOC_TYPE_ID, invoiceDocument, selfBillingInvoiceDocument } = await impor
 const BUYER = "0208:0598726857";
 const EMAIL_TO = "accounting@buyer.example";
 const RAW_XML_BILLING_ONLY =
-  "A raw XML document can only be sent without a Peppol recipient when it is an invoice, credit note, self-billing invoice or self-billing credit note in a supported format.";
+  "A raw XML document can only be sent without a Peppol recipient when it is an invoice, credit note, self-billing invoice, self-billing credit note, order, order response or despatch advice in a supported format.";
 
 const { sentEmails, recorded, sendAs4, validateDocument } = useSendingPipeline({ transmission: () => ({ ok: true }) });
 

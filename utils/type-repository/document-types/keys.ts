@@ -10,6 +10,13 @@ export const TRANSACTION_MESSAGING_DOCUMENT_TYPE_KEYS = [
   "frenchInvoicingCdar",
 ] as const;
 
+/** The Peppol BIS 3 post-award documents that order and deliver goods and services. */
+export const OPERATIONAL_DOCUMENT_TYPE_KEYS = [
+  "order",
+  "orderResponse",
+  "despatchAdvice",
+] as const;
+
 export const REPORTING_DOCUMENT_TYPE_KEYS = [
   "frenchB2CSalesReport",
   "frenchB2CPaymentReport",
@@ -25,12 +32,14 @@ export const REPORTING_DOCUMENT_TYPE_KEYS = [
  *
  * Order is significant: it is the order the Postgres enum declares its values
  * in, so a new type is appended to its class rather than inserted before an
- * existing one. `unknown` stays last, which is what the migrations expect.
+ * existing one, and a new class after the existing ones. `unknown` stays last,
+ * which is what the migrations expect.
  */
 export const STORED_DOCUMENT_TYPE_KEYS = [
   ...BILLING_DOCUMENT_TYPE_KEYS,
   ...TRANSACTION_MESSAGING_DOCUMENT_TYPE_KEYS,
   ...REPORTING_DOCUMENT_TYPE_KEYS,
+  ...OPERATIONAL_DOCUMENT_TYPE_KEYS,
   "unknown",
 ] as const;
 
@@ -40,10 +49,13 @@ export type TransactionMessagingDocumentTypeKey =
   (typeof TRANSACTION_MESSAGING_DOCUMENT_TYPE_KEYS)[number];
 export type ReportingDocumentTypeKey =
   (typeof REPORTING_DOCUMENT_TYPE_KEYS)[number];
+export type OperationalDocumentTypeKey =
+  (typeof OPERATIONAL_DOCUMENT_TYPE_KEYS)[number];
 export type DocumentTypeKey =
   | BillingDocumentTypeKey
   | TransactionMessagingDocumentTypeKey
-  | ReportingDocumentTypeKey;
+  | ReportingDocumentTypeKey
+  | OperationalDocumentTypeKey;
 export type StoredDocumentType = (typeof STORED_DOCUMENT_TYPE_KEYS)[number];
 export type ParsedOrUnknownDocumentType = DocumentTypeKey | "unknown";
 

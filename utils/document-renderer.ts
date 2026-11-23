@@ -326,7 +326,7 @@ function forcePositiveAmountSign(value: string): string {
  * takes one of these rather than a stored row, so callers that hold a parsed
  * document (the type repository) can render without inventing a row.
  */
-type DocumentRenderContext = {
+export type DocumentRenderContext = {
   documentId: string;
   type: PublicTransmittedDocument["type"];
   documentTypeTitle: string;
@@ -810,7 +810,7 @@ export async function renderFranceB2BiReport<F extends "html" | "pdf">(
  * The one place the format option is turned into renderTailwindTemplate's flags,
  * so every layout treats `pdfa` and the preview flag identically.
  */
-async function renderTemplate<F extends "html" | "pdf">(
+export async function renderTemplate<F extends "html" | "pdf">(
   template: string,
   data: object,
   options: { format: F; pdfa?: boolean },

@@ -70,7 +70,7 @@ const e2eDescribe = describe.skipIf(SKIP_E2E);
 // Exact messages the API is expected to return.
 const ERROR = {
   billingOnly:
-    "Only billing document types (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote) are supported when recipient is null.",
+    "Only business documents (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote, order, orderResponse, despatchAdvice) are supported when recipient is null.",
   recipientOrEmail:
     "Either recipient (for Peppol) or email.to (for email delivery) must be provided.",
   pdfMessageLevelResponse:

@@ -82,6 +82,8 @@ export const invoiceDocumentType: DocumentType<
         senderName: senderName ?? undefined,
         senderEmail: normalize(document.seller?.email) ?? undefined,
         receiverName: receiverName ?? undefined,
+        receiverRole: "buyer",
+        receiverAddressable: document.buyer,
       };
     },
   },

@@ -3,6 +3,9 @@ import "zod-openapi/extend";
 import { invoiceSchema } from "@peppol/utils/parsing/invoice/schemas";
 import { selfBillingCreditNoteSchema } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
 import { selfBillingInvoiceSchema } from "@peppol/utils/parsing/self-billing-invoice/schemas";
+import { orderSchema } from "@peppol/utils/parsing/order/schemas";
+import { orderResponseSchema } from "@peppol/utils/parsing/order-response/schemas";
+import { despatchAdviceSchema } from "@peppol/utils/parsing/despatch-advice/schemas";
 import { creditNoteSchema } from "@peppol/utils/parsing/creditnote/schemas";
 import { messageLevelResponseSchema } from "@peppol/utils/parsing/message-level-response/schemas";
 import { franceCdarSchema } from "@peppol/utils/parsing/france-cdar/schemas";
@@ -191,6 +194,9 @@ export const transmittedDocumentResponse = z.object({
         // The stored shape, which reads back reports filed before the invoicing
         // framework was part of a cross-border report.
         storedFrenchB2BiReportSchema,
+        orderSchema,
+        orderResponseSchema,
+        despatchAdviceSchema,
         z.null(),
     ]).openapi({
         description: "The document read into the JSON shape of its type, so you do not have to parse the XML yourself. Null when the type is `unknown` or the payload was not kept.",

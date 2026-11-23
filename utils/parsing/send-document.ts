@@ -6,6 +6,9 @@ import { invoiceDocumentType } from "@peppol/utils/type-repository/document-type
 import { messageLevelResponseDocumentType } from "@peppol/utils/type-repository/document-types/messageLevelResponse";
 import { selfBillingCreditNoteDocumentType } from "@peppol/utils/type-repository/document-types/selfBillingCreditNote";
 import { selfBillingInvoiceDocumentType } from "@peppol/utils/type-repository/document-types/selfBillingInvoice";
+import { orderDocumentType } from "@peppol/utils/type-repository/document-types/order";
+import { orderResponseDocumentType } from "@peppol/utils/type-repository/document-types/orderResponse";
+import { despatchAdviceDocumentType } from "@peppol/utils/type-repository/document-types/despatchAdvice";
 
 export const DocumentType = {
   INVOICE: "invoice",
@@ -14,6 +17,9 @@ export const DocumentType = {
   SELF_BILLING_CREDIT_NOTE: "selfBillingCreditNote",
   MESSAGE_LEVEL_RESPONSE: "messageLevelResponse",
   FRENCH_INVOICING_CDAR: "frenchInvoicingCdar",
+  ORDER: "order",
+  ORDER_RESPONSE: "orderResponse",
+  DESPATCH_ADVICE: "despatchAdvice",
   XML: "xml",
 } as const;
 
@@ -25,6 +31,9 @@ export const documentTypeSchema = z
     DocumentType.SELF_BILLING_CREDIT_NOTE,
     DocumentType.MESSAGE_LEVEL_RESPONSE,
     DocumentType.FRENCH_INVOICING_CDAR,
+    DocumentType.ORDER,
+    DocumentType.ORDER_RESPONSE,
+    DocumentType.DESPATCH_ADVICE,
     DocumentType.XML,
   ])
   .openapi({
@@ -62,6 +71,9 @@ const documentRequestTypes = {
   [DocumentType.SELF_BILLING_CREDIT_NOTE]: selfBillingCreditNoteDocumentType,
   [DocumentType.MESSAGE_LEVEL_RESPONSE]: messageLevelResponseDocumentType,
   [DocumentType.FRENCH_INVOICING_CDAR]: frenchInvoicingCdarDocumentType,
+  [DocumentType.ORDER]: orderDocumentType,
+  [DocumentType.ORDER_RESPONSE]: orderResponseDocumentType,
+  [DocumentType.DESPATCH_ADVICE]: despatchAdviceDocumentType,
   [DocumentType.XML]: { sendSchema: sendXmlSchema, translatableTitle: "XML" },
 } as const satisfies Record<
   DocumentType,
@@ -112,7 +124,7 @@ export function documentRequestSchema<
 export const sendDocumentBaseShape = {
   recipient: z.string().nullable().openapi({
     description:
-      "The Peppol address of the recipient. If null, the document will be sent via email only (requires `email.to`): as a PDF, or, when `doctypeId` is set, as a structured document in that format, validated as it would be for a Peppol recipient and attached as XML. In a document written this way, the receiving party's electronic address is its enterprise number under `enterpriseNumberScheme`, else its VAT number, else the first address in `email.to`; Peppol BIS does not accept an email address there and needs one of the numbers. A raw XML document is never rewritten: it is validated and attached exactly as given, with the electronic addresses it states, and must be an invoice, credit note, self-billing invoice or self-billing credit note. French regulated documents cannot be delivered by email only. A recipient the Peppol network says is not registered is not attempted: the Peppol delivery fails with `recipient_not_found` and email delivery, if configured, applies.",
+      "The Peppol address of the recipient. If null, the document will be sent via email only (requires `email.to`): as a PDF, or, when `doctypeId` is set, as a structured document in that format, validated as it would be for a Peppol recipient and attached as XML. In a document written this way, the receiving party's electronic address is its enterprise number under `enterpriseNumberScheme`, else its VAT number, else the first address in `email.to`; Peppol BIS does not accept an email address there and needs one of the numbers. A raw XML document is never rewritten: it is validated and attached exactly as given, with the electronic addresses it states, and must be an invoice, credit note, self-billing invoice, self-billing credit note, order, order response or despatch advice. French regulated documents cannot be delivered by email only. A recipient the Peppol network says is not registered is not attempted: the Peppol delivery fails with `recipient_not_found` and email delivery, if configured, applies.",
     examples: ["0208:987654321"],
   }),
   email: z
@@ -171,7 +183,7 @@ export const sendDocumentBaseShape = {
     .openapi({
       ref: "PDFGeneration",
       description:
-        "Optionally generate a PDF of the document and include it as an embedded attachment (also included in email attachments when email sending is enabled). Not supported for message level responses, French Invoicing CDAR messages, or raw XML documents.",
+        "Optionally generate a PDF of the document and include it as an embedded attachment (also included in email attachments when email sending is enabled). Not supported for message level responses, French Invoicing CDAR messages, order responses, or raw XML documents.",
     }),
   doctypeId: z.string().optional().openapi({
     description:

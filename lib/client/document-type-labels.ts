@@ -29,6 +29,9 @@ export function getDocumentTypeLabel(
     frenchB2CPaymentReport: t("French B2C Payment Report"),
     frenchB2BiInvoiceReport: t("French Cross-Border Invoice Report"),
     frenchB2BiPaymentReport: t("French Cross-Border Payment Report"),
+    order: t("Order"),
+    orderResponse: t("Order Response"),
+    despatchAdvice: t("Despatch Advice"),
     unknown: t("Unknown"),
   };
   return labels[type as StoredDocumentType] ?? type;
