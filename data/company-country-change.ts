@@ -1,7 +1,6 @@
 import { cleanEnterpriseNumber, cleanVatNumber, UserFacingError } from "@peppol/utils/util";
 import { COUNTRIES } from "@peppol/utils/countries";
-import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
-import { vatNumberIdentifier } from "@peppol/utils/identifiers/vat-number";
+import { defaultVatNumberIdentifier, derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, normalizeIdentifierValue, validateIdentifier } from "@peppol/utils/identifier-validation";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import { cleanIdentifier, cleanScheme, validateIdentifierAgainstCompany } from "./company-identifiers";
 import { findUnsupportedIdentifiers } from "./company-identifier-policy";
@@ -57,10 +56,12 @@ export type CountryChangePlan = {
  * registered the register number under 0204 and wrote 0204 as its BT-30 scheme, but
  * 0204 is the Leitweg-ID of a public authority. Companies created back then still
  * carry both, and a country change has to recognise them as the old country's
- * defaults rather than as something the customer chose.
+ * defaults rather than as something the customer chose. Luxembourg registered the
+ * matricule under 9938 before it moved new participants to 0240.
  */
 const LEGACY_DEFAULT_ENTERPRISE_NUMBER_SCHEMES: Record<string, string> = {
   DE: "0204",
+  LU: "9938",
 };
 
 /**
@@ -92,7 +93,7 @@ function defaultIdentifiersFor(
       });
     }
   }
-  const vatIdentifier = vatNumberIdentifier(country, vatNumber);
+  const vatIdentifier = defaultVatNumberIdentifier(country, { enterpriseNumber, vatNumber });
   if (vatIdentifier) {
     defaults.push({
       scheme: cleanScheme(vatIdentifier.scheme),

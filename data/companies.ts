@@ -13,8 +13,7 @@ import { createVerificationSession, type VerificationExpectedDetails } from "./d
 import { getCompanyVerificationLog, revokeOpenCompanyVerificationSessions } from "./company-verification";
 import { companyDocumentsS3Prefix } from "./offload/storage";
 import { enqueueS3PrefixDeletions } from "./s3-deletion";
-import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, validateCompanyNumbers } from "@peppol/utils/identifier-validation";
-import { vatNumberIdentifier } from "@peppol/utils/identifiers/vat-number";
+import { defaultVatNumberIdentifier, derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, validateCompanyNumbers } from "@peppol/utils/identifier-validation";
 import { publishCompanyVerificationEvent } from "./company-verification-webhooks";
 import { resolveDefaultPeppolProviders } from "./peppol-providers";
 import { getSmpProviderDescriptor } from "./smp-providers/descriptors";
@@ -232,7 +231,7 @@ async function setupCompanyDefaults({ company, isPlayground, useTestNetwork, ver
       console.error(`Failed to create enterprise number identifier for company ${company.id}: ${error}`);
     }
   }
-  const vatIdentifier = vatNumberIdentifier(company.country, company.vatNumber);
+  const vatIdentifier = defaultVatNumberIdentifier(company.country, company);
   if (vatIdentifier) {
     try {
       await createCompanyIdentifier({

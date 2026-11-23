@@ -37,6 +37,12 @@ export type CountryIdentifierRules = {
    * schemes.
    */
   derivedIdentifiers?: (company: { enterpriseNumber: string | null; vatNumber: string | null }) => { scheme: string; identifier: string }[];
+  /**
+   * Whether a company of the country gets no identifier under the country's default
+   * VAT scheme, because the country addresses it by another of its numbers. The VAT
+   * scheme stays open to the company; it only stops being a default.
+   */
+  withoutDefaultVatIdentifier?: (company: { enterpriseNumber: string | null; vatNumber: string | null }) => boolean;
 };
 
 /**
