@@ -25,7 +25,23 @@ export async function upsertCompanyRegistrations({companyId, useTestNetwork}: {c
     throw new UserFacingError("Company or identifiers or document types not found, could not upsert company registration");
   }
 
+  // A migration key can be used only once. When registering the company fails further
+  // on, the caller rolls back by unregistering every identifier, including a participant
+  // just claimed with a key, and no SMP publishes that one afterwards. Registering the
+  // identifiers without a key first makes a participant that is still held elsewhere
+  // fail before any key is spent.
+  const withKey = new Set<string>();
   for (const identifier of identifiers) {
+    if(await getPendingInboundMigration({companyId, scheme: identifier.scheme, identifier: identifier.identifier, useTestNetwork})){
+      withKey.add(identifier.id);
+    }
+  }
+  const ordered = [
+    ...identifiers.filter((identifier) => !withKey.has(identifier.id)),
+    ...identifiers.filter((identifier) => withKey.has(identifier.id)),
+  ];
+
+  for (const identifier of ordered) {
     await registerCompanyIdentifier({company, identifier, documentTypes, useTestNetwork});
   }
 }

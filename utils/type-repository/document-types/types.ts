@@ -2,25 +2,41 @@ import type { z } from "zod";
 import type { sendDocumentSchema } from "../../parsing/send-document";
 import type { Company } from "@peppol/data/companies";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
+import type { AddressableParty } from "@peppol/utils/identifiers/electronic-address";
 import type { DocumentTypeKey } from "./keys";
 
 export type {
   BillingDocumentTypeKey,
   DocumentTypeKey,
+  OperationalDocumentTypeKey,
   ParsedOrUnknownDocumentType,
   ReportingDocumentTypeKey,
   StoredDocumentType,
   TransactionMessagingDocumentTypeKey,
 } from "./keys";
 
-export type DocumentTypeClass = "billing" | "transactionMessaging" | "reporting";
+export type DocumentTypeClass =
+  | "billing"
+  | "transactionMessaging"
+  | "reporting"
+  | "operational";
 
 export type DocumentDetails = {
   documentNumber?: string;
   amount?: string;
   currency?: string;
   senderName?: string;
+  /** The issuer's email address as the document states it, where a reply to the document belongs. */
+  senderEmail?: string;
   receiverName?: string;
+  /** The receiving party's field in the document, such as "buyer", for error messages. */
+  receiverRole?: string;
+  /**
+   * The receiving party's numbers, which give the electronic address a structured
+   * document delivered by email alone names for it, since it has no Peppol recipient.
+   * Null for a party identified by party identifiers alone when it has none.
+   */
+  receiverAddressable?: AddressableParty;
 };
 
 export type SendPreprocessContext = {

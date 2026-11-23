@@ -67,6 +67,13 @@ export type DocumentFormat<DocumentTypes extends readonly AnyDocumentType[]> = {
   isFormat?: (document: ParsedXmlDocument, context: DetectionContext) => boolean;
 
   /**
+   * The process a raw document of this format declares it travels over, for a format
+   * that can travel over several and whose documents name the one they belong to.
+   * Raw XML sent without a process id is sent over it.
+   */
+  declaredProcessId?: (document: ParsedXmlDocument) => string | undefined;
+
+  /**
    * The validation profile to validate this format's XML with, for a format whose XML does
    * not reliably identify the rules that apply to it: the French formats, whose doc type
    * decides the French rules while BT-24 may say plain EN 16931. Absent for every format

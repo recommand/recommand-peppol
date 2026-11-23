@@ -32,6 +32,8 @@ export function franceCdarToXML({
     Boolean(franceCdar.reasonCode) ||
     Boolean(franceCdar.reason) ||
     Boolean(franceCdar.reasonNote) ||
+    Boolean(franceCdar.requestedActionCode) ||
+    Boolean(franceCdar.requestedAction) ||
     characteristics.length > 0;
 
   const statusDetail = hasStatusDetail
@@ -41,6 +43,12 @@ export function franceCdarToXML({
             ? { "ram:ReasonCode": franceCdar.reasonCode }
             : {}),
           ...(franceCdar.reason ? { "ram:Reason": franceCdar.reason } : {}),
+          ...(franceCdar.requestedActionCode
+            ? { "ram:RequestedActionCode": franceCdar.requestedActionCode }
+            : {}),
+          ...(franceCdar.requestedAction
+            ? { "ram:RequestedAction": franceCdar.requestedAction }
+            : {}),
           "ram:SequenceNumeric": "1",
           ...(franceCdar.reasonNote
             ? {
@@ -66,9 +74,13 @@ export function franceCdarToXML({
       "@_xmlns:udt":
         "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
       "rsm:ExchangedDocumentContext": {
-        "ram:BusinessProcessSpecifiedDocumentContextParameter": {
-          "ram:ID": franceCdar.businessProcess,
-        },
+        ...(franceCdar.businessProcess
+          ? {
+              "ram:BusinessProcessSpecifiedDocumentContextParameter": {
+                "ram:ID": franceCdar.businessProcess,
+              },
+            }
+          : {}),
         "ram:GuidelineSpecifiedDocumentContextParameter": {
           "ram:ID": "urn.cpro.gouv.fr:1p0:CDV:invoice",
         },

@@ -145,9 +145,24 @@ describe("the Belgian representative check while the CBE cannot be reached", () 
     expect(await listRepresentatives(belgian)).toEqual({
       representatives: [{ firstName: "Jan", lastName: "Peeters", function: "Bestuurder" }],
       nameWithoutList: "unknown",
+      registerUnavailable: false,
     });
     expect(await checkRepresentative(belgian, name("Jan", "Peeters"))).toEqual(name("Jan", "Peeters"));
     await expect(checkRepresentative(belgian, name("Els", "Maes"))).rejects.toThrow("in the CBE registry");
+  });
+
+  it("tells the form the register is unavailable instead of listing nobody when there is no copy to fall back to", async () => {
+    cbeIsDown();
+    expect(await listRepresentatives(belgian)).toEqual({ representatives: [], nameWithoutList: "unknown", registerUnavailable: true });
+  });
+
+  it("does not blame the register for a company without an enterprise number", async () => {
+    cbeIsDown();
+    expect(await listRepresentatives({ ...belgian, enterpriseNumber: null })).toEqual({
+      representatives: [],
+      nameWithoutList: "unknown",
+      registerUnavailable: false,
+    });
   });
 
   it("refuses with an error the representative can act on when there is no copy to fall back to", async () => {

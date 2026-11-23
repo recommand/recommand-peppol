@@ -1,6 +1,6 @@
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { markDocumentsAsRead } from "@peppol/data/transmitted-documents";
-import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { Server, type Context } from "@recommand/lib/api";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -36,6 +36,7 @@ type BulkMarkAsReadContext = Context<
 const _bulkMarkAsRead = server.post(
   "/:teamId/documents/bulk-mark-as-read",
   requireIntegrationSupportedTeamAccess(),
+  requireDocumentAccess(),
   describeRoute({ hide: true }),
   zodValidator("param", bulkMarkAsReadParamSchema),
   zodValidator("json", bulkMarkAsReadJsonBodySchema),

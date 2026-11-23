@@ -1,7 +1,7 @@
 import type { RecommandApp } from "@recommand/lib/app";
 import { Server } from "@recommand/lib/api";
 import { Logger } from "@recommand/lib/logger";
-import { withoutEmptyPaths, withoutUnusedSchemas } from "./utils/openapi";
+import { withSortedParameters } from "./utils/openapi";
 import reportingServer from "./api/reporting";
 import companiesServer from "./api/companies";
 import labelsServer from "@peppol/api/labels";
@@ -19,7 +19,7 @@ import inboundAddressesServer from "./api/v2/inbound-addresses";
 import filesServer from "./api/v2/files";
 import intakeDocumentTypesServer from "./api/intake-document-types";
 import transmittedDocumentsServer from "./api/documents";
-import { generateSpecs, type OpenApiSpecsOptions } from "hono-openapi";
+import { generateSpecs, type GenerateSpecOptions } from "hono-openapi";
 import type { Context } from "hono";
 import webhooksServer from "./api/webhooks";
 import integrationsServer from "./api/integrations";
@@ -76,7 +76,14 @@ export function registerOpenApiRoutes(server: Server) {
   ];
 
   // Add OpenAPI documentation
-  const specsOptions: OpenApiSpecsOptions = {
+  const specsOptions: Partial<GenerateSpecOptions> = {
+    // An `Output` component is written over its input form, so the two don't
+    // repeat each other's inline enumerations.
+    composeOutputComponents: true,
+    // `hono-openapi` would document a 400 on every validated route with the
+    // body its own validator sends, but `zodValidator` answers with a body of
+    // its own, so that response would describe a body that is never sent.
+    defaultValidationErrorResponse: false,
     exclude,
     documentation: {
       info: {
@@ -123,6 +130,7 @@ For additional support or questions, don't hesitate to contact our support team.
           jwt: {
             type: "http",
             scheme: "bearer",
+            bearerFormat: "JWT",
             description:
               "JWT authentication. Create a new JWT token in the Recommand dashboard.",
           },
@@ -218,15 +226,13 @@ For additional support or questions, don't hesitate to contact our support team.
       ],
     },
   };
-  // hono-openapi builds each response schema in place the first time it
-  // generates the document, so a second generation lacks the component
-  // schemas those responses refer to. Generate the document once and serve
-  // it from both routes. Before caching it, drop the empty path items
-  // hono-openapi leaves behind for hidden routes (see withoutEmptyPaths).
+  // The routes do not change once the server runs, so generate the document
+  // once and serve it from both routes, with every operation's parameters in a
+  // fixed order (see withSortedParameters).
   let openApiDocument: ReturnType<typeof generateSpecs> | undefined;
   const getOpenApiDocument = (c: Context) => {
-    openApiDocument ??= generateSpecs(server, specsOptions, undefined, c).then(
-      (document) => withoutUnusedSchemas(withoutEmptyPaths(document)),
+    openApiDocument ??= generateSpecs(server, specsOptions, c).then(
+      withSortedParameters,
       (error) => {
         openApiDocument = undefined;
         throw error;

@@ -11,7 +11,8 @@ import {
 import {
     describeErrorResponse,
 } from "@core/lib/api-docs";
-import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { isExportRangeWithinLimit } from "@peppol/utils/export-range";
 import { buildDocumentsArchive } from "./archive";
 import { documentDirectionSchema, exportOutputTypeSchema, pdfGenerationModeSchema } from "./shared";
 
@@ -61,11 +62,7 @@ const exportDocumentsBodySchema = z.object({
 }).refine((data) => data.to > data.from, {
     message: "End date must be after start date",
     path: ["to"],
-}).refine((data) => {
-    const maxRange = 31 * 24 * 60 * 60 * 1000;
-    const range = data.to.getTime() - data.from.getTime();
-    return range <= maxRange;
-}, {
+}).refine((data) => isExportRangeWithinLimit(data.from, data.to), {
     message: "Date range must not exceed 1 month (31 days)",
     path: ["to"],
 });
@@ -79,6 +76,7 @@ type ExportDocumentsContext = Context<AuthenticatedUserContext & AuthenticatedTe
 const _exportDocuments = server.post(
     "/:teamId/documents/export",
     requireIntegrationSupportedTeamAccess(),
+    requireDocumentAccess(),
     describeRoute({ hide: true }),
     zodValidator("param", exportDocumentsParamSchemaWithTeamId),
     zodValidator("json", exportDocumentsBodySchema),
@@ -88,6 +86,7 @@ const _exportDocuments = server.post(
 const _exportDocumentsMinimal = server.post(
     "/documents/export",
     requireIntegrationSupportedTeamAccess(),
+    requireDocumentAccess(),
     exportDocumentsRouteDescription,
     zodValidator("json", exportDocumentsBodySchema),
     _exportDocumentsImplementation,

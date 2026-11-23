@@ -30,19 +30,19 @@ const upsertSupplierRouteDescription = describeRoute({
 
 const upsertSupplierJsonBodySchema = z.object({
   id: z.string().optional().openapi({
-    description: "The internal ID of the supplier to update. If provided, updates by id.",
+    description: "The ID of the supplier to update. When it does not match one of the team's suppliers, the request fails with a 400.",
   }),
   name: z.string().openapi({
-    description: "The name of the supplier",
+    description: "The supplier's name.",
   }),
   externalId: z.string().nullable().optional().openapi({
-    description: "The external ID of the supplier. If provided without id, finds by externalId and updates or creates if not found.",
+    description: "Your own identifier for the supplier, unique within the team. Without an id, the supplier with this external ID is updated, or created when there is none. With an id, it replaces the supplier's external ID; null clears it, and leaving it out keeps it.",
   }),
   vatNumber: z.string().nullable().optional().openapi({
-    description: "The VAT number of the supplier",
+    description: "The supplier's VAT number. An incoming invoice or credit note whose seller has exactly this VAT number is matched to the supplier. Leaving it out on an update clears it.",
   }),
   peppolAddresses: z.array(z.string()).optional().default([]).openapi({
-    description: "The Peppol addresses of the supplier",
+    description: "The supplier's Peppol addresses, each as `scheme:identifier`. An incoming invoice or credit note sent from one of these addresses is matched to the supplier. Leaving them out on an update clears them.",
   }),
 });
 

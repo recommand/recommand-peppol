@@ -76,6 +76,9 @@ async function _getVerificationContextImplementation(c: GetVerificationContextCo
             representatives,
             // What the form asks when the register lists nobody.
             nameWithoutRepresentatives: listed?.nameWithoutList ?? "typed",
+            // The register could not be read and the representative would be refused
+            // for it; the form asks to try again later.
+            isRegisterUnavailable: listed?.registerUnavailable ?? false,
             isPlayground: teamIsPlayground,
             isMandateRequired,
             countryRequirements: getVerificationCountryRequirements(company.country, isMandateRequired, company.isSmpRecipient),

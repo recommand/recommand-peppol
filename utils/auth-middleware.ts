@@ -1,5 +1,5 @@
-import { isMember } from "@core/data/teams";
 import {
+  checkTeamAccess,
   requireAuth,
   requireTeamAccess,
   type AuthenticatedTeamContext,
@@ -10,7 +10,7 @@ import { verifySession, type SessionVerificationExtension } from "@core/lib/sess
 import { getCompanyById, type Company } from "@peppol/data/companies";
 import { verifyIntegrationJwt } from "@peppol/data/integrations/auth";
 import { getExtendedTeam, type ExtendedTeam } from "@peppol/data/teams";
-import { checkPeppolEntitlement, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
+import { checkPeppolEntitlement, checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import { actionFailure } from "@recommand/lib/utils";
 import { createMiddleware } from "hono/factory";
 import { requiresCompanyVerification } from "@peppol/utils/playground";
@@ -63,23 +63,8 @@ export function requireCompanyAccess(options: CompanyAccessOptions = {}) {
       return c.json(actionFailure("Company not found"), 404);
     }
 
-    const contextTeamId = c.get("teamId");
-    const user: { id: string; isAdmin: boolean } | null = c.get("user");
-    if (contextTeamId) {
-      // If the user is authenticated via an API key, ensure the API key belongs to the team
-      // Admins bypass this check and can access any company
-      if (!user?.isAdmin && contextTeamId !== company.teamId) {
-        return c.json(actionFailure("Unauthorized"), 401);
-      }
-    } else {
-      if (!user?.id) {
-        return c.json(actionFailure("Unauthorized"), 401);
-      }
-      // If the user is not authenticated via an API key, ensure they are a member of the team
-      // Admins bypass this check and can access any company
-      if (!user.isAdmin && !(await isMember(user.id, company.teamId))) {
-        return c.json(actionFailure("Unauthorized"), 401);
-      }
+    if (!(await checkTeamAccess(c, company.teamId)).allowed) {
+      return c.json(actionFailure("Unauthorized"), 401);
     }
 
     // Get team based on company
@@ -117,6 +102,29 @@ export function requireTransactionEntitlement() {
       const entitlement = await checkPeppolEntitlement(team, PEPPOL_ENTITLEMENTS.TRANSACTIONS);
       if (!entitlement.allowed) {
         return c.json(actionFailure(entitlement.message ?? "This team cannot exchange documents"), 401);
+      }
+
+      await next();
+    }
+  );
+}
+
+/**
+ * Only a team that holds the document access entitlement may read or change its
+ * stored documents, sent or received, except for labelling them. Documents keep
+ * arriving without it, and are there once the team holds it again.
+ */
+export function requireDocumentAccess() {
+  return createMiddleware<AuthenticatedUserContext & AuthenticatedTeamContext>(
+    async (c, next) => {
+      const team = c.var.team;
+      if (!team) {
+        return c.json(actionFailure("Team not found"), 404);
+      }
+
+      const entitlement = await checkPeppolEntitlementForTeamId(team.id, PEPPOL_ENTITLEMENTS.DOCUMENT_ACCESS);
+      if (!entitlement.allowed) {
+        return c.json(actionFailure(entitlement.message ?? "This team cannot access its documents"), 403);
       }
 
       await next();

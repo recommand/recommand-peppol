@@ -21,7 +21,17 @@ const franceCdarStatusCodeDescription = `French invoice lifecycle status.
 | \`212\` | Collected (cashed) |
 | \`213\` | Rejected |
 | \`214\` | Validated or pre-validated ("Visée") |
-| \`501\` | Inadmissible file |`;
+| \`220\` | Cancelled (replaced by a corrective invoice or credit note) |
+| \`221\` | Routing error (the receiving platform does not serve the recipient's address) |
+| \`224\` | Direct payment requested |
+| \`225\` | Factored |
+| \`226\` | Factored confidentially |
+| \`227\` | Account to pay changed |
+| \`228\` | No longer factored |
+| \`501\` | Inadmissible file |
+| \`601\` | Lifecycle status rejected |
+
+\`601\` is set by a platform that rejects a lifecycle status message (a CDAR) rather than an invoice: \`invoiceTypeCode\` is then \`305\` and \`invoiceId\` identifies the rejected message. It only appears in CDARs you receive.`;
 
 const franceCdarPhaseDescription = `CDAR phase.
 
@@ -57,7 +67,7 @@ const franceCdarRoleCodeDescription = `CDAR party role code (UNCL 3035).
 | \`II\` | Invoicer (invoice issuer) |
 | \`IV\` | Invoicee (party invoiced) |`;
 
-const franceCdarInvoiceTypeCodeDescription = `Type of the referenced invoice (UNTDID 1001, restricted to the values allowed by BR-FR-04).
+const franceCdarInvoiceTypeCodeDescription = `Type of the referenced document: an invoice type (UNTDID 1001, restricted to the values allowed by BR-FR-04), or \`305\` for a lifecycle status message.
 
 | Value | Meaning |
 | --- | --- |
@@ -76,7 +86,10 @@ const franceCdarInvoiceTypeCodeDescription = `Type of the referenced invoice (UN
 | \`381\` | Credit note |
 | \`396\` | Factored credit note |
 | \`502\` | Self-billed factored credit note |
-| \`503\` | Credit note for an advance payment invoice |`;
+| \`503\` | Credit note for an advance payment invoice |
+| \`305\` | Lifecycle status message (the status concerns a CDAR, not an invoice) |
+
+\`305\` only appears in CDARs you receive, together with status \`601\`.`;
 
 const franceCdarReasonCodeDescription = `Coded reason for the invoice lifecycle status.
 
@@ -133,10 +146,15 @@ const franceCdarReasonCodeDescription = `Coded reason for the invoice lifecycle 
 | \`CONTACT_ACHTR\` | Public-sector refusal: other reason, contact your buyer |
 | \`RETRAIT_MAN_SERV\` | Public-sector refusal reason, see the AFNOR XP Z12-012 reason code table |
 | \`ST_CT_NON_DECLAR\` | Public-sector refusal reason, see the AFNOR XP Z12-012 reason code table |
+| \`REJ_INC\` | Lifecycle status rejected: inconsistent with the earlier statuses |
+| \`REJ_INEX\` | Lifecycle status rejected: the status does not exist |
+| \`REJ_RG\` | Lifecycle status rejected: a business rule is not met |
+| \`REJ_HAB\` | Lifecycle status rejected: the issuer's role does not allow this status |
+| \`REJ_ENCAISSEMENT\` | Lifecycle status rejected: the collected amounts are not broken down by VAT rate |
 
-The \`IRR_*\` codes are the reasons for an inadmissible file (\`501\`). The public-sector refusal codes are set by the public invoicing portal and only appear in CDARs you receive.
+The \`IRR_*\` codes are the reasons for an inadmissible file (\`501\`). The public-sector refusal codes are set by the public invoicing portal, and the codes for a rejected lifecycle status (\`REJ_INC\`, \`REJ_INEX\`, \`REJ_RG\`, \`REJ_HAB\`, \`REJ_ENCAISSEMENT\`) by the platform that rejects it; both only appear in CDARs you receive.
 
-When sending, statuses \`200\`, \`206\`, \`207\`, \`208\`, \`210\`, \`213\` and \`501\` accept only the codes the French rules list for them (BR-FR-CDV-CL-09). A refusal (\`210\`) accepts \`TX_TVA_ERR\`, \`MONTANTTOTAL_ERR\`, \`CALCUL_ERR\`, \`NON_CONFORME\`, \`DOUBLON\`, \`DEST_ERR\`, \`TRANSAC_INC\`, \`EMMET_INC\`, \`CONTRAT_TERM\`, \`DOUBLE_FACT\`, \`CMD_ERR\`, \`ADR_ERR\` and \`REF_CT_ABSENT\`, so not \`AUTRE\`.`;
+When sending, statuses \`200\`, \`206\`, \`207\`, \`208\`, \`210\`, \`213\`, \`221\` and \`501\` accept only the codes the French rules list for them (BR-FR-CDV-CL-09). A refusal (\`210\`) accepts \`TX_TVA_ERR\`, \`MONTANTTOTAL_ERR\`, \`CALCUL_ERR\`, \`NON_CONFORME\`, \`DOUBLON\`, \`DEST_ERR\`, \`TRANSAC_INC\`, \`EMMET_INC\`, \`CONTRAT_TERM\`, \`DOUBLE_FACT\`, \`CMD_ERR\`, \`ADR_ERR\` and \`REF_CT_ABSENT\`, so not \`AUTRE\`.`;
 
 export const franceCdarStatusCodeSchema = z.enum([
   "200", // Submitted
@@ -154,7 +172,15 @@ export const franceCdarStatusCodeSchema = z.enum([
   "212", // Collected (cashed)
   "213", // Rejected
   "214", // Validated or pre-validated ("Visée")
+  "220", // Cancelled
+  "221", // Routing error
+  "224", // Direct payment requested
+  "225", // Factored
+  "226", // Factored confidentially
+  "227", // Account to pay changed
+  "228", // No longer factored
   "501", // Inadmissible file
+  "601", // Lifecycle status message rejected (only received)
 ]).openapi({ description: franceCdarStatusCodeDescription, ref: "FranceCdarStatusCode" });
 
 export const franceCdarPhaseSchema = z.enum([
@@ -202,6 +228,7 @@ export const franceCdarInvoiceTypeCodeSchema = z.enum([
   "396", // Factored credit note
   "502", // Self-billed factored credit note
   "503", // Credit note for an advance payment invoice
+  "305", // Lifecycle status message (only received)
 ]).openapi({ description: franceCdarInvoiceTypeCodeDescription, ref: "FranceCdarInvoiceTypeCode" });
 
 export const franceCdarReasonCodeSchema = z.enum([
@@ -256,7 +283,37 @@ export const franceCdarReasonCodeSchema = z.enum([
   "CONTACT_ACHTR", // Public-sector refusal: contact your buyer
   "RETRAIT_MAN_SERV", // Public-sector refusal
   "ST_CT_NON_DECLAR", // Public-sector refusal
+  "REJ_INC", // Lifecycle status rejected: inconsistent with earlier statuses
+  "REJ_INEX", // Lifecycle status rejected: status does not exist
+  "REJ_RG", // Lifecycle status rejected: business rule not met
+  "REJ_HAB", // Lifecycle status rejected: role not allowed
+  "REJ_ENCAISSEMENT", // Lifecycle status rejected: collected amounts not split by VAT rate
 ]).openapi({ description: franceCdarReasonCodeDescription, ref: "FranceCdarReasonCode" });
+
+const franceCdarRequestedActionCodeDescription = `Action the issuer of the status expects from the recipient (BR-FR-CDV-CL-10).
+
+| Value | Meaning |
+| --- | --- |
+| \`NOA\` | No action required |
+| \`PIN\` | Provide the missing information, without issuing a new invoice |
+| \`NIN\` | Issue a corrected invoice |
+| \`CNF\` | Cancel the invoice in full with a credit note |
+| \`CNP\` | Issue a partial credit note |
+| \`CNA\` | Repay the amount paid on the invoice |
+| \`OTH\` | Other action, described in \`requestedAction\` |`;
+
+export const franceCdarRequestedActionCodeSchema = z.enum([
+  "NOA", // No action required
+  "PIN", // Provide information
+  "NIN", // Issue a corrected invoice
+  "CNF", // Credit fully
+  "CNP", // Credit partially
+  "CNA", // Repay the amount paid
+  "OTH", // Other
+]).openapi({
+  description: franceCdarRequestedActionCodeDescription,
+  ref: "FranceCdarRequestedActionCode",
+});
 
 const franceCdarAmountSchema = z
   .string()
@@ -297,6 +354,10 @@ const franceCdarIdentifierSchemeSchema = z
   .string()
   .regex(/^\d{4}$/, "Identifier scheme must be a four-digit code");
 const franceCdarReasonSchema = franceCdarNonBlankString(250, "Reason");
+const franceCdarRequestedActionSchema = franceCdarNonBlankString(
+  250,
+  "Requested action"
+);
 const franceCdarReasonNoteSchema = franceCdarNonBlankString(
   2000,
   "Reason note"
@@ -345,6 +406,7 @@ const reasonCodesByStatus: Partial<
   "210": ["TX_TVA_ERR", "MONTANTTOTAL_ERR", "CALCUL_ERR", "NON_CONFORME", "DOUBLON", "DEST_ERR", "TRANSAC_INC", "EMMET_INC", "CONTRAT_TERM", "DOUBLE_FACT", "CMD_ERR", "ADR_ERR", "REF_CT_ABSENT"],
   "501": ["IRR_VIDE_F", "IRR_TYPE_F", "IRR_SYNTAX", "IRR_TAILLE_PJ", "IRR_NOM_PJ", "IRR_VID_PJ", "IRR_EXT_DOC", "IRR_TAILLE_F", "IRR_ANTIVIRUS", "IRR_NOM_F"],
   "213": ["MONTANTTOTAL_ERR", "CALCUL_ERR", "DOUBLON", "DEST_INC", "ADR_ERR", "REJ_SEMAN", "REJ_UNI", "REJ_COH", "REJ_ADR", "REJ_CONT_B2G", "REJ_REF_PJ", "REJ_ASS_PJ"],
+  "221": ["ROUTAGE_ERR"],
 };
 
 // The public invoicing portal sets these when it refuses an invoice on behalf of a
@@ -357,6 +419,32 @@ const publicSectorRefusalReasonCodes: readonly z.infer<typeof franceCdarReasonCo
   "CONTACT_ACHTR",
 ];
 
+// A platform sets these when it rejects a lifecycle status message it received
+// (DGFiP external specifications, rule G7.19 for flow 6). They describe a status on
+// a status, which a company never sends.
+const lifecycleStatusRejectionReasonCodes: readonly z.infer<typeof franceCdarReasonCodeSchema>[] = [
+  "REJ_INC",
+  "REJ_INEX",
+  "REJ_RG",
+  "REJ_HAB",
+  "REJ_ENCAISSEMENT",
+];
+
+// A CDAR whose referenced document is a lifecycle status message (type 305, DGFiP
+// rule G7.15) rather than an invoice. Its status is 601: a platform rejected that
+// message.
+const LIFECYCLE_STATUS_MESSAGE_TYPE_CODE = "305";
+const LIFECYCLE_STATUS_REJECTED_STATUS_CODE = "601";
+
+function isStatusOnLifecycleStatusMessage(
+  data: Pick<z.infer<typeof franceCdarObjectSchema>, "statusCode" | "invoiceTypeCode">
+): boolean {
+  return (
+    data.invoiceTypeCode === LIFECYCLE_STATUS_MESSAGE_TYPE_CODE ||
+    data.statusCode === LIFECYCLE_STATUS_REJECTED_STATUS_CODE
+  );
+}
+
 function refineSendFranceCdarReasonCode(
   data: Pick<z.infer<typeof franceCdarObjectSchema>, "statusCode" | "reasonCode">,
   ctx: z.RefinementCtx
@@ -366,6 +454,14 @@ function refineSendFranceCdarReasonCode(
       code: z.ZodIssueCode.custom,
       path: ["reasonCode"],
       message: `reasonCode ${data.reasonCode} is set by the public invoicing portal and cannot be sent`,
+    });
+    return;
+  }
+  if (data.reasonCode && lifecycleStatusRejectionReasonCodes.includes(data.reasonCode)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["reasonCode"],
+      message: `reasonCode ${data.reasonCode} is set by a platform rejecting a lifecycle status and cannot be sent`,
     });
     return;
   }
@@ -404,19 +500,42 @@ function refineSendFranceCdarIssuerLegalId(
   }
 }
 
+// The statuses a platform sets while it transmits a file, as opposed to the
+// statuses a party sets while it processes the invoice (XP Z12-012, "Acteurs CDV").
 const franceCdarTransmissionStatusCodes = new Set([
   "200",
   "201",
   "202",
   "203",
   "213",
+  "221",
   "501",
+  "601",
 ]);
 
 export function getFranceCdarPhaseForStatus(
   statusCode: z.infer<typeof franceCdarStatusCodeSchema>
 ): z.infer<typeof franceCdarPhaseSchema> {
   return franceCdarTransmissionStatusCodes.has(statusCode) ? "305" : "23";
+}
+
+// A status on a lifecycle status message is set by the platform that rejects the
+// message, never by a company, so it is only ever received.
+function refineSendFranceCdarSubject(
+  data: Pick<z.infer<typeof franceCdarObjectSchema>, "statusCode" | "invoiceTypeCode">,
+  ctx: z.RefinementCtx
+) {
+  if (!isStatusOnLifecycleStatusMessage(data)) return;
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path: [
+      data.statusCode === LIFECYCLE_STATUS_REJECTED_STATUS_CODE
+        ? "statusCode"
+        : "invoiceTypeCode",
+    ],
+    message:
+      "A status on a lifecycle status message (status 601, invoice type code 305) is set by the platform that rejects the message and cannot be sent",
+  });
 }
 
 const franceCdarDateTimeSchema = z
@@ -439,8 +558,10 @@ const franceCdarObjectSchema = z.object({
       "Creation date and time of the CDAR, without a timezone and with second precision. Date-only values are accepted for incoming format-102 documents.",
     examples: ["2024-03-20T14:05:09"],
   }),
-  businessProcess: franceCdarBusinessProcessSchema.openapi({
-    description: franceCdarBusinessProcessDescription,
+  businessProcess: franceCdarBusinessProcessSchema.optional().openapi({
+    description: `${franceCdarBusinessProcessDescription}
+
+Required when sending. A received CDAR may omit it: lifecycle status messages exchanged with the PPF, and a platform's rejection of a lifecycle status, carry no business process.`,
     examples: ["REGULATED"],
   }),
   phase: franceCdarPhaseSchema.openapi({
@@ -509,7 +630,7 @@ ${franceCdarRoleCodeDescription}`,
   }),
   invoiceId: franceCdarInvoiceIdSchema.openapi({
     description:
-      "Number of the invoice this status relates to. For status 501, this is the filename of the inadmissible file.",
+      "Number of the invoice this status relates to. For status 501, this is the filename of the inadmissible file. For status 601 (invoice type code 305), this is the ID of the rejected lifecycle status message.",
   }),
   invoiceTypeCode: franceCdarInvoiceTypeCodeSchema.optional().openapi({
     description: `Type of the referenced invoice.
@@ -538,6 +659,14 @@ ${franceCdarInvoiceTypeCodeDescription}`,
   reason: franceCdarReasonSchema.optional().openapi({
     description:
       "Optional free-text status reason. This is distinct from the IncludedNote explanation required for reasonCode AUTRE.",
+  }),
+  requestedActionCode: franceCdarRequestedActionCodeSchema.optional().openapi({
+    description: franceCdarRequestedActionCodeDescription,
+    examples: ["NIN"],
+  }),
+  requestedAction: franceCdarRequestedActionSchema.optional().openapi({
+    description:
+      "Free-text description of the action expected from the recipient, for example with requestedActionCode OTH.",
   }),
   reasonNote: franceCdarReasonNoteSchema.optional().openapi({
     description:
@@ -607,7 +736,12 @@ function refineFranceCdar(
     }
   }
 
-  if (data.statusCode !== "501") {
+  // BR-FR-CDV-11 and BR-FR-CDV-13 identify the invoice a status relates to. A
+  // status on a lifecycle status message identifies that message by its ID alone,
+  // and the platforms that send one leave the invoice details out.
+  const concernsInvoice = !isStatusOnLifecycleStatusMessage(data);
+
+  if (data.statusCode !== "501" && concernsInvoice) {
     if (!data.invoiceIssueDate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -636,6 +770,7 @@ function refineFranceCdar(
   // recipient is a platform (WK) or the PPF (DFH).
   if (
     requireRecipientElectronicAddress &&
+    concernsInvoice &&
     data.recipientRole !== "WK" &&
     data.recipientRole !== "DFH" &&
     !data.recipientElectronicAddress
@@ -667,6 +802,10 @@ export const sendFranceCdarSchema = franceCdarObjectSchema
     id: franceCdarIdSchema.optional().openapi({
       description: "The ID of the CDAR. If not provided, the ID will be autogenerated.",
     }),
+    businessProcess: franceCdarBusinessProcessSchema.openapi({
+      description: franceCdarBusinessProcessDescription,
+      examples: ["REGULATED"],
+    }),
     issueDate: franceCdarDateTimeSchema.optional().openapi({
       examples: ["2024-03-20T14:05:09"],
       description:
@@ -680,7 +819,7 @@ export const sendFranceCdarSchema = franceCdarObjectSchema
     phase: franceCdarPhaseSchema.optional().openapi({
       description: `${franceCdarPhaseDescription}
 
-Defaults to \`305\` for statuses \`200\`, \`201\`, \`202\`, \`203\`, \`213\`, and \`501\`; otherwise defaults to \`23\`.`,
+Defaults to \`305\` for statuses \`200\`, \`201\`, \`202\`, \`203\`, \`213\`, \`221\` and \`501\`; otherwise defaults to \`23\`.`,
       examples: ["23"],
     }),
   })
@@ -694,6 +833,7 @@ Defaults to \`305\` for statuses \`200\`, \`201\`, \`202\`, \`203\`, \`213\`, an
     // sender used a reason code the current rules no longer accept for its status.
     refineSendFranceCdarReasonCode(data, ctx);
     refineSendFranceCdarIssuerLegalId(data, ctx);
+    refineSendFranceCdarSubject(data, ctx);
   })
   .openapi({
     ref: "SendFranceCdar",
@@ -707,6 +847,9 @@ export type FranceCdarPhase = z.infer<typeof franceCdarPhaseSchema>;
 export type FranceCdarBusinessProcess = z.infer<typeof franceCdarBusinessProcessSchema>;
 export type FranceCdarRoleCode = z.infer<typeof franceCdarRoleCodeSchema>;
 export type FranceCdarReasonCode = z.infer<typeof franceCdarReasonCodeSchema>;
+export type FranceCdarRequestedActionCode = z.infer<
+  typeof franceCdarRequestedActionCodeSchema
+>;
 export type FranceCdarInvoiceTypeCode = z.infer<
   typeof franceCdarInvoiceTypeCodeSchema
 >;

@@ -5,6 +5,7 @@ import { calculateDocumentTotals } from "../invoice/calculations";
 import { parsePeppolAddress } from "../peppol-address";
 import { resolveBuyerReference } from "../buyer-reference";
 import { partyIdentifiersToCII } from "../party-identifiers";
+import { taxRegistrationsToCII, type PartyRole } from "../tax-registration";
 import { getPaymentCodeByKey, hasPayeeAccount } from "@peppol/utils/payment-means";
 import type { XmlProfile } from "@peppol/utils/parsing/xml-profile";
 
@@ -110,7 +111,7 @@ function tradeAddress(party: Party): XmlNode {
   };
 }
 
-function tradeParty(party: Party, peppolAddress: string): XmlNode {
+function tradeParty(party: Party, role: PartyRole, peppolAddress: string): XmlNode {
   const parsedAddress = parsePeppolAddress(peppolAddress);
   const partyContact = contact(party);
 
@@ -127,11 +128,7 @@ function tradeParty(party: Party, peppolAddress: string): XmlNode {
     "ram:URIUniversalCommunication": {
       "ram:URIID": id(parsedAddress.identifier, parsedAddress.schemeId),
     },
-    ...(party.vatNumber && {
-      "ram:SpecifiedTaxRegistration": {
-        "ram:ID": id(party.vatNumber, "VA"),
-      },
-    }),
+    ...taxRegistrationsToCII(party, role),
   };
 }
 
@@ -457,8 +454,8 @@ export function billingDocumentToCII({
           ...(buyerReference && {
             "ram:BuyerReference": buyerReference,
           }),
-          "ram:SellerTradeParty": tradeParty(document.seller, supplierAddress),
-          "ram:BuyerTradeParty": tradeParty(document.buyer, customerAddress),
+          "ram:SellerTradeParty": tradeParty(document.seller, "seller", supplierAddress),
+          "ram:BuyerTradeParty": tradeParty(document.buyer, "buyer", customerAddress),
           ...(document.salesOrderReference && {
             "ram:SellerOrderReferencedDocument": {
               "ram:IssuerAssignedID": document.salesOrderReference,

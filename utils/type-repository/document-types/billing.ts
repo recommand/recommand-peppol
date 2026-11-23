@@ -28,11 +28,11 @@ export function isBillableDocument(
   }
   if (type === "frenchInvoicingCdar") {
     const cdar = parsed as { phase?: string; statusCode?: string } | null | undefined;
-    const phase =
-      cdar?.phase ??
-      (cdar?.statusCode
-        ? getFranceCdarPhaseForStatus(cdar.statusCode as Parameters<typeof getFranceCdarPhaseForStatus>[0])
-        : undefined);
+    // The status decides the phase. Some senders declare the processing phase on a
+    // transmission status, and that must not turn a free status into a charged one.
+    const phase = cdar?.statusCode
+      ? getFranceCdarPhaseForStatus(cdar.statusCode as Parameters<typeof getFranceCdarPhaseForStatus>[0])
+      : cdar?.phase;
     // An unparseable status cannot be shown to be a business answer, so it is not
     // charged as one.
     return phase === "23";

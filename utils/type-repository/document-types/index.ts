@@ -9,6 +9,9 @@ import { frenchB2CSalesReportDocumentType } from "./frenchB2CSalesReport";
 import { frenchB2CPaymentReportDocumentType } from "./frenchB2CPaymentReport";
 import { frenchB2BiInvoiceReportDocumentType } from "./frenchB2BiInvoiceReport";
 import { frenchB2BiPaymentReportDocumentType } from "./frenchB2BiPaymentReport";
+import { orderDocumentType } from "./order";
+import { orderResponseDocumentType } from "./orderResponse";
+import { despatchAdviceDocumentType } from "./despatchAdvice";
 
 /**
  * Every document type the platform knows, in no significant order.
@@ -28,6 +31,9 @@ export const documentTypes = [
   frenchB2CPaymentReportDocumentType,
   frenchB2BiInvoiceReportDocumentType,
   frenchB2BiPaymentReportDocumentType,
+  orderDocumentType,
+  orderResponseDocumentType,
+  despatchAdviceDocumentType,
 ] as const satisfies readonly AnyDocumentType[];
 
 export function getDocumentType(key: string): AnyDocumentType | undefined {

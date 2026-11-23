@@ -150,10 +150,12 @@ async function readEnterpriseFromCbe(enterpriseNumber: string): Promise<Enterpri
     ? parseInt(header.ReplyContext.AccountBalance, 10)
     : 0;
 
-  console.log("CBE Account balance:", accountBalance);
-  // Send alert if account balance is less than 200 and is a multiple of 5 or less than 20
+  // The web service is free with a daily request quota; AccountBalance is what is
+  // left of today's quota.
+  console.log("CBE requests left today:", accountBalance);
+  // Alert when fewer than 200 are left, on every fifth request and below 20 on each.
   if (accountBalance < 200 && (accountBalance % 5 === 0 || accountBalance < 20)) {
-    sendSystemAlert("CBE Account balance is low", `Account balance is low: ${accountBalance}`, "warning");
+    sendSystemAlert("CBE daily request quota is nearly used up", `Requests left today: ${accountBalance}`, "warning");
   }
 
   const representatives: Representative[] = [];

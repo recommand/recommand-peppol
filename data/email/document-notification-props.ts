@@ -1,3 +1,4 @@
+import { checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import type { DocumentIncomingNotificationProps } from "@peppol/emails/document-incoming-notification";
 import type { DocumentOutgoingNotificationProps } from "@peppol/emails/document-outgoing-notification";
 import { getCompanyById } from "@peppol/data/companies";
@@ -331,6 +332,12 @@ export async function buildPeppolDocumentEmailAttachments(
   }> = [];
 
   if (!attach || event.aggregateType !== "peppol.document") {
+    return attachments;
+  }
+
+  // A rule's email follows the team's access to its documents: it goes out without them.
+  const access = await checkPeppolEntitlementForTeamId(event.teamId, PEPPOL_ENTITLEMENTS.DOCUMENT_ACCESS);
+  if (!access.allowed) {
     return attachments;
   }
 

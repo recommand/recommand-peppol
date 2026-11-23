@@ -13,6 +13,7 @@ import type { SelfBillingCreditNote } from "../self-billing-creditnote/schemas";
 import { UserFacingError } from "@peppol/utils/util";
 import { assertLinePeriodsWithinBillingPeriod } from "../billing-period";
 import { assertPartyIdentifiers } from "../party-identifiers";
+import { assertTaxRegistration } from "../tax-registration";
 
 type VatCalculationDocument = Pick<
   Invoice,
@@ -246,6 +247,7 @@ export function calculateDocumentTotals({
   if (isDocumentValidationEnforced) {
     assertLinePeriodsWithinBillingPeriod(document);
     assertPartyIdentifiers(document);
+    assertTaxRegistration(document);
   }
   const totals = calculateTotals(document);
   const vat = resolveVatTotals({ document, isDocumentValidationEnforced });

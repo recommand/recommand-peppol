@@ -48,6 +48,12 @@ describe("Document billing", () => {
     }
   });
 
+  it("charges orders, order responses and despatch advices", () => {
+    for (const type of ["order", "orderResponse", "despatchAdvice"] as const) {
+      expect(isBillableDocument(type, null)).toBe(true);
+    }
+  });
+
   it("never charges a message level response", () => {
     expect(isBillableDocument("messageLevelResponse", null)).toBe(false);
   });
@@ -72,6 +78,12 @@ describe("Document billing", () => {
     expect(isBillableDocument("frenchInvoicingCdar", { statusCode: "205" } as never)).toBe(true);
     expect(isBillableDocument("frenchInvoicingCdar", { statusCode: "202" } as never)).toBe(false);
     expect(isBillableDocument("frenchInvoicingCdar", null)).toBe(false);
+  });
+
+  it("classifies by the status when the declared phase contradicts it", () => {
+    expect(isBillableDocument("frenchInvoicingCdar", { phase: "23", statusCode: "202" } as never)).toBe(false);
+    expect(isBillableDocument("frenchInvoicingCdar", { phase: "23", statusCode: "203" } as never)).toBe(false);
+    expect(isBillableDocument("frenchInvoicingCdar", { phase: "305", statusCode: "205" } as never)).toBe(true);
   });
 
   it("writes no transfer event for a status a platform generated, however it was sent", () => {

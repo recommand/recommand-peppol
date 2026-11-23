@@ -2,6 +2,7 @@ import { getEnterpriseData } from "../cbe-public-search/client";
 import { fetchSigningAuthority } from "../bronnoysund/signing-authority";
 import { belgianRepresentativeCheck } from "./belgium";
 import { norwegianRepresentativeCheck } from "./norway";
+import { UserFacingError } from "@peppol/utils/util";
 import type {
   CheckedCompany,
   CountryRepresentativeCheck,
@@ -54,23 +55,28 @@ export async function checkRepresentative(
 /**
  * The people to offer on the verification form, or null when the company's country
  * has no register to list them from and the representative types their name. A
- * register that cannot be reached lists nobody.
+ * register that cannot be reached lists nobody; `registerUnavailable` says so when
+ * the check before the identity check would refuse the representative for it.
  */
 export async function listRepresentatives(
   company: CheckedCompany,
   dependencies: RepresentativeCheckDependencies = defaultDependencies
-): Promise<{ representatives: ListedRepresentative[]; nameWithoutList: "unknown" | "typed" } | null> {
+): Promise<{ representatives: ListedRepresentative[]; nameWithoutList: "unknown" | "typed"; registerUnavailable: boolean } | null> {
   const check = representativeChecks[company.country];
   if (!check) {
     return null;
   }
   let representatives: ListedRepresentative[] = [];
+  let registerUnavailable = false;
   try {
     representatives = await check.listRepresentatives(company, dependencies);
   } catch (error) {
     console.error(`Failed to list the representatives of company ${company.id}:`, error);
+    // A company without an enterprise number is not the register's failure; the
+    // context route asks for the company details instead.
+    registerUnavailable = check.refusesWithoutRegister && !(error instanceof UserFacingError);
   }
-  return { representatives, nameWithoutList: check.nameWithoutList };
+  return { representatives, nameWithoutList: check.nameWithoutList, registerUnavailable };
 }
 
 /**

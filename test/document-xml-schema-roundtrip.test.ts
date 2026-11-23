@@ -18,6 +18,9 @@ import {
 } from "../utils/parsing/invoice/calculations";
 import { messageLevelResponseSchema } from "../utils/parsing/message-level-response/schemas";
 import { franceCdarSchema } from "../utils/parsing/france-cdar/schemas";
+import { orderSchema, type Order } from "../utils/parsing/order/schemas";
+import { orderResponseSchema } from "../utils/parsing/order-response/schemas";
+import { despatchAdviceSchema } from "../utils/parsing/despatch-advice/schemas";
 import {
   selfBillingCreditNoteSchema,
   type SelfBillingCreditNote,
@@ -37,6 +40,9 @@ const schemasByType = {
   selfBillingCreditNote: selfBillingCreditNoteSchema,
   messageLevelResponse: messageLevelResponseSchema,
   frenchInvoicingCdar: franceCdarSchema,
+  order: orderSchema,
+  orderResponse: orderResponseSchema,
+  despatchAdvice: despatchAdviceSchema,
   // Reporting types are filed as data and have no XML representation, so they are
   // deliberately outside this roundtrip.
 } satisfies Record<
@@ -62,7 +68,12 @@ function valueForPath(path: string[]): unknown {
     field === "dueDate" ||
     field === "startDate" ||
     field === "endDate" ||
-    field === "date"
+    field === "date" ||
+    field === "validityEndDate" ||
+    field === "actualDespatchDate" ||
+    field === "expiryDate" ||
+    field === "bestBeforeDate" ||
+    field === "manufactureDate"
   ) {
     return "2025-01-01";
   }
@@ -107,6 +118,8 @@ function valueForPath(path: string[]): unknown {
   if (field === "recipientElectronicAddressScheme") return "0225";
   if (field === "vatPercent") return "20.00";
   if (field === "schemeVersion") return "1.0";
+  // A measure, such as the gross weight of a shipment.
+  if (field === "value" && /gross/.test(joined)) return "2";
   if (field === "value") return "Schema value";
 
   return `${field || "value"}-schema`;
@@ -173,7 +186,9 @@ function normalizeBillingDocument<T extends BillingDocument>(document: T): T {
     ...line,
     netAmount: calculateLineAmount(line),
   }));
-  const withLines = { ...document, lines };
+  // Only the seller has a tax registration identifier (BT-32).
+  const { taxRegistrationId: _taxRegistrationId, ...buyer } = document.buyer ?? {};
+  const withLines = { ...document, ...(document.buyer && { buyer }), lines };
   const vat = calculateVat({ document: withLines, isDocumentValidationEnforced: false });
   const totals = calculateTotals({ ...withLines, vat, totals: undefined });
 
@@ -199,8 +214,16 @@ function generatedDocumentFor(type: ParsedOrUnknownDocumentType): ParsedDocument
   }
   const generated = schema.parse(sample) as ParsedDocument;
   if (type === "messageLevelResponse" || type === "frenchInvoicingCdar") return generated;
+  if (type === "orderResponse" || type === "despatchAdvice") return generated;
+  if (type === "order") {
+    // A Peppol order has no place for the seller's VAT number.
+    const order = generated as Order;
+    return schema.parse({ ...order, seller: { ...order.seller, vatNumber: null } }) as ParsedDocument;
+  }
   return schema.parse(normalizeBillingDocument(generated as BillingDocument)) as ParsedDocument;
 }
+
+type WithCountrySpecific = ParsedDocument & { countrySpecific?: unknown };
 
 function documentForFormat(
   format: AnyDocumentFormat,
@@ -210,7 +233,7 @@ function documentForFormat(
   const {
     countrySpecific: _countrySpecific,
     ...sharedDocument
-  } = document;
+  } = document as WithCountrySpecific;
   if (!format.translatableTitle.includes("France")) return sharedDocument as ParsedDocument;
   return {
     ...sharedDocument,
@@ -228,7 +251,7 @@ function documentForFormat(
 
 function withoutCountrySpecific(document: ParsedDocument): ParsedDocument {
   if (!("lines" in document)) return document;
-  const { countrySpecific: _countrySpecific, ...sharedDocument } = document;
+  const { countrySpecific: _countrySpecific, ...sharedDocument } = document as WithCountrySpecific;
   return sharedDocument as ParsedDocument;
 }
 

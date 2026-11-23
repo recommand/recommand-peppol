@@ -19,6 +19,7 @@ import { toast } from "@core/components/ui/sonner";
 import { stringifyActionFailure } from "@recommand/lib/utils";
 import { useActiveTeam } from "@core/hooks/user";
 import { useTranslation } from "@core/hooks/use-translation";
+import { isExportRangeWithinLimit } from "@peppol/utils/export-range";
 
 const client = rc<TransmittedDocuments>("peppol");
 
@@ -97,12 +98,8 @@ export function ExportDocumentsDialog({
 
             if (end <= start) {
                 newErrors.endDateTime = t`End datetime must be after start datetime`;
-            } else {
-                const maxRange = 31 * 24 * 60 * 60 * 1000;
-                const range = end.getTime() - start.getTime();
-                if (range > maxRange) {
-                    newErrors.endDateTime = t`Date range must not exceed 1 month (31 days)`;
-                }
+            } else if (!isExportRangeWithinLimit(start, end)) {
+                newErrors.endDateTime = t`Date range must not exceed 1 month (31 days)`;
             }
         }
 

@@ -1,3 +1,5 @@
+import { answeredByIdempotency } from "@core/lib/idempotency";
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { Counter, Gauge, Histogram, registry } from "./registry";
 
@@ -66,6 +68,20 @@ function outcomeForStatus(status: number): string {
   return "error";
 }
 
+/**
+ * The outcome of a finished request. A retry answered with the first send's response,
+ * and a request its `Idempotency-Key` refused, sent nothing themselves, so they don't
+ * count by their status: a key used for another document answers `422`, as a failed
+ * delivery does.
+ */
+const outcomeFor = (c: Context, status: number) => {
+  if (c.res?.headers.get("Idempotency-Replayed")) {
+    return "replayed";
+  }
+
+  return answeredByIdempotency(c) ? "idempotency_refused" : outcomeForStatus(status);
+};
+
 type SendDocumentMetricsContext = {
   Variables: { team: NetworkTeam };
 };
@@ -88,7 +104,7 @@ export const trackSendDocument = createMiddleware<SendDocumentMetricsContext>(
     } finally {
       inFlight.dec();
       const network = networkFor(c.get("team"));
-      const outcome = outcomeForStatus(status);
+      const outcome = outcomeFor(c, status);
       requestsTotal.inc({ network, outcome, status: String(status) });
       requestDuration.observe(
         { network, outcome },

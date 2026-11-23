@@ -12,7 +12,7 @@ import {
     describeErrorResponse,
     describeSuccessResponse,
 } from "@core/lib/api-docs";
-import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
 import { withDocumentDeliveries } from "@peppol/data/deliveries";
 
@@ -50,6 +50,7 @@ type GetInboxContext = Context<AuthenticatedUserContext & AuthenticatedTeamConte
 const _getInboxMinimal = server.get(
     "/inbox",
     requireIntegrationSupportedTeamAccess(),
+    requireDocumentAccess(),
     getInboxRouteDescription,
     zodValidator("query", getInboxQuerySchema),
     _getInboxImplementation,
@@ -58,6 +59,7 @@ const _getInboxMinimal = server.get(
 const _getInbox = server.get(
     "/:teamId/inbox",
     requireIntegrationSupportedTeamAccess(),
+    requireDocumentAccess(),
     describeRoute({hide: true}),
     zodValidator("query", getInboxQuerySchema),
     zodValidator("param", z.object({

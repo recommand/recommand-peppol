@@ -4,7 +4,10 @@ import {
   getDocumentFormatByDocTypeId,
   resolveFormatProcessId,
 } from "@peppol/utils/type-repository/document-formats";
-import { selfDeclaredDocTypeId } from "@peppol/utils/type-repository/document-formats/xml-detection";
+import {
+  parseXmlForDetection,
+  selfDeclaredDocTypeId,
+} from "@peppol/utils/type-repository/document-formats/xml-detection";
 import { assertDocTypeIdMatchesXml } from "./doctype-consistency";
 import { SendingFailure } from "./errors";
 import { assertProcessIdMatchesDocument } from "./process-id-consistency";
@@ -54,9 +57,13 @@ export function prepareXmlDocument(input: SendingInput): PreparedDocument {
 
   let processId = input.processId;
   if (!processId && format) {
-    processId = parsed
-      ? resolveFormatProcessId(format, parsed)
-      : format.supportedProcessIds[0];
+    const declared = format.declaredProcessId?.(parseXmlForDetection(xml) ?? {});
+    processId =
+      declared && format.supportedProcessIds.includes(declared)
+        ? declared
+        : parsed
+          ? resolveFormatProcessId(format, parsed)
+          : format.supportedProcessIds[0];
   }
   if (!processId) {
     throw new SendingFailure(

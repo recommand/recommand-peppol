@@ -9,6 +9,7 @@ import { getDocumentFilename } from "../utils/document-filename";
 import { documentTypes, getDocumentType } from "../utils/type-repository/document-types";
 import {
   BILLING_DOCUMENT_TYPE_KEYS,
+  OPERATIONAL_DOCUMENT_TYPE_KEYS,
   REPORTING_DOCUMENT_TYPE_KEYS,
   STORED_DOCUMENT_TYPE_KEYS,
   TRANSACTION_MESSAGING_DOCUMENT_TYPE_KEYS,
@@ -26,6 +27,7 @@ describe("document type registry", () => {
       ...BILLING_DOCUMENT_TYPE_KEYS,
       ...TRANSACTION_MESSAGING_DOCUMENT_TYPE_KEYS,
       ...REPORTING_DOCUMENT_TYPE_KEYS,
+      ...OPERATIONAL_DOCUMENT_TYPE_KEYS,
     ] as string[]);
 
     // `unknown` is the only stored type without a registry entry: it is what a

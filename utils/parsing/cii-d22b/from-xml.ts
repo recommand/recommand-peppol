@@ -8,6 +8,7 @@ import {
   getTextContent,
 } from "../xml-helpers";
 import { parseCiiPartyIdentifiers } from "../party-identifiers";
+import { parseCiiTaxRegistration, type PartyRole } from "../tax-registration";
 import { parseCiiCommodityClassifications } from "../commodity-classifications";
 
 const parser = new XMLParser({
@@ -75,7 +76,7 @@ function first<T>(value: T | T[] | undefined): T | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function party(tradeParty: any) {
+function party(tradeParty: any, role: PartyRole) {
   return {
     name: getTextContent(tradeParty.Name),
     street: getTextContent(tradeParty.PostalTradeAddress?.LineOne),
@@ -83,9 +84,7 @@ function party(tradeParty: any) {
     city: getTextContent(tradeParty.PostalTradeAddress?.CityName),
     postalZone: getTextContent(tradeParty.PostalTradeAddress?.PostcodeCode),
     country: getTextContent(tradeParty.PostalTradeAddress?.CountryID),
-    vatNumber: tradeParty.SpecifiedTaxRegistration?.ID
-      ? getTextContent(tradeParty.SpecifiedTaxRegistration.ID)
-      : null,
+    ...parseCiiTaxRegistration(tradeParty, role),
     enterpriseNumberScheme: getNullableTextContent(
       tradeParty.SpecifiedLegalOrganization?.ID?.["@_schemeID"]
     ),
@@ -202,8 +201,8 @@ export function parseBillingDocumentFromCII(xml: string) {
             .filter((ref: any) => getTextContent(ref.TypeCode) === "916")
             .map(attachment)
         : [],
-    seller: party(agreement.SellerTradeParty),
-    buyer: party(agreement.BuyerTradeParty),
+    seller: party(agreement.SellerTradeParty, "seller"),
+    buyer: party(agreement.BuyerTradeParty, "buyer"),
     delivery: shipToTradeParty || deliveryDate
       ? {
           date: deliveryDate,

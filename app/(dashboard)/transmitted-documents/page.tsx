@@ -27,6 +27,11 @@ import {
   type FilterConfig,
 } from "@core/components/data-table/toolbar";
 import { PartyInfoTooltip } from "@peppol/components/party-info-tooltip";
+import {
+  getDocumentNumber,
+  getDocumentReceiverParty,
+  getDocumentSenderParty,
+} from "@peppol/lib/client/document-summary";
 import { TransmissionStatusIcons } from "@peppol/components/transmission-status-icons";
 import { DocumentTypeCell } from "@peppol/components/document-type-cell";
 import { LabelBadge } from "@peppol/components/label-badge";
@@ -46,10 +51,6 @@ import {
   isReportingDocumentTypeKey,
   type ParsedOrUnknownDocumentType,
 } from "@peppol/utils/type-repository/document-types/keys";
-import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
-import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
-import type { SelfBillingInvoice } from "@peppol/utils/parsing/self-billing-invoice/schemas";
-import type { SelfBillingCreditNote } from "@peppol/utils/parsing/self-billing-creditnote/schemas";
 import { Checkbox } from "@core/components/ui/checkbox";
 import { useTranslation } from "@core/hooks/use-translation";
 import { getDocumentTypeLabel } from "@peppol/lib/client/document-type-labels";
@@ -804,15 +805,12 @@ export default function Page() {
     {
       id: "documentNumber",
       accessorFn: (row) => {
-        const parsed = row.parsed;
-        if (!parsed) return null;
-        return (parsed as any)?.invoiceNumber ?? (parsed as any)?.creditNoteNumber ?? null;
+        return getDocumentNumber(row.parsed);
       },
       header: ({ column }) => <ColumnHeader column={column} title={t`Document Number`} />,
       meta: { label: t`Document Number` },
       cell: ({ row }) => {
-        const parsed = row.original.parsed;
-        const documentNumber = parsed ? ((parsed as any)?.invoiceNumber ?? (parsed as any)?.creditNoteNumber ?? null) : null;
+        const documentNumber = getDocumentNumber(row.original.parsed);
         const id = row.original.id;
         return (
           <Link
@@ -835,23 +833,14 @@ export default function Page() {
         const senderId = row.getValue("senderId") as string;
         const documentType = document.type;
 
-        // Check if document type is recognized and has parsed data
-        const isRecognizedType = ["invoice", "creditNote", "selfBillingInvoice", "selfBillingCreditNote"].includes(documentType);
-
-        if (isRecognizedType && document.parsed) {
-          // For billing documents, sender is the seller, for self-billing documents, sender is the buyer
-          const senderInfo = ["invoice", "creditNote"].includes(documentType)
-            ? (document.parsed as Invoice | CreditNote)?.seller
-            : ["selfBillingInvoice", "selfBillingCreditNote"].includes(documentType) ? (document.parsed as SelfBillingInvoice | SelfBillingCreditNote)?.buyer : undefined;
-
-          if (senderInfo?.name) {
-            return (
-              <div className="flex items-center gap-2">
-                <span>{senderInfo.name}</span>
-                <PartyInfoTooltip partyInfo={senderInfo} peppolAddress={senderId} />
-              </div>
-            );
-          }
+        const senderInfo = getDocumentSenderParty(documentType, document.parsed);
+        if (senderInfo) {
+          return (
+            <div className="flex items-center gap-2">
+              <span>{senderInfo.name}</span>
+              <PartyInfoTooltip partyInfo={senderInfo} peppolAddress={senderId} />
+            </div>
+          );
         }
 
         // Fallback to showing senderId for unrecognized types or missing parsed data
@@ -872,32 +861,23 @@ export default function Page() {
         const emailRecipients = document.emailRecipients;
         const isReporting = isReportingDocumentTypeKey(documentType);
 
-        // Check if document type is recognized and has parsed data
-        const isRecognizedType = ["invoice", "creditNote", "selfBillingInvoice", "selfBillingCreditNote"].includes(documentType);
-
-        if (isRecognizedType && document.parsed) {
-          // For billing documents, receiver is the buyer, for self-billing documents, receiver is the seller
-          const receiverInfo = ["invoice", "creditNote"].includes(documentType)
-            ? (document.parsed as any)?.buyer
-            : (document.parsed as any)?.seller;
-
-          if (receiverInfo?.name) {
-            return (
-              <div className="flex items-center gap-2">
-                <span>{receiverInfo.name}</span>
-                <div className="flex items-center gap-1">
-                  <PartyInfoTooltip partyInfo={receiverInfo} peppolAddress={receiverId} />
-                  <TransmissionStatusIcons
-                    sentOverPeppol={sentOverPeppol}
-                    sentOverEmail={sentOverEmail}
-                    emailRecipients={emailRecipients || undefined}
-                    isReporting={isReporting}
-                  />
-                  <DeliveryFailedBadge deliveries={document.deliveries} size="sm" />
-                </div>
+        const receiverInfo = getDocumentReceiverParty(documentType, document.parsed);
+        if (receiverInfo) {
+          return (
+            <div className="flex items-center gap-2">
+              <span>{receiverInfo.name}</span>
+              <div className="flex items-center gap-1">
+                <PartyInfoTooltip partyInfo={receiverInfo} peppolAddress={receiverId} />
+                <TransmissionStatusIcons
+                  sentOverPeppol={sentOverPeppol}
+                  sentOverEmail={sentOverEmail}
+                  emailRecipients={emailRecipients || undefined}
+                  isReporting={isReporting}
+                />
+                <DeliveryFailedBadge deliveries={document.deliveries} size="sm" />
               </div>
-            );
-          }
+            </div>
+          );
         }
 
         // Fallback to showing receiverId for unrecognized types or missing parsed data

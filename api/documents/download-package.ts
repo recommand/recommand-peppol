@@ -13,11 +13,8 @@ import {
     resolveDocumentOriginalPayload,
     resolveDocumentXmlAndAttachments,
 } from "@peppol/data/offload/storage";
-import {
-    describeErrorResponse,
-    parameterSchema,
-} from "@core/lib/api-docs";
-import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { describeErrorResponse } from "@core/lib/api-docs";
+import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import JSZip from "jszip";
 import { renderDocumentPdf } from "@peppol/utils/document-renderer";
 
@@ -42,10 +39,10 @@ const downloadPackageRouteDescription = describeRoute({
             headers: {
                 "Content-Disposition": {
                     description: "Offers the zip as a download named after the document.",
-                    schema: parameterSchema({
+                    schema: {
                         examples: ["attachment; filename=\"doc_01JQZ8X0M4T7RB6K9V2NDHW3PA.zip\""],
                         type: "string",
-                    }),
+                    },
                 },
             },
         },
@@ -76,6 +73,7 @@ type DownloadPackageContext = Context<AuthenticatedUserContext & AuthenticatedTe
 const _downloadPackageMinimal = server.get(
     "/documents/:documentId/download-package",
     requireIntegrationSupportedTeamAccess(),
+    requireDocumentAccess(),
     downloadPackageRouteDescription,
     zodValidator("param", downloadPackageParamSchema),
     zodValidator("query", downloadPackageQuerySchema),
@@ -85,6 +83,7 @@ const _downloadPackageMinimal = server.get(
 const _downloadPackage = server.get(
     "/:teamId/documents/:documentId/downloadPackage",
     requireIntegrationSupportedTeamAccess(),
+    requireDocumentAccess(),
     describeRoute({hide: true}),
     zodValidator("param", downloadPackageParamSchemaWithTeamId),
     zodValidator("query", downloadPackageQuerySchema),

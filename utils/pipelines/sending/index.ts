@@ -1,4 +1,5 @@
 import { audit } from "@core/lib/audit";
+import { markRefused } from "@core/lib/idempotency";
 import {
   getAccessPointProvider,
   type SendAs4Response,
@@ -31,6 +32,7 @@ import { normalizePeppolAddress } from "@peppol/utils/parsing/peppol-address";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { recordSendDocumentDelivery } from "@peppol/utils/metrics";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
+import { UserFacingError } from "@peppol/utils/util";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
 import { ulid } from "ulid";
 import {
@@ -49,6 +51,11 @@ import { validateDocument } from "./validate-document";
 
 export async function sendingPipeline(c: SendingContext) {
   let inputFormat = "unknown";
+  // Whether any channel was tried, so a failure before then can't have sent anything
+  let channelAttempted = false;
+  // Whether a channel may have delivered the document although the send failed: a
+  // lost connection to the access point, or an email the mail service didn't confirm
+  let outcomeUnknown = false;
 
   try {
     const input = c.req.valid("json");
@@ -60,12 +67,9 @@ export async function sendingPipeline(c: SendingContext) {
     const documentId = `doc_${ulid()}`;
     const recipientAddress = normalizePeppolAddress(input.recipient);
 
-    const documentType = getDocumentType(input.documentType);
-    if (recipientAddress === null && documentType?.class !== "billing") {
-      throw new SendingFailure(
-        "Only billing document types (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote) are supported when recipient is null.",
-        400,
-      );
+    // Raw XML only says what it is once it is read, so its type is checked below.
+    if (recipientAddress === null && input.documentType !== "xml") {
+      assertEmailOnlyDocumentType(input.documentType, NOT_DELIVERABLE_BY_EMAIL);
     }
     if (recipientAddress === null && !input.email?.to.length) {
       throw new SendingFailure(
@@ -121,8 +125,10 @@ export async function sendingPipeline(c: SendingContext) {
     // Without a Peppol recipient a document is emailed as a PDF, unless the caller names
     // the format it is to be written in: it is then written, validated and attached as
     // it would be for a Peppol recipient, so a buyer who is not on Peppol still receives
-    // a structured document.
-    const isStructuredEmail = recipientAddress === null && !!input.doctypeId;
+    // a structured document. Raw XML already is one, and is emailed as it was given.
+    const isStructuredEmail =
+      recipientAddress === null &&
+      (input.documentType === "xml" || !!input.doctypeId);
     if (isStructuredEmail) {
       assertNotFranceRegulatedByEmailOnly({
         docTypeId: input.doctypeId,
@@ -153,6 +159,15 @@ export async function sendingPipeline(c: SendingContext) {
       processId: prepared.processId,
     });
 
+    // Checked first: a French regulated document without a Peppol recipient is refused
+    // for that reason, whatever the company is set up for.
+    if (isStructuredEmail) {
+      assertNotFranceRegulatedByEmailOnly({
+        docTypeId: prepared.docTypeId,
+        processId: prepared.processId,
+      });
+    }
+
     // We want to ensure French regulated flows are only supported for companies in France and over the AT access point.
     assertFranceRegulatedSendingSupported({
       docTypeId: prepared.docTypeId,
@@ -160,13 +175,6 @@ export async function sendingPipeline(c: SendingContext) {
       company,
       isPlayground,
     });
-
-    if (isStructuredEmail) {
-      assertNotFranceRegulatedByEmailOnly({
-        docTypeId: prepared.docTypeId,
-        processId: prepared.processId,
-      });
-    }
 
     const xmlDocument =
       recipientAddress === null && !isStructuredEmail ? null : prepared.xml;
@@ -186,6 +194,12 @@ export async function sendingPipeline(c: SendingContext) {
     const validation = xmlDocument
       ? await validateDocument(xmlDocument, prepared.docTypeId)
       : undefined;
+
+    // After validation, so XML in a known format that could not be read is refused with
+    // the rules it breaks rather than only for its unknown type.
+    if (recipientAddress === null && input.documentType === "xml") {
+      assertEmailOnlyDocumentType(prepared.type, RAW_XML_NOT_DELIVERABLE_BY_EMAIL);
+    }
 
     let sentPeppol = false;
     let as4Response: SendAs4Response | null = null;
@@ -214,6 +228,7 @@ export async function sendingPipeline(c: SendingContext) {
         peppolFailure = `Recipient ${recipientAddress} is not registered on the Peppol ${useTestNetwork ? "test network" : "network"}.`;
         peppolFailureCategory = "recipient_not_found";
       } else if (isPlayground && !useTestNetwork) {
+        channelAttempted = true;
         try {
           await simulateSendAs4({
             senderId: senderAddress,
@@ -238,8 +253,11 @@ export async function sendingPipeline(c: SendingContext) {
               : error instanceof PlaygroundDocumentNotSupportedError
                 ? "document_not_supported"
                 : "transport";
+          // Any other failure may come after the simulation delivered the document
+          outcomeUnknown ||= peppolFailureCategory === "transport";
         }
       } else {
+        channelAttempted = true;
         as4Response = await getAccessPointProvider(
           company.accessPointProvider,
         ).sendAs4({
@@ -253,6 +271,7 @@ export async function sendingPipeline(c: SendingContext) {
           useTestNetwork,
         });
         sentPeppol = as4Response.ok;
+        outcomeUnknown ||= !sentPeppol && !!as4Response.outcomeUnknown;
         if (!sentPeppol) {
           peppolFailure =
             as4Response.sendingException?.message ??
@@ -266,7 +285,10 @@ export async function sendingPipeline(c: SendingContext) {
         throw new SendingFailure(
           `Failed to send document over Peppol network. ${peppolFailure}`,
           422,
-          { deliveryFailure: { channel: "peppol", category: peppolFailureCategory ?? "other" } },
+          {
+            deliveryFailure: { channel: "peppol", category: peppolFailureCategory ?? "other" },
+            outcomeUnknown,
+          },
         );
       }
     }
@@ -281,21 +303,21 @@ export async function sendingPipeline(c: SendingContext) {
           to,
           subject: email.subject,
           htmlBody: email.htmlBody,
+          replyTo: email.replyTo,
           xmlDocument,
           type: prepared.type as any,
           parsedDocument: prepared.parsed,
           isPlayground,
           metadata,
         });
-      const outcome = await sendDocumentEmails({
-        documentId,
-        recipients: email.to,
-        send: isPlayground
-          ? playgroundEmailSender(await getPlaygroundMemberAddresses(team.id), mail)
-          : mail,
-      });
+      const send = isPlayground
+        ? playgroundEmailSender(await getPlaygroundMemberAddresses(team.id), mail)
+        : mail;
+      channelAttempted = true;
+      const outcome = await sendDocumentEmails({ documentId, recipients: email.to, send });
       emailMessages = outcome.sent;
       emailFailures = outcome.failed;
+      outcomeUnknown ||= emailFailures.length > 0;
       emailFailure = outcome.failed.at(-1)?.message ?? "";
     }
     const emailRecipients = emailMessages.map((message) => message.address);
@@ -304,9 +326,12 @@ export async function sendingPipeline(c: SendingContext) {
       throw new SendingFailure(
         `Failed to send document over Peppol network and email. ${peppolFailure} ${emailFailure}`,
         422,
-        peppolFailureCategory
-          ? { deliveryFailure: { channel: "peppol", category: peppolFailureCategory } }
-          : {},
+        {
+          ...(peppolFailureCategory
+            ? { deliveryFailure: { channel: "peppol", category: peppolFailureCategory } }
+            : {}),
+          outcomeUnknown,
+        },
       );
     }
 
@@ -377,6 +402,12 @@ export async function sendingPipeline(c: SendingContext) {
     );
   } catch (error) {
     if (error instanceof SendingFailure) {
+      // A refusal frees the Idempotency-Key for a corrected retry, unless a channel may
+      // already have delivered the document
+      if (!outcomeUnknown) {
+        markRefused(c);
+      }
+
       const failure =
         typeof error.payload === "string"
           ? actionFailure(error.payload)
@@ -384,29 +415,48 @@ export async function sendingPipeline(c: SendingContext) {
       return c.json({ ...failure, ...error.details }, error.status);
     }
 
+    // Before any channel was tried, nothing went out, so the key is freed as for a
+    // refusal. After that, a channel may have delivered the document.
+    if (!channelAttempted) {
+      markRefused(c);
+    }
+
+    // An error that says what to correct before anything went out is a refusal the
+    // company can fix itself, so it's audited as one and nobody is alerted
+    const refusal = !channelAttempted && error instanceof UserFacingError ? error : null;
+
     console.error(error);
     await audit(c, {
       action: "create",
       subsystem: "peppol.documents",
       outcome: "failed",
       objectType: "peppol.document",
-      reasonCode: "send_document_failed",
+      reasonCode: refusal ? "send_document_refused" : "send_document_failed",
       metadata: {
         inputFormat,
         error: error instanceof Error ? error.message : String(error),
       },
     });
+
+    if (refusal) {
+      return c.json(actionFailure(refusal.message), 400);
+    }
+
     sendSystemAlert(
       "Document Sending Failed",
       `Failed to send document over Peppol network. Error: \`\`\`\n${error}\n\`\`\``,
       "error",
     );
-    return c.json(
-      actionFailure(
-        error instanceof Error ? error.message : "Failed to send document",
-      ),
-      400,
-    );
+
+    // After a channel was tried, it may have delivered the document, as for a failed
+    // channel whose outcome is unknown
+    if (channelAttempted) {
+      return c.json({ ...actionFailure("Failed to send document"), outcomeUnknown: true }, 422);
+    }
+
+    // Anything else is a fault on Recommand's side. Nothing went out, so sending the
+    // document again is safe.
+    return c.json(actionFailure("Failed to send document"), 500);
   }
 }
 
@@ -438,6 +488,23 @@ async function isRecipientUnregistered(options: {
     recipientAddress: options.recipientAddress,
     useTestNetwork: options.useTestNetwork,
   });
+}
+
+const NOT_DELIVERABLE_BY_EMAIL =
+  "Only business documents (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote, order, orderResponse, despatchAdvice) are supported when recipient is null.";
+const RAW_XML_NOT_DELIVERABLE_BY_EMAIL =
+  "A raw XML document can only be sent without a Peppol recipient when it is an invoice, credit note, self-billing invoice, self-billing credit note, order, order response or despatch advice in a supported format.";
+
+/**
+ * Only document types that say they can be delivered by email may go without a Peppol
+ * recipient: the billing and the operational documents. A message level response or a
+ * report goes to a Peppol participant or nowhere. A raw XML document that could not be read as one of
+ * the supported formats has no known type, and is refused as well.
+ */
+function assertEmailOnlyDocumentType(type: string, message: string): void {
+  if (!getDocumentType(type)?.email?.isEmailDeliverySupported) {
+    throw new SendingFailure(message, 400);
+  }
 }
 
 export default sendingPipeline;

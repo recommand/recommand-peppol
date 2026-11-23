@@ -1,4 +1,5 @@
 import { publishEvent } from "@core/data/rules/events";
+import { checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import type { Company } from "@peppol/data/companies";
 import { assignSupplierLabelsToDocument } from "@peppol/data/document-labels";
 import {
@@ -184,36 +185,44 @@ export async function insertIncomingDocumentRecord(
   await tx.insert(transmittedDocuments).values(row);
 
   const intake = source.channel === "peppol" ? null : source;
-  await publishEvent("peppol.document.received.v1", {
-    teamId: company.teamId,
-    streamId: company.id,
-    aggregateType: "peppol.document",
-    aggregateId: row.id,
-    idempotencyKey: `peppol.document.received:${row.id}`,
-    payload: {
-      companyId: company.id,
-      docType: received.type,
-      senderId: source.senderId,
-      receiverId: source.receiverId,
-      peppolMessageId: row.peppolMessageId ?? null,
-      peppolConversationId: row.peppolConversationId ?? null,
-      envelopeId: row.envelopeId ?? null,
-      countryC1: source.countryC1,
-      ...(intake
-        ? {
-            channel: intake.channel,
-            importId: intake.importId,
-            processingMethod: intake.processingMethod,
-          }
-        : {}),
-    },
-    data: {
-      direction: "incoming",
-      parsed: received.parsedDocument ?? null,
-      xml: received.xmlDocument ?? null,
-    },
-    tx,
-  });
+  // A team without access to its documents still receives them, so nothing sent to
+  // it is lost, but no event announces them, then or later.
+  const documentAccess = await checkPeppolEntitlementForTeamId(
+    company.teamId,
+    PEPPOL_ENTITLEMENTS.DOCUMENT_ACCESS,
+  );
+  if (documentAccess.allowed) {
+    await publishEvent("peppol.document.received.v1", {
+      teamId: company.teamId,
+      streamId: company.id,
+      aggregateType: "peppol.document",
+      aggregateId: row.id,
+      idempotencyKey: `peppol.document.received:${row.id}`,
+      payload: {
+        companyId: company.id,
+        docType: received.type,
+        senderId: source.senderId,
+        receiverId: source.receiverId,
+        peppolMessageId: row.peppolMessageId ?? null,
+        peppolConversationId: row.peppolConversationId ?? null,
+        envelopeId: row.envelopeId ?? null,
+        countryC1: source.countryC1,
+        ...(intake
+          ? {
+              channel: intake.channel,
+              importId: intake.importId,
+              processingMethod: intake.processingMethod,
+            }
+          : {}),
+      },
+      data: {
+        direction: "incoming",
+        parsed: received.parsedDocument ?? null,
+        xml: received.xmlDocument ?? null,
+      },
+      tx,
+    });
+  }
 
   // Transport receipts and platform-level lifecycle statuses are not charged; see
   // isBillableDocument for the rule. The detected type decides, so a lifecycle

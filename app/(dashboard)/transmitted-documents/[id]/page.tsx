@@ -64,6 +64,7 @@ import type { FrenchReportingStatusSummary } from "@peppol/data/fr-reporting-sub
 import type { DeliveryStatus, DeliverySummary } from "@peppol/data/deliveries/model";
 import { useTranslation } from "@core/hooks/use-translation";
 import { getDocumentTypeLabel } from "@peppol/lib/client/document-type-labels";
+import { getDocumentNumber } from "@peppol/lib/client/document-summary";
 
 const client = rc<TransmittedDocuments>("peppol");
 const labelsClient = rc<Labels>("v1");
@@ -434,11 +435,7 @@ export default function TransmittedDocumentDetailPage() {
       <ArrowUp className="h-4 w-4" />
     );
 
-  const documentNumber =
-    parsed?.invoiceNumber ??
-    parsed?.creditNoteNumber ??
-    parsed?.selfBillingInvoiceNumber ??
-    parsed?.selfBillingCreditNoteNumber;
+  const documentNumber = getDocumentNumber(parsed);
   const hasStructuredData = !!parsed && doc.type !== "unknown";
   const hasXml = Boolean(doc.xml);
   const titleNumber =
@@ -817,11 +814,7 @@ export default function TransmittedDocumentDetailPage() {
                       {relatedDocuments.map((relatedDoc) => {
                         const relatedParsed: any = relatedDoc.parsed;
                         const relatedDocumentNumber =
-                          relatedParsed?.invoiceNumber ??
-                          relatedParsed?.creditNoteNumber ??
-                          relatedParsed?.selfBillingInvoiceNumber ??
-                          relatedParsed?.selfBillingCreditNoteNumber ??
-                          relatedParsed?.id;
+                          getDocumentNumber(relatedParsed) ?? relatedParsed?.id;
                         const relatedTitle =
                           relatedDocumentNumber ||
                           `${relatedDoc.id.slice(0, 6)}...${relatedDoc.id.slice(-6)}`;

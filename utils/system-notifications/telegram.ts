@@ -120,18 +120,67 @@ async function sendTelegramMessage(
   }
 }
 
+/** Telegram rejects longer messages, so a longer alert would not arrive at all. */
+const MAX_MESSAGE_LENGTH = 4096;
+const TRUNCATION_NOTICE = "\n\n… (truncated)";
+
+const EMAIL_ADDRESS = /([A-Za-z0-9._%+-]+)@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g;
+
+/**
+ * Alerts leave our infrastructure, so an email address keeps only its first
+ * character and its domain: enough to recognise the mailbox and the mail
+ * server, without the person's name that addresses often contain.
+ */
+function maskEmailAddresses(text: string): string {
+  return text.replace(EMAIL_ADDRESS, (_, local: string, domain: string) => `${local[0]}***@${domain}`);
+}
+
+function truncate(text: string, maxLength: number, notice: string): string {
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return text.slice(0, maxLength - notice.length) + notice;
+}
+
+/** Cuts escaped MarkdownV2 text without leaving a dangling escape character. */
+function truncateMarkdownV2(escaped: string, maxLength: number): string {
+  const notice = escapeMarkdownV2(TRUNCATION_NOTICE);
+  if (escaped.length <= maxLength) {
+    return escaped;
+  }
+  let cut = escaped.slice(0, maxLength - notice.length);
+  const trailingBackslashes = cut.length - cut.replace(/\\+$/, "").length;
+  if (trailingBackslashes % 2 === 1) {
+    cut = cut.slice(0, -1);
+  }
+  return cut + notice;
+}
+
 /**
  * Send a message to all configured Telegram recipients. Never rejects, so it
  * is safe to call without awaiting: failures are logged and reported in the
- * result, including missing configuration.
+ * result, including missing configuration. Email addresses in the message are
+ * masked and an overlong message is truncated.
  */
 export async function sendTelegramNotification(
   message: string,
   options: Partial<SendTelegramOptions> = {}
 ): Promise<{ success: boolean; sentTo: string[]; errors: string[] }> {
+  return sendToAllRecipients(
+    truncate(maskEmailAddresses(message), MAX_MESSAGE_LENGTH, TRUNCATION_NOTICE),
+    options
+  );
+}
+
+async function sendToAllRecipients(
+  message: string,
+  options: Partial<SendTelegramOptions> = {}
+): Promise<{ success: boolean; sentTo: string[]; errors: string[] }> {
+  // Plain text unless a caller formats on purpose: notifications carry raw error
+  // text, and a stray "<" or "&" would make Telegram refuse an HTML message.
   const defaultOptions: SendTelegramOptions = {
     message,
-    parseMode: "HTML",
+    parseMode: undefined,
     disableWebPagePreview: false,
     disableNotification: false,
   };
@@ -173,7 +222,8 @@ export async function sendTelegramNotification(
 }
 
 /**
- * Send a system alert message to all Telegram recipients
+ * Send a system alert message to all Telegram recipients. Email addresses are
+ * masked and an overlong message is truncated, as in sendTelegramNotification.
  */
 export async function sendSystemAlert(
   title: string,
@@ -188,14 +238,15 @@ export async function sendSystemAlert(
     };
 
     // Escape both title and message for MarkdownV2
-    const escapedTitle = escapeMarkdownV2(title);
-    const escapedMessage = escapeMarkdownV2(message);
-    
-    const formattedMessage = `*${emoji[level]} ${escapedTitle}*\n\n${escapedMessage}`;
+    const escapedTitle = escapeMarkdownV2(maskEmailAddresses(title));
+    const escapedMessage = escapeMarkdownV2(maskEmailAddresses(message));
+
+    const heading = `*${emoji[level]} ${escapedTitle}*\n\n`;
+    const formattedMessage = heading + truncateMarkdownV2(escapedMessage, MAX_MESSAGE_LENGTH - heading.length);
 
     console.log("Sending Telegram notification for system alert:", formattedMessage);
 
-    await sendTelegramNotification(formattedMessage, {
+    await sendToAllRecipients(formattedMessage, {
       parseMode: "MarkdownV2",
       disableWebPagePreview: true,
     });

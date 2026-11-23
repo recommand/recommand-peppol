@@ -14,7 +14,7 @@ import {
   describeErrorResponse,
   describeSuccessResponse,
 } from "@core/lib/api-docs";
-import { requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { requireDocumentAccess, requireIntegrationSupportedTeamAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { transmittedDocumentResponse } from "./shared";
 import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions";
 import { withDocumentDeliveries } from "@peppol/data/deliveries";
@@ -49,6 +49,7 @@ type GetTransmittedDocumentContext = Context<AuthenticatedUserContext & Authenti
 const _getTransmittedDocumentMinimal = server.get(
     "/documents/:documentId",
     requireIntegrationSupportedTeamAccess(),
+    requireDocumentAccess(),
     getTransmittedDocumentRouteDescription,
     zodValidator("param", getTransmittedDocumentParamSchema),
     _getTransmittedDocumentImplementation,
@@ -57,6 +58,7 @@ const _getTransmittedDocumentMinimal = server.get(
 const _getTransmittedDocument = server.get(
     "/:teamId/documents/:documentId",
     requireIntegrationSupportedTeamAccess(),
+    requireDocumentAccess(),
     describeRoute({hide: true}),
     zodValidator("param", getTransmittedDocumentParamSchemaWithTeamId),
     _getTransmittedDocumentImplementation,

@@ -20,6 +20,9 @@ const PEPPOL_BIS_CUSTOMIZATION_IDS = new Set([
   "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:selfbilling:3.0",
   "urn:fdc:peppol.eu:poacc:trns:mlr:3",
   "urn:fdc:peppol.eu:poacc:trns:invoice_response:3",
+  "urn:fdc:peppol.eu:poacc:trns:order:3",
+  "urn:fdc:peppol.eu:poacc:trns:order_response:3",
+  "urn:fdc:peppol.eu:poacc:trns:despatch_advice:3",
 ]);
 
 /**
@@ -34,6 +37,10 @@ const PEPPOL_BIS_PROCESS_IDS = new Set([
   "urn:fdc:peppol.eu:2017:poacc:selfbilling:01:1.0",
   "urn:fdc:peppol.eu:poacc:bis:mlr:3",
   "urn:fdc:peppol.eu:poacc:bis:invoice_response:3",
+  "urn:fdc:peppol.eu:poacc:bis:ordering:3",
+  "urn:fdc:peppol.eu:poacc:bis:order_only:3",
+  "urn:fdc:peppol.eu:poacc:bis:advanced_ordering:3",
+  "urn:fdc:peppol.eu:poacc:bis:despatch_advice:3",
 ]);
 
 /** A process id without the identifier scheme in front of it or surrounding whitespace. */

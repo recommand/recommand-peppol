@@ -70,7 +70,7 @@ const e2eDescribe = describe.skipIf(SKIP_E2E);
 // Exact messages the API is expected to return.
 const ERROR = {
   billingOnly:
-    "Only billing document types (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote) are supported when recipient is null.",
+    "Only business documents (invoice, creditNote, selfBillingInvoice, selfBillingCreditNote, order, orderResponse, despatchAdvice) are supported when recipient is null.",
   recipientOrEmail:
     "Either recipient (for Peppol) or email.to (for email delivery) must be provided.",
   pdfMessageLevelResponse:
@@ -344,9 +344,10 @@ async function expectStoredDocument(
   });
   expect(typeof document.senderId).toBe("string");
 
-  // The XML is only stored when there is a Peppol recipient: the matrix sends no
-  // JSON document with a doctypeId, which would have an email-only one stored too.
-  if (combination.recipient.value === null) {
+  // The XML is stored when there is a Peppol recipient, or when it was given as raw
+  // XML: the matrix sends no JSON document with a doctypeId, which would have an
+  // email-only one stored too.
+  if (combination.recipient.value === null && combination.variant.documentType !== "xml") {
     expect(document.xml).toBeNull();
   } else {
     expect(typeof document.xml).toBe("string");

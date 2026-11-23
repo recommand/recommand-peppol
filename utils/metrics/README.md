@@ -11,7 +11,7 @@ and Prometheus text exposition.
 
 The endpoint only needs two calls (see `api/send-document.ts`):
 
-- `trackSendDocument` — the first middleware on both send routes.
+- `trackSendDocument` — mounted with `server.use()` ahead of both send routes, so it runs first.
 - `recordSendDocumentDelivery({ ... })` — just before the success response.
 
 `initializeMetricsServer(logger)` is called once from the peppol package `init`.
@@ -27,7 +27,11 @@ The endpoint only needs two calls (see `api/send-document.ts`):
 | `peppol_send_document_deliveries_total` | counter   | `network`, `channel`, `document_type`   |
 
 
-`outcome` is one of `success`, `unauthorized`, `rejected` (4xx),
+`outcome` is one of `success`, `replayed` (a retry under an `Idempotency-Key`
+answered with the first send's response, whatever its status),
+`idempotency_refused` (a request its `Idempotency-Key` refused before it ran: an
+invalid key, a key used for another request, or a repeat while the first is
+running or without a response to repeat), `unauthorized`, `rejected` (4xx),
 `delivery_failed` (422) and `error` (5xx).
 
 `network` separates real customer traffic from the rest, mirroring the branch in

@@ -1,4 +1,6 @@
 import { sendEmail } from "@core/lib/email";
+import { getCompanyById } from "@peppol/data/companies";
+import { checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
 import {
   getIncomingCompanyNotificationEmailAddresses,
   getOutgoingCompanyNotificationEmailAddresses,
@@ -108,6 +110,15 @@ async function sendRecordedNotification(
 export async function sendIncomingDocumentNotifications(
   options: DocumentNotificationOptions
 ): Promise<DocumentNotificationResult[]> {
+  // These emails can attach the document, so they follow the team's access to its documents.
+  const company = await getCompanyById(options.companyId);
+  if (company) {
+    const access = await checkPeppolEntitlementForTeamId(company.teamId, PEPPOL_ENTITLEMENTS.DOCUMENT_ACCESS);
+    if (!access.allowed) {
+      return [];
+    }
+  }
+
   const notificationEmails = selectNotificationAddresses(
     await getIncomingCompanyNotificationEmailAddresses(options.companyId),
     options.onlyEmails

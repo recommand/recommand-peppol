@@ -20,11 +20,14 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { ulid } from "ulid";
 import { z } from "zod";
+import "zod-openapi/extend";
 
 const server = new Server();
 
 const previewDocumentParamSchema = z.object({
-  companyId: z.string(),
+  companyId: z.string().openapi({
+    description: "The ID of the company that would send the document",
+  }),
   type: z.enum(["html"]),
 });
 

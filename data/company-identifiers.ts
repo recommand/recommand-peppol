@@ -13,7 +13,7 @@ import type { Company } from "./companies";
 import type { AccessPointProviderId } from "./peppol-providers";
 import { assertIdentifierSchemeAllowed, assertIdentifiersAllowed } from "./company-identifier-policy";
 import { lockCompanyRow, sameCompanyIdentity, type CompanyIdentitySnapshot } from "./company-row-lock";
-import { createPendingInboundMigration } from "./participant-migrations";
+import { assertNotMigratingOut, cancelPendingInboundMigration, createPendingInboundMigration } from "./participant-migrations";
 
 export type CompanyIdentifier = typeof companyIdentifiers.$inferSelect;
 export type InsertCompanyIdentifier = typeof companyIdentifiers.$inferInsert;
@@ -451,10 +451,15 @@ export async function updateCompanyIdentifier({
     return oldIdentifier;
   }
 
+  const oldParticipant = {companyId: oldIdentifier.companyId, scheme: oldIdentifier.scheme, identifier: oldIdentifier.identifier, useTestNetwork};
+  await assertNotMigratingOut(oldParticipant);
+
   if(!skipSmpRegistration){
     await upsertCompanyRegistration({companyId: companyIdentifier.companyId, identifier: cleanedIdentifier, useTestNetwork: useTestNetwork}); // Register the new identifier
     await unregisterCompanyIdentifier({identifier: oldIdentifier, useTestNetwork: useTestNetwork}); // Unregister the old identifier
   }
+
+  await cancelPendingInboundMigration(oldParticipant);
 
   const updatedIdentifier = await writeIdentifierAgainst(validatedAgainst, companyIdentifier.companyId, (tx) => tx
     .update(companyIdentifiers)
@@ -490,9 +495,14 @@ export async function deleteCompanyIdentifier({
     throw new UserFacingError("Company identifier not found");
   }
 
+  const participant = {companyId, scheme: identifier.scheme, identifier: identifier.identifier, useTestNetwork};
+  await assertNotMigratingOut(participant);
+
   if(!skipSmpRegistration){
     await unregisterCompanyIdentifier({identifier, useTestNetwork});
   }
+
+  await cancelPendingInboundMigration(participant);
 
   await db
     .delete(companyIdentifiers)

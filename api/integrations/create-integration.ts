@@ -29,7 +29,9 @@ const createIntegrationRouteDescription = describeRoute({
 });
 
 const createIntegrationJsonBodySchema = z.object({
-    companyId: z.string(),
+    companyId: z.string().openapi({
+        description: "The ID of the company the integration is for",
+    }),
     manifest: manifestSchema.optional(),
     url: z.string().url().optional(),
     configuration: configurationSchema.nullish(),

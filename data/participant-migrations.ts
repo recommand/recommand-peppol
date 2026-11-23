@@ -124,6 +124,33 @@ export async function getPendingInboundMigration(
   return open?.direction === "inbound" && open.status === "pending" ? open : undefined;
 }
 
+/**
+ * Refuses to remove an identifier or give it another value while its participant is
+ * migrating out: the new provider holds a key for it, and the migration has to be
+ * finalized or cancelled first.
+ */
+export async function assertNotMigratingOut(options: Participant & { companyId: string; useTestNetwork: boolean }): Promise<void> {
+  const open = await getOpenParticipantMigration(options);
+  if (open?.direction === "outbound") {
+    throw new UserFacingError(
+      `An outbound migration of ${participantAddress(cleanParticipant(options))} is in progress. Finalize or cancel it first.`
+    );
+  }
+}
+
+/**
+ * Withdraws the pending inbound key of an identifier that is removed or given another
+ * value. The key was given for that participant; left behind, it would be used if the
+ * same identifier is added again later, when the previous provider may have voided
+ * it, and the registration would fail on it.
+ */
+export async function cancelPendingInboundMigration(options: Participant & { companyId: string; useTestNetwork: boolean }): Promise<void> {
+  const pending = await getPendingInboundMigration(options);
+  if (pending) {
+    await setStatus(pending.id, "cancelled", "The identifier was removed or changed");
+  }
+}
+
 async function setStatus(
   migrationId: string,
   status: ParticipantMigration["status"],
@@ -158,20 +185,20 @@ async function loadCompanyContext(companyId: string): Promise<{ company: Company
   return context;
 }
 
-/** Only participants on an SMP that supports SML migration keys can be moved with one. */
+/**
+ * Only participants on an SMP that supports SML migration keys can be moved with one.
+ * A company that does not receive yet may still hold an inbound key: it is used when
+ * the company is registered as a recipient, which cannot happen without it while
+ * another SMP publishes the participant.
+ */
 function assertMigrationSupported(company: Company, teamExtension: TeamExtension | null): void {
   if (!getSmpProviderDescriptor(company.smpProvider).migrationKeys) {
     throw new UserFacingError(
-      `Migration keys are only supported for companies published through Recommand's own SMP. This company is published through a partner SMP (${company.smpProvider}).`
+      `Migration keys are only supported for companies whose SMP is Recommand's own. This company uses a partner SMP (${company.smpProvider}).`
     );
   }
   if (!shouldInteractWithPeppolNetwork({ isPlayground: teamExtension?.isPlayground, useTestNetwork: teamExtension?.useTestNetwork })) {
     throw new UserFacingError("This playground team is not connected to a Peppol network, so there is no registration to migrate.");
-  }
-  if (!company.isSmpRecipient) {
-    throw new UserFacingError(
-      "The company is not registered as a recipient (isSmpRecipient is false). Only recipient registrations can be migrated."
-    );
   }
 }
 
@@ -220,7 +247,7 @@ export async function createPendingInboundMigration({
 /**
  * Takes over an existing identifier of the company from its previous SMP. When the
  * company is currently publishable, the migration runs right away; otherwise the key
- * waits for the registration that follows verification.
+ * waits for the registration that follows verification or the switch to receiving.
  */
 export async function requestInboundMigration({
   companyId,
