@@ -1,4 +1,5 @@
 import type { CountryIdentifierRules } from "../validators";
+import { andorra } from "./andorra";
 import { australia } from "./australia";
 import { austria } from "./austria";
 import { belgium } from "./belgium";
@@ -33,6 +34,7 @@ import { unitedKingdom } from "./united-kingdom";
 
 /** The identifier rules of every country that has them. */
 export const countryIdentifierRules: readonly CountryIdentifierRules[] = [
+  andorra,
   australia,
   austria,
   belgium,

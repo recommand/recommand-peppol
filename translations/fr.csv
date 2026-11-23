@@ -1098,3 +1098,4 @@ The company register cannot be reached right now\, so we cannot check who repres
 Order,Commande
 Order Response,Confirmation de commande
 Despatch Advice,Bon de livraison
+For Andorran businesses\, enter the NRT (e.g. L712345A). It becomes your Peppol address under scheme 9922\, with the AD prefix. Leave the VAT number empty if your invoices are not subject to VAT.,Pour les entreprises andorranes\, saisissez le NRT (p. ex. L712345A). Il devient votre adresse Peppol sous le schéma 9922\, avec le préfixe AD. Laissez le numéro de TVA vide si vos factures ne sont pas soumises à la TVA.

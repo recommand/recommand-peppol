@@ -1098,3 +1098,4 @@ The company register cannot be reached right now\, so we cannot check who repres
 Order,Bestelling
 Order Response,Orderbevestiging
 Despatch Advice,Leverbon
+For Andorran businesses\, enter the NRT (e.g. L712345A). It becomes your Peppol address under scheme 9922\, with the AD prefix. Leave the VAT number empty if your invoices are not subject to VAT.,Vul voor Andorrese bedrijven het NRT in (bv. L712345A). Het wordt je Peppol-adres onder schema 9922\, met het prefix AD. Laat het btw-nummer leeg als je facturen niet aan btw onderworpen zijn.
