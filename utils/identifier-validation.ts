@@ -4,6 +4,7 @@ import { countryIdentifierRules, getCountryIdentifierRules } from "./identifiers
 import { validateGln, validateIban } from "./identifiers/international";
 import { PEPPOL_VAT_SCHEMES, REMOVED_SCHEMES } from "./identifiers/peppol-schemes";
 import type { IdentifierValidator } from "./identifiers/validators";
+import { vatNumberIdentifier } from "./identifiers/vat-number";
 
 // The rules themselves live in ./identifiers: the check digit algorithms, the validator
 // building blocks, and one file per country registered in ./identifiers/countries. This
@@ -194,6 +195,21 @@ export function derivedDefaultIdentifiers(
   company: { enterpriseNumber: string | null; vatNumber: string | null }
 ): { scheme: string; identifier: string }[] {
   return getCountryIdentifierRules(country)?.derivedIdentifiers?.(company) ?? [];
+}
+
+/**
+ * The identifier a company gets by default for its VAT number: the number under its
+ * country's default VAT scheme, unless the country addresses this company by another
+ * of its numbers (see withoutDefaultVatIdentifier).
+ */
+export function defaultVatNumberIdentifier(
+  country: string,
+  company: { enterpriseNumber: string | null; vatNumber: string | null }
+): { scheme: string; identifier: string } | null {
+  if (getCountryIdentifierRules(country)?.withoutDefaultVatIdentifier?.(company)) {
+    return null;
+  }
+  return vatNumberIdentifier(country, company.vatNumber);
 }
 
 /** The prefixes a country's VAT numbers carry: its code, unless its rules name others. */

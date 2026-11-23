@@ -167,8 +167,8 @@ const SENDER_ADDITIONS: { addition: (identifier: SenderCandidate) => boolean; gi
     addition: (identifier) => identifier.scheme === "9938" && /^\d{11}$/.test(identifier.identifier),
     givesWayTo: (identifier) => identifier.scheme === "9938" && /^lu\d{8}$/i.test(identifier.identifier),
   },
-  // A Luxembourg matricule under 0240 gives way to the scheme Luxembourg addresses
-  // companies under, 9938.
+  // A Luxembourg matricule under 0240 gives way to 9938, the scheme a company
+  // registered before Luxembourg moved to 0240 has always sent from.
   {
     addition: (identifier) => identifier.scheme === "0240",
     givesWayTo: (identifier) => identifier.scheme === "9938",

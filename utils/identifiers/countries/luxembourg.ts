@@ -33,6 +33,12 @@ const MATRICULE = /^\d{11}$/;
 /** The register of legal persons' own scheme, which takes the matricule alone. */
 const MATRICULE_SCHEME = "0240";
 
+/** The matricule a company records as its enterprise number, when that is what it recorded. */
+function companyMatricule(company: { enterpriseNumber: string | null }): string | null {
+  const enterpriseNumber = cleanEnterpriseNumber(company.enterpriseNumber);
+  return enterpriseNumber && MATRICULE.test(enterpriseNumber) ? enterpriseNumber : null;
+}
+
 function validateLuxembourgMatricule(identifier: string): void {
   if (!MATRICULE.test(identifier.replace(/[\.\-\s]/g, ""))) {
     throw new UserFacingError(
@@ -42,10 +48,10 @@ function validateLuxembourgMatricule(identifier: string): void {
 }
 
 /**
- * Luxembourg addresses every organisation under 9938, with either its VAT number or
- * its matricule: "la codelist à utiliser dans Peppol pour les 2 types de numéros est
- * toujours la liste 9938" (efacturation.public.lu, FAQ on Peppol identifiers). A value
- * of digits only is read as a matricule, anything else as a VAT number.
+ * 9938 takes a VAT number or a matricule. Until November 2026 Luxembourg addressed
+ * every organisation under it, by either number, and participants registered that way
+ * keep their address. A value of digits only is read as a matricule, anything else as
+ * a VAT number.
  */
 export function validateLuxembourgPeppolIdentifier(identifier: string): void {
   const cleaned = identifier.replace(/[\.\-\s]/g, "");
@@ -120,13 +126,16 @@ export const luxembourg: CountryIdentifierRules = {
     schemes: ["9938", MATRICULE_SCHEME],
     validate: validateLuxembourgIdentifierBelongsToCompany,
   },
-  // Luxembourg has no default enterprise number scheme, because a company records its
-  // matricule or its RCS number there. A matricule is published under 9938, the scheme
-  // Luxembourg addresses every organisation under, and not under 0240, which Luxembourg
-  // does not use; a company can still add 0240 itself. An RCS number is no Peppol
-  // address and derives nothing.
+  // Luxembourg registers a new participant under its matricule with scheme 0240, and
+  // under its VAT number with 9938 only when it has no matricule (efacturation.public.lu,
+  // "What is a Peppol identifier?", as updated 11 November 2026). There is no default
+  // enterprise number scheme, because a company records its matricule or its RCS number
+  // there: a matricule derives the 0240 identifier and takes the place of the VAT
+  // number, an RCS number is no Peppol address and derives nothing. A company can
+  // still add its 9938 identifiers itself.
   derivedIdentifiers: (company) => {
-    const matricule = cleanEnterpriseNumber(company.enterpriseNumber);
-    return matricule && MATRICULE.test(matricule) ? [{ scheme: "9938", identifier: matricule }] : [];
+    const matricule = companyMatricule(company);
+    return matricule ? [{ scheme: MATRICULE_SCHEME, identifier: matricule }] : [];
   },
+  withoutDefaultVatIdentifier: (company) => companyMatricule(company) !== null,
 };

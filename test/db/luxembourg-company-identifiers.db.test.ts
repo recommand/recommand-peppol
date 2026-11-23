@@ -3,12 +3,12 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
 import { connectTestDatabase, testDatabaseUrl } from "./harness";
 
-// A Luxembourg company is addressed under 9938 by its VAT number and by its
-// matricule, as Luxembourg prescribes. Its enterprise number is its matricule or its
-// RCS number; a matricule is published under 9938 by default, and the company keeps
-// sending under its VAT number. 0240, the register of legal persons' own scheme, is
-// not derived, and only ever takes the company's own matricule when the company adds
-// it. The SMP and the SML are replaced by scripted answers; the companies are real rows.
+// A Luxembourg company is addressed by its matricule under 0240, the register of legal
+// persons' own scheme, and by its VAT number under 9938 only when it has no matricule,
+// as Luxembourg prescribes for new participants. Its enterprise number is its
+// matricule or its RCS number. 9938 stays open to the company, for its VAT number and
+// its matricule, and 0240 only ever takes the company's own matricule.
+// The SMP and the SML are replaced by scripted answers; the companies are real rows.
 
 let pool: Pool;
 let createCompany: typeof import("../../data/companies").createCompany;
@@ -86,43 +86,42 @@ describe.skipIf(!testDatabaseUrl)("Luxembourg company identifiers against Postgr
     fetchMock.mockClear();
   });
 
-  it("creates a company with its matricule and its VAT number under 9938, sending under the VAT number", async () => {
+  it("creates a company with its matricule under 0240 only, also when it has a VAT number", async () => {
     const company = await createCompany(luxembourgCompany);
-    expect(await identifierRows(company.id)).toEqual([MATRICULE_9938, VAT]);
-    expect(await getSendingCompanyIdentifier(company)).toMatchObject({ scheme: "9938", identifier: "lu15027442" });
+    expect(await identifierRows(company.id)).toEqual([MATRICULE]);
+    expect(await getSendingCompanyIdentifier(company)).toMatchObject({ scheme: "0240", identifier: "20042228800" });
   });
 
-  it("creates the 9938 matricule identifier for a company that names 0240 as its enterprise number scheme", async () => {
+  it("creates the 0240 identifier once for a company that names 0240 as its enterprise number scheme", async () => {
     const company = await createCompany({ ...luxembourgCompany, vatNumber: null, enterpriseNumberScheme: "0240" });
-    expect(await identifierRows(company.id)).toEqual([MATRICULE_9938]);
-    expect(await getSendingCompanyIdentifier(company)).toMatchObject({ scheme: "9938", identifier: "20042228800" });
+    expect(await identifierRows(company.id)).toEqual([MATRICULE]);
   });
 
-  it("creates no identifier from an RCS number", async () => {
+  it("creates the VAT number under 9938 for a company without a matricule, and nothing from an RCS number", async () => {
     const company = await createCompany({ ...luxembourgCompany, enterpriseNumber: "B123456" });
     expect(await identifierRows(company.id)).toEqual([VAT]);
   });
 
-  it("returns the 9938 matricule identifier a request adds again", async () => {
+  it("returns the 0240 identifier a request adds again, and refuses another matricule", async () => {
     const company = await createCompany(luxembourgCompany);
     const [existing] = (
       await pool.query(
-        `SELECT id FROM peppol_company_identifiers WHERE company_id = $1 AND scheme = '9938' AND identifier = '20042228800'`,
+        `SELECT id FROM peppol_company_identifiers WHERE company_id = $1 AND scheme = '0240' AND identifier = '20042228800'`,
         [company.id]
       )
     ).rows;
-    const again = await createCompanyIdentifier({ companyIdentifier: { companyId: company.id, scheme: "9938", identifier: "20042228800" }, ...write });
+    const again = await createCompanyIdentifier({ companyIdentifier: { companyId: company.id, scheme: "0240", identifier: "20042228800" }, ...write });
     expect(again.id).toBe(existing.id);
-  });
-
-  it("takes the company's own matricule under 0240 when it is added, still sending under the VAT number, and refuses another", async () => {
-    const company = await createCompany(luxembourgCompany);
-    await createCompanyIdentifier({ companyIdentifier: { companyId: company.id, scheme: "0240", identifier: "20042228800" }, ...write });
     await expect(
       createCompanyIdentifier({ companyIdentifier: { companyId: company.id, scheme: "0240", identifier: "19656100039" }, ...write })
     ).rejects.toThrow("must match the company enterprise number when it is a matricule");
+  });
+
+  it("still takes the company's VAT number and matricule under 9938 when they are added", async () => {
+    const company = await createCompany(luxembourgCompany);
+    await createCompanyIdentifier({ companyIdentifier: { companyId: company.id, scheme: "9938", identifier: "LU15027442" }, ...write });
+    await createCompanyIdentifier({ companyIdentifier: { companyId: company.id, scheme: "9938", identifier: "20042228800" }, ...write });
     expect(await identifierRows(company.id)).toEqual([MATRICULE, MATRICULE_9938, VAT]);
-    expect(await getSendingCompanyIdentifier(company)).toMatchObject({ scheme: "9938", identifier: "lu15027442" });
   });
 
   it("refuses 0240 on a company of another country", async () => {

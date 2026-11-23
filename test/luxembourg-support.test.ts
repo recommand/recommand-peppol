@@ -1,11 +1,12 @@
 import { describe, expect, it, mock } from "bun:test";
 
-// A Luxembourg company is addressed under 9938 by its VAT number or by its 11 digit
-// matricule, the number of the register of legal persons. Without a format check the
-// scheme took any value, so a register number (RCS, e.g. B123456) could be published
-// as if it were one of them.
+// A Luxembourg company is addressed by its 11 digit matricule, the number of the
+// register of legal persons, under 0240, or by its VAT number under 9938 when it has
+// no matricule; 9938 also takes the matricule, as Luxembourg used to register it.
+// Without a format check a scheme took any value, so a register number (RCS, e.g.
+// B123456) could be published as if it were one of them.
 
-import { derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, validateCountryIdentifier, validateIdentifier } from "../utils/identifier-validation";
+import { defaultVatNumberIdentifier, derivedDefaultIdentifiers, enterpriseNumberIdentifierScheme, validateCountryIdentifier, validateIdentifier } from "../utils/identifier-validation";
 
 const validVatNumbers = ["LU15027442", "lu15027442", "LU 1502.74-42", "LU20260743"];
 const invalidVatNumbers = [
@@ -182,19 +183,34 @@ describe("scheme 0240", () => {
 });
 
 // Luxembourg has no default enterprise number scheme: a company records its matricule
-// or its RCS number. A matricule derives its identifier under 9938, the scheme
-// Luxembourg addresses organisations under, also for a company that names 0240 as its
-// enterprise number scheme. 0240, which Luxembourg does not use, is not derived.
+// or its RCS number. Luxembourg registers a new participant under its matricule with
+// 0240, and under its VAT number with 9938 only when it has no matricule, so a
+// matricule derives the 0240 identifier and takes the place of the VAT number.
 describe("the identifier a Luxembourg matricule derives", () => {
   it("is derived from a matricule, however it is written", () => {
     for (const enterpriseNumber of ["20042228800", "2004 2228 800"]) {
       expect(derivedDefaultIdentifiers("LU", { enterpriseNumber, vatNumber: "LU15027442" })).toEqual([
-        { scheme: "9938", identifier: "20042228800" },
+        { scheme: "0240", identifier: "20042228800" },
       ]);
     }
     expect(derivedDefaultIdentifiers("LU", { enterpriseNumber: "20042228800", vatNumber: null })).toEqual([
-      { scheme: "9938", identifier: "20042228800" },
+      { scheme: "0240", identifier: "20042228800" },
     ]);
+  });
+
+  it("takes the place of the VAT number under 9938, which a company without a matricule keeps", () => {
+    expect(defaultVatNumberIdentifier("LU", { enterpriseNumber: "20042228800", vatNumber: "LU15027442" })).toBeNull();
+    for (const enterpriseNumber of ["B123456", null]) {
+      expect(defaultVatNumberIdentifier("LU", { enterpriseNumber, vatNumber: "LU15027442" })).toEqual({
+        scheme: "9938",
+        identifier: "LU15027442",
+      });
+    }
+    // Another country's VAT number stays a default whatever its enterprise number.
+    expect(defaultVatNumberIdentifier("BE", { enterpriseNumber: "20042228800", vatNumber: "BE0123456749" })).toEqual({
+      scheme: "9925",
+      identifier: "BE0123456749",
+    });
   });
 
   it("is not derived from an RCS number, or without an enterprise number", () => {
@@ -209,5 +225,41 @@ describe("the identifier a Luxembourg matricule derives", () => {
   it("takes the place of 0240 named as the enterprise number scheme, which is Luxembourg's own", () => {
     expect(enterpriseNumberIdentifierScheme("LU", "0240")).toBeNull();
     expect(enterpriseNumberIdentifierScheme("LU", null)).toBeNull();
+  });
+});
+
+// A company created before Luxembourg moved to 0240 holds its VAT number and its
+// matricule under 9938. Both were defaults then, so a country change takes them along.
+describe("a Luxembourg company changing country", () => {
+  it("replaces the identifiers Luxembourg gave it, under 9938 as under 0240", async () => {
+    const { planCompanyCountryChange } = await import("../data/company-country-change");
+    const base = { teamExtension: { isPlayground: false, useTestNetwork: false }, verificationStarted: false, networkRegistered: false };
+    const luxembourgCompany = {
+      country: "LU", enterpriseNumber: "20042228800", vatNumber: "LU15027442", enterpriseNumberScheme: null,
+      accessPointProvider: "recommand-ap1" as const, smpProvider: "recommand-smp1" as const,
+    };
+    const outOfLuxembourg = planCompanyCountryChange({
+      ...base,
+      oldCompany: luxembourgCompany,
+      newCountry: "BE",
+      enterpriseNumber: "0123456749",
+      vatNumber: "BE0123456749",
+      identifiers: [
+        { id: "matricule", scheme: "0240", identifier: "20042228800" },
+        { id: "oldMatricule", scheme: "9938", identifier: "20042228800" },
+        { id: "oldVat", scheme: "9938", identifier: "lu15027442" },
+      ],
+    });
+    expect(outOfLuxembourg.deleteIdentifierIds.sort()).toEqual(["matricule", "oldMatricule", "oldVat"]);
+
+    const intoLuxembourg = planCompanyCountryChange({
+      ...base,
+      oldCompany: { ...luxembourgCompany, country: "BE", enterpriseNumber: "0123456749", vatNumber: "BE0123456749", enterpriseNumberScheme: "0208" },
+      newCountry: "LU",
+      enterpriseNumber: "20042228800",
+      vatNumber: "LU15027442",
+      identifiers: [],
+    });
+    expect(intoLuxembourg.createIdentifiers).toEqual([{ scheme: "0240", identifier: "20042228800" }]);
   });
 });
