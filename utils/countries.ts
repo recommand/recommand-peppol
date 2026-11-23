@@ -19,6 +19,12 @@ type BaseCountryInfo = {
 
 const BASE_COUNTRIES: BaseCountryInfo[] = ([
     {
+        code: "AD",
+        name: "Andorra",
+        flag: "🇦🇩",
+        supportLevel: "supported",
+    },
+    {
         code: "AT",
         name: "Austria",
         flag: "🇦🇹",
