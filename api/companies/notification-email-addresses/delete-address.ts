@@ -5,7 +5,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireCompanyAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
 import { deleteCompanyNotificationEmailAddress } from "@peppol/data/company-notification-emails";
 import { UserFacingError } from "@peppol/utils/util";
@@ -41,6 +41,7 @@ type DeleteAddressContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 const _deleteAddressMinimal = server.delete(
     "/companies/:companyId/notification-email-addresses/:notificationEmailAddressId",
     requireCompanyAccess(),
+    requirePermission("exchange.notification_email_addresses.delete"),
     deleteAddressRouteDescription,
     zodValidator("param", deleteAddressParamSchema),
     _deleteAddressImplementation,
@@ -49,6 +50,7 @@ const _deleteAddressMinimal = server.delete(
 const _deleteAddress = server.delete(
     "/:teamId/companies/:companyId/notification-email-addresses/:notificationEmailAddressId",
     requireCompanyAccess(),
+    requirePermission("exchange.notification_email_addresses.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteAddressParamSchemaWithTeamId),
     _deleteAddressImplementation,

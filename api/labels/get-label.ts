@@ -10,7 +10,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { labelResponse } from "./shared";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -39,6 +39,7 @@ type GetLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamConte
 const _getLabelMinimal = server.get(
     "/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.labels.read"),
     getLabelRouteDescription,
     zodValidator("param", getLabelParamSchema),
     _getLabelImplementation,
@@ -47,6 +48,7 @@ const _getLabelMinimal = server.get(
 const _getLabel = server.get(
     "/:teamId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.labels.read"),
     describeRoute({hide: true}),
     zodValidator("param", getLabelParamSchema.extend({
         teamId: z.string(),

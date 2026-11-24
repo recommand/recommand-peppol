@@ -49,8 +49,8 @@ export const participantMigrationResponse = z.object({
     status: z.enum(["pending", "inProgress", "completed", "cancelled", "failed"]).openapi({
         description: "`pending`: the key is stored and is used as soon as the company is registered in the SMP, which for teams with strict verification is when the company passes its identity check. `inProgress`: an outbound key was issued and the receiving provider has not claimed the identifier yet. `completed`: the identifier moved. `failed`: the SML refused the key; see `errorMessage`.",
     }),
-    migrationKey: z.string().openapi({
-        description: "The migration key. For an outbound migration this is the key to hand to the new provider.",
+    migrationKey: z.string().optional().openapi({
+        description: "The migration key. For an outbound migration this is the key to hand to the new provider. Only present when the credential has the `exchange.identifiers.migrate` permission, or is an integration token.",
     }),
     errorMessage: z.string().nullable().openapi({
         description: "Why the migration failed or was cancelled, when it did.",

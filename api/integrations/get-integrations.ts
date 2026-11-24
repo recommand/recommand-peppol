@@ -4,7 +4,7 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
-import { type CompanyAccessContext, requireIntegrationAccess } from "@peppol/utils/auth-middleware";
+import { type CompanyAccessContext, requireIntegrationAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { integrationResponse } from "./shared";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
 import { getIntegrations, getIntegrationsByCompany } from "@peppol/data/integrations";
@@ -39,6 +39,7 @@ const _getIntegrationsMinimal = server.get(
     "/integrations",
     requireTeamAccess(),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.read"),
     getIntegrationsRouteDescription,
     zodValidator("query", getIntegrationsQuerySchema),
     _getIntegrationsImplementation,
@@ -48,6 +49,7 @@ const _getIntegrations = server.get(
     "/:teamId/integrations",
     requireTeamAccess(),
     requireIntegrationAccess(),
+    requirePermission("exchange.integrations.read"),
     describeRoute({hide: true}),
     zodValidator("param", getIntegrationsParamSchemaWithTeamId),
     zodValidator("query", getIntegrationsQuerySchema),

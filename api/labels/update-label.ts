@@ -11,7 +11,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { labelResponse } from "./shared";
 import { UserFacingError } from "@peppol/utils/util";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedTeamAccess, requirePermission } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -62,6 +62,7 @@ type UpdateLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 const _updateLabelMinimal = server.put(
     "/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.labels.write"),
     updateLabelRouteDescription,
     zodValidator("param", updateLabelParamSchema),
     zodValidator("json", updateLabelJsonBodySchema),
@@ -71,6 +72,7 @@ const _updateLabelMinimal = server.put(
 const _updateLabel = server.put(
     "/:teamId/labels/:labelId",
     requireIntegrationSupportedTeamAccess(),
+    requirePermission("exchange.labels.write"),
     describeRoute({hide: true}),
     zodValidator("param", updateLabelParamSchemaWithTeamId),
     zodValidator("json", updateLabelJsonBodySchema),

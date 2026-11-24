@@ -1,4 +1,4 @@
-import { requireDocumentAccess } from "@peppol/utils/auth-middleware";
+import { requireDocumentAccess, requirePermission } from "@peppol/utils/auth-middleware";
 import { Server, type Context } from "@recommand/lib/api";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -22,6 +22,7 @@ const _deleteAllTransmittedDocuments = server.delete(
     "/:teamId/documents/all",
     requireTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("exchange.documents.delete"),
     describeRoute({hide: true}),
     zodValidator("param", deleteAllTransmittedDocumentsParamSchemaWithTeamId),
     _deleteAllTransmittedDocumentsImplementation,
@@ -31,6 +32,7 @@ const _deleteAllTransmittedDocumentsMinimal = server.delete(
     "/documents/all",
     requireTeamAccess(),
     requireDocumentAccess(),
+    requirePermission("exchange.documents.delete"),
     describeRoute({hide: true}),
     _deleteAllTransmittedDocumentsImplementation,
 );

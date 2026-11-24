@@ -841,6 +841,13 @@
       "when": 1795451499475,
       "tag": "20261123163139_andorra",
       "breakpoints": true
+    },
+    {
+      "idx": 120,
+      "version": "7",
+      "when": 1795514400000,
+      "tag": "20261124100000_grant_permissions_on_existing_routes",
+      "breakpoints": true
     }
   ]
 }
