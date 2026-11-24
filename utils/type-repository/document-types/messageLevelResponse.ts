@@ -14,7 +14,7 @@ export const messageLevelResponseDocumentType: DocumentType<
   key: "messageLevelResponse",
   translatableTitle: getDocumentTypeTitle("messageLevelResponse"),
   class: "transactionMessaging",
-  aiIntake: false,
+  aiIntake: null,
   sendSchema: sendMessageLevelResponseSchema,
   documentSchema: messageLevelResponseSchema,
 

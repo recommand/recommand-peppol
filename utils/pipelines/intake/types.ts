@@ -3,7 +3,6 @@ import type { ImportFile } from "@peppol/data/imports/files";
 import type { Import } from "@peppol/data/imports/imports";
 import type { AttemptRecord, ImportResult } from "@peppol/data/imports/results";
 import type { Failure, Finding, ProcessingMethod, SourceLocation } from "@peppol/types/intake";
-import type { ValidationResponse } from "@peppol/types/validation";
 
 export type StageName = "structured" | "text" | "classify" | "extract" | "check" | "publish";
 
@@ -35,11 +34,8 @@ export type ExtractCheckpoint = {
   model: string;
 };
 
-/**
- * The document to publish, parsed with its type's schema, and what the checks found.
- * An extracted document carries the validation of its encoded XML.
- */
-export type CheckCheckpoint = { document: unknown; findings: Finding[]; validation?: ValidationResponse };
+/** The document to publish, parsed with its type's schema, and what the checks found. */
+export type CheckCheckpoint = { document: unknown; findings: Finding[] };
 
 export type Checkpoints = {
   structured?: StructuredCheckpoint;

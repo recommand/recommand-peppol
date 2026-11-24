@@ -51,3 +51,11 @@ export type PreparedIncomingDocument = {
   xmlDocument: string;
   originalPayload: IncomingOriginalPayload | null;
 };
+
+/**
+ * An incoming document as it is recorded: received with its XML, or extracted by
+ * document intake from a PDF, which has no XML.
+ */
+export type RecordedIncomingDocument = Omit<PreparedIncomingDocument, "xmlDocument"> & {
+  xmlDocument: string | null;
+};

@@ -6,12 +6,12 @@ import {
   runIncomingDocumentFollowUps,
 } from "@peppol/data/record-incoming-document";
 import { getExtendedTeam } from "@peppol/data/teams";
-import type { PreparedIncomingDocument } from "@peppol/utils/pipelines/receiving/types";
+import type { RecordedIncomingDocument } from "@peppol/utils/pipelines/receiving/types";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import type { DocumentTypeKey } from "@peppol/utils/type-repository/document-types/types";
 import { db } from "@recommand/db";
-import { encodeResult } from "../encode";
-import { failure, processingMethodOf, type ResultContext, type Stage, type StageOutcome } from "../types";
+import { resultEnvelope } from "../envelope";
+import { processingMethodOf, type ResultContext, type Stage, type StageOutcome } from "../types";
 
 async function publish(context: ResultContext): Promise<StageOutcome> {
   const { importRow, company, checkpoints } = context;
@@ -20,27 +20,22 @@ async function publish(context: ResultContext): Promise<StageOutcome> {
   const documentType = getDocumentType(type)!;
   const check = checkpoints.check!;
 
-  const encoded = await encodeResult(context, documentType, check.document);
-  if ("error" in encoded) {
-    return { failure: failure("extraction_invalid", `The extracted content could not be written as a document: ${encoded.error}`) };
-  }
-  const { sender, senderId, receiverId } = encoded;
+  const envelope = await resultEnvelope(context, documentType, check.document);
+  const { sender, senderId, receiverId } = envelope;
 
-  const received: PreparedIncomingDocument = {
+  const received: RecordedIncomingDocument = {
     documentType,
     type: type as DocumentTypeKey,
     probableType: type as DocumentTypeKey,
-    parsedDocument: encoded.document,
-    xmlDocument: encoded.xml,
-    originalPayload: encoded.originalPayload,
+    parsedDocument: envelope.document,
+    xmlDocument: envelope.xml,
+    originalPayload: envelope.originalPayload,
   };
   const team = await getExtendedTeam(company.teamId);
   const record = await prepareIncomingDocumentRecord({
     received,
     company,
     skipBilling: team?.isPlayground ?? false,
-    // The check stage validated an extracted document already; parsed XML is validated here.
-    validation: check.validation,
     source: {
       channel: importRow.channel,
       importId: importRow.id,
@@ -48,8 +43,8 @@ async function publish(context: ResultContext): Promise<StageOutcome> {
       findings: check.findings,
       senderId,
       receiverId,
-      docTypeId: encoded.docTypeId,
-      processId: encoded.processId,
+      docTypeId: envelope.docTypeId,
+      processId: envelope.processId,
       countryC1: sender?.country || company.country,
     },
   });

@@ -16,7 +16,7 @@ export const orderResponseDocumentType: DocumentType<
   key: "orderResponse",
   translatableTitle: getDocumentTypeTitle("orderResponse"),
   class: "operational",
-  aiIntake: false,
+  aiIntake: null,
   sendSchema: sendOrderResponseSchema,
   documentSchema: orderResponseSchema,
 

@@ -14,10 +14,9 @@ import { recordUsageEvents, usageEventId } from "@peppol/data/usage";
 import { validateXmlDocument } from "@peppol/data/validation/client";
 import { transmittedDocuments } from "@peppol/db/schema";
 import type { Finding, ProcessingMethod } from "@peppol/types/intake";
-import type { ValidationResponse } from "@peppol/types/validation";
 import type { CreditNote } from "@peppol/utils/parsing/creditnote/schemas";
 import type { Invoice } from "@peppol/utils/parsing/invoice/schemas";
-import type { PreparedIncomingDocument } from "@peppol/utils/pipelines/receiving/types";
+import type { RecordedIncomingDocument } from "@peppol/utils/pipelines/receiving/types";
 import { sendSystemAlert } from "@peppol/utils/system-notifications/telegram";
 import { withTimeout } from "@peppol/utils/timeout";
 import { getValidationProfile } from "@peppol/utils/type-repository/document-formats";
@@ -54,12 +53,10 @@ export type IncomingDocumentSource =
     };
 
 export type RecordIncomingDocumentInput = {
-  received: PreparedIncomingDocument;
+  received: RecordedIncomingDocument;
   company: Company;
   source: IncomingDocumentSource;
   skipBilling?: boolean;
-  /** Validation already run by the caller; validated here when absent. */
-  validation?: ValidationResponse;
 };
 
 /** A document ready to insert: validated, with its original payload stored. */
@@ -77,11 +74,11 @@ export async function prepareIncomingDocumentRecord(
   input: RecordIncomingDocumentInput,
 ): Promise<IncomingDocumentRecord> {
   const { received, company, source } = input;
+  // A document without XML, extracted from a PDF, has no format whose rules apply.
   const validation =
-    input.validation ??
-    (await validateXmlDocument(received.xmlDocument, {
-      profile: getValidationProfile(source.docTypeId),
-    }));
+    received.xmlDocument === null
+      ? null
+      : await validateXmlDocument(received.xmlDocument, { profile: getValidationProfile(source.docTypeId) });
   const id = `doc_${ulid()}`;
   const createdAt = new Date();
   const parsedDocument = received.parsedDocument;
@@ -267,7 +264,7 @@ export async function recordIncomingDocument(
  */
 export async function runIncomingDocumentFollowUps(options: {
   documentId: string;
-  received: PreparedIncomingDocument;
+  received: RecordedIncomingDocument;
   company: Company;
   senderId: string;
   isPlayground: boolean;

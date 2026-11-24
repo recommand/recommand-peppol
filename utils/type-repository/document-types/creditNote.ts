@@ -6,7 +6,9 @@ import {
 } from "@peppol/utils/parsing/creditnote/schemas";
 import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
 import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
+import { checkBillingConsistency } from "@peppol/utils/parsing/invoice/consistency";
 import type { DocumentType } from "./types";
+import { creditNoteAiIntake } from "./billing-intake";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
 
@@ -17,7 +19,7 @@ export const creditNoteDocumentType: DocumentType<
   key: "creditNote",
   translatableTitle: getDocumentTypeTitle("creditNote"),
   class: "billing",
-  aiIntake: true,
+  aiIntake: creditNoteAiIntake,
   sendSchema: sendCreditNoteSchema,
   documentSchema: creditNoteSchema,
 
@@ -100,6 +102,8 @@ export const creditNoteDocumentType: DocumentType<
   },
 
   extractDocumentNumber: (document) => normalize(document.creditNoteNumber),
+
+  checkConsistency: checkBillingConsistency,
 };
 
 export default creditNoteDocumentType;

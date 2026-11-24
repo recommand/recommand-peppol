@@ -3,6 +3,7 @@ import type { sendDocumentSchema } from "../../parsing/send-document";
 import type { Company } from "@peppol/data/companies";
 import type { Attachment } from "@peppol/utils/parsing/invoice/schemas";
 import type { AddressableParty } from "@peppol/utils/identifiers/electronic-address";
+import type { Discrepancy, Finding, Issue } from "@peppol/types/intake";
 import type { DocumentTypeKey } from "./keys";
 
 export type {
@@ -63,6 +64,31 @@ export type RenderResult<F extends RenderFormat> = F extends "pdf"
   : string;
 
 /**
+ * What document intake needs to extract a type from a PDF with a model, beyond the
+ * type's schema. Every function gets the document as the model wrote it, or as the
+ * schema parsed it, and must not throw on a value of an unexpected shape.
+ */
+export type AiIntakeRules = {
+  /** Extraction rules for the model, next to the rules for every type. */
+  instructions: string[];
+  /** Write an extracted document in the form that the schema requires, before it is parsed. */
+  normalize?: (document: unknown) => unknown;
+  /** What a parsed document must contain to be published, next to its number and sender. */
+  minimumEvidence?: (document: unknown) => Issue[];
+  /**
+   * Correct a value that a model misreads in a known way, when the document's own
+   * other values show the correct one. Each correction is reported as a finding.
+   */
+  reconcile?: (document: unknown) => { document: unknown; findings: Finding[] };
+  /**
+   * Values of a parsed document that the schema accepts but the type does not, such as
+   * a VAT category with a rate it cannot have. `text` is the text layer of the PDF, when
+   * it has one. The model is asked to correct them; what remains is published as a finding.
+   */
+  issues?: (document: unknown, context: { text?: string }) => Issue[];
+};
+
+/**
  * The canonical document a schema describes, once parsed. Every member reads
  * one: `documentSchema` is the full document, and `sendSchema` is that same schema
  * with the fields the send API lets a caller omit loosened, so a document only
@@ -74,8 +100,11 @@ export type DocumentType<SendSchema extends z.ZodSchema, DocumentSchema extends 
   key: DocumentTypeKey;
   translatableTitle: string;
   class: DocumentTypeClass;
-  /** Whether document intake may recognise this type in a PDF and extract it with a model. */
-  aiIntake: boolean;
+  /**
+   * How document intake extracts this type from a PDF with a model, or null when it
+   * may not recognise the type in a PDF.
+   */
+  aiIntake: AiIntakeRules | null;
   sendSchema: SendSchema;
   documentSchema: DocumentSchema;
   preprocessFromSendAPI: (
@@ -108,6 +137,12 @@ export type DocumentType<SendSchema extends z.ZodSchema, DocumentSchema extends 
   extractDocumentNumber: (
     document: ParsedDocument<DocumentSchema>
   ) => string | null;
+  /**
+   * The values a parsed document states that its own other values contradict, for
+   * example totals that do not add up. A document of a received format and an
+   * extracted document are checked alike.
+   */
+  checkConsistency?: (document: ParsedDocument<DocumentSchema>) => Discrepancy[];
 };
 
 export type AnyDocumentType = DocumentType<z.ZodSchema, z.ZodSchema>;

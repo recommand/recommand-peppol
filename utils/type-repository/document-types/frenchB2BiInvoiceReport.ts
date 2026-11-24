@@ -12,7 +12,7 @@ export const frenchB2BiInvoiceReportDocumentType: DocumentType<
   key: "frenchB2BiInvoiceReport",
   translatableTitle: getDocumentTypeTitle("frenchB2BiInvoiceReport"),
   class: "reporting",
-  aiIntake: false,
+  aiIntake: null,
   sendSchema: frenchB2BiInvoiceReportSchema,
   documentSchema: frenchB2BiInvoiceReportSchema,
 

@@ -1,49 +1,86 @@
 import type { Company } from "@peppol/data/companies";
-import type { Finding, Issue } from "@peppol/types/intake";
-import type {
-  AnyDocumentType,
-  DocumentTypeClass,
-} from "@peppol/utils/type-repository/document-types/types";
-import { normalizeExtractedDocument } from "../normalize";
-import { BILLING_INSTRUCTIONS, billingMinimumEvidence, billingNormalize, billingTotalsCheck } from "./billing";
+import type { Discrepancy, Finding, Issue } from "@peppol/types/intake";
+import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";
+import { isUnitCode, normalizeExtractedDocument } from "../normalize";
 import { minimumEvidence, receiverCheck } from "./common";
 
-type ClassChecks = {
-  minimumEvidence: (document: unknown) => Issue[];
-  findings: (document: unknown) => Finding[];
-  /** Write an extracted document of the class in the form that its formats require. */
-  normalize?: (document: unknown) => unknown;
-  /** Extraction rules for the model, next to the rules for every type. */
-  instructions?: string[];
-};
+export { ambiguousDateFindings } from "./dates";
 
-// Checks that apply to every type of a class. They read the class's shared fields only.
-const CLASS_CHECKS: Partial<Record<DocumentTypeClass, ClassChecks>> = {
-  billing: {
-    minimumEvidence: billingMinimumEvidence,
-    findings: billingTotalsCheck,
-    normalize: billingNormalize,
-    instructions: BILLING_INSTRUCTIONS,
-  },
-};
+// The checks of a document. The pipeline knows no document type: what a type adds, it
+// declares on its definition (`aiIntake` and `checkConsistency`).
 
-/** An extracted document after the normalization for every type and for its class. */
+/** An extracted document after the normalization for every type and for its own type. */
 export function normalizeExtraction(documentType: AnyDocumentType, document: unknown): unknown {
   const normalized = normalizeExtractedDocument(document);
-  return CLASS_CHECKS[documentType.class]?.normalize?.(normalized) ?? normalized;
+  return documentType.aiIntake?.normalize?.(normalized) ?? normalized;
 }
 
-/** The extraction rules of the type's class. */
-export function classInstructions(documentType: AnyDocumentType): string[] {
-  return CLASS_CHECKS[documentType.class]?.instructions ?? [];
+/** The extraction rules of the type. */
+export function typeInstructions(documentType: AnyDocumentType): string[] {
+  return documentType.aiIntake?.instructions ?? [];
 }
 
 /** What an extracted document must contain to be published; empty when it is enough. */
 export function minimumEvidenceIssues(documentType: AnyDocumentType, document: unknown): Issue[] {
-  return [
-    ...minimumEvidence(documentType, document),
-    ...(CLASS_CHECKS[documentType.class]?.minimumEvidence(document) ?? []),
-  ];
+  return [...minimumEvidence(documentType, document), ...(documentType.aiIntake?.minimumEvidence?.(document) ?? [])];
+}
+
+/** A parsed extracted document with the values that the type corrects, and a finding for each correction. */
+export function reconcileExtraction(
+  documentType: AnyDocumentType,
+  document: unknown,
+): { document: unknown; findings: Finding[] } {
+  return documentType.aiIntake?.reconcile?.(document) ?? { document, findings: [] };
+}
+
+/** The values a parsed document states that its own other values contradict. */
+export function discrepancies(documentType: AnyDocumentType, document: unknown): Discrepancy[] {
+  return documentType.checkConsistency?.(document) ?? [];
+}
+
+/** A discrepancy or issue as it is shown to the model that wrote the document. */
+export function repairHint(problem: Discrepancy | Issue): string {
+  return `${problem.pointer ?? "document"}: ${problem.message}`;
+}
+
+function unitCodeIssues(value: unknown, pointer = ""): Issue[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => unitCodeIssues(item, `${pointer}/${index}`));
+  }
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+  return Object.entries(value).flatMap(([key, item]) =>
+    key === "unitCode" && typeof item === "string" && item !== "" && !isUnitCode(item)
+      ? [
+          {
+            code: "invalid_unit_code",
+            message: `${item} is not a UN/ECE Recommendation 20 unit code.`,
+            pointer: `${pointer}/${key}`,
+          },
+        ]
+      : unitCodeIssues(item, `${pointer}/${key}`),
+  );
+}
+
+/**
+ * Values of a parsed extracted document that its schema accepts but that are wrong: a
+ * unit that is not a unit code, and what the type declares (`aiIntake.issues`). `text`
+ * is the text layer of the PDF, when it has one.
+ */
+export function extractionIssues(documentType: AnyDocumentType, document: unknown, text?: string): Issue[] {
+  return [...unitCodeIssues(document), ...(documentType.aiIntake?.issues?.(document, { text }) ?? [])];
+}
+
+/** An issue that the model did not correct, as a finding of the published document. */
+export function issueFinding(issue: Issue): Finding {
+  return {
+    code: issue.code,
+    severity: "warning",
+    scope: "extraction",
+    message: issue.message,
+    pointer: `/content${issue.pointer ?? ""}`,
+  };
 }
 
 /** The findings of the checks: remarks that do not stop publication. */
@@ -54,6 +91,14 @@ export function checkFindings(
 ): Finding[] {
   return [
     ...receiverCheck(documentType, document, company),
-    ...(CLASS_CHECKS[documentType.class]?.findings(document) ?? []),
+    ...discrepancies(documentType, document).map(
+      (discrepancy): Finding => ({
+        code: "inconsistent_amounts",
+        severity: "warning",
+        scope: "business",
+        message: discrepancy.message,
+        pointer: `/content${discrepancy.pointer}`,
+      }),
+    ),
   ];
 }

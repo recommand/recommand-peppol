@@ -27,7 +27,8 @@ mock.module("@peppol/data/imports/results", () => ({
   addDocumentFindings: async (documentId: string, findings: unknown[]) => addedFindings.push({ documentId, findings }),
 }));
 // The answers of the validation service, in order; valid when none is left. A module
-// mock stays for the whole test run, so other test files get the real client.
+// mock stays for the whole test run, so other test files get the real client. Intake
+// validates received XML only, so the stub also shows that it validates nothing else.
 const validationAnswers: unknown[] = [];
 const validatedXml: string[] = [];
 let stubValidation = false;
@@ -618,67 +619,74 @@ describe("extract and check", () => {
     );
   });
 
-  const invalidAnswer = {
-    result: "invalid",
-    errors: [
-      { ruleCode: "BR-CO-15", errorMessage: "Invoice total amount with VAT is wrong.", errorLevel: "ERROR", fieldName: "/Invoice/LegalMonetaryTotal" },
-      { ruleCode: "PEPPOL-R001", errorMessage: "A warning only.", errorLevel: "WARNING", fieldName: null },
-    ],
-  };
-
-  it("validates the encoded document and keeps the validation for publication", async () => {
-    const { outcome } = await extractAndCheck("invoice", [{ document: invoice.document, findings: [], multipleDocuments: false }]);
-    expect(validatedXml).toHaveLength(1);
-    expect(validatedXml[0]).toContain("<Invoice");
-    expect(outcome).toMatchObject({ checkpoint: { validation: { result: "valid" } } });
+  it("empties a placeholder that the model wrote for a value that is not printed", async () => {
+    const document = { ...invoice.document, buyer: { ...invoice.document.buyer, street: "<UNKNOWN>", city: "N/A" } };
+    const { outcome } = await extractAndCheck("invoice", [{ document, findings: [], multipleDocuments: false }]);
+    const checked = (outcome as { checkpoint: { document: Record<string, any> } }).checkpoint.document;
+    expect(checked.buyer).toMatchObject({ street: "", city: "" });
   });
 
-  it("repairs a document that does not pass validation once", async () => {
-    validationAnswers.push(invalidAnswer);
-    const output = { document: invoice.document, findings: [], multipleDocuments: false };
-    const { outcome, model } = await extractAndCheck("invoice", [output, output]);
-    expect(outcome).toMatchObject({ checkpoint: { validation: { result: "valid" } } });
+  /** The sample invoice with its one line at another amount, which its quantity and price do not give. */
+  const misread = (netAmount: string) => ({
+    document: { ...invoice.document, lines: [{ ...invoice.document.lines[0], netAmount }] },
+    findings: [],
+    multipleDocuments: false,
+  });
+  const consistent = { document: invoice.document, findings: [], multipleDocuments: false };
+
+  it("does not encode or validate an extracted document", async () => {
+    const { outcome } = await extractAndCheck("invoice", [consistent]);
+    expect(validatedXml).toHaveLength(0);
+    expect(outcome).toEqual({ checkpoint: { document: expect.any(Object), findings: [] } });
+  });
+
+  it("repairs a document whose amounts do not add up, pointing at the values", async () => {
+    const { outcome, model } = await extractAndCheck("invoice", [misread("90.00"), consistent]);
+    expect(outcome).toEqual({ checkpoint: { document: expect.objectContaining({ invoiceNumber: invoice.number }), findings: [] } });
     expect(model.doGenerateCalls).toHaveLength(2);
     const repairPrompt = JSON.stringify(model.doGenerateCalls[1].prompt);
-    expect(repairPrompt).toContain("BR-CO-15: Invoice total amount with VAT is wrong. (at /Invoice/LegalMonetaryTotal)");
-    expect(repairPrompt).not.toContain("A warning only.");
+    expect(repairPrompt).toContain("/lines/0/netAmount: The line amount is 90.00, but quantity 2 × price 50.00 gives 100.00.");
+    expect(repairPrompt).toContain("Keep a value that the document prints in the field where it belongs");
   });
 
-  it("repairs with the latest output until the document passes validation", async () => {
-    validationAnswers.push(invalidAnswer, invalidAnswer);
-    const output = (invoiceNumber: string) => ({
-      document: { ...invoice.document, invoiceNumber },
-      findings: [],
-      multipleDocuments: false,
-    });
-    const { outcome, model, run } = await extractAndCheck("invoice", [output("A-1"), output("A-2"), output("A-3")]);
-    expect(outcome).toMatchObject({ checkpoint: { document: { invoiceNumber: "A-3" }, validation: { result: "valid" } } });
-    expect(model.doGenerateCalls).toHaveLength(3);
-    expect(JSON.stringify(model.doGenerateCalls[1].prompt)).toContain("A-1");
-    expect(JSON.stringify(model.doGenerateCalls[2].prompt)).toContain("A-2");
-    expect(JSON.stringify(model.doGenerateCalls[2].prompt)).not.toContain("A-1");
-    expect(run.progressCalls).toBe(2);
-  });
-
-  it("fails a document that still does not pass validation after three repairs", async () => {
-    validationAnswers.push(invalidAnswer, invalidAnswer, invalidAnswer, invalidAnswer);
-    const output = { document: invoice.document, findings: [], multipleDocuments: false };
+  it("publishes a document whose amounts still do not add up after three repairs, with findings", async () => {
+    const output = misread("90.00");
     const { outcome, model } = await extractAndCheck("invoice", [output, output, output, output]);
-    expect(outcome).toEqual({
-      failure: expect.objectContaining({
-        code: "extraction_invalid",
-        message: "The extracted document does not pass validation.",
-        issues: [{ code: "BR-CO-15", message: "Invoice total amount with VAT is wrong." }],
-      }),
-    });
     expect(model.doGenerateCalls).toHaveLength(1 + MAX_REPAIR_CALLS);
+    const findings = (outcome as { checkpoint: { findings: Record<string, unknown>[] } }).checkpoint.findings;
+    expect(findings).toContainEqual({
+      code: "inconsistent_amounts",
+      severity: "warning",
+      scope: "business",
+      message: "The line amount is 90.00, but quantity 2 × price 50.00 gives 100.00.",
+      pointer: "/content/lines/0/netAmount",
+    });
   });
 
-  it("lets a document through when the validation service fails, like a received document", async () => {
-    validationAnswers.push({ result: "error", errors: [] });
-    const { outcome, model } = await extractAndCheck("invoice", [{ document: invoice.document, findings: [], multipleDocuments: false }]);
-    expect(outcome).toMatchObject({ checkpoint: { validation: { result: "error" } } });
+  it("keeps the output with the fewest discrepancies when a repair makes it worse", async () => {
+    const broken = { document: { ...invoice.document, lines: [] }, findings: [], multipleDocuments: false };
+    const { outcome, model } = await extractAndCheck("invoice", [misread("90.00"), broken, broken, broken]);
+    expect(model.doGenerateCalls).toHaveLength(1 + MAX_REPAIR_CALLS);
+    expect(outcome).toMatchObject({ checkpoint: { document: { lines: [{ netAmount: "90.00" }] } } });
+  });
+
+  it("corrects a base quantity without a repair call, and reports the correction", async () => {
+    const perHundred = {
+      ...consistent,
+      document: { ...invoice.document, lines: [{ ...invoice.document.lines[0], quantity: "200", baseQuantity: null }] },
+    };
+    const { outcome, model } = await extractAndCheck("invoice", [perHundred]);
     expect(model.doGenerateCalls).toHaveLength(1);
+    const checkpoint = (outcome as { checkpoint: { document: Record<string, any>; findings: { code: string }[] } }).checkpoint;
+    expect(checkpoint.document.lines[0].baseQuantity).toBe("100");
+    expect(checkpoint.findings.map((finding) => finding.code)).toEqual(["corrected_value"]);
+  });
+
+  it("asks for an empty string instead of a placeholder for a value that is not printed", async () => {
+    const { model } = await extractAndCheck("invoice", [consistent]);
+    const prompt = JSON.stringify(model.doGenerateCalls[0].prompt);
+    expect(prompt).toContain("Write an empty string for a required text field whose value is not printed");
+    expect(prompt).toContain("Never write a placeholder such as <UNKNOWN>");
   });
 
   it("fails a document without the minimum evidence", async () => {
@@ -693,10 +701,11 @@ describe("extract and check", () => {
       buyer: { ...invoice.document.buyer, name: "Somebody Else" },
       totals: { ...invoice.document.totals, taxInclusiveAmount: "999.99" },
     };
-    const { outcome } = await extractAndCheck("invoice", [{ document, findings: [], multipleDocuments: false }]);
+    const output = { document, findings: [], multipleDocuments: false };
+    const { outcome } = await extractAndCheck("invoice", [output, output, output, output]);
     const codes = (outcome as { checkpoint: { findings: { code: string }[] } }).checkpoint.findings.map((finding) => finding.code);
     expect(codes).toContain("receiver_mismatch");
-    expect(codes).toContain("inconsistent_totals");
+    expect(codes).toContain("inconsistent_amounts");
   });
 
   it("ignores a PDF that repeats a document published from the XML of the same import", async () => {

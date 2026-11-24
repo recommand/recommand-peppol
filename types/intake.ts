@@ -46,6 +46,18 @@ export type Failure = {
   context?: Record<string, unknown>;
 };
 
+/**
+ * A value that a document states and that its own other values contradict, for
+ * example a line amount that is not its quantity times its price. The pointer is a
+ * JSON Pointer into the document.
+ */
+export type Discrepancy = {
+  pointer: string;
+  stated: string;
+  expected: string;
+  message: string;
+};
+
 /** A remark about a published document that did not stop its publication. */
 export type Finding = {
   code: string;

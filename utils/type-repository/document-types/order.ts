@@ -11,7 +11,7 @@ export const orderDocumentType: DocumentType<typeof sendOrderSchema, typeof orde
   key: "order",
   translatableTitle: getDocumentTypeTitle("order"),
   class: "operational",
-  aiIntake: false,
+  aiIntake: null,
   sendSchema: sendOrderSchema,
   documentSchema: orderSchema,
 

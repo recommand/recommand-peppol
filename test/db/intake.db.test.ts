@@ -343,11 +343,19 @@ describe.skipIf(!testDatabaseUrl)("document intake against PostgreSQL", () => {
       await drain();
 
       expect((await imports.getImport(accepted.id))?.status).toBe("completed");
-      const [document] = await rows<{ processing_method: string; parsed: { attachments: { filename: string }[] }; xml: string; findings: unknown[] }>(
-        `SELECT processing_method, parsed, xml, findings FROM peppol_transmitted_documents`,
-      );
+      const [document] = await rows<{
+        processing_method: string;
+        parsed: { invoiceNumber: string; attachments: { filename: string }[] };
+        xml: string | null;
+        validation: unknown;
+        doc_type_id: string;
+      }>(`SELECT processing_method, parsed, xml, validation, doc_type_id FROM peppol_transmitted_documents`);
       expect(document.processing_method).toBe("extracted");
-      expect(document.xml).toContain(invoice.number);
+      // The document was never a message in a format: it is recorded as its content only.
+      expect(document.xml).toBeNull();
+      expect(document.validation).toBeNull();
+      expect(document.doc_type_id).toContain("urn:oasis:names:specification:ubl:schema:xsd:Invoice-2::Invoice");
+      expect(document.parsed.invoiceNumber).toBe(invoice.number);
       expect(document.parsed.attachments.map((attachment) => attachment.filename)).toContain("purchase.pdf");
       expect(await rows(`SELECT type, ai_processed FROM peppol_transfer_events`)).toEqual([{ type: "api", ai_processed: true }]);
       expect((await rows<{ stage: string }>(`SELECT stage, model FROM peppol_import_attempts ORDER BY started_at`)).map((row) => row.stage)).toEqual([

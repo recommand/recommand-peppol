@@ -12,9 +12,10 @@ import type { ResultContext } from "./types";
 
 type Party = { name?: string | null; country?: string | null; vatNumber?: string | null };
 
-/** The document of a result as it is recorded: its XML and the Peppol envelope values. */
-export type EncodedResult = {
-  xml: string;
+/** The document of a result as it is recorded: the XML it came as, if any, and the Peppol envelope values. */
+export type ResultEnvelope = {
+  /** The received XML; null for a document extracted from a PDF, which has none. */
+  xml: string | null;
   docTypeId: string;
   processId: string;
   document: unknown;
@@ -23,6 +24,9 @@ export type EncodedResult = {
   senderId: string;
   receiverId: string | null;
 };
+
+/** The address of a party that has none: the address the send path uses for an unknown recipient. */
+const UNKNOWN_ADDRESS = "0000:0000";
 
 /**
  * The party that sent the document: the party the document type names as its sender.
@@ -49,19 +53,20 @@ async function companyAddress(companyId: string): Promise<string | null> {
 }
 
 /**
- * The XML to record: the received XML, or the extracted content encoded in the type's
- * preferred format. The same input always gives the same XML, so the check stage can
- * validate the XML that the publish stage records.
+ * The document to record and its envelope. Received XML is kept as it came. A document
+ * extracted from a PDF is recorded as its content only, without XML: it never was a
+ * message in a format, so no XML would be its own. Its envelope names the type's
+ * preferred format, the sender's own registration or VAT number, and the company's
+ * Peppol identifier.
  */
-export async function encodeResult(
+export async function resultEnvelope(
   context: ResultContext,
   documentType: AnyDocumentType,
   document: unknown,
-): Promise<EncodedResult | { error: string }> {
+): Promise<ResultEnvelope> {
   const sender = sendingParty(documentType, document);
-  const senderId = partyElectronicAddress(sender) ?? "0000:0000";
-  // The Peppol column keeps only a registered identifier of the company. The encoded
-  // document names the company by its own numbers when it has no identifier.
+  const senderId = partyElectronicAddress(sender) ?? UNKNOWN_ADDRESS;
+  // The Peppol column keeps only a registered identifier of the company.
   const receiverId = await companyAddress(context.company.id);
   const envelope = { sender, senderId, receiverId };
 
@@ -95,16 +100,12 @@ export async function encodeResult(
         })
       : document;
   const format = getDocumentFormatsByDocumentTypeKey(documentType.key)[0];
-  const processId = resolveFormatProcessId(format, withPdf);
-  const recipientAddress = receiverId ?? partyElectronicAddress(context.company) ?? "0000:0000";
-  try {
-    const xml = format.encode(withPdf, processId, {
-      senderAddress: senderId,
-      recipientAddress,
-      isDocumentValidationEnforced: false,
-    });
-    return { ...envelope, xml, docTypeId: format.docTypeId, processId, document: withPdf, originalPayload: null };
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
-  }
+  return {
+    ...envelope,
+    xml: null,
+    docTypeId: format.docTypeId,
+    processId: resolveFormatProcessId(format, withPdf),
+    document: withPdf,
+    originalPayload: null,
+  };
 }

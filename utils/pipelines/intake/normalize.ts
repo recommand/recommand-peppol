@@ -33,7 +33,28 @@ const UNIT_ALIASES: Record<string, string> = {
   PIECE: "H87",
   PIECES: "H87",
   EACH: "H87",
+  HOUR: "HUR",
+  HOURS: "HUR",
+  DAYS: "DAY",
+  DAG: "DAY",
+  DAGEN: "DAY",
+  MONTH: "MON",
+  MONTHS: "MON",
+  MAAND: "MON",
+  MAANDEN: "MON",
+  YEAR: "ANN",
+  YEARS: "ANN",
+  JAAR: "ANN",
+  MB: "4L",
+  GB: "E34",
+  TB: "E35",
+  "%": "P1",
 };
+
+/** Whether a value is a UN/ECE Recommendation 20 unit code. */
+export function isUnitCode(value: string) {
+  return VALID_UNIT_CODES.has(value);
+}
 
 function unitCode(value: string) {
   const code = value.trim().toUpperCase();
@@ -50,23 +71,31 @@ const NORMALIZERS: Record<string, (value: string) => string | null | undefined> 
 };
 
 /**
+ * A placeholder that a model can write for a value that is not printed, such as
+ * `<UNKNOWN>` or `N/A`. No document prints it as a value, so it becomes empty, as the
+ * UBL parser writes a value that a received document leaves out.
+ */
+const PLACEHOLDER = /^\s*(<[^<>]*>|n\/a)\s*$/i;
+
+/**
  * Write the values of an extracted document in the form that the formats require, where
  * the document prints them in another form: a registration or VAT number with dots or
  * spaces, and a unit as its printed abbreviation. Generic: it reads only field names
- * that every document type uses with the same meaning. The class of the type can add
- * its own normalization (see `checks`).
+ * that every document type uses with the same meaning. The type can add its own
+ * normalization (`aiIntake.normalize`).
  */
-export function normalizeExtractedDocument(value: unknown): unknown {
+export function normalizeExtractedDocument(value: unknown, key?: string): unknown {
+  if (typeof value === "string") {
+    if (PLACEHOLDER.test(value)) {
+      return "";
+    }
+    return key && NORMALIZERS[key] ? NORMALIZERS[key](value) : value;
+  }
   if (Array.isArray(value)) {
-    return value.map(normalizeExtractedDocument);
+    return value.map((item) => normalizeExtractedDocument(item));
   }
   if (!value || typeof value !== "object") {
     return value;
   }
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [
-      key,
-      typeof item === "string" && NORMALIZERS[key] ? NORMALIZERS[key](item) : normalizeExtractedDocument(item),
-    ]),
-  );
+  return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, normalizeExtractedDocument(item, name)]));
 }

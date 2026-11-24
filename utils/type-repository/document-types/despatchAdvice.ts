@@ -17,7 +17,7 @@ export const despatchAdviceDocumentType: DocumentType<
   key: "despatchAdvice",
   translatableTitle: getDocumentTypeTitle("despatchAdvice"),
   class: "operational",
-  aiIntake: false,
+  aiIntake: null,
   sendSchema: sendDespatchAdviceSchema,
   documentSchema: despatchAdviceSchema,
 

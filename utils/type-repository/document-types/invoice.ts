@@ -6,7 +6,9 @@ import {
 } from "@peppol/utils/parsing/invoice/schemas";
 import { resolveVatTotals } from "@peppol/utils/parsing/invoice/calculations";
 import { getDocumentTypeTitle } from "@peppol/lib/client/document-type-labels";
+import { checkBillingConsistency } from "@peppol/utils/parsing/invoice/consistency";
 import type { DocumentType } from "./types";
+import { billingAiIntake } from "./billing-intake";
 import { normalize } from "./normalize";
 import { withGeneratedAttachment } from "./attachments";
 
@@ -17,7 +19,7 @@ export const invoiceDocumentType: DocumentType<
   key: "invoice",
   translatableTitle: getDocumentTypeTitle("invoice"),
   class: "billing",
-  aiIntake: true,
+  aiIntake: billingAiIntake,
   sendSchema: sendInvoiceSchema,
   documentSchema: invoiceSchema,
 
@@ -104,6 +106,8 @@ export const invoiceDocumentType: DocumentType<
   },
 
   extractDocumentNumber: (document) => normalize(document.invoiceNumber),
+
+  checkConsistency: checkBillingConsistency,
 };
 
 export default invoiceDocumentType;
