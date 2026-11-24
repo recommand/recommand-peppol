@@ -88,3 +88,10 @@ export const withSortedParameters = <
 
   return { ...specs, paths };
 };
+
+/**
+ * Marks an operation as safe to repeat although its method isn't, as the
+ * `x-idempotent` extension, so a client generated from the document can
+ * retry it.
+ */
+export const idempotentOperation = { "x-idempotent": true };
