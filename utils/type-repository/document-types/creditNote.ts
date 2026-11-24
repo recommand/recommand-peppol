@@ -19,7 +19,11 @@ export const creditNoteDocumentType: DocumentType<
   key: "creditNote",
   translatableTitle: getDocumentTypeTitle("creditNote"),
   class: "billing",
-  aiIntake: creditNoteAiIntake,
+  aiIntake: {
+    ...creditNoteAiIntake,
+    classification:
+      "The seller corrects or cancels an earlier invoice, fully or in part: it states the amounts that the seller credits to the buyer.",
+  },
   sendSchema: sendCreditNoteSchema,
   documentSchema: creditNoteSchema,
 

@@ -9,6 +9,7 @@ import {
   forbiddenDecisionModel,
   forbiddenLanguageModel,
   invoiceViewText,
+  OPERATIONAL_SAMPLE_TYPES,
   RECEIVING_COMPANY,
   SAMPLE_TYPES,
   sampleDocument,
@@ -68,7 +69,7 @@ mock.module("@peppol/data/imports/files", () => ({
   },
 }));
 
-const { setIntakeDecisionModelFactory } = await import("@peppol/utils/pipelines/intake/models/jev");
+const { decisionModelOver, setIntakeDecisionModelFactory } = await import("@peppol/utils/pipelines/intake/models/jev");
 const { setIntakeLanguageModelFactory } = await import("@peppol/utils/pipelines/intake/models/claude");
 const { structuredStage } = await import("@peppol/utils/pipelines/intake/stages/structured");
 const { textStage } = await import("@peppol/utils/pipelines/intake/stages/text");
@@ -88,7 +89,11 @@ const { runResult } = await import("@peppol/utils/pipelines/intake");
 const { storable, storableText } = await import("@peppol/utils/storable");
 const { isDataException } = await import("@peppol/utils/db-errors");
 const { parseIncomingXml, IncomingXmlDecodeError } = await import("@peppol/utils/pipelines/receiving/parse");
-const { getDocumentFormat } = await import("@peppol/utils/type-repository/document-formats");
+const { getDocumentFormat, getDocumentFormatsByDocumentTypeKey, resolveFormatProcessId } = await import(
+  "@peppol/utils/type-repository/document-formats"
+);
+const { getDocumentType } = await import("@peppol/utils/type-repository/document-types");
+const { resultEnvelope } = await import("@peppol/utils/pipelines/intake/envelope");
 type ResultContext = import("@peppol/utils/pipelines/intake/types").ResultContext;
 type Checkpoints = import("@peppol/utils/pipelines/intake/types").Checkpoints;
 
@@ -403,6 +408,76 @@ describe("classification", () => {
     expect(decide({ invoice: 0.3, creditNote: 0.3 }, "invoice")).toMatchObject({ type: { type: "invoice" } });
   });
 
+  it("describes each type to the classifier, so that an order or a delivery note is not taken for an invoice", async () => {
+    const fake = fakeDecisionModel(() => ({ despatchAdvice: 0.85, invoice: 0.1, none: 0.05 }));
+    setIntakeDecisionModelFactory(() => fake.model);
+    const result = await classifyPdf({ pdf: textPdf, text: "PAKBON DN-2026-118", filename: "pakbon.pdf", subject: null });
+    const request = fake.calls[0];
+    const descriptions = Object.fromEntries(request.options.map((option) => [option.id, option.description]));
+    expect(descriptions.invoice).toContain("asks the buyer to pay");
+    expect(descriptions.order).toContain("purchase order");
+    expect(descriptions.despatchAdvice).toContain("delivery note");
+    expect(descriptions.orderResponse).toBeUndefined();
+    expect(request.instructions).toContain("A document that asks for payment is not the same as a document that orders or delivers goods");
+    expect(request.instructions).not.toContain("such as an order, a delivery note");
+    expect(decideClassification(result, { expectedType: null, acceptedTypes: null })).toMatchObject({
+      type: { type: "despatchAdvice", probability: 0.85 },
+    });
+  });
+
+  it("gives Jev the descriptions as the criteria of the options", async () => {
+    const calls: { questions: Record<string, { criteria: Record<string, unknown> }> }[] = [];
+    const jev = decisionModelOver(
+      {
+        specificationVersion: "v4",
+        provider: "fake",
+        modelId: "fake-jev",
+        supportedQuestionTypes: ["choice"],
+        doDecide: async (options: never) => {
+          calls.push(options);
+          return {
+            answers: { answer: { type: "choice", choice: "Order", probabilities: { Order: 0.9, Invoice: 0.1 } } },
+            warnings: [],
+          };
+        },
+      } as never,
+      "fake-jev",
+    );
+    const result = await jev.decide(
+      {
+        state: [{ type: "text", text: "PURCHASE ORDER" }],
+        instructions: "Which document?",
+        options: [
+          { id: "order", label: "Order", description: "The buyer orders goods." },
+          { id: "invoice", label: "Invoice" },
+        ],
+      },
+      {},
+    );
+    expect(calls[0].questions.answer.criteria).toEqual({ Order: "The buyer orders goods.", Invoice: null });
+    expect(result.probabilities).toEqual({ order: 0.9, invoice: 0.1 });
+  });
+
+  it("gives the extraction model the description of each option for a scanned PDF", async () => {
+    const model = fakeLanguageModel({ result: "Order" });
+    setIntakeLanguageModelFactory(() => model);
+    const result = await classifyPdf({ pdf: scannedPdf, text: "", filename: "scan.pdf", subject: null });
+    expect(result.probabilities).toEqual({ order: 1 });
+    const prompt = JSON.stringify(model.doGenerateCalls[0].prompt);
+    expect(prompt).toContain("- Order: The buyer orders goods or services from the seller");
+    expect(prompt).toContain("- Despatch Advice: The party that sends goods lists what it delivers");
+  });
+
+  it("decides on an order or a delivery note like on any other type", () => {
+    expect(decide({ order: 0.8, invoice: 0.15 })).toMatchObject({ type: { type: "order", probability: 0.8 } });
+    expect(decide({ despatchAdvice: 0.9 }, "invoice")).toMatchObject({
+      failure: { code: "type_mismatch", context: { detectedType: "despatchAdvice", expectedType: "invoice" } },
+    });
+    expect(decide({ order: 0.9 }, null, ["invoice", "creditNote"])).toMatchObject({
+      failure: { code: "unsupported_document_type", context: { detectedType: "order" } },
+    });
+  });
+
   it("records the model call as an attempt", async () => {
     setIntakeDecisionModelFactory(() => fakeDecisionModel(invoiceAnswer).model);
     const run = context({ bytes: textPdf, mediaType: "application/pdf", checkpoints: { structured: { method: null }, text: { text: "x", pageCount: 1, textHash: "h" } } });
@@ -516,6 +591,13 @@ describe("extraction schema", () => {
       expect(schema.properties.document.properties.attachments).toBeUndefined();
       expect(JSON.stringify(schema)).not.toContain('"examples"');
     }
+  });
+
+  it("covers the invoice and credit note types, the order and the despatch advice, but not the order response", () => {
+    const keys = aiIntakeTypes().map((type) => type.key);
+    expect(keys).toEqual(expect.arrayContaining(["invoice", "creditNote", "order", "despatchAdvice"]));
+    expect(keys).not.toContain("orderResponse");
+    expect(Object.keys((extractionSchema(getDocumentType("despatchAdvice")!) as any).properties.document.properties)).not.toContain("totals");
   });
 });
 
@@ -709,6 +791,32 @@ describe("extract and check", () => {
     expect(checked.buyer).toMatchObject({ street: "", city: "" });
   });
 
+  it("leaves out an optional object that states nothing, for every type, without a repair", async () => {
+    const document = {
+      ...invoice.document,
+      billingPeriod: { startDate: null, endDate: "" },
+      delivery: { date: null, location: { country: "" } },
+      lines: invoice.document.lines.map((line: Record<string, unknown>) => ({ ...line, standardId: { scheme: "", identifier: "" } })),
+    };
+    const { outcome, model } = await extractAndCheck("invoice", [{ document, findings: [], multipleDocuments: false }]);
+    expect(model.doGenerateCalls).toHaveLength(1);
+    const checked = (outcome as { checkpoint: { document: Record<string, any> } }).checkpoint.document;
+    expect(checked).toMatchObject({ billingPeriod: null, delivery: null, lines: [expect.objectContaining({ standardId: null })] });
+  });
+
+  it("keeps a required object that states nothing, so the schema reports it", async () => {
+    const empty = { document: { ...invoice.document, seller: { name: "", street: "", city: "", postalZone: "", country: "" } }, findings: [], multipleDocuments: false };
+    const { outcome } = await extractAndCheck("invoice", [empty, empty, empty, empty]);
+    expect(outcome).toMatchObject({ failure: { code: "extraction_invalid", issues: [expect.objectContaining({ pointer: "/content/seller/country" })] } });
+  });
+
+  it("fails empty totals as missing evidence, without a repair", async () => {
+    const document = { ...invoice.document, totals: { taxExclusiveAmount: "", taxInclusiveAmount: null, payableAmount: null } };
+    const { outcome, model } = await extractAndCheck("invoice", [{ document, findings: [], multipleDocuments: false }]);
+    expect(outcome).toMatchObject({ failure: { code: "insufficient_evidence", issues: [{ code: "missing_payable_amount" }] } });
+    expect(model.doGenerateCalls).toHaveLength(1);
+  });
+
   /** The sample invoice with its one line at another amount, which its quantity and price do not give. */
   const misread = (netAmount: string) => ({
     document: { ...invoice.document, lines: [{ ...invoice.document.lines[0], netAmount }] },
@@ -803,5 +911,200 @@ describe("extract and check", () => {
     expect(addedFindings).toEqual([
       { documentId: "doc_xml", findings: [expect.objectContaining({ code: "conflicting_representation" })] },
     ]);
+  });
+});
+
+describe("orders and delivery notes", () => {
+  const order = sampleDocument("order");
+  const despatchAdvice = sampleDocument("despatchAdvice");
+  const output = (document: unknown) => ({ document, findings: [], multipleDocuments: false });
+  type Checked = { document: Record<string, any>; findings: Record<string, unknown>[] };
+  const checked = (outcome: unknown) => (outcome as { checkpoint: Checked }).checkpoint;
+
+  it.each(OPERATIONAL_SAMPLE_TYPES)("runs the generic stages for %s, with its own rules and not those of billing", async (type) => {
+    const sample = sampleDocument(type);
+    const { outcome, model } = await extractAndCheck(type, [output(sample.document)]);
+    expect(outcome).toEqual({ checkpoint: { document: expect.any(Object), findings: [] } });
+    expect(sample.documentType.extractDocumentNumber(checked(outcome).document)).toBe(sample.number);
+    expect(model.doGenerateCalls).toHaveLength(1);
+    const prompt = JSON.stringify(model.doGenerateCalls[0].prompt);
+    expect(prompt).not.toContain("Use VAT category S only with a rate above 0.");
+    expect(prompt).not.toContain("paymentMeans");
+    expect(prompt).toContain(type === "order" ? "The buyer issues the order." : "A delivery note states no prices or amounts.");
+  });
+
+  describe("order", () => {
+    it("accepts an order without prices, VAT or totals, without a repair and without the checks of billing", async () => {
+      const lines = order.document.lines.map(({ netPriceAmount: _price, netAmount: _amount, vat: _vat, ...line }: Record<string, unknown>) => line);
+      const { outcome, model } = await extractAndCheck("order", [output({ ...order.document, lines, totals: null, vat: null })]);
+      expect(model.doGenerateCalls).toHaveLength(1);
+      expect(checked(outcome).findings).toEqual([]);
+      expect(checked(outcome).document.lines[0]).toMatchObject({ quantity: "40", sellersId: "FL-55" });
+      expect(checked(outcome).document.lines[0].netPriceAmount).toBeUndefined();
+    });
+
+    it("keeps the delivery address, the requested delivery date and the issuer as the buyer", async () => {
+      const { outcome } = await extractAndCheck("order", [output(order.document)]);
+      const document = checked(outcome).document;
+      expect(document.delivery).toMatchObject({
+        recipientName: "Bakkerij Janssens Atelier",
+        location: { street: "Industrieweg 12", city: "Gent", country: "BE" },
+        requestedPeriod: { startDate: "2026-11-27", endDate: "2026-11-27" },
+      });
+      expect(getDocumentType("order")!.extractCounterparties(document)).toEqual({
+        senderName: "Bakkerij Janssens BV",
+        receiverName: "Recommand E2E Buyer",
+      });
+    });
+
+    it("leaves out a requested delivery period without a date and a VAT entry without a category, without a repair", async () => {
+      const document = {
+        ...order.document,
+        delivery: { ...order.document.delivery, requestedPeriod: { startDate: null, endDate: "" } },
+        lines: order.document.lines.map((line: Record<string, unknown>, index: number) =>
+          index === 1 ? { ...line, vat: { category: null, percentage: null }, requestedDeliveryPeriod: {} } : line,
+        ),
+        vat: null,
+        totals: { ...order.document.totals, taxInclusiveAmount: null, payableAmount: order.document.totals.taxExclusiveAmount },
+      };
+      const { outcome, model } = await extractAndCheck("order", [output(document)]);
+      expect(model.doGenerateCalls).toHaveLength(1);
+      expect(checked(outcome).document.delivery.requestedPeriod).toBeNull();
+      expect(checked(outcome).document.lines[1]).toMatchObject({ vat: null, requestedDeliveryPeriod: null });
+    });
+
+    it("repairs a line amount that is not its quantity times its price, and reports it when it stays", async () => {
+      const misread = output({
+        ...order.document,
+        lines: [{ ...order.document.lines[0], netAmount: "700.00" }, order.document.lines[1]],
+      });
+      const { outcome, model } = await extractAndCheck("order", [misread, misread, misread, misread]);
+      expect(model.doGenerateCalls).toHaveLength(1 + MAX_REPAIR_CALLS);
+      expect(JSON.stringify(model.doGenerateCalls[1].prompt)).toContain(
+        "/lines/0/netAmount: The line amount is 700.00, but quantity 40 × price 18.50 gives 740.00.",
+      );
+      expect(checked(outcome).findings).toContainEqual({
+        code: "inconsistent_amounts",
+        severity: "warning",
+        scope: "business",
+        message: "The line amount is 700.00, but quantity 40 × price 18.50 gives 740.00.",
+        pointer: "/content/lines/0/netAmount",
+      });
+    });
+
+    it("reports an order that is placed with another company", async () => {
+      const document = { ...order.document, seller: { ...order.document.seller, name: "Other Supplier NV" } };
+      const { outcome } = await extractAndCheck("order", [output(document)]);
+      expect(checked(outcome).findings.map((finding) => finding.code)).toEqual(["receiver_mismatch"]);
+    });
+
+    it("fails an order without the name of its buyer, which issued it", async () => {
+      const document = { ...order.document, buyer: { ...order.document.buyer, name: "" } };
+      const { outcome, model } = await extractAndCheck("order", [output(document)]);
+      expect(outcome).toMatchObject({ failure: { code: "insufficient_evidence", issues: [{ code: "missing_sender" }] } });
+      expect(model.doGenerateCalls).toHaveLength(1);
+    });
+  });
+
+  describe("delivery note", () => {
+    it("keeps the delivered and outstanding quantities and the references to the order, and states no amounts", async () => {
+      const { outcome } = await extractAndCheck("despatchAdvice", [output(despatchAdvice.document)]);
+      const document = checked(outcome).document;
+      expect(document.orderReference).toBe("PO-2026-0042");
+      expect(document.lines[0]).toMatchObject({
+        quantity: "30",
+        outstandingQuantity: "10",
+        outstandingReason: "Out of stock",
+        orderLineReference: "1",
+        itemInstances: [expect.objectContaining({ lotNumber: "L2026-311" })],
+      });
+      expect(document.totals).toBeUndefined();
+    });
+
+    it("writes a registration number under a scheme without dots, and leaves out a carrier that states nothing", async () => {
+      const document = {
+        ...despatchAdvice.document,
+        despatchParty: { ...despatchAdvice.document.despatchParty, partyIdentifiers: [{ identifier: "0403.201.185", scheme: "0208" }] },
+        consignee: { ...despatchAdvice.document.consignee, partyIdentifiers: [{ identifier: "K-10.442" }] },
+        shipment: { ...despatchAdvice.document.shipment, carrier: { name: "", identifier: null } },
+      };
+      const { outcome, model } = await extractAndCheck("despatchAdvice", [output(document)]);
+      expect(model.doGenerateCalls).toHaveLength(1);
+      const result = checked(outcome).document;
+      expect(result.despatchParty.partyIdentifiers).toEqual([{ identifier: "0403201185", scheme: "0208" }]);
+      // A number without a scheme, such as a customer number, stays as printed.
+      expect(result.consignee.partyIdentifiers).toEqual([{ identifier: "K-10.442" }]);
+      expect(result.shipment.carrier).toBeNull();
+    });
+
+    it("repairs a negative quantity", async () => {
+      const negative = output({ ...despatchAdvice.document, lines: [{ ...despatchAdvice.document.lines[0], quantity: "-30" }] });
+      const { outcome, model } = await extractAndCheck("despatchAdvice", [negative, output(despatchAdvice.document)]);
+      expect(model.doGenerateCalls).toHaveLength(2);
+      expect(JSON.stringify(model.doGenerateCalls[1].prompt)).toContain("/lines/0/quantity: The quantity -30 is negative.");
+      expect(checked(outcome).findings).toEqual([]);
+    });
+
+    it("fails a line without an article number, and tells the model not to invent one", async () => {
+      const line = { ...despatchAdvice.document.lines[0], sellersId: null, standardId: null };
+      const withoutArticle = output({ ...despatchAdvice.document, lines: [line] });
+      const { outcome, model } = await extractAndCheck("despatchAdvice", [withoutArticle, withoutArticle, withoutArticle, withoutArticle]);
+      expect(outcome).toMatchObject({
+        failure: { code: "extraction_invalid", issues: [expect.objectContaining({ pointer: "/content/lines/0" })] },
+      });
+      expect(JSON.stringify(model.doGenerateCalls[1].prompt)).toContain("never add a value that the document does not print");
+    });
+
+    it("fails a delivery note without the name of its despatch party, which issued it", async () => {
+      const document = { ...despatchAdvice.document, despatchParty: { ...despatchAdvice.document.despatchParty, name: "" } };
+      const { outcome } = await extractAndCheck("despatchAdvice", [output(document)]);
+      expect(outcome).toMatchObject({ failure: { code: "insufficient_evidence", issues: [{ code: "missing_sender" }] } });
+    });
+
+    it("reports a delivery note for another consignee", async () => {
+      const document = { ...despatchAdvice.document, consignee: { ...despatchAdvice.document.consignee, name: "Somebody Else" } };
+      const { outcome } = await extractAndCheck("despatchAdvice", [output(document)]);
+      expect(checked(outcome).findings.map((finding) => finding.code)).toEqual(["receiver_mismatch"]);
+    });
+  });
+
+  describe("publication", () => {
+    /** The envelope of an extracted document of a type, after extract and check. */
+    async function envelopeOf(type: "order" | "despatchAdvice") {
+      const sample = sampleDocument(type);
+      const { outcome, run } = await extractAndCheck(type, [output(sample.document)]);
+      return { envelope: await resultEnvelope(run, sample.documentType, checked(outcome).document), sample };
+    }
+
+    it("records an extracted order without XML, in the order format, from the buyer", async () => {
+      const { envelope } = await envelopeOf("order");
+      const format = getDocumentFormat("peppol-ubl-order")!;
+      expect(envelope).toMatchObject({ xml: null, docTypeId: format.docTypeId, processId: format.supportedProcessIds[0] });
+      expect(envelope.senderId).toBe("0208:0123456749");
+      expect(envelope.sender).toMatchObject({ name: "Bakkerij Janssens BV", country: "BE" });
+      expect((envelope.document as { attachments: { mimeCode: string }[] }).attachments).toEqual([
+        expect.objectContaining({ mimeCode: "application/pdf" }),
+      ]);
+    });
+
+    it("gives an extracted delivery note the address of the despatch party's identifier", async () => {
+      const { envelope } = await envelopeOf("despatchAdvice");
+      const format = getDocumentFormat("peppol-ubl-despatch-advice")!;
+      expect(envelope).toMatchObject({ xml: null, docTypeId: format.docTypeId, senderId: "0208:0403201185" });
+    });
+
+    it.each(OPERATIONAL_SAMPLE_TYPES)("gives a %s that the UBL format of its type writes and reads back", async (type) => {
+      const { envelope, sample } = await envelopeOf(type as "order" | "despatchAdvice");
+      const format = getDocumentFormatsByDocumentTypeKey(type)[0];
+      const processId = resolveFormatProcessId(format, envelope.document);
+      const xml = format.encode(envelope.document as never, processId, {
+        senderAddress: envelope.senderId,
+        recipientAddress: "0208:0598726857",
+        isDocumentValidationEnforced: true,
+      });
+      const decoded = sample.documentType.documentSchema.parse(format.decode(xml, processId));
+      expect(sample.documentType.extractDocumentNumber(decoded)).toBe(sample.number);
+      expect(decoded.lines).toHaveLength(sample.document.lines.length);
+    });
   });
 });

@@ -104,7 +104,7 @@ export function CompanyInboundAddressesManager({ companyId }: { companyId: strin
           <div>
             <CardTitle>{t`Inbound email addresses`}</CardTitle>
             <CardDescription className="text-balance">
-              {t`Forward invoices and credit notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.`}
+              {t`Forward invoices, credit notes, orders and delivery notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.`}
             </CardDescription>
           </div>
           {canManage && (

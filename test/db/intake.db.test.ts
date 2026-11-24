@@ -364,6 +364,37 @@ describe.skipIf(!testDatabaseUrl)("document intake against PostgreSQL", () => {
       ]);
     });
 
+    it.each([
+      { label: "an order", type: "order", docTypeId: "Order-2::Order", senderId: "0208:0123456749", title: "PURCHASE ORDER" },
+      { label: "a delivery note", type: "despatchAdvice", docTypeId: "DespatchAdvice-2::DespatchAdvice", senderId: "0208:0403201185", title: "DELIVERY NOTE" },
+    ] as const)("extracts $label from a PDF and records it like a received document of its type", async ({ type, docTypeId, senderId, title }) => {
+      const sample = sampleDocument(type);
+      const decision = fakeDecisionModel(() => ({ [type]: 0.9, invoice: 0.05, none: 0.05 }));
+      jev.setIntakeDecisionModelFactory(() => decision.model);
+      claude.setIntakeLanguageModelFactory(() => fakeLanguageModel({ document: sample.document, findings: [], multipleDocuments: false }));
+      const pdf = buildPdf({ pages: [`${title} ${sample.number}`] });
+      const accepted = await (await upload(pdf, `${type}.pdf`)).json();
+
+      await drain();
+
+      expect((await imports.getImport(accepted.id))?.status).toBe("completed");
+      const [document] = await rows(
+        `SELECT type, processing_method, xml, doc_type_id, sender_id, document_number, sender_name FROM peppol_transmitted_documents`,
+      );
+      expect(document).toMatchObject({
+        type,
+        processing_method: "extracted",
+        xml: null,
+        sender_id: senderId,
+        document_number: sample.number,
+        sender_name: sample.documentType.extractCounterparties(sample.document).senderName,
+      });
+      expect(document.doc_type_id).toContain(docTypeId);
+      expect(await rows(`SELECT type, ai_processed FROM peppol_transfer_events`)).toEqual([{ type: "api", ai_processed: true }]);
+      const [received] = await rows<{ payload: Record<string, unknown> }>(`SELECT payload FROM events WHERE type = 'peppol.document.received.v1'`);
+      expect(received.payload).toMatchObject({ docType: type, senderId, processingMethod: "extracted" });
+    });
+
     // Some PDFs draw a dash with a glyph whose text is NUL, which PostgreSQL refuses in text and jsonb.
     it("extracts a PDF whose text layer has NUL characters, and stores its text with them replaced", async () => {
       const decision = fakeDecisionModel(() => ({ invoice: 0.92, none: 0.08 }));

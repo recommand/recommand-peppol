@@ -1016,7 +1016,7 @@ Failed to load imports: {0},Imports laden mislukt: {0}
 Failed to load inbound email addresses: {0},Inkomende e-mailadressen laden mislukt: {0}
 File,Bestand
 Files,Bestanden
-Forward invoices and credit notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Stuur facturen en creditnota's door naar een van deze adressen. De PDF- en XML-bijlagen worden verwerkt tot inkomende documenten van dit bedrijf.
+Forward invoices\, credit notes\, orders and delivery notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Stuur facturen\, creditnota's\, bestellingen en leverbonnen door naar een van deze adressen. De PDF- en XML-bijlagen worden verwerkt tot inkomende documenten van dit bedrijf.
 Ignored,Genegeerd
 Import,Import
 Imports,Imports
@@ -1059,7 +1059,7 @@ The import was deleted,De import is verwijderd
 The type of document could not be recognised,Het type document kon niet herkend worden
 This type of document is not supported,Dit type document wordt niet ondersteund
 Upload a PDF or XML document\, or give the company an inbound email address on its page.,Upload een PDF- of XML-document\, of geef het bedrijf een inkomend e-mailadres op de bedrijfspagina.
-Upload a PDF or XML invoice or credit note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Upload een factuur of creditnota als PDF of XML. XML en PDF's met ingesloten XML worden gelezen zoals ze zijn; de inhoud van andere PDF's wordt met AI uitgelezen.
+Upload a PDF or XML invoice\, credit note\, order or delivery note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Upload een factuur\, creditnota\, bestelling of leverbon als PDF of XML. XML en PDF's met ingesloten XML worden gelezen zoals ze zijn; de inhoud van andere PDF's wordt met AI uitgelezen.
 Upload document,Document uploaden
 Upload,Uploaden
 View document,Document bekijken

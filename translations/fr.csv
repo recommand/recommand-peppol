@@ -1016,7 +1016,7 @@ Failed to load imports: {0},Échec du chargement des imports : {0}
 Failed to load inbound email addresses: {0},Échec du chargement des adresses e-mail de réception : {0}
 File,Fichier
 Files,Fichiers
-Forward invoices and credit notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Transférez les factures et les avoirs vers l'une de ces adresses. Les pièces jointes PDF et XML sont traitées en documents entrants de cette entreprise.
+Forward invoices\, credit notes\, orders and delivery notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Transférez les factures\, les avoirs\, les commandes et les bons de livraison vers l'une de ces adresses. Les pièces jointes PDF et XML sont traitées en documents entrants de cette entreprise.
 Ignored,Ignoré
 Import,Import
 Imports,Imports
@@ -1059,7 +1059,7 @@ The import was deleted,L'import a été supprimé
 The type of document could not be recognised,Le type de document n'a pas pu être reconnu
 This type of document is not supported,Ce type de document n'est pas pris en charge
 Upload a PDF or XML document\, or give the company an inbound email address on its page.,Téléversez un document PDF ou XML\, ou attribuez une adresse e-mail de réception à l'entreprise sur sa page.
-Upload a PDF or XML invoice or credit note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Téléversez une facture ou un avoir au format PDF ou XML. Le XML et les PDF contenant du XML intégré sont lus tels quels ; le contenu des autres PDF est extrait par IA.
+Upload a PDF or XML invoice\, credit note\, order or delivery note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Téléversez une facture\, un avoir\, une commande ou un bon de livraison au format PDF ou XML. Le XML et les PDF contenant du XML intégré sont lus tels quels ; le contenu des autres PDF est extrait par IA.
 Upload document,Téléverser un document
 Upload,Téléverser
 View document,Voir le document

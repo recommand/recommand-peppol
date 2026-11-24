@@ -19,7 +19,11 @@ export const selfBillingCreditNoteDocumentType: DocumentType<
   key: "selfBillingCreditNote",
   translatableTitle: getDocumentTypeTitle("selfBillingCreditNote"),
   class: "billing",
-  aiIntake: creditNoteAiIntake,
+  aiIntake: {
+    ...creditNoteAiIntake,
+    classification:
+      "A credit note that the buyer issues on behalf of the seller, under a self-billing agreement, to correct an earlier self-billing invoice.",
+  },
   sendSchema: sendSelfBillingCreditNoteSchema,
   documentSchema: selfBillingCreditNoteSchema,
 

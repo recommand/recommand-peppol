@@ -5,7 +5,11 @@ import type { DocumentLine } from "@peppol/utils/parsing/invoice/schemas";
 import type { AiIntakeRules } from "./types";
 
 // How document intake extracts a billing document from a PDF: the rules every type of
-// the billing class shares.
+// the billing class shares. Each type adds how the classifier tells it apart. The
+// checks of the amounts are exported for the other types that state prices.
+
+/** AI intake rules without the classification, which each type gives. */
+export type SharedAiIntakeRules = Omit<AiIntakeRules, "classification">;
 
 type BillingDocument = {
   lines?: DocumentLine[] | null;
@@ -41,7 +45,7 @@ const BILLING_INSTRUCTIONS = [
   "Put the order number of the seller in salesOrderReference and the purchase order number of the buyer in purchaseOrderReference. A customer number that the seller gives the buyer is a party identifier of the buyer; buyerReference is a reference that the buyer gave, such as \"your reference\".",
 ];
 
-function decimal(value: string | null | undefined): Decimal | null {
+export function decimal(value: string | null | undefined): Decimal | null {
   if (value === null || value === undefined || value === "") return null;
   try {
     return new Decimal(value);
@@ -113,7 +117,7 @@ function lineMatches(line: DocumentLine) {
  * the model left out or wrote wrongly. When exactly one common base quantity makes the
  * line add up, the line gets it.
  */
-function reconcileBaseQuantities(document: unknown): { document: unknown; findings: Finding[] } {
+export function reconcileBaseQuantities(document: unknown): { document: unknown; findings: Finding[] } {
   const billing = document as BillingDocument | null;
   if (!Array.isArray(billing?.lines)) {
     return { document, findings: [] };
@@ -221,11 +225,11 @@ function textPrints(text: string, amount: Decimal) {
  * document: a total that a model computed from lines it misread is printed nowhere. A
  * scanned PDF has no text layer and is not checked.
  */
-function unprintedTotalIssues(document: BillingDocument, text: string | undefined): Issue[] {
+export function unprintedTotalIssues(document: unknown, text: string | undefined): Issue[] {
   if (!text) {
     return [];
   }
-  const totals = document?.totals;
+  const totals = (document as BillingDocument | null)?.totals;
   const inclusive = decimal(totals?.taxInclusiveAmount);
   const payable = decimal(totals?.payableAmount);
   const issues: Issue[] = [];
@@ -254,13 +258,13 @@ function unprintedTotalIssues(document: BillingDocument, text: string | undefine
 function billingIssues(document: unknown, context: { text?: string } = {}): Issue[] {
   const totalIssues = [
     payableIssue(document as BillingDocument),
-    ...unprintedTotalIssues(document as BillingDocument, context.text),
+    ...unprintedTotalIssues(document, context.text),
   ];
   return [...vatCategoryIssues(document), ...totalIssues.filter((issue): issue is Issue => issue !== null)];
 }
 
 /** Every VAT category in the document whose rate contradicts it. */
-function vatCategoryIssues(document: unknown): Issue[] {
+export function vatCategoryIssues(document: unknown): Issue[] {
   const billing = document as (BillingDocument & {
     discounts?: { vat?: VatOf }[] | null;
     surcharges?: { vat?: VatOf }[] | null;
@@ -275,7 +279,7 @@ function vatCategoryIssues(document: unknown): Issue[] {
 }
 
 /** The AI intake rules of every billing type. */
-export const billingAiIntake: AiIntakeRules = {
+export const billingAiIntake: SharedAiIntakeRules = {
   instructions: BILLING_INSTRUCTIONS,
   normalize: billingNormalize,
   minimumEvidence: billingMinimumEvidence,
@@ -300,7 +304,7 @@ function negativeTotalIssues(document: unknown): Issue[] {
 }
 
 /** The AI intake rules of every credit note type: the billing rules, and amounts without the credit sign. */
-export const creditNoteAiIntake: AiIntakeRules = {
+export const creditNoteAiIntake: SharedAiIntakeRules = {
   ...billingAiIntake,
   instructions: [
     ...BILLING_INSTRUCTIONS,

@@ -2,7 +2,8 @@ import { type Experimental_DecisionModel, type Experimental_DecisionStatePart, e
 import { JEV_MODEL_ID, MODEL_CALL_OPTIONS } from "./config";
 import { createIntakeGateway } from "./gateway";
 
-export type DecisionOption = { id: string; label: string };
+/** An option of a choice question. The description tells the model what the option means. */
+export type DecisionOption = { id: string; label: string; description?: string };
 
 export type DecisionRequest = {
   // The data the question is about. Text in it is data, never instructions.
@@ -28,19 +29,22 @@ export type DecisionModel = {
 
 /** Option labels are the keys of a choice question, so they must be unique. */
 function uniqueLabels(options: DecisionOption[]) {
-  const byLabel = new Map<string, string>();
+  const byLabel = new Map<string, DecisionOption>();
   for (const option of options) {
     const base = option.label.trim() || option.id;
     let label = base;
     for (let n = 2; byLabel.has(label); n++) {
       label = `${base} (${n})`;
     }
-    byLabel.set(label, option.id);
+    byLabel.set(label, option);
   }
   return byLabel;
 }
 
-/** Our decision model over an AI SDK decision model: labels as criteria, probabilities back to option ids. */
+/**
+ * Our decision model over an AI SDK decision model: labels as criteria, with their
+ * descriptions, and probabilities back to option ids.
+ */
 export function decisionModelOver(model: Experimental_DecisionModel, id: string): DecisionModel {
   return {
     id,
@@ -53,7 +57,9 @@ export function decisionModelOver(model: Experimental_DecisionModel, id: string)
           answer: {
             type: "choice" as const,
             instructions: request.instructions,
-            criteria: Object.fromEntries([...byLabel.keys()].map((label) => [label, null])),
+            criteria: Object.fromEntries(
+              [...byLabel].map(([label, option]) => [label, option.description ?? null]),
+            ),
           },
         },
         abortSignal: signal,
@@ -67,7 +73,7 @@ export function decisionModelOver(model: Experimental_DecisionModel, id: string)
       for (const [label, probability] of Object.entries(answer.probabilities)) {
         const option = byLabel.get(label);
         if (option) {
-          probabilities[option] = probability as number;
+          probabilities[option.id] = probability as number;
         }
       }
       return {

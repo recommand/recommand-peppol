@@ -6,11 +6,18 @@ import {
   getDocumentFormatsByDocumentTypeKey,
   resolveFormatProcessId,
 } from "@peppol/utils/type-repository/document-formats";
+import type { PartyIdentifier } from "@peppol/utils/parsing/invoice/schemas";
+import { identifiedParty } from "@peppol/utils/type-repository/document-types/party-identifiers";
 import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";
 import { MEDIA_TYPES, xmlText } from "./file-kind";
 import type { ResultContext } from "./types";
 
-type Party = { name?: string | null; country?: string | null; vatNumber?: string | null };
+type Party = {
+  name?: string | null;
+  country?: string | null;
+  vatNumber?: string | null;
+  partyIdentifiers?: PartyIdentifier[] | null;
+};
 
 /** The document of a result as it is recorded: the XML it came as, if any, and the Peppol envelope values. */
 export type ResultEnvelope = {
@@ -65,7 +72,10 @@ export async function resultEnvelope(
   document: unknown,
 ): Promise<ResultEnvelope> {
   const sender = sendingParty(documentType, document);
-  const senderId = partyElectronicAddress(sender) ?? UNKNOWN_ADDRESS;
+  // A party that a type identifies by party identifiers alone, such as the despatch
+  // party of a despatch advice, has its address in its first identifier with a scheme.
+  const senderId =
+    partyElectronicAddress(sender) ?? partyElectronicAddress(identifiedParty(sender?.partyIdentifiers)) ?? UNKNOWN_ADDRESS;
   // The Peppol column keeps only a registered identifier of the company.
   const receiverId = await companyAddress(context.company.id);
   const envelope = { sender, senderId, receiverId };

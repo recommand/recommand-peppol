@@ -16,6 +16,8 @@ import {
 
 // Fixtures for document intake: PDFs built in memory, documents of every type that AI
 // intake supports, and fake models that record their calls. No test calls a real model.
+// The receiving company is the buyer of the billing documents, the seller of the order
+// and the consignee of the despatch advice.
 
 /**
  * A minimal PDF: one page per entry of `pages`, each line of a page as text, and
@@ -76,15 +78,88 @@ export const RECEIVING_COMPANY = {
   phone: null,
 } as unknown as Company;
 
+/** An order that a customer sends to the receiving company, which is its seller. */
+function orderDocument() {
+  return {
+    orderNumber: "PO-2026-0042",
+    issueDate: "2026-11-20",
+    buyerReference: "Atelier",
+    buyer: {
+      name: "Bakkerij Janssens BV",
+      street: "Markt 5",
+      city: "Gent",
+      postalZone: "9000",
+      country: "BE",
+      vatNumber: "BE0123456749",
+      enterpriseNumber: "0123456749",
+      enterpriseNumberScheme: "0208",
+    },
+    seller: { name: "Recommand E2E Buyer", street: "Teststraat 2", city: "Antwerp", postalZone: "2000", country: "BE" },
+    delivery: {
+      recipientName: "Bakkerij Janssens Atelier",
+      location: { street: "Industrieweg 12", city: "Gent", postalZone: "9000", country: "BE" },
+      requestedPeriod: { startDate: "2026-11-27", endDate: "2026-11-27" },
+    },
+    paymentTerms: { note: "30 days end of month" },
+    lines: [
+      { id: "1", name: "Flour type 55, 25 kg", sellersId: "FL-55", quantity: "40", unitCode: "C62", netPriceAmount: "18.50", vat: { category: "S", percentage: "6" } },
+      { id: "2", name: "Butter block, 10 kg", sellersId: "BT-10", quantity: "12", unitCode: "C62", netPriceAmount: "64.00", vat: { category: "S", percentage: "6" } },
+    ],
+  };
+}
+
+/** A despatch advice (a delivery note) of a supplier, for goods it delivers to the receiving company. */
+function despatchAdviceDocument() {
+  return {
+    despatchAdviceNumber: "DN-2026-118",
+    issueDate: "2026-11-26",
+    orderReference: "PO-2026-0042",
+    despatchParty: {
+      name: "Molens Van Damme NV",
+      street: "Kaai 3",
+      city: "Brugge",
+      postalZone: "8000",
+      country: "BE",
+      partyIdentifiers: [{ identifier: "0403201185", scheme: "0208" }],
+    },
+    consignee: { name: "Recommand E2E Buyer", street: "Teststraat 2", city: "Antwerp", postalZone: "2000", country: "BE" },
+    shipment: {
+      trackingId: "3SABC123456789",
+      grossWeight: { value: "1200", unitCode: "KGM" },
+      handlingUnitCount: 2,
+      actualDespatchDate: "2026-11-26",
+    },
+    lines: [
+      {
+        id: "1",
+        name: "Flour type 55, 25 kg",
+        sellersId: "FL-55",
+        quantity: "30",
+        unitCode: "C62",
+        outstandingQuantity: "10",
+        outstandingReason: "Out of stock",
+        orderLineReference: "1",
+        itemInstances: [{ lotNumber: "L2026-311" }],
+      },
+      { id: "2", name: "Butter block, 10 kg", sellersId: "BT-10", quantity: "12", unitCode: "C62", orderLineReference: "2" },
+    ],
+  };
+}
+
 const SEND_DOCUMENTS = {
   invoice: invoiceDocument,
   creditNote: creditNoteDocument,
   selfBillingInvoice: selfBillingInvoiceDocument,
   selfBillingCreditNote: selfBillingCreditNoteDocument,
+  order: orderDocument,
+  despatchAdvice: despatchAdviceDocument,
 } as const;
 
 export type SampleType = keyof typeof SEND_DOCUMENTS;
-export const SAMPLE_TYPES = Object.keys(SEND_DOCUMENTS) as SampleType[];
+/** The billing types, which share their AI intake rules. */
+export const SAMPLE_TYPES: SampleType[] = ["invoice", "creditNote", "selfBillingInvoice", "selfBillingCreditNote"];
+/** The operational types that AI intake supports: an order and a despatch advice (a delivery note). */
+export const OPERATIONAL_SAMPLE_TYPES: SampleType[] = ["order", "despatchAdvice"];
 
 /**
  * A document of a type, as its preferred UBL format writes it, and as that XML reads

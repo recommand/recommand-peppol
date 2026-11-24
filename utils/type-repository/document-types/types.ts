@@ -69,6 +69,11 @@ export type RenderResult<F extends RenderFormat> = F extends "pdf"
  * schema parsed it, and must not throw on a value of an unexpected shape.
  */
 export type AiIntakeRules = {
+  /**
+   * What the classification model reads about the type next to its title: what the
+   * type is, and how to tell it from the other types, such as an order from an invoice.
+   */
+  classification: string;
   /** Extraction rules for the model, next to the rules for every type. */
   instructions: string[];
   /** Write an extracted document in the form that the schema requires, before it is parsed. */

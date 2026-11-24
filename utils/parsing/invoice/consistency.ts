@@ -14,7 +14,7 @@ type PricedLine = Pick<DocumentLine, "quantity" | "netPriceAmount" | "baseQuanti
 /** Sums of amounts that the document states, which it rounded to the cent each. */
 const SUM_TOLERANCE = new Decimal("0.01");
 
-function amount(value: string | null | undefined): Decimal | null {
+export function amount(value: string | null | undefined): Decimal | null {
   if (value === null || value === undefined || value.trim() === "") {
     return null;
   }
@@ -59,7 +59,8 @@ export function lineAmountTolerance(line: Pick<DocumentLine, "quantity" | "netPr
   return SUM_TOLERANCE.plus(new Decimal(10).pow(-decimals).div(2).mul(units));
 }
 
-function lineDiscrepancies(lines: BillingDocument["lines"]): Discrepancy[] {
+/** Each line amount that is not its quantity times its price. A line without a price or an amount is not checked. */
+export function lineDiscrepancies(lines: BillingDocument["lines"]): Discrepancy[] {
   return lines.flatMap((line, index) => {
     const stated = amount(line.netAmount);
     const expected = computedLineAmount(line);
@@ -180,7 +181,19 @@ function vatDiscrepancies(document: BillingDocument, lineAmounts: (Decimal | nul
   return discrepancies;
 }
 
-function totalsDiscrepancies(document: BillingDocument, lineAmounts: (Decimal | null)[]): Discrepancy[] {
+/**
+ * The totals that the line amounts, the document discounts and surcharges and the VAT
+ * total contradict. `lineAmounts` has null for a line whose amount is not known.
+ */
+export function totalsDiscrepancies(
+  document: {
+    discounts?: { amount: string }[] | null;
+    surcharges?: { amount: string }[] | null;
+    totals?: { linesAmount?: string | null; taxExclusiveAmount?: string | null; taxInclusiveAmount?: string | null } | null;
+    vat?: { totalVatAmount?: string | null } | null;
+  },
+  lineAmounts: (Decimal | null)[],
+): Discrepancy[] {
   const totals = document.totals;
   if (!totals) {
     return [];

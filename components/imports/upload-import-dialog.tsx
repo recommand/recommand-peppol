@@ -74,7 +74,7 @@ export function UploadImportDialog({ companies, defaultCompanyId, onUploaded }: 
         <DialogHeader>
           <DialogTitle>{t`Upload document`}</DialogTitle>
           <DialogDescription>
-            {t`Upload a PDF or XML invoice or credit note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.`}
+            {t`Upload a PDF or XML invoice, credit note, order or delivery note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.`}
           </DialogDescription>
         </DialogHeader>
         <FieldGroup>

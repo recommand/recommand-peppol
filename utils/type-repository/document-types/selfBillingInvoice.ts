@@ -19,7 +19,11 @@ export const selfBillingInvoiceDocumentType: DocumentType<
   key: "selfBillingInvoice",
   translatableTitle: getDocumentTypeTitle("selfBillingInvoice"),
   class: "billing",
-  aiIntake: billingAiIntake,
+  aiIntake: {
+    ...billingAiIntake,
+    classification:
+      "An invoice that the buyer issues on behalf of the seller, under a self-billing agreement: the document says self-billing, autofacturation, or Gutschrift for an invoice that the buyer made.",
+  },
   sendSchema: sendSelfBillingInvoiceSchema,
   documentSchema: selfBillingInvoiceSchema,
 

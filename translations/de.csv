@@ -1016,7 +1016,7 @@ Failed to load imports: {0},Importe konnten nicht geladen werden: {0}
 Failed to load inbound email addresses: {0},Eingangs-E-Mail-Adressen konnten nicht geladen werden: {0}
 File,Datei
 Files,Dateien
-Forward invoices and credit notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Leiten Sie Rechnungen und Gutschriften an eine dieser Adressen weiter. Die PDF- und XML-Anhänge werden zu eingehenden Dokumenten dieses Unternehmens verarbeitet.
+Forward invoices\, credit notes\, orders and delivery notes to one of these addresses. The PDF and XML attachments are processed into incoming documents of this company.,Leiten Sie Rechnungen\, Gutschriften\, Bestellungen und Lieferscheine an eine dieser Adressen weiter. Die PDF- und XML-Anhänge werden zu eingehenden Dokumenten dieses Unternehmens verarbeitet.
 Ignored,Ignoriert
 Import,Import
 Imports,Importe
@@ -1059,7 +1059,7 @@ The import was deleted,Der Import wurde gelöscht
 The type of document could not be recognised,Der Dokumenttyp konnte nicht erkannt werden
 This type of document is not supported,Dieser Dokumenttyp wird nicht unterstützt
 Upload a PDF or XML document\, or give the company an inbound email address on its page.,Laden Sie ein PDF- oder XML-Dokument hoch oder geben Sie dem Unternehmen auf seiner Seite eine Eingangs-E-Mail-Adresse.
-Upload a PDF or XML invoice or credit note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Laden Sie eine Rechnung oder Gutschrift als PDF oder XML hoch. XML und PDFs mit eingebettetem XML werden unverändert gelesen; der Inhalt anderer PDFs wird mit KI extrahiert.
+Upload a PDF or XML invoice\, credit note\, order or delivery note. XML and PDFs with embedded XML are read as they are; the content of other PDFs is extracted with AI.,Laden Sie eine Rechnung\, Gutschrift\, Bestellung oder einen Lieferschein als PDF oder XML hoch. XML und PDFs mit eingebettetem XML werden unverändert gelesen; der Inhalt anderer PDFs wird mit KI extrahiert.
 Upload document,Dokument hochladen
 Upload,Hochladen
 View document,Dokument anzeigen

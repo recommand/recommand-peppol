@@ -1,10 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import { ambiguousDateFindings, extractionIssues, normalizeExtraction } from "@peppol/utils/pipelines/intake/checks";
+import {
+  ambiguousDateFindings,
+  discrepancies,
+  extractionIssues,
+  minimumEvidenceIssues,
+  normalizeExtraction,
+} from "@peppol/utils/pipelines/intake/checks";
 import { getDocumentType } from "@peppol/utils/type-repository/document-types";
 import { sampleDocument } from "./intake/fixtures";
 
 // The checks of an extracted document that its schema cannot express: unit codes, VAT
-// categories against their rates, and numeric dates that can be read two ways.
+// categories against their rates, numeric dates that can be read two ways, and the
+// amounts and quantities of orders and despatch advices.
 
 const invoiceType = getDocumentType("invoice")!;
 const invoice = sampleDocument("invoice").document;
@@ -108,5 +115,112 @@ describe("ambiguousDateFindings", () => {
       { code: "uncertain_value", severity: "warning" as const, scope: "extraction" as const, message: "", pointer: "/content/issueDate" },
     ];
     expect(ambiguousDateFindings({ issueDate: "2026-02-03" }, "03/02/2026", reported)).toEqual([]);
+  });
+});
+
+describe("order", () => {
+  const orderType = getDocumentType("order")!;
+  const order = sampleDocument("order").document;
+  const pointers = (document: unknown) => discrepancies(orderType, document).map((discrepancy) => discrepancy.pointer);
+  const unpriced = {
+    ...order,
+    lines: order.lines.map(({ netPriceAmount: _price, netAmount: _amount, vat: _vat, ...line }: Record<string, unknown>) => line),
+    totals: null,
+    vat: null,
+  };
+
+  it("finds nothing in an order that our own encoder wrote, nor in an order without prices", () => {
+    expect(discrepancies(orderType, order)).toEqual([]);
+    expect(discrepancies(orderType, unpriced)).toEqual([]);
+    expect(extractionIssues(orderType, unpriced)).toEqual([]);
+  });
+
+  it("checks only the lines that have a price", () => {
+    const mixed = { ...order, lines: [unpriced.lines[0], { ...order.lines[1], netAmount: "700.00" }], totals: null, vat: null };
+    expect(pointers(mixed)).toEqual(["/lines/1/netAmount"]);
+  });
+
+  it("finds totals that do not add up and a VAT total that the lines do not give", () => {
+    expect(pointers({ ...order, totals: { ...order.totals, taxExclusiveAmount: "1500.00" } })).toEqual([
+      "/totals/taxExclusiveAmount",
+      "/totals/taxInclusiveAmount",
+    ]);
+    const [discrepancy] = discrepancies(orderType, { ...order, vat: { totalVatAmount: "99.00" }, totals: { ...order.totals, taxInclusiveAmount: "1607.00" } });
+    expect(discrepancy).toEqual({
+      pointer: "/vat/totalVatAmount",
+      stated: "99.00",
+      expected: "90.48",
+      message: "The total VAT is 99.00, but the VAT categories and rates of the lines, discounts and surcharges give 90.48.",
+    });
+  });
+
+  it("requires no payable amount, as a billing document does", () => {
+    expect(minimumEvidenceIssues(orderType, unpriced)).toEqual([]);
+    const { totals: _totals, ...withoutTotals } = invoice;
+    expect(minimumEvidenceIssues(invoiceType, withoutTotals).map((issue) => issue.code)).toEqual(["missing_payable_amount"]);
+  });
+
+  it("reports a VAT category with a rate it cannot have, a total that is not printed, and a negative quantity", () => {
+    const document = {
+      ...order,
+      lines: [{ ...order.lines[0], vat: { category: "S", percentage: "0.00" } }, { ...order.lines[1], quantity: "-12" }],
+    };
+    expect(extractionIssues(orderType, document, "Total 1.598,48").map((issue) => issue.pointer)).toEqual([
+      "/lines/0/vat/category",
+      "/lines/1/quantity",
+    ]);
+    expect(extractionIssues(orderType, order, "Total 99,00").map((issue) => issue.code)).toEqual(["unprinted_total"]);
+    // An order without totals has no total to find in the text.
+    expect(extractionIssues(orderType, unpriced, "Total 99,00")).toEqual([]);
+  });
+
+  it("leaves out the optional objects that state nothing, but keeps a required party", () => {
+    const document = {
+      ...order,
+      buyer: { name: "", street: "" },
+      delivery: { requestedPeriod: { startDate: null, endDate: "" }, location: { country: "" } },
+      deliveryTerms: { code: null, specialTerms: "" },
+      lines: [{ ...order.lines[0], vat: {}, standardId: { scheme: "", identifier: "" } }],
+    };
+    const normalized = normalizeExtraction(orderType, document) as Record<string, any>;
+    expect(normalized.buyer).toEqual({ name: "", street: "" });
+    expect(normalized.delivery).toBeNull();
+    expect(normalized.deliveryTerms).toBeNull();
+    expect(normalized.lines[0]).toMatchObject({ vat: null, standardId: null });
+  });
+});
+
+describe("despatch advice", () => {
+  const despatchAdviceType = getDocumentType("despatchAdvice")!;
+  const despatchAdvice = sampleDocument("despatchAdvice").document;
+
+  it("finds nothing in a despatch advice that our own encoder wrote, and has no consistency check", () => {
+    expect(extractionIssues(despatchAdviceType, despatchAdvice)).toEqual([]);
+    expect(despatchAdviceType.checkConsistency).toBeUndefined();
+    expect(minimumEvidenceIssues(despatchAdviceType, despatchAdvice)).toEqual([]);
+  });
+
+  it("reports a negative delivered or outstanding quantity", () => {
+    const document = { ...despatchAdvice, lines: [{ ...despatchAdvice.lines[0], quantity: "-30", outstandingQuantity: "-10" }] };
+    expect(extractionIssues(despatchAdviceType, document)).toEqual([
+      { code: "negative_quantity", message: "The quantity -30 is negative. Write the quantity as a positive number.", pointer: "/lines/0/quantity" },
+      {
+        code: "negative_quantity",
+        message: "The outstandingQuantity -10 is negative. Write the quantity as a positive number.",
+        pointer: "/lines/0/outstandingQuantity",
+      },
+    ]);
+  });
+
+  it("leaves out a referenced party and a measure that state nothing, and writes a printed unit as its code", () => {
+    const document = {
+      ...despatchAdvice,
+      buyer: { name: "", identifier: { identifier: "", scheme: null } },
+      shipment: { ...despatchAdvice.shipment, grossWeight: { value: "1200", unitCode: "kg" }, grossVolume: { value: "", unitCode: "" } },
+    };
+    const normalized = normalizeExtraction(despatchAdviceType, document) as Record<string, any>;
+    expect(normalized.buyer).toBeNull();
+    expect(normalized.shipment.grossWeight).toEqual({ value: "1200", unitCode: "KGM" });
+    expect(normalized.shipment.grossVolume).toBeNull();
   });
 });

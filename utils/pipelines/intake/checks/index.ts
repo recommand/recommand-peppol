@@ -1,7 +1,7 @@
 import type { Company } from "@peppol/data/companies";
 import type { Discrepancy, Finding, Issue } from "@peppol/types/intake";
 import type { AnyDocumentType } from "@peppol/utils/type-repository/document-types/types";
-import { isUnitCode, normalizeExtractedDocument } from "../normalize";
+import { isUnitCode, normalizeExtractedDocument, withoutEmptyObjects } from "../normalize";
 import { minimumEvidence, receiverCheck } from "./common";
 
 export { ambiguousDateFindings } from "./dates";
@@ -9,9 +9,12 @@ export { ambiguousDateFindings } from "./dates";
 // The checks of a document. The pipeline knows no document type: what a type adds, it
 // declares on its definition (`aiIntake` and `checkConsistency`).
 
-/** An extracted document after the normalization for every type and for its own type. */
+/**
+ * An extracted document after the normalization for every type and for its own type:
+ * values in the form that the formats require, and no optional object that states nothing.
+ */
 export function normalizeExtraction(documentType: AnyDocumentType, document: unknown): unknown {
-  const normalized = normalizeExtractedDocument(document);
+  const normalized = withoutEmptyObjects(normalizeExtractedDocument(document), documentType.documentSchema);
   return documentType.aiIntake?.normalize?.(normalized) ?? normalized;
 }
 

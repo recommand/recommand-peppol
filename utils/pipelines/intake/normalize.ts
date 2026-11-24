@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { UNIT_CODES } from "@peppol/utils/unit-codes";
 import { cleanEnterpriseNumber, cleanVatNumber } from "@peppol/utils/util";
 
@@ -98,4 +99,54 @@ export function normalizeExtractedDocument(value: unknown, key?: string): unknow
     return value;
   }
   return Object.fromEntries(Object.entries(value).map(([name, item]) => [name, normalizeExtractedDocument(item, name)]));
+}
+
+function isEmpty(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim() === "";
+  if (Array.isArray(value)) return value.every(isEmpty);
+  if (typeof value === "object") return Object.values(value).every(isEmpty);
+  return false;
+}
+
+/** A schema without its wrappers, and whether a wrapper lets the value be left out. */
+function unwrap(schema: z.ZodTypeAny): { base: z.ZodTypeAny; optional: boolean } {
+  let base = schema;
+  let optional = false;
+  for (;;) {
+    if (base instanceof z.ZodOptional || base instanceof z.ZodNullable) {
+      optional = true;
+      base = base.unwrap();
+    } else if (base instanceof z.ZodDefault) {
+      base = base.removeDefault();
+    } else if (base instanceof z.ZodEffects) {
+      base = base.innerType();
+    } else {
+      return { base, optional };
+    }
+  }
+}
+
+/**
+ * The document without the optional objects that state nothing, read from the type's
+ * schema. Generic: it reads nothing but the schema. The schema refuses such an object (a period needs a date, a VAT entry its
+ * category and rate, a referenced party a name or an identifier), and a model can write
+ * one for a value that the document does not print. A required object, such as a party
+ * that the type requires, stays, so the schema still reports it.
+ */
+export function withoutEmptyObjects(value: unknown, schema: z.ZodTypeAny): unknown {
+  const { base, optional } = unwrap(schema);
+  if (base instanceof z.ZodArray) {
+    return Array.isArray(value) ? value.map((item) => withoutEmptyObjects(item, base.element)) : value;
+  }
+  if (!(base instanceof z.ZodObject) || !value || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  if (optional && isEmpty(value)) {
+    return null;
+  }
+  const shape = base.shape as Record<string, z.ZodTypeAny>;
+  return Object.fromEntries(
+    Object.entries(value).map(([name, item]) => [name, shape[name] ? withoutEmptyObjects(item, shape[name]) : item]),
+  );
 }

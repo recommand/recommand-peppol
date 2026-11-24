@@ -19,7 +19,11 @@ export const invoiceDocumentType: DocumentType<
   key: "invoice",
   translatableTitle: getDocumentTypeTitle("invoice"),
   class: "billing",
-  aiIntake: billingAiIntake,
+  aiIntake: {
+    ...billingAiIntake,
+    classification:
+      "The seller asks the buyer to pay for goods or services that it supplied: it states amounts with VAT and an amount to pay. Also a receipt that states these amounts as paid.",
+  },
   sendSchema: sendInvoiceSchema,
   documentSchema: invoiceSchema,
 
