@@ -8,7 +8,7 @@ import { withFrenchReportingStatus } from "@peppol/data/fr-reporting-submissions
 import { resolveDocumentParsedWithAttachments } from "@peppol/data/offload/storage";
 import { getTransmittedDocument, getTransmittedDocuments } from "@peppol/data/transmitted-documents";
 import { checkPeppolEntitlementForTeamId, PEPPOL_ENTITLEMENTS } from "@peppol/lib/entitlements";
-import { getDocumentType } from "@peppol/utils/type-repository/document-types";
+import { documentDetails } from "@peppol/mcp/document-details";
 
 /** As the document routes do: a team without document access keeps receiving, but can't read what it has. */
 const requireDocumentAccess = async (team: Team) => {
@@ -31,31 +31,24 @@ type SummarizedDocument = {
   type: string;
 };
 
-/** The currency billing documents carry; the email details only hold a placeholder for it. */
-const currencyOf = (parsed: unknown) =>
-  parsed && typeof parsed === "object" && "currency" in parsed && typeof parsed.currency === "string" ? parsed.currency : null;
-
 /** What a model needs to tell documents apart: who, what, how much, and where it stands. */
 const summarize = (document: SummarizedDocument) => {
-  const documentType = document.parsed ? getDocumentType(document.type) : undefined;
-  const parsed = document.parsed as never;
-  const details = documentType?.email?.extractDocumentDetails(parsed);
-  const counterparties = documentType?.extractCounterparties(parsed);
+  const { amount, currency, documentNumber, receiverName, senderName } = documentDetails(document.type, document.parsed);
 
   return {
-    amount: details?.amount ?? null,
+    amount,
     companyId: document.companyId,
     createdAt: document.createdAt,
-    currency: currencyOf(document.parsed),
+    currency,
     deliveryStatus: document.deliveryStatus ?? null,
     direction: document.direction,
-    documentNumber: documentType?.extractDocumentNumber(parsed) ?? null,
+    documentNumber,
     id: document.id,
     readAt: document.readAt,
     receiverId: document.receiverId,
-    receiverName: counterparties?.receiverName ?? null,
+    receiverName,
     senderId: document.senderId,
-    senderName: counterparties?.senderName ?? null,
+    senderName,
     type: document.type,
   };
 };

@@ -28,6 +28,7 @@ import type {
 import { validationResponse, validationResult } from "@peppol/types/validation";
 import { STORED_DOCUMENT_TYPE_KEYS } from "@peppol/utils/type-repository/document-types/keys";
 import type { ParsedDocument } from "@peppol/utils/type-repository/document-types/parsed";
+import type { SendDocument } from "@peppol/utils/parsing/send-document";
 import { zodValidIsoIcdSchemeIdentifiers } from "@peppol/utils/iso-icd-scheme-identifiers";
 import type { Representative } from "@peppol/data/cbe-public-search/types";
 import type { EmailFallbackRequest } from "@peppol/data/deliveries/email-fallback";
@@ -1057,3 +1058,31 @@ export const integrationTaskLogs = pgTable("integration_task_logs", {
     .notNull(),
   updatedAt: autoUpdateTimestamp(),
 });
+
+// A document an assistant prepared to send through MCP, as it was checked, for the team and company it
+// was prepared for. Its ID is the handle the assistant gets for it.
+export const preparedSends = pgTable(
+  "peppol_prepared_sends",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => "prs_" + ulid()),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    // Whether the format and process in `input` are the ones the recipient was asked for when it was prepared
+    fixedRoute: boolean("fixed_route").notNull().default(false),
+    input: jsonb("input").$type<SendDocument>().notNull(),
+
+    companyId: text("company_id")
+      .references(() => companies.id, { onDelete: "cascade" })
+      .notNull(),
+    teamId: text("team_id")
+      .references(() => teams.id, { onDelete: "cascade" })
+      .notNull(),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  // The hourly purge looks the expired ones up
+  (table) => [index("peppol_prepared_sends_expires_at_idx").on(table.expiresAt)]
+);

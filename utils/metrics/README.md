@@ -11,7 +11,7 @@ and Prometheus text exposition.
 
 The endpoint only needs two calls (see `api/send-document.ts`):
 
-- `trackSendDocument` — mounted with `server.use()` ahead of both send routes, so it runs first.
+- `trackSendDocument` — mounted with `server.use()` ahead of both send routes, so it runs first. The MCP server's `send_document` runs it first too (`mcp/sending.ts`), so its sends count as requests like the API's.
 - `recordSendDocumentDelivery({ ... })` — just before the success response.
 
 `initializeMetricsServer(logger)` is called once from the peppol package `init`.
