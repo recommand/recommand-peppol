@@ -11,14 +11,13 @@ import { useTranslation } from "@core/hooks/use-translation";
 const client = rc<Companies>("peppol");
 
 type Step1Props = {
-    teamId: string;
     data: Partial<CompanyFormData>;
     onNext: (data: Partial<CompanyFormData>) => void;
     onCancel: () => void;
     offerSetUpLater: boolean;
 };
 
-export function Step1Vat({ teamId, data, onNext, onCancel, offerSetUpLater }: Step1Props) {
+export function Step1Vat({ data, onNext, onCancel, offerSetUpLater }: Step1Props) {
     const { t } = useTranslation();
     const [identityData, setIdentityData] = useState<Partial<CompanyIdentityFieldsValue>>({
         ...(data.country ? getCompanyCountryDefaults(data.country) : {}),
@@ -45,8 +44,7 @@ export function Step1Vat({ teamId, data, onNext, onCancel, offerSetUpLater }: St
 
         if (country === "BE" && vatNumber.trim().length >= 4) {
             try {
-                const response = await client[":teamId"]["vat-lookup"].$get({
-                    param: { teamId },
+                const response = await client["vat-lookup"].$get({
                     query: { country, vatNumber },
                 });
                 const json = await response.json();
