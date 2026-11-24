@@ -44,6 +44,8 @@ const markAsReadJsonBodySchema = z.object({
         description: "Whether to mark the document as read (true) or unread (false). If not provided, defaults to true.",
         examples: [true],
     }),
+}).openapi({
+    description: "Whether to mark the document as read or unread. Leaving the body or `read` out marks it as read.",
 }).optional();
 
 type MarkAsReadContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { param: z.input<typeof markAsReadParamSchemaWithTeamId>, json: z.input<typeof markAsReadJsonBodySchema> }, out: { param: z.infer<typeof markAsReadParamSchemaWithTeamId>, json: z.infer<typeof markAsReadJsonBodySchema> } }>;

@@ -57,6 +57,8 @@ const createAddressJsonBodySchema = z.object({
     includeDocumentJsonOutgoing: z.boolean().optional().openapi({
         description: "Whether to include the document.json attachment for outgoing document notifications",
     }),
+}).openapi({
+    description: "The address to notify, the directions to notify it about, and the attachments its notifications carry.",
 });
 
 type CreateAddressContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext & CompanyAccessContext, string, { in: { param: z.input<typeof createAddressParamSchemaWithTeamId>, json: z.input<typeof createAddressJsonBodySchema> }, out: { param: z.infer<typeof createAddressParamSchemaWithTeamId>, json: z.infer<typeof createAddressJsonBodySchema> } }>;

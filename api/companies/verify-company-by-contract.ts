@@ -21,6 +21,7 @@ const verifyCompanyByContractRouteDescription = describeRoute({
     summary: "Verify Company By Contract",
     tags: ["Companies"],
     requestBody: {
+        description: "The signed contract, as a PDF in the `contract` field.",
         required: true,
         content: {
             "multipart/form-data": {

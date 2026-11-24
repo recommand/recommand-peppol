@@ -55,6 +55,8 @@ const updateLabelJsonBodySchema = z.object({
         examples: ["erp-routing-inbox"],
         description: "Your own identifier for the label. It must be unique within the team. Left as it is when omitted; pass `null` to clear it.",
     }),
+}).openapi({
+    description: "The label details to change. Fields you leave out keep their current value.",
 });
 
 type UpdateLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext, string, { in: { param: z.input<typeof updateLabelParamSchemaWithTeamId>, json: z.input<typeof updateLabelJsonBodySchema> }, out: { param: z.infer<typeof updateLabelParamSchemaWithTeamId>, json: z.infer<typeof updateLabelJsonBodySchema> } }>;

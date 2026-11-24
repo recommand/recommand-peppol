@@ -40,6 +40,8 @@ const createDocumentTypeJsonBodySchema = z.object({
     processId: z.string().min(1, "Process ID is required").openapi({
         description: "The ID of the process to create",
     }),
+}).openapi({
+    description: "The document type the company can receive, and the process it receives it under.",
 });
 
 const createDocumentTypeParamSchemaWithTeamId = createDocumentTypeParamSchema.extend({ teamId: z.string() });

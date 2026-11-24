@@ -76,6 +76,8 @@ const upsertCustomerJsonBodySchema = z.object({
   phone: z.string().nullable().optional().openapi({
     description: "Contact phone number for the customer. Leaving it out on an update clears it.",
   }),
+}).openapi({
+  description: "The customer to create or update. With an `id`, that customer is updated; with an `externalId`, the customer with that external ID, which is created when there is none; with neither, a new customer is created.",
 });
 
 const upsertCustomerParamSchema = z.object({
