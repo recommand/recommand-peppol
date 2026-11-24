@@ -1,6 +1,6 @@
+import { audit } from "@core/lib/audit";
 import {
   checkTeamAccess,
-  requireAuth,
   requireTeamAccess,
   type AuthenticatedTeamContext,
   type AuthenticatedUserContext,
@@ -167,10 +167,32 @@ const integrationSupportedAuthExtensions: SessionVerificationExtension[] = [
   }
 ]
 
+/** What `requireIntegrationSupportedAuth` sets: an integration token verifies without a user, so `user.id` is `null` for one. */
+export type IntegrationSupportedAuthContext = {
+  Variables: Omit<AuthenticatedUserContext["Variables"], "user"> & {
+    user: Omit<AuthenticatedUserContext["Variables"]["user"], "id"> & { id: string | null };
+  };
+};
+
+// Core's requireAuth needs a user, which an integration token doesn't have, so any verified credential passes here
 export function requireIntegrationSupportedAuth() {
-  return requireAuth({
-    extensions: integrationSupportedAuthExtensions,
-  })
+  return createMiddleware<IntegrationSupportedAuthContext>(async (c, next) => {
+    const session = await verifySession(c, integrationSupportedAuthExtensions);
+    if (!session) {
+      await audit(c, {
+        action: "authorize",
+        objectId: c.req.path,
+        objectType: "core.route",
+        outcome: "denied",
+        reasonCode: "unauthenticated",
+        subsystem: "core.auth",
+      });
+
+      return c.json(actionFailure("Unauthorized"), 401);
+    }
+
+    await next();
+  });
 }
 
 export function requireIntegrationSupportedTeamAccess(options: TeamAccessOptions = {}) {

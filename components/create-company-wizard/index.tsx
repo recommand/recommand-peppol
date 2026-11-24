@@ -84,7 +84,6 @@ export function CreateCompanyWizard({ teamId, verificationRequirements, useTestN
 
             {step === 1 && (
                 <Step1Vat
-                    teamId={teamId}
                     data={formData}
                     onNext={(data) => {
                         mergeData(data);

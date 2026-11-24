@@ -1,4 +1,4 @@
-import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { getEnterpriseData } from "@peppol/data/cbe-public-search/client";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -7,7 +7,8 @@ import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
 import { cleanEnterpriseNumber } from "@peppol/utils/util";
-import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
+import type { IntegrationSupportedAuthContext } from "@peppol/utils/auth-middleware";
+import { requireIntegrationSupportedAuth, requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
@@ -20,13 +21,56 @@ const vatLookupParamSchema = z.object({
     teamId: z.string(),
 });
 
-type VatLookupContext = Context<AuthenticatedUserContext & AuthenticatedTeamContext, string, { in: { param: z.input<typeof vatLookupParamSchema>, query: z.input<typeof vatLookupQuerySchema> }, out: { param: z.infer<typeof vatLookupParamSchema>, query: z.infer<typeof vatLookupQuerySchema> } }>;
+const vatLookupResponse = z.object({
+    address: z.string().nullable().openapi({
+        description: "The street and number, or `null` when the register has none.",
+    }),
+    city: z.string().nullable().openapi({
+        description: "The city, or `null` when the register has none.",
+    }),
+    country: z.literal("BE").openapi({
+        description: "Always `BE`: only Belgian companies can be looked up.",
+    }),
+    name: z.string().nullable().openapi({
+        description: "The company's registered name, or `null` when the register has none.",
+    }),
+    postalCode: z.string().nullable().openapi({
+        description: "The postal code, or `null` when the register has none.",
+    }),
+});
 
-// IMPORTANT: Even though this endpoint is a hidden route, it is also used by some internal integrations, so make sure to keep it backwards compatible.
+type VatLookupContext = Context<IntegrationSupportedAuthContext, string, { in: { query: z.input<typeof vatLookupQuerySchema> }, out: { query: z.infer<typeof vatLookupQuerySchema> } }>;
+
+// IMPORTANT: Even though these endpoints are hidden routes, they are also used by some internal integrations, so make sure to keep them backwards compatible.
+
+// The lookup reads the public Belgian enterprise register, so it answers the same for every team and doesn't need one
 const _vatLookup = server.get(
+    "/vat-lookup",
+    requireIntegrationSupportedAuth(),
+    describeRoute({
+        description: "Look a Belgian company up by VAT or enterprise number in the public enterprise register, and return its name and address.",
+        hide: true,
+        operationId: "lookUpBelgianCompany",
+        responses: {
+            ...describeSuccessResponse("The company as the register knows it", vatLookupResponse),
+            ...describeErrorResponse(400, "The country isn't Belgium, or the company couldn't be looked up"),
+            ...describeErrorResponse(401, "Unauthorized"),
+        },
+        summary: "Look up a Belgian company",
+        tags: ["Companies"],
+    }),
+    zodValidator("query", vatLookupQuerySchema),
+    _vatLookupImplementation,
+);
+
+// Kept for integrations that still name their team in the path
+const _vatLookupWithTeamId = server.get(
     "/:teamId/vat-lookup",
     requireIntegrationSupportedTeamAccess(),
-    describeRoute({ hide: true }),
+    describeRoute({
+        deprecated: true,
+        hide: true,
+    }),
     zodValidator("param", vatLookupParamSchema),
     zodValidator("query", vatLookupQuerySchema),
     _vatLookupImplementation,
@@ -64,6 +108,6 @@ async function _vatLookupImplementation(c: VatLookupContext) {
     }
 }
 
-export type VatLookup = typeof _vatLookup;
+export type VatLookup = typeof _vatLookup | typeof _vatLookupWithTeamId;
 
 export default server;
