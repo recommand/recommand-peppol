@@ -1,3 +1,4 @@
+import { storableText } from "@peppol/utils/storable";
 import { extractText, getDocumentProxy } from "unpdf";
 
 /** A PDF that cannot be opened: damaged, encrypted, or not a PDF at all. */
@@ -46,9 +47,11 @@ async function readPdf<T>(bytes: Uint8Array, read: (document: PdfDocument) => Pr
   }
 }
 
+// A text layer can hold control characters, such as NUL where a font maps a dash to no
+// character. They are replaced here, before the text is stored, hashed or read by a model.
 async function textOf(document: PdfDocument) {
   const { text, totalPages } = await extractText(document, { mergePages: true });
-  return { text: text.trim(), pageCount: totalPages };
+  return { text: storableText(text).trim(), pageCount: totalPages };
 }
 
 async function embeddedFilesOf(document: PdfDocument): Promise<EmbeddedFile[]> {
@@ -63,13 +66,13 @@ async function embeddedFilesOf(document: PdfDocument): Promise<EmbeddedFile[]> {
       document as unknown as { getAttachmentContent(id: string): Promise<Uint8Array | null> }
     ).getAttachmentContent(id);
     if (content) {
-      files.push({ filename: attachment.filename, content: Buffer.from(content) });
+      files.push({ filename: storableText(attachment.filename), content: Buffer.from(content) });
     }
   }
   return files;
 }
 
-/** The text layer of a PDF, empty for a scanned PDF, and its number of pages. */
+/** The text layer of a PDF, empty for a scanned PDF, and its number of pages. Control characters are replaced. */
 export function readPdfText(bytes: Uint8Array): Promise<{ text: string; pageCount: number }> {
   return readPdf(bytes, textOf);
 }

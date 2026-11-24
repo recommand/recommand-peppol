@@ -1,5 +1,6 @@
 import { importAttempts, importResults, imports, transmittedDocuments } from "@peppol/db/schema";
 import type { Failure, Finding, SourceLocation } from "@peppol/types/intake";
+import { storableText } from "@peppol/utils/storable";
 import { db } from "@recommand/db";
 import { and, asc, eq, gt, isNotNull, ne, sql } from "drizzle-orm";
 import { ulid } from "ulid";
@@ -189,6 +190,6 @@ export async function recordAttempt(attempt: AttemptRecord) {
     ...attempt,
     inputTokens: attempt.inputTokens ?? null,
     outputTokens: attempt.outputTokens ?? null,
-    error: attempt.error ?? null,
+    error: attempt.error == null ? null : storableText(attempt.error),
   });
 }

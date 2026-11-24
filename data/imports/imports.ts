@@ -4,6 +4,7 @@ import {
   type Failure,
   type ImportStatus,
 } from "@peppol/types/intake";
+import { storable } from "@peppol/utils/storable";
 import { db } from "@recommand/db";
 import { and, desc, eq, gte, inArray, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import { publishImportChanged, publishImportDeleted, publishImportFinished } from "./events";
@@ -31,7 +32,8 @@ export function isFinalImportStatus(status: ImportStatus): boolean {
  * accepting response, which is stored with the import for an idempotent replay. When the
  * insert fails, for example on a unique violation because the idempotency key or the
  * email receipt is already taken, the stored bytes are removed again: no row points at
- * them.
+ * them. The values pass through `storable`: the email channel copies headers such as the
+ * subject into them as they came.
  */
 export async function acceptImport(
   values: NewImport,
@@ -46,7 +48,7 @@ export async function acceptImport(
       );
     }
     return await db.transaction(async (tx) => {
-      const [row] = await tx.insert(imports).values(values).returning();
+      const [row] = await tx.insert(imports).values(storable(values)).returning();
       const inserted = stored.length > 0 ? await tx.insert(files).values(stored).returning() : [];
       await publishImportChanged(row, tx);
       if (!toResponse) {

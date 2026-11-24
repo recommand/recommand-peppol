@@ -4,6 +4,7 @@ import { LEASE_MS, MAX_CONCURRENT_IMPORTS, RETRY_BACKOFF_MS } from "@peppol/util
 import { createResultContext, runResult } from "@peppol/utils/pipelines/intake";
 import { planImport } from "@peppol/utils/pipelines/intake/plan";
 import { failure } from "@peppol/utils/pipelines/intake/types";
+import { storableText } from "@peppol/utils/storable";
 import { db } from "@recommand/db";
 import { and, asc, eq, inArray, isNull, lt, lte, notInArray, or, sql } from "drizzle-orm";
 import { getImportFiles } from "./files";
@@ -69,7 +70,8 @@ async function extendLease(claimed: Import) {
  * another worker owns the import and this worker leaves it alone.
  */
 async function scheduleRetry(claimed: Import, error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+  // The message of a failed query quotes its parameters, which may hold text from the document.
+  const message = storableText(error instanceof Error ? error.message : String(error));
   const attempts = claimed.attempts + 1;
   const retry = attempts <= RETRY_BACKOFF_MS.length;
   const [row] = await db

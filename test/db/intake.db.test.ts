@@ -364,6 +364,23 @@ describe.skipIf(!testDatabaseUrl)("document intake against PostgreSQL", () => {
       ]);
     });
 
+    // Some PDFs draw a dash with a glyph whose text is NUL, which PostgreSQL refuses in text and jsonb.
+    it("extracts a PDF whose text layer has NUL characters, and stores its text with them replaced", async () => {
+      const decision = fakeDecisionModel(() => ({ invoice: 0.92, none: 0.08 }));
+      jev.setIntakeDecisionModelFactory(() => decision.model);
+      claude.setIntakeLanguageModelFactory(() => fakeLanguageModel({ document: invoice.document, findings: [], multipleDocuments: false }));
+      const pdf = buildPdf({ pages: [`${invoiceViewText(invoice.document, invoice.number)}\nPeriod Mar 1\u0000Mar 31, 2026`] });
+      const accepted = await (await upload(pdf, "purchase.pdf", { type: "invoice" })).json();
+
+      await drain();
+
+      expect(await imports.getImport(accepted.id)).toMatchObject({ status: "completed", attempts: 0, lastError: null });
+      const [result] = await rows<{ text: string }>(`SELECT checkpoints->'text'->>'text' AS text FROM peppol_import_results`);
+      expect(result.text).toContain("Period Mar 1\uFFFDMar 31, 2026");
+      expect(JSON.stringify(decision.calls)).toContain("Mar 1\uFFFDMar 31");
+      expect(JSON.stringify(decision.calls)).not.toContain("\\u0000");
+    });
+
     it("parses the XML of a hybrid PDF without a model and keeps the PDF as its container", async () => {
       const cii = sampleDocument("invoice", "cii-d22b-en16931");
       const pdf = buildPdf({ pages: ["Invoice"], attachments: [{ name: "factur-x.xml", content: cii.xml }] });
@@ -1042,6 +1059,25 @@ describe.skipIf(!testDatabaseUrl)("document intake against PostgreSQL", () => {
       const [result] = (await (await app.request(`/api/v2/imports/${row.id}/results`)).json()).data;
       expect(result.error).toMatchObject({ code: "page_limit_exceeded", context: { pageCount: MAX_PDF_PAGES + 1 } });
       expect(await rows(`SELECT id FROM peppol_import_attempts`)).toHaveLength(0);
+    });
+
+    it("stores an email whose subject and attachment name have NUL characters", async () => {
+      jev.setIntakeDecisionModelFactory(() => fakeDecisionModel(() => ({ none: 0.95 })).model);
+      const address = await (await createAddress()).json();
+      const received = await inboundEmail({
+        messageId: "nul-1",
+        to: address.address,
+        subject: "Invoice 12\u000034",
+        attachments: [{ name: "invoice\u0000.pdf", content: buildPdf({ pages: ["Our monthly newsletter"] }) }],
+      });
+      expect(received.status).toBe(200);
+
+      await drain();
+
+      expect(await rows(`SELECT status, source->>'subject' AS subject FROM peppol_imports`)).toEqual([
+        { status: "ignored", subject: "Invoice 12\uFFFD34" },
+      ]);
+      expect(await rows(`SELECT filename FROM peppol_files WHERE media_type = 'application/pdf'`)).toEqual([{ filename: "invoice\uFFFD.pdf" }]);
     });
 
     it("refuses an unknown or disabled address", async () => {

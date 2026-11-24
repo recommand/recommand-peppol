@@ -3,6 +3,7 @@ import { deleteFile, downloadBinaryFile, uploadFile } from "@core/lib/s3";
 import { companyDocumentsS3Prefix, S3_OPERATION_TIMEOUT_MS } from "@peppol/data/offload/storage";
 import { files } from "@peppol/db/schema";
 import type { FileFormat, FileProvenance } from "@peppol/types/intake";
+import { storableText } from "@peppol/utils/storable";
 import { withTimeout } from "@peppol/utils/timeout";
 import { db } from "@recommand/db";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
@@ -30,7 +31,7 @@ export function sha256Hex(bytes: Uint8Array | string): string {
 /**
  * Store the bytes of a file an import received or derived, and return its row to
  * insert. The bytes live under the company's document prefix, so deleting the
- * company's objects removes them too.
+ * company's objects removes them too. The file name is the sender's, so it is made storable.
  */
 export async function uploadImportFile(
   input: ImportFileUpload & { teamId: string; companyId: string; importId: string },
@@ -43,7 +44,7 @@ export async function uploadImportFile(
     teamId: input.teamId,
     companyId: input.companyId,
     importId: input.importId,
-    filename: input.filename,
+    filename: storableText(input.filename),
     mediaType: input.mediaType,
     format: input.format,
     size: input.bytes.byteLength,

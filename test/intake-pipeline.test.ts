@@ -22,9 +22,21 @@ mock.module("@recommand/db", () => ({ db: {} }));
 
 const otherResults: ImportResult[] = [];
 const addedFindings: unknown[] = [];
+// What `runResult` saved and published, and an error the next checkpoint save throws.
+const savedCheckpoints: Record<string, unknown>[] = [];
+const publishedFailures: unknown[] = [];
+let saveError: unknown = null;
 mock.module("@peppol/data/imports/results", () => ({
   getImportResults: async () => otherResults,
   addDocumentFindings: async (documentId: string, findings: unknown[]) => addedFindings.push({ documentId, findings }),
+  saveResultCheckpoints: async (_resultId: string, checkpoints: Record<string, unknown>) => {
+    if (saveError) throw saveError;
+    savedCheckpoints.push(structuredClone(checkpoints));
+  },
+  publishFailedResult: async (_importId: string, _resultId: string, error: unknown) => publishedFailures.push(error),
+  ignoreResult: async () => {},
+  recordAttempt: async () => {},
+  publishDocumentResult: async () => {},
 }));
 // The answers of the validation service, in order; valid when none is left. A module
 // mock stays for the whole test run, so other test files get the real client. Intake
@@ -72,6 +84,9 @@ const { isSameMessage } = await import("@peppol/utils/pipelines/intake/pairing")
 const { detectFileKind, xmlFormat } = await import("@peppol/utils/pipelines/intake/file-kind");
 const { countPdfPages, readPdfEmbeddedFiles, readPdfText, PdfUnreadableError } = await import("@peppol/utils/pipelines/intake/pdf");
 const { aiIntakeTypes } = await import("@peppol/utils/pipelines/intake/document-types");
+const { runResult } = await import("@peppol/utils/pipelines/intake");
+const { storable, storableText } = await import("@peppol/utils/storable");
+const { isDataException } = await import("@peppol/utils/db-errors");
 const { parseIncomingXml, IncomingXmlDecodeError } = await import("@peppol/utils/pipelines/receiving/parse");
 const { getDocumentFormat } = await import("@peppol/utils/type-repository/document-formats");
 type ResultContext = import("@peppol/utils/pipelines/intake/types").ResultContext;
@@ -192,6 +207,33 @@ describe("files", () => {
     expect(embedded.map((entry) => [entry.filename, entry.content.toString()])).toEqual([["factur-x.xml", "<a/>"]]);
     expect(readPdfText(Buffer.from("%PDF-1.7 damaged"))).rejects.toBeInstanceOf(PdfUnreadableError);
   });
+
+  // Some PDFs draw a dash with a glyph whose text is NUL, which PostgreSQL cannot store.
+  it("replaces the control characters of a text layer, and keeps the words apart", async () => {
+    const pdf = buildPdf({ pages: ["Invoice number INV\u00000042", "Period Mar 1\u0000Mar 31\u0007 EUR 20"] });
+    const { text } = await readPdfText(pdf);
+    expect(text).toContain("Invoice number INV\uFFFD0042");
+    expect(text).toContain("Period Mar 1\uFFFDMar 31\uFFFD EUR 20");
+  });
+});
+
+describe("storable text", () => {
+  it("replaces what PostgreSQL or XML refuses, in every string of a value", () => {
+    expect(storableText("a\u0000b\u001Fc\td\ne\rf")).toBe("a\uFFFDb\uFFFDc\td\ne\rf");
+    expect(storableText("lone \uD800 surrogate, pair \uD83D\uDE00")).toBe("lone \uFFFD surrogate, pair \uD83D\uDE00");
+    const date = new Date();
+    expect(storable<unknown>({ "k\u0000": ["x\u0000", 1, null, { y: "\u0000" }], date })).toEqual({
+      "k\uFFFD": ["x\uFFFD", 1, null, { y: "\uFFFD" }],
+      date,
+    });
+  });
+
+  it("recognises a data exception of PostgreSQL, also when Drizzle wrapped it", () => {
+    const wrapped = Object.assign(new Error("Failed query: update ..."), { cause: Object.assign(new Error("unsupported Unicode escape sequence"), { code: "22P05" }) });
+    expect(isDataException(wrapped)).toBe(true);
+    expect(isDataException(Object.assign(new Error("duplicate key"), { code: "23505" }))).toBe(false);
+    expect(isDataException(new Error("socket hang up"))).toBe(false);
+  });
 });
 
 describe("parseIncomingXml", () => {
@@ -281,6 +323,14 @@ describe("text stage", () => {
     const outcome = (await textStage.run(run)) as { checkpoint: { text: string; pageCount: number } };
     expect(outcome.checkpoint.text).toBe("");
     expect(outcome.checkpoint.pageCount).toBe(1);
+  });
+
+  it("stores and hashes the text with its control characters replaced", async () => {
+    const pdf = buildPdf({ pages: ["Invoice number INV\u00000042"] });
+    const run = context({ bytes: pdf, mediaType: "application/pdf", checkpoints: { structured: { method: null } } });
+    const outcome = (await textStage.run(run)) as { checkpoint: { text: string; textHash: string } };
+    expect(outcome.checkpoint.text).toBe("Invoice number INV\uFFFD0042");
+    expect(outcome.checkpoint.textHash).toBe(realFiles.sha256Hex("Invoice number INV\uFFFD0042"));
   });
 
   it("fails a PDF over the page limit before any model call", async () => {
@@ -385,6 +435,39 @@ describe("model call errors", () => {
       });
       await expect(call).rejects.toBe(error);
     }
+  });
+});
+
+describe("running a result", () => {
+  const run = () => context({ bytes: textPdf, mediaType: "application/pdf", checkpoints: { structured: { method: null } } });
+  beforeEach(() => {
+    savedCheckpoints.length = 0;
+    publishedFailures.length = 0;
+    saveError = null;
+  });
+
+  it("makes what a stage returns storable before the next stage reads it or it is saved", async () => {
+    const decision = fakeDecisionModel(() => ({ invoice: 0.95 }));
+    setIntakeDecisionModelFactory(() => ({ ...decision.model, id: "decision\u0000model" }));
+    setIntakeLanguageModelFactory(() => null);
+    const result = run();
+    await expect(runResult(result)).rejects.toThrow("No extraction model is configured");
+    expect(result.checkpoints.classify).toMatchObject({ model: "decision\uFFFDmodel" });
+    expect(savedCheckpoints.at(-1)!.classify).toMatchObject({ model: "decision\uFFFDmodel" });
+  });
+
+  it("fails the result at once when the database refuses a value, instead of retrying it", async () => {
+    saveError = Object.assign(new Error("Failed query: update ..."), {
+      cause: Object.assign(new Error("unsupported Unicode escape sequence"), { code: "22P05" }),
+    });
+    await runResult(run());
+    expect(publishedFailures).toEqual([{ code: "input_rejected", message: expect.any(String), context: { stage: "text" } }]);
+  });
+
+  it("leaves any other database error to the retry schedule", async () => {
+    saveError = new Error("Connection terminated unexpectedly");
+    await expect(runResult(run())).rejects.toBe(saveError);
+    expect(publishedFailures).toEqual([]);
   });
 });
 

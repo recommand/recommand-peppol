@@ -33,6 +33,9 @@ export const textStage: Stage = {
           }),
         };
       }
+      // The hash covers the whole text as `readPdfText` cleaned it, before it is cut: the
+      // text every later stage reads. Two text layers that differ only in a control
+      // character read the same to them, so they get the same hash.
       return { checkpoint: { text: text.slice(0, MAX_STORED_TEXT), pageCount, textHash: sha256Hex(text) } };
     } catch (error) {
       if (error instanceof PdfUnreadableError) {

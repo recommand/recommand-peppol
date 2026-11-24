@@ -8,6 +8,8 @@ import {
   recordAttempt,
   saveResultCheckpoints,
 } from "@peppol/data/imports/results";
+import { isDataException } from "@peppol/utils/db-errors";
+import { storable } from "@peppol/utils/storable";
 import { PermanentStageError } from "./stages/attempt";
 import { checkStage } from "./stages/check";
 import { classifyStage } from "./stages/classify";
@@ -15,7 +17,7 @@ import { extractStage } from "./stages/extract";
 import { publishStage } from "./stages/publish";
 import { structuredStage } from "./stages/structured";
 import { textStage } from "./stages/text";
-import type { Checkpoints, ResultContext, Stage, StageOutcome } from "./types";
+import { failure, type Checkpoints, type ResultContext, type Stage, type StageOutcome } from "./types";
 
 /** The stages of one result, in order. Each reads the checkpoints of the stages before it. */
 export const STAGES: Stage[] = [structuredStage, textStage, classifyStage, extractStage, checkStage, publishStage];
@@ -74,6 +76,11 @@ async function runStage(stage: Stage, context: ResultContext): Promise<StageOutc
  * Run the stages of one result from its first stage without a checkpoint. A stage's
  * checkpoint is saved before the next stage starts, so a retry does not repeat a model
  * call. A failure or an ignored result ends it; so does publication.
+ *
+ * What a stage returns passes through `storable` before the next stage reads it or it is
+ * saved, so the stages after it, and a retry that loads the checkpoint, see the same
+ * values. A data exception of the database fails the result at once: the same values
+ * would fail on every retry.
  */
 export async function runResult(context: ResultContext): Promise<void> {
   const save = () =>
@@ -82,20 +89,35 @@ export async function runResult(context: ResultContext): Promise<void> {
     if (stage.name in context.checkpoints || (stage.applies && !stage.applies(context))) {
       continue;
     }
-    const outcome = await runStage(stage, context);
-    if ("checkpoint" in outcome) {
-      (context.checkpoints as Record<string, unknown>)[stage.name] = outcome.checkpoint;
-      await save();
-      await context.progress();
-      continue;
+    try {
+      const outcome = storable(await runStage(stage, context));
+      if ("checkpoint" in outcome) {
+        (context.checkpoints as Record<string, unknown>)[stage.name] = outcome.checkpoint;
+        await save();
+        await context.progress();
+        continue;
+      }
+      if ("failure" in outcome) {
+        await save();
+        await publishFailedResult(context.importRow.id, context.result.id, outcome.failure);
+      } else if ("ignored" in outcome) {
+        await save();
+        await ignoreResult(context.result.id, outcome.ignored);
+      }
+      return;
+    } catch (error) {
+      if (!isDataException(error)) {
+        throw error;
+      }
+      console.error(`Result ${context.result.id} has a value the database refuses, in stage ${stage.name}:`, error);
+      await publishFailedResult(
+        context.importRow.id,
+        context.result.id,
+        failure("input_rejected", "The database refused a value read from the document. Processing it again gives the same answer.", {
+          stage: stage.name,
+        }),
+      );
+      return;
     }
-    if ("failure" in outcome) {
-      await save();
-      await publishFailedResult(context.importRow.id, context.result.id, outcome.failure);
-    } else if ("ignored" in outcome) {
-      await save();
-      await ignoreResult(context.result.id, outcome.ignored);
-    }
-    return;
   }
 }
