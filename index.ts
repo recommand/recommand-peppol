@@ -82,6 +82,12 @@ export function registerOpenApiRoutes(server: Server) {
       info: {
         title: "Recommand Peppol API",
         version: "1.0.0",
+        contact: {
+          email: "support@recommand.eu",
+          name: "Recommand support",
+          url: "https://recommand.eu/en/contact",
+        },
+        termsOfService: "https://recommand.eu/en/legal/terms",
         description: `
 Welcome to the Recommand Peppol API documentation. This API provides a comprehensive set of endpoints for managing and interacting with the Recommand Peppol platform.
 
