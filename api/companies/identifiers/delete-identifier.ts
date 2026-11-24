@@ -7,6 +7,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -18,6 +19,7 @@ const server = new Server();
 
 const deleteIdentifierRouteDescription = describeRoute({
     operationId: "deleteCompanyIdentifier",
+    ...irreversible,
     description: "Remove an identifier from the company and unregister it from the SMP, so documents can no longer be routed to that address. Documents already received under it are kept.",
     summary: "Delete Company Identifier",
     tags: ["Company Identifiers"],

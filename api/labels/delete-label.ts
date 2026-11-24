@@ -8,6 +8,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { UserFacingError } from "@peppol/utils/util";
 import { requireIntegrationSupportedTeamAccess } from "@peppol/utils/auth-middleware";
@@ -16,6 +17,7 @@ const server = new Server();
 
 const deleteLabelRouteDescription = describeRoute({
     operationId: "deleteLabel",
+    ...irreversible,
     description:
         "Deletes the label and removes it from every document and supplier it was assigned to. The documents and suppliers themselves are untouched. There is no undo, and a rule or integration that routes on this label stops matching, so unassign it first if you want to check what depends on it.",
     summary: "Delete Label",

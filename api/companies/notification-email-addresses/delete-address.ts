@@ -4,6 +4,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { requireCompanyAccess, type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import type { AuthenticatedUserContext, AuthenticatedTeamContext } from "@core/lib/auth-middleware";
@@ -14,6 +15,7 @@ const server = new Server();
 
 const deleteAddressRouteDescription = describeRoute({
     operationId: "deleteCompanyNotificationEmailAddress",
+    ...irreversible,
     description: "Stop emailing this address about the company's documents and remove it.",
     summary: "Delete Company Notification Email Address",
     tags: ["Company Notification Email Addresses"],

@@ -9,6 +9,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import {
   describeErrorResponse,
   describeSuccessResponse,
@@ -21,6 +22,7 @@ const server = new Server();
 
 const deleteCustomerRouteDescription = describeRoute({
   operationId: "deleteCustomer",
+  ...irreversible,
   description: "Delete a customer",
   summary: "Delete Customer",
   tags: ["Customers"],

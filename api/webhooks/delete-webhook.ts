@@ -3,6 +3,7 @@ import { z } from "zod";
 import "zod-openapi/extend";
 import { zodValidator } from "@recommand/lib/zod-validator";
 import { describeRoute } from "hono-openapi";
+import { irreversible } from "@peppol/utils/openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import { type CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { type AuthenticatedUserContext, type AuthenticatedTeamContext, requireTeamAccess } from "@core/lib/auth-middleware";
@@ -14,6 +15,7 @@ const server = new Server();
 
 const deleteWebhookRouteDescription = describeRoute({
     operationId: "deleteWebhook",
+    ...irreversible,
     description: "Stop delivering events to this endpoint and remove it. Deleting an ID that does not exist also succeeds, so the call is safe to repeat. Deliveries already in flight may still arrive.",
     summary: "Delete Webhook",
     tags: ["Webhooks"],
