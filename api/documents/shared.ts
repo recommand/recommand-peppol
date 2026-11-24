@@ -71,6 +71,33 @@ export const deliveryStatusResponse = deliveryStatusSchema.nullable().openapi({
     examples: ["delivered"],
 });
 
+/** The document list's filters, which the MCP server's `search_documents` takes too. */
+export const transmittedDocumentFilters = z.object({
+    deliveryStatus: deliveryStatusSchema.optional().openapi({
+        description: "Filter outgoing documents by their summarised delivery status: `delivered` (confirmed on at least one channel), `failed` (every delivery failed) or `pending` (still awaiting confirmation). Documents without deliveries never match.",
+        examples: ["failed"],
+    }),
+    direction: documentDirectionSchema.optional().openapi({
+        description: "Filter documents by direction (incoming or outgoing)",
+    }),
+    from: z.coerce.date().optional().openapi({
+        description: "Filter documents created from this timestamp (inclusive). ISO 8601 format.",
+        examples: ["2024-01-01T00:00:00Z"],
+    }),
+    search: z.string().optional().openapi({
+        description: "Search term to filter documents",
+        examples: ["invoice"],
+    }),
+    to: z.coerce.date().optional().openapi({
+        description: "Filter documents created until this timestamp (exclusive). ISO 8601 format.",
+        examples: ["2024-12-31T23:59:59Z"],
+    }),
+    type: transmittedDocumentTypeSchema.optional().openapi({
+        description: "Filter documents by type",
+        examples: ["invoice"],
+    }),
+});
+
 export const deliveryChannelSchema = z.enum(deliveryChannels).openapi({
     description: "The channel a delivery went over.",
     ref: "DeliveryChannel",
