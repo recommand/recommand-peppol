@@ -545,6 +545,15 @@ export async function getTransmittedDocument(
   };
 }
 
+/** The team a document belongs to, for finding the team a request acts in. */
+export async function getTransmittedDocumentTeamId(documentId: string): Promise<string | undefined> {
+  return await db
+    .select({ teamId: transmittedDocuments.teamId })
+    .from(transmittedDocuments)
+    .where(eq(transmittedDocuments.id, documentId))
+    .then((rows) => rows[0]?.teamId);
+}
+
 export async function getAllTransmittedDocumentsInRange(
   teamId: string,
   from: Date,

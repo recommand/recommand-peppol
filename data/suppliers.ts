@@ -145,6 +145,18 @@ export async function getSupplierByIdOrExternalId(
   return await getSupplier(teamId, { id: supplierId, externalId: supplierId });
 }
 
+/**
+ * The team a supplier belongs to, for finding the team a request acts in. Only by its ID:
+ * an external ID only names a supplier within one team.
+ */
+export async function getSupplierTeamId(supplierId: string): Promise<string | undefined> {
+  return await db
+    .select({ teamId: supportingDataSuppliers.teamId })
+    .from(supportingDataSuppliers)
+    .where(eq(supportingDataSuppliers.id, supplierId))
+    .then((rows) => rows[0]?.teamId);
+}
+
 export async function upsertSupplier(
   data: Partial<InsertSupplier> & {
     teamId: string;

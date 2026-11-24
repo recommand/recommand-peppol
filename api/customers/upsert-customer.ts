@@ -99,7 +99,7 @@ type UpsertCustomerContext = Context<
 
 const _upsertCustomerMinimal = server.post(
   "/customers",
-  requireIntegrationSupportedTeamAccess(),
+  requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
   requirePermission("exchange.customers.write"),
   upsertCustomerRouteDescription,
   zodValidator("json", upsertCustomerJsonBodySchema),

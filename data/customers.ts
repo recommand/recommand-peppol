@@ -94,6 +94,18 @@ export async function getCustomerByIdOrExternalId(
   return await getCustomer(teamId, { id: customerId, externalId: customerId });
 }
 
+/**
+ * The team a customer belongs to, for finding the team a request acts in. Only by its ID:
+ * an external ID only names a customer within one team.
+ */
+export async function getCustomerTeamId(customerId: string): Promise<string | undefined> {
+  return await db
+    .select({ teamId: supportingDataCustomers.teamId })
+    .from(supportingDataCustomers)
+    .where(eq(supportingDataCustomers.id, customerId))
+    .then((rows) => rows[0]?.teamId);
+}
+
 export async function upsertCustomer(
   data: Partial<InsertCustomer> & {
     teamId: string;

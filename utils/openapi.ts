@@ -88,3 +88,10 @@ export const withSortedParameters = <
 
   return { ...specs, paths };
 };
+
+/**
+ * The security requirements of an operation that checks no permission but accepts any credential,
+ * an app's OAuth access token included. Without it, the operation would only list the document's
+ * default `httpBasic` and `jwt`, as if an app couldn't call it.
+ */
+export const anyCredentialSecurity: Record<string, string[]>[] = [{ httpBasic: [] }, { jwt: [] }, { oauth2: [] }];

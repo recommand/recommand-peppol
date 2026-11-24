@@ -114,7 +114,7 @@ type GetTransmittedDocumentsContext = Context<AuthenticatedUserContext & Authent
 
 const _transmittedDocumentsMinimal = server.get(
     "/documents",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requireDocumentAccess(),
     requirePermission("exchange.documents.read"),
     getTransmittedDocumentsRouteDescription,

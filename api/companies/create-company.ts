@@ -63,7 +63,7 @@ type CreateCompanyContext = Context<AuthenticatedUserContext & AuthenticatedTeam
 
 const _createCompanyMinimal = server.post(
     "/companies",
-    requireTeamAccess(),
+    requireTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.companies.write"),
     createCompanyRouteDescription,
     zodValidator("json", createCompanyJsonBodySchema),

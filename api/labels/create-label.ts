@@ -50,7 +50,7 @@ type CreateLabelContext = Context<AuthenticatedUserContext & AuthenticatedTeamCo
 
 const _createLabelMinimal = server.post(
     "/labels",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     requirePermission("exchange.labels.write"),
     createLabelRouteDescription,
     zodValidator("json", createLabelJsonBodySchema),

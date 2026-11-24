@@ -1,4 +1,4 @@
-import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import type { AuthenticatedTeamContext, AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { createCompanyVerificationLog } from "@peppol/data/company-verification";
 import { Server, type Context } from "@recommand/lib/api";
 import { actionFailure, actionSuccess } from "@recommand/lib/utils";
@@ -9,7 +9,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { UserFacingError } from "@peppol/utils/util";
-import { requirePermission } from "@peppol/utils/auth-middleware";
+import { requirePermission, requireTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 

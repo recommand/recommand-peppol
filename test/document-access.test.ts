@@ -113,7 +113,7 @@ describe("the documents API", () => {
     for (const file of routeFiles) {
       const source = readFileSync(join(directory, file), "utf8");
       const routes = source.match(/server\.(get|post|put|patch|delete)\(/g)!.length;
-      const guarded = source.match(/require(IntegrationSupported)?TeamAccess\(\),\s*requireDocumentAccess\(\),/g)?.length ?? 0;
+      const guarded = source.match(/require(IntegrationSupported)?TeamAccess\((\{[^}]*\})?\),\s*requireDocumentAccess\(\),/g)?.length ?? 0;
       expect(`${file}: ${guarded}`).toBe(`${file}: ${labelling.includes(file) ? 0 : routes}`);
     }
   });

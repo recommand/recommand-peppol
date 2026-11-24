@@ -229,4 +229,14 @@ describe.skipIf(!testDatabaseUrl)("permissions on Peppol routes against PostgreS
       "POST /verifyDocumentSupport",
     ]);
   }, 120_000);
+
+  it("offers apps sending, notification addresses and webhooks only when the user ticks them, and never what outlives the grant", async () => {
+    const { getDelegablePermission } = await import("@core/lib/permissions");
+    ["exchange.documents.send", "exchange.notification_email_addresses.write", "exchange.webhooks.write"].forEach((permissionId) =>
+      expect(getDelegablePermission(permissionId)?.delegation).toBe("opt_in")
+    );
+    ["exchange.identifiers.migrate", "exchange.integrations.read", "exchange.integrations.write", "exchange.webhooks.read"].forEach((permissionId) =>
+      expect(getDelegablePermission(permissionId)).toBeNull()
+    );
+  });
 });

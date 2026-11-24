@@ -5,6 +5,7 @@ import { zodValidator } from "@recommand/lib/zod-validator";
 import { actionSuccess } from "@recommand/lib/utils";
 import { type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import { describeRoute } from "hono-openapi";
+import { anyCredentialSecurity } from "@peppol/utils/openapi";
 import {
     describeErrorResponse,
     describeSuccessResponse,
@@ -36,6 +37,7 @@ const verifyRecipientRouteDescription = describeRoute({
     operationId: "verifyRecipient",
     description: "Look a Peppol address up in the SMP and report what the participant behind it is registered to receive. Use it before sending to check that an address exists and to see its document types. A lookup that fails, including for an address that is not registered at all, is not an error: the response is `{ isValid: false }` with no further fields. In a playground that is not connected to the Peppol Test Network, an address that belongs to a company in the same playground reports that company's document types, without SMP or endpoint fields; any other address is looked up on the production network, as the send endpoint does.",
     summary: "Verify Recipient",
+    security: anyCredentialSecurity,
     tags: ["Recipients"],
     responses: {
         ...describeSuccessResponse("Successfully verified recipient", z.object({
@@ -61,7 +63,7 @@ type VerifyRecipientContext = Context<AuthenticatedUserContext & AuthenticatedTe
 
 const _verifyRecipient = server.post(
     "/verify",
-    requireIntegrationSupportedTeamAccess(),
+    requireIntegrationSupportedTeamAccess({ documentTeamHeader: true }),
     verifyRecipientRouteDescription,
     zodValidator("json", verifyRecipientJsonBodySchema),
     _verifyRecipientImplementation,

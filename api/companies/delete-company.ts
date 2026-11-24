@@ -1,4 +1,4 @@
-import { requireTeamAccess, type AuthenticatedTeamContext, type AuthenticatedUserContext } from "@core/lib/auth-middleware";
+import type { AuthenticatedTeamContext, AuthenticatedUserContext } from "@core/lib/auth-middleware";
 import {
     deleteCompany,
 } from "@peppol/data/companies";
@@ -11,7 +11,7 @@ import { describeRoute } from "hono-openapi";
 import { describeErrorResponse, describeSuccessResponse } from "@core/lib/api-docs";
 import type { CompanyAccessContext } from "@peppol/utils/auth-middleware";
 import { audit } from "@core/lib/audit";
-import { requirePermission } from "@peppol/utils/auth-middleware";
+import { requirePermission, requireTeamAccess } from "@peppol/utils/auth-middleware";
 
 const server = new Server();
 
