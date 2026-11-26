@@ -40,7 +40,7 @@ See [our pricing page](https://recommand.eu/en/pricing) for more info.
 
 ## Community & Support
 
-- [GitHub](https://github.com/brbxai/recommand-peppol)
+- [GitHub](https://github.com/recommand/recommand-peppol)
 - [Discord](https://discord.gg/a2tcQYA3ew)
 - [Contact](https://recommand.eu/contact) or email us at [support@recommand.eu](mailto:support@recommand.eu)
 
