@@ -30,7 +30,6 @@
   "dependencies": {
     "@date-fns/tz": "1.5.0",
     "@react-email/components": "^1.0.12",
-    "@scalar/openapi-to-markdown": "^0.6.0",
     "@tanstack/react-table": "^8.21.3",
     "croner": "^9.1.0",
     "date-fns": "^4.4.0",
